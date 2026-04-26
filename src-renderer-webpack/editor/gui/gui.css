@@ -129,32 +129,43 @@ p {
    NeoWarp: Extension Library Modal Glassmorphism
    ============================================ */
 
-/* Modal overlay - stronger blur */
-:global(.modal-overlay) {
-  backdrop-filter: blur(16px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-  background-color: rgba(0, 0, 0, 0.4) !important;
+/* React Modal overlay - this is the dark background behind the modal */
+:global(.ReactModal__Overlay) {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
 }
 
-/* Full screen modal content - transparent background */
-:global(.modal-content.full-screen) {
-  background-color: transparent !important;
+/* Full screen modal content - the main container */
+:global(.ReactModal__Content) {
+  background: transparent !important;
 }
 
-/* Extension library header - glass effect */
-:global(.library-scroll-grid) + :global(.header),
-:global(.header) {
-  background: rgba(255, 255, 255, 0.12) !important;
+/* Modal content inner container */
+:global([class*="modal-content"]) {
+  background: transparent !important;
+}
+
+/* Full screen modal - remove default background */
+:global([class*="modal-content"][class*="full-screen"]),
+:global([class*="full-screen"]) {
+  background: transparent !important;
+}
+
+/* Extension library header - glass effect for the title bar */
+:global([class*="header"]) {
+  background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* Filter bar in extension page - using attribute selector for CSS Modules */
+/* Filter bar - the row with search and tag buttons */
 :global([class*="filter-bar"]) {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Tag buttons (所有, Scratch, NeoWarp etc.) */
@@ -162,58 +173,83 @@ p {
   background: rgba(255, 255, 255, 0.15) !important;
   backdrop-filter: blur(8px) saturate(140%);
   -webkit-backdrop-filter: blur(8px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Active/selected tag button */
 :global([class*="tag-button"][class*="active"]),
 :global([class*="tag-button"][class*="selected"]) {
-  background: rgba(76, 151, 255, 0.4) !important;
+  background: rgba(76, 151, 255, 0.5) !important;
   backdrop-filter: blur(8px) saturate(180%);
   -webkit-backdrop-filter: blur(8px) saturate(180%);
-  border: 1px solid rgba(76, 151, 255, 0.6) !important;
+  border: 1px solid rgba(76, 151, 255, 0.7) !important;
+  box-shadow: 0 2px 12px rgba(76, 151, 255, 0.3);
 }
 
-/* Filter input in extension page */
+/* Filter input - search box */
 :global([class*="filter-input"]) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 20px !important;
   color: white !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Filter component container - remove extra background */
+:global([class*="filter"][class*="bar"]) {
+  background: transparent !important;
 }
 
 /* Library items grid background */
-:global(.library-scroll-grid),
 :global([class*="library-scroll-grid"]) {
   background: transparent !important;
 }
 
-/* Dark theme support for modal */
-:global(.sa-body-editor.dark) :global(.modal-overlay) {
-  background-color: rgba(0, 0, 0, 0.5) !important;
+/* Library item cards - subtle glass effect */
+:global([class*="library-item"]) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-:global(.sa-body-editor.dark) :global(.library-scroll-grid) + :global(.header),
-:global(.sa-body-editor.dark) :global(.header) {
-  background: rgba(30, 30, 30, 0.25) !important;
+/* ============================================
+   Dark Theme Support for Extension Library
+   ============================================ */
+
+:global(.sa-body-editor.dark) :global(.ReactModal__Overlay) {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
+
+:global(.sa-body-editor.dark) :global([class*="header"]) {
+  background: rgba(20, 20, 20, 0.3) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 :global(.sa-body-editor.dark) :global([class*="filter-bar"]) {
-  background: rgba(30, 30, 30, 0.2) !important;
+  background: rgba(20, 20, 20, 0.25) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 :global(.sa-body-editor.dark) :global([class*="tag-button"]) {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
 :global(.sa-body-editor.dark) :global([class*="tag-button"][class*="active"]),
 :global(.sa-body-editor.dark) :global([class*="tag-button"][class*="selected"]) {
-  background: rgba(76, 151, 255, 0.3) !important;
-  border: 1px solid rgba(76, 151, 255, 0.5) !important;
+  background: rgba(76, 151, 255, 0.4) !important;
+  border: 1px solid rgba(76, 151, 255, 0.6) !important;
 }
 
 :global(.sa-body-editor.dark) :global([class*="filter-input"]) {
-  background: rgba(0, 0, 0, 0.2) !important;
+  background: rgba(0, 0, 0, 0.25) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+}
+
+:global(.sa-body-editor.dark) :global([class*="library-item"]) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
