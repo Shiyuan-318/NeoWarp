@@ -19,12 +19,16 @@ p {
   margin: 0;
 }
 
-/* NeoWarp: Glassmorphism effect for blocks workspace */
-/* Main workspace glass effect */
+/* ============================================
+   NeoWarp: Unified Glassmorphism Effect
+   ============================================ */
+
+/* Main workspace - transparent background */
 :global(.blocklySvg) {
   background: transparent !important;
 }
 
+/* Unified glass overlay for entire workspace */
 :global(.blocklySvg)::before {
   content: '';
   position: absolute;
@@ -32,41 +36,80 @@ p {
   left: 0;
   right: 0;
   bottom: 0;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  background: rgba(255, 255, 255, 0.08);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Toolbox glass effect */
+/* Toolbox - completely transparent, only category colors show */
 :global(.blocklyToolboxDiv) {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Category menu items - keep their original colors but add slight transparency */
+:global(.scratchCategoryMenu) {
+  background: transparent !important;
+}
+
+:global(.scratchCategoryMenuItem) {
+  background: transparent !important;
+}
+
+/* Selected category highlight - subtle glass effect */
+:global(.scratchCategoryMenuItem.scratchCategoryMenuItemSelected) {
   background: rgba(255, 255, 255, 0.15) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 4px;
 }
 
-/* Flyout glass effect */
+/* Flyout - unified glass effect matching workspace */
 :global(.blocklyFlyout) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(15px) saturate(180%);
-  -webkit-backdrop-filter: blur(15px) saturate(180%);
+  background: rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Dark theme support */
+/* Flyout background rect */
+:global(.blocklyFlyoutBackground) {
+  fill: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* ============================================
+   Dark Theme Support
+   ============================================ */
+
 :global(.sa-body-editor.dark) :global(.blocklySvg)::before {
-  background: rgba(30, 30, 30, 0.35);
+  background: rgba(0, 0, 0, 0.15);
 }
 
 :global(.sa-body-editor.dark) :global(.blocklyToolboxDiv) {
-  background: rgba(30, 30, 30, 0.25) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+:global(.sa-body-editor.dark) :global(.scratchCategoryMenuItem.scratchCategoryMenuItemSelected) {
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 :global(.sa-body-editor.dark) :global(.blocklyFlyout) {
-  background: rgba(30, 30, 30, 0.2) !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
-/* Ensure workspace content is above the glass overlay */
+:global(.sa-body-editor.dark) :global(.blocklyFlyoutBackground) {
+  fill: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ============================================
+   Ensure content is above overlays
+   ============================================ */
+
 :global(.blocklySvg) > * {
   position: relative;
   z-index: 1;
@@ -75,4 +118,61 @@ p {
 :global(.blocklyMainBackground) {
   stroke: none;
   fill: transparent !important;
+}
+
+/* Category item labels - ensure readability */
+:global(.scratchCategoryMenuItemLabel) {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   NeoWarp: Extension Library Modal Glassmorphism
+   ============================================ */
+
+/* Modal overlay - stronger blur */
+:global(.modal-overlay) {
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  background-color: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Full screen modal content - transparent background */
+:global(.modal-content.full-screen) {
+  background-color: transparent !important;
+}
+
+/* Extension library header - glass effect */
+:global(.library-scroll-grid) + :global(.header),
+:global(.header) {
+  background: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Filter bar in extension page */
+:global(.filter-bar) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+
+/* Library items grid background */
+:global(.library-scroll-grid) {
+  background: transparent !important;
+}
+
+/* Dark theme support for modal */
+:global(.sa-body-editor.dark) :global(.modal-overlay) {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+:global(.sa-body-editor.dark) :global(.library-scroll-grid) + :global(.header),
+:global(.sa-body-editor.dark) :global(.header) {
+  background: rgba(30, 30, 30, 0.25) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+:global(.sa-body-editor.dark) :global(.filter-bar) {
+  background: rgba(30, 30, 30, 0.2) !important;
 }
