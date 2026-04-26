@@ -153,11 +153,29 @@ p {
 }
 
 /* Extension library header - glass effect for the title bar */
-:global([class*="header"]) {
+/* Use more specific selector to avoid matching library item titles */
+:global([class*="modal-content"] [class*="header"]:first-child),
+:global(.ReactModal__Content > div > [class*="header"]) {
   background: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Back button in header - transparent background */
+:global([class*="back-button"]),
+:global([class*="header"] [class*="button"]) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Library item title/label - remove background */
+:global([class*="library-item"] [class*="title"]),
+:global([class*="library-item"] [class*="label"]),
+:global([class*="library-item"] [class*="name"]) {
+  background: transparent !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 /* Filter bar - the row with search and tag buttons */
@@ -222,7 +240,8 @@ p {
   background-color: rgba(0, 0, 0, 0.7) !important;
 }
 
-:global(.sa-body-editor.dark) :global([class*="header"]) {
+:global(.sa-body-editor.dark) :global([class*="modal-content"] [class*="header"]:first-child),
+:global(.sa-body-editor.dark) :global(.ReactModal__Content > div > [class*="header"]) {
   background: rgba(20, 20, 20, 0.3) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
