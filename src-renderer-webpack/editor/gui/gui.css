@@ -150,15 +150,40 @@ p {
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* Filter bar in extension page */
-:global(.filter-bar) {
+/* Filter bar in extension page - using attribute selector for CSS Modules */
+:global([class*="filter-bar"]) {
   background: rgba(255, 255, 255, 0.08) !important;
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
 }
 
+/* Tag buttons (所有, Scratch, NeoWarp etc.) */
+:global([class*="tag-button"]) {
+  background: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Active/selected tag button */
+:global([class*="tag-button"][class*="active"]),
+:global([class*="tag-button"][class*="selected"]) {
+  background: rgba(76, 151, 255, 0.4) !important;
+  backdrop-filter: blur(8px) saturate(180%);
+  -webkit-backdrop-filter: blur(8px) saturate(180%);
+  border: 1px solid rgba(76, 151, 255, 0.6) !important;
+}
+
+/* Filter input in extension page */
+:global([class*="filter-input"]) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+}
+
 /* Library items grid background */
-:global(.library-scroll-grid) {
+:global(.library-scroll-grid),
+:global([class*="library-scroll-grid"]) {
   background: transparent !important;
 }
 
@@ -173,6 +198,22 @@ p {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-:global(.sa-body-editor.dark) :global(.filter-bar) {
+:global(.sa-body-editor.dark) :global([class*="filter-bar"]) {
   background: rgba(30, 30, 30, 0.2) !important;
+}
+
+:global(.sa-body-editor.dark) :global([class*="tag-button"]) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+:global(.sa-body-editor.dark) :global([class*="tag-button"][class*="active"]),
+:global(.sa-body-editor.dark) :global([class*="tag-button"][class*="selected"]) {
+  background: rgba(76, 151, 255, 0.3) !important;
+  border: 1px solid rgba(76, 151, 255, 0.5) !important;
+}
+
+:global(.sa-body-editor.dark) :global([class*="filter-input"]) {
+  background: rgba(0, 0, 0, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
