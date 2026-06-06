@@ -15,7 +15,9 @@
     "webpack:prod": "cross-env NODE_ENV=production webpack",
     "electron:start": "electron src-main/entrypoint.js",
     "electron:package:dir": "electron-builder --dir",
-    "electron:build": "electron-builder"
+    "electron:build": "electron-builder",
+    "web:build": "cross-env NODE_ENV=production webpack --config webpack.web.cjs",
+    "web:dev": "webpack --config webpack.web.cjs --watch"
   },
   "dependencies": {
     "semver": "^7.7.3"

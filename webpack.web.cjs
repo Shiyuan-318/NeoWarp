@@ -1,0 +1,116 @@
+/**
+ * Web 版编辑器 webpack 配置
+ * 用于构建可部署到 GitHub Pages 的纯 Web 版编辑器
+ */
+const path = require('path');
+const {DefinePlugin} = require('webpack');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+
+const base = {
+    mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+    devtool: process.env.NODE_ENV === 'production' ? false : 'cheap-source-map',
+    target: 'web',
+    module: {
+        rules: [
+            {
+                test: /\.jsx?$/,
+                loader: 'babel-loader',
+                options: {
+                    presets: ['@babel/preset-env', '@babel/preset-react']
+                }
+            },
+            {
+                test: /\.(svg|png|wav|gif|jpg|mp3|woff2|hex)$/,
+                loader: 'file-loader',
+                options: {
+                    outputPath: 'static/assets/',
+                    esModule: false
+                }
+            },
+            {
+                test: /\.css$/,
+                use: [
+                    {
+                        loader: 'style-loader'
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                            modules: true,
+                            importLoaders: 1,
+                            localIdentName: '[name]_[local]_[hash:base64:5]',
+                            camelCase: true
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                            postcssOptions: {
+                                plugins: [
+                                    'postcss-import',
+                                    'postcss-simple-vars',
+                                    'autoprefixer'
+                                ]
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                test: /\.(ttf)$/,
+                loader: 'file-loader',
+                options: {
+                    outputPath: 'static/fonts/',
+                    esModule: false
+                }
+            }
+        ]
+    }
+};
+
+module.exports = [
+    {
+        ...base,
+        output: {
+            path: path.resolve(__dirname, 'dist-web'),
+            filename: 'index.js'
+        },
+        entry: './src-renderer-webpack/editor/web/index.jsx',
+        plugins: [
+            new DefinePlugin({
+                'process.env.ROOT': '""'
+            }),
+            new CopyWebpackPlugin({
+                patterns: [
+                    {
+                        from: 'node_modules/scratch-blocks/media',
+                        to: 'static/blocks-media/default'
+                    },
+                    {
+                        from: 'node_modules/scratch-blocks/media',
+                        to: 'static/blocks-media/high-contrast'
+                    },
+                    {
+                        from: 'node_modules/scratch-gui/src/lib/themes/blocks/high-contrast-media/blocks-media',
+                        to: 'static/blocks-media/high-contrast',
+                        force: true
+                    },
+                    {
+                        context: 'src-renderer-webpack/editor/web/',
+                        from: '*.html'
+                    },
+                    {
+                        from: 'font',
+                        to: 'static/fonts'
+                    }
+                ]
+            })
+        ],
+        resolve: {
+            alias: {
+                'scratch-gui$': path.resolve(__dirname, 'node_modules/scratch-gui/src/index.js'),
+                'scratch-render-fonts$': path.resolve(__dirname, 'node_modules/scratch-gui/src/lib/tw-scratch-render-fonts'),
+            }
+        }
+    }
+];

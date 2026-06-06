@@ -6,6 +6,7 @@ node_modules/
 
 # Built files
 dist
+dist-web
 dist-renderer-webpack
 dist-library-files
 dist-extensions
