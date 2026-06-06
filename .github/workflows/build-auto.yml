@@ -19,11 +19,20 @@ jobs:
         node-version: 24
         cache: npm
     - name: Install dependencies
-      # 使用 --ignore-scripts 跳过 scratch-vm 的 prepublish（下载 microbit 固件经常超时）
+      # 使用 --ignore-scripts 跳过 scratch-gui 的 prepublish（下载 microbit 固件经常超时）
       run: npm ci --ignore-scripts
     - name: Install Electron binary
-      # electron 的 postinstall 下载二进制文件，必须单独运行
       run: cd node_modules/electron && node install.js
+    - name: Run scratch-gui prepublish
+      # scratch-gui 的 prepublish 下载 microbit 固件并生成必要文件，加重试
+      run: |
+        for i in 1 2 3; do
+          cd $GITHUB_WORKSPACE/node_modules/scratch-gui && node scripts/prepublish.mjs && exit 0
+          echo "scratch-gui prepublish attempt $i failed, retrying in 10s..."
+          sleep 10
+        done
+        echo "scratch-gui prepublish failed after 3 attempts"
+        exit 1
     - name: Prepare extensions
       # Don't need to do a full fetch, that would just cause a lot of unnecessary traffic
       run: node scripts/prepare-extensions.mjs

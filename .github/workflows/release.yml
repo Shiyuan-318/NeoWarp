@@ -28,6 +28,14 @@ jobs:
       run: npm ci --ignore-scripts --loglevel=info
     - name: Install Electron binary
       run: cd node_modules/electron && node install.js
+    - name: Run scratch-gui prepublish
+      run: |
+        for i in 1 2 3; do
+          cd $GITHUB_WORKSPACE/node_modules/scratch-gui && node scripts/prepublish.mjs && exit 0
+          echo "attempt $i failed, retrying in 10s..."
+          sleep 10
+        done
+        exit 1
     - name: Fetch
       run: npm run fetch
     - name: Compile
@@ -69,6 +77,14 @@ jobs:
       run: npm ci --ignore-scripts --loglevel=info
     - name: Install Electron binary
       run: cd node_modules/electron && node install.js
+    - name: Run scratch-gui prepublish
+      run: |
+        for i in 1 2 3; do
+          cd $GITHUB_WORKSPACE/node_modules/scratch-gui && node scripts/prepublish.mjs && exit 0
+          echo "attempt $i failed, retrying in 10s..."
+          sleep 10
+        done
+        exit 1
     - name: Fetch
       run: npm run fetch
     - name: Compile
@@ -149,6 +165,16 @@ jobs:
     - name: Install Electron binary
       working-directory: D:\repo
       run: cd node_modules/electron && node install.js
+    - name: Run scratch-gui prepublish
+      working-directory: D:\repo
+      shell: bash
+      run: |
+        for i in 1 2 3; do
+          cd node_modules/scratch-gui && node scripts/prepublish.mjs && exit 0
+          echo "attempt $i failed, retrying in 10s..."
+          sleep 10
+        done
+        exit 1
     - name: Fetch
       working-directory: D:\repo
       run: npm run fetch

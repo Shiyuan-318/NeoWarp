@@ -42,9 +42,19 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        # 使用 --ignore-scripts 跳过 scratch-vm 的 prepublish（它会从 packagerdata.turbowarp.org
-        # 下载 microbit 固件，经常超时），scratch-vm 已有预编译产物无需重新构建
+        # 使用 --ignore-scripts 跳过 scratch-gui 的 prepublish（下载 microbit 固件经常超时）
         run: npm ci --ignore-scripts
+
+      - name: Run scratch-gui prepublish
+        # scratch-gui 的 prepublish 下载 microbit 固件并生成必要文件，加重试
+        run: |
+          for i in 1 2 3; do
+            cd $GITHUB_WORKSPACE/node_modules/scratch-gui && node scripts/prepublish.mjs && exit 0
+            echo "scratch-gui prepublish attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "scratch-gui prepublish failed after 3 attempts"
+          exit 1
 
       - name: Prepare extensions
         run: node scripts/prepare-extensions.mjs
