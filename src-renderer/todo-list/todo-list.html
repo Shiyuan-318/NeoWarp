@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>待办清单</title>
+    <style>
+        :root {
+            --bg: #f5f5f7;
+            --surface: #ffffff;
+            --surface-secondary: #f0f0f2;
+            --text: #1d1d1f;
+            --text-secondary: #6e6e73;
+            --text-tertiary: #aeaeb2;
+            --border: #e5e5e8;
+            --accent: #0071e3;
+            --accent-light: #e8f0fe;
+            --accent-hover: #0060c0;
+            --danger: #ff3b30;
+            --danger-light: #ffeceb;
+            --success: #34c759;
+            --success-light: #e8f8ed;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 30px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-full: 50px;
+            --transition: 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg: #1c1c1e;
+            --surface: #2c2c2e;
+            --surface-secondary: #3a3a3c;
+            --text: #f5f5f7;
+            --text-secondary: #aeaeb2;
+            --text-tertiary: #636366;
+            --border: #48484a;
+            --accent: #0a84ff;
+            --accent-light: #1a3a5c;
+            --accent-hover: #409cff;
+            --danger: #ff453a;
+            --danger-light: #3e1a1a;
+            --success: #30d158;
+            --success-light: #1a3a1c;
+            --shadow: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+            --shadow-lg: 0 10px 30px rgba(0,0,0,0.3), 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+            transition: background var(--transition), color var(--transition);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            padding-top: max(14px, env(safe-area-inset-top));
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            flex-shrink: 0;
+            z-index: 10;
+            -webkit-app-region: drag;
+            transition: background var(--transition), border-color var(--transition);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-icon {
+            width: 22px;
+            height: 22px;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+        }
+
+        .stats-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .stat-value {
+            font-weight: 600;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px 16px;
+            scroll-behavior: smooth;
+        }
+
+        .main-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .main-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .main-content::-webkit-scrollbar-thumb {
+            background: var(--text-tertiary);
+            border-radius: 3px;
+        }
+
+        .add-bar {
+            display: flex;
+            gap: 8px;
+            padding: 12px 4px 16px;
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 5;
+            transition: background var(--transition);
+        }
+
+        .add-input {
+            flex: 1;
+            height: 44px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 14px;
+            padding: 0 14px;
+            outline: none;
+            transition: all var(--transition);
+            font-family: inherit;
+        }
+        .add-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+        .add-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .add-btn {
+            height: 44px;
+            padding: 0 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: var(--accent);
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            flex-shrink: 0;
+            outline: none;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .add-btn:hover { background: var(--accent-hover); }
+        .add-btn:active { transform: scale(0.96); }
+        .add-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            color: var(--text-tertiary);
+            text-align: center;
+            gap: 12px;
+        }
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            opacity: 0.4;
+        }
+        .empty-state-text {
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .todo-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            transition: all var(--transition);
+            box-shadow: var(--shadow);
+            position: relative;
+            group: true;
+        }
+        .todo-item:hover {
+            border-color: var(--text-tertiary);
+            box-shadow: var(--shadow-lg);
+        }
+        .todo-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+
+        .todo-checkbox {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--text-tertiary);
+            background: transparent;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition);
+            position: relative;
+        }
+        .todo-checkbox:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+        .todo-checkbox.checked {
+            background: var(--success);
+            border-color: var(--success);
+        }
+        .todo-checkbox.checked::after {
+            content: '';
+            width: 6px;
+            height: 10px;
+            border: solid #ffffff;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg) translateY(-1px);
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+            color: var(--text);
+            word-break: break-word;
+            transition: color var(--transition), opacity var(--transition);
+        }
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            opacity: 0.5;
+            color: var(--text-secondary);
+        }
+
+        .todo-edit-input {
+            flex: 1;
+            height: 32px;
+            border: 2px solid var(--accent);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--text);
+            font-size: 14px;
+            padding: 0 10px;
+            outline: none;
+            font-family: inherit;
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+
+        .todo-actions {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+        .todo-item:hover .todo-actions,
+        .todo-item.editing .todo-actions {
+            opacity: 1;
+        }
+
+        .todo-action-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition);
+            flex-shrink: 0;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .todo-action-btn:hover {
+            background: var(--surface-secondary);
+            color: var(--text);
+        }
+        .todo-action-btn.delete-btn:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        .todo-action-btn svg {
+            width: 14px;
+            height: 14px;
+            pointer-events: none;
+        }
+
+        .clear-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 4px;
+        }
+        .clear-btn {
+            height: 34px;
+            padding: 0 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-full);
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all var(--transition);
+            outline: none;
+            font-family: inherit;
+        }
+        .clear-btn:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-full);
+            padding: 10px 20px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            z-index: 100;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* 提醒相关样式 */
+        .reminder-btn {
+            position: relative;
+        }
+        .reminder-btn.has-reminder::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+
+        .reminder-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        .reminder-dialog-overlay.visible {
+            display: flex;
+        }
+
+        .reminder-dialog {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 24px;
+            width: 320px;
+            max-width: 90vw;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .reminder-dialog-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        .reminder-dialog-content {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .reminder-preset-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .reminder-preset-btn {
+            flex: 1;
+            min-width: 70px;
+            height: 36px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all var(--transition);
+            outline: none;
+            font-family: inherit;
+        }
+        .reminder-preset-btn:hover {
+            background: var(--surface-secondary);
+            border-color: var(--accent);
+        }
+        .reminder-preset-btn.selected {
+            background: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
+        }
+
+        .reminder-custom-input {
+            height: 40px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 14px;
+            padding: 0 12px;
+            outline: none;
+            transition: all var(--transition);
+            font-family: inherit;
+        }
+        .reminder-custom-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+
+        .reminder-dialog-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .reminder-dialog-btn {
+            flex: 1;
+            height: 40px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            outline: none;
+            font-family: inherit;
+        }
+        .reminder-dialog-btn.cancel {
+            background: var(--surface-secondary);
+            color: var(--text);
+        }
+        .reminder-dialog-btn.cancel:hover {
+            background: var(--border);
+        }
+        .reminder-dialog-btn.confirm {
+            background: var(--accent);
+            color: #ffffff;
+        }
+        .reminder-dialog-btn.confirm:hover {
+            background: var(--accent-hover);
+        }
+        .reminder-dialog-btn.remove {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        .reminder-dialog-btn.remove:hover {
+            background: var(--danger);
+            color: #ffffff;
+        }
+
+        .reminder-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--accent);
+            margin-left: 8px;
+            opacity: 0.8;
+        }
+        .reminder-indicator svg {
+            width: 12px;
+            height: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-left">
+            <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 11l3 3L22 4"></path>
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+            </svg>
+            <span class="header-title">待办清单</span>
+        </div>
+
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat">
+            <span>共</span>
+            <span class="stat-value" id="totalCount">0</span>
+            <span>项</span>
+        </div>
+        <div class="stat">
+            <span>已完成</span>
+            <span class="stat-value" id="doneCount">0</span>
+            <span>项</span>
+        </div>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <div class="add-bar">
+            <input
+                class="add-input"
+                id="addInput"
+                type="text"
+                placeholder="输入新待办事项..."
+                maxlength="200"
+                autocomplete="off"
+            >
+            <button class="add-btn" id="addBtn">添加</button>
+        </div>
+
+        <div class="todo-list" id="todoList"></div>
+        <div class="empty-state" id="emptyState">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="5" width="18" height="14" rx="2" ry="2"></rect>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <div class="empty-state-text">暂无待办事项<br>在上方输入框添加新的任务吧</div>
+        </div>
+
+        <div class="clear-bar" id="clearBar" style="display:none;">
+            <button class="clear-btn" id="clearDoneBtn">清除已完成项</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- 提醒设置对话框 -->
+    <div class="reminder-dialog-overlay" id="reminderDialogOverlay">
+        <div class="reminder-dialog">
+            <div class="reminder-dialog-title">设置提醒时间</div>
+            <div class="reminder-dialog-content">
+                <div class="reminder-preset-group" id="reminderPresetGroup">
+                    <button class="reminder-preset-btn" data-minutes="10">10分钟</button>
+                    <button class="reminder-preset-btn" data-minutes="30">30分钟</button>
+                    <button class="reminder-preset-btn" data-minutes="60">1小时</button>
+                    <button class="reminder-preset-btn" data-minutes="120">2小时</button>
+                    <button class="reminder-preset-btn" data-minutes="1440">明天</button>
+                </div>
+                <input type="datetime-local" class="reminder-custom-input" id="reminderCustomTime">
+                <div class="reminder-dialog-actions">
+                    <button class="reminder-dialog-btn cancel" id="reminderCancelBtn">取消</button>
+                    <button class="reminder-dialog-btn remove" id="reminderRemoveBtn" style="display:none;">移除提醒</button>
+                    <button class="reminder-dialog-btn confirm" id="reminderConfirmBtn">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var STORAGE_KEY = 'neowarp_todo_list';
+
+        var todos = [];
+        var editingId = null;
+        var theme = 'light';
+        var toastTimer = null;
+        var reminders = {};
+        var currentReminderTodoId = null;
+
+        var addInput = document.getElementById('addInput');
+        var addBtn = document.getElementById('addBtn');
+        var todoList = document.getElementById('todoList');
+        var emptyState = document.getElementById('emptyState');
+        var clearBar = document.getElementById('clearBar');
+        var clearDoneBtn = document.getElementById('clearDoneBtn');
+        var totalCount = document.getElementById('totalCount');
+        var doneCount = document.getElementById('doneCount');
+        var toast = document.getElementById('toast');
+        var mainContent = document.getElementById('mainContent');
+
+        var reminderDialogOverlay = document.getElementById('reminderDialogOverlay');
+        var reminderPresetGroup = document.getElementById('reminderPresetGroup');
+        var reminderCustomTime = document.getElementById('reminderCustomTime');
+        var reminderCancelBtn = document.getElementById('reminderCancelBtn');
+        var reminderRemoveBtn = document.getElementById('reminderRemoveBtn');
+        var reminderConfirmBtn = document.getElementById('reminderConfirmBtn');
+
+        function loadTodos() {
+            try {
+                var raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    todos = JSON.parse(raw);
+                    if (!Array.isArray(todos)) todos = [];
+                }
+            } catch(e) {
+                todos = [];
+            }
+        }
+
+        function saveTodos() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+            } catch(e) {}
+        }
+
+        function generateId() {
+            return 'todo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        }
+
+        function formatTime(date) {
+            var now = new Date();
+            var d = new Date(date);
+            var month = d.getMonth() + 1;
+            var day = d.getDate();
+            var hours = d.getHours();
+            var minutes = d.getMinutes();
+            var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+            var timeStr = pad(hours) + ':' + pad(minutes);
+
+            if (d.toDateString() === now.toDateString()) {
+                return '今天 ' + timeStr;
+            }
+            var yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            if (d.toDateString() === yesterday.toDateString()) {
+                return '昨天 ' + timeStr;
+            }
+            return month + '/' + day + ' ' + timeStr;
+        }
+
+        function formatReminderTime(reminderTime) {
+            var d = new Date(reminderTime);
+            var month = d.getMonth() + 1;
+            var day = d.getDate();
+            var hours = d.getHours();
+            var minutes = d.getMinutes();
+            var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+            return month + '/' + day + ' ' + pad(hours) + ':' + pad(minutes);
+        }
+
+        function getReminderIndicatorHTML(todoId) {
+            if (!reminders[todoId]) return '';
+            var timeStr = formatReminderTime(reminders[todoId].reminderTime);
+            return '<span class="reminder-indicator" title="提醒时间: ' + timeStr + '">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>' +
+                '<path d="M13.73 21a2 2 0 0 1-3.46 0"></path>' +
+                '</svg>' +
+                timeStr +
+                '</span>';
+        }
+
+        function showToast(msg) {
+            if (toastTimer) clearTimeout(toastTimer);
+            toast.textContent = msg;
+            toast.classList.add('visible');
+            toastTimer = setTimeout(function() {
+                toast.classList.remove('visible');
+                toastTimer = null;
+            }, 2000);
+        }
+
+        function updateStats() {
+            totalCount.textContent = todos.length;
+            var done = 0;
+            todos.forEach(function(t) { if (t.completed) done++; });
+            doneCount.textContent = done;
+            emptyState.style.display = todos.length === 0 ? '' : 'none';
+            clearBar.style.display = done > 0 ? '' : 'none';
+        }
+
+        function renderTodos() {
+            todoList.innerHTML = '';
+
+            todos.forEach(function(todo) {
+                var isEditing = editingId === todo.id;
+
+                var item = document.createElement('div');
+                item.className = 'todo-item' + (todo.completed ? ' completed' : '') + (isEditing ? ' editing' : '');
+                item.setAttribute('data-id', todo.id);
+
+                var checkbox = document.createElement('div');
+                checkbox.className = 'todo-checkbox' + (todo.completed ? ' checked' : '');
+                checkbox.addEventListener('click', function() {
+                    toggleTodo(todo.id);
+                });
+
+                var textEl;
+                if (isEditing) {
+                    textEl = document.createElement('input');
+                    textEl.className = 'todo-edit-input';
+                    textEl.type = 'text';
+                    textEl.value = todo.text;
+                    textEl.maxLength = 200;
+                    textEl.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            finishEdit(todo.id, textEl.value.trim());
+                        } else if (e.key === 'Escape') {
+                            cancelEdit();
+                        }
+                    });
+                    textEl.addEventListener('blur', function() {
+                        finishEdit(todo.id, textEl.value.trim());
+                    });
+                } else {
+                    textEl = document.createElement('span');
+                    textEl.className = 'todo-text';
+                    textEl.innerHTML = todo.text + getReminderIndicatorHTML(todo.id);
+                    textEl.title = formatTime(todo.createdAt);
+                    textEl.addEventListener('dblclick', function() {
+                        startEdit(todo.id);
+                    });
+                }
+
+                var actions = document.createElement('div');
+                actions.className = 'todo-actions';
+
+                if (!isEditing) {
+                    var reminderBtn = document.createElement('button');
+                    reminderBtn.className = 'todo-action-btn reminder-btn' + (reminders[todo.id] ? ' has-reminder' : '');
+                    reminderBtn.title = reminders[todo.id] ? '修改提醒' : '设置提醒';
+                    reminderBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>';
+                    reminderBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        openReminderDialog(todo.id);
+                    });
+                    actions.appendChild(reminderBtn);
+
+                    var editBtn = document.createElement('button');
+                    editBtn.className = 'todo-action-btn';
+                    editBtn.title = '编辑';
+                    editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+                    editBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        startEdit(todo.id);
+                    });
+                    actions.appendChild(editBtn);
+
+                    var deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'todo-action-btn delete-btn';
+                    deleteBtn.title = '删除';
+                    deleteBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path></svg>';
+                    deleteBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        deleteTodo(todo.id);
+                    });
+                    actions.appendChild(deleteBtn);
+                }
+
+                item.appendChild(checkbox);
+                item.appendChild(textEl);
+                item.appendChild(actions);
+                todoList.appendChild(item);
+
+                if (isEditing) {
+                    setTimeout(function() { textEl.focus(); textEl.select(); }, 50);
+                }
+            });
+
+            updateStats();
+        }
+
+        function addTodo() {
+            var text = addInput.value.trim();
+            if (!text) {
+                showToast('请输入待办内容');
+                return;
+            }
+
+            todos.unshift({
+                id: generateId(),
+                text: text,
+                completed: false,
+                createdAt: new Date().toISOString()
+            });
+
+            saveTodos();
+            renderTodos();
+            addInput.value = '';
+            addInput.focus();
+        }
+
+        function toggleTodo(id) {
+            var todo = null;
+            for (var i = 0; i < todos.length; i++) {
+                if (todos[i].id === id) { todo = todos[i]; break; }
+            }
+            if (!todo) return;
+            todo.completed = !todo.completed;
+            if (todo.completed) {
+                todo.completedAt = new Date().toISOString();
+                if (reminders[id]) {
+                    cancelReminder(id);
+                }
+            } else {
+                delete todo.completedAt;
+            }
+            saveTodos();
+            renderTodos();
+        }
+
+        function startEdit(id) {
+            editingId = id;
+            renderTodos();
+        }
+
+        function finishEdit(id, newText) {
+            if (editingId === id && !newText) {
+                deleteTodo(id);
+                return;
+            }
+            var todo = null;
+            for (var i = 0; i < todos.length; i++) {
+                if (todos[i].id === id) { todo = todos[i]; break; }
+            }
+            if (todo && newText) {
+                todo.text = newText;
+                saveTodos();
+            }
+            editingId = null;
+            renderTodos();
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            renderTodos();
+        }
+
+        function deleteTodo(id) {
+            todos = todos.filter(function(t) { return t.id !== id; });
+            if (editingId === id) editingId = null;
+            if (reminders[id]) {
+                cancelReminder(id);
+            }
+            saveTodos();
+            renderTodos();
+            showToast('已删除');
+        }
+
+        function clearCompleted() {
+            var doneCount = 0;
+            todos.forEach(function(t) {
+                if (t.completed) {
+                    doneCount++;
+                    if (reminders[t.id]) {
+                        cancelReminder(t.id);
+                    }
+                }
+            });
+            if (doneCount === 0) return;
+            todos = todos.filter(function(t) { return !t.completed; });
+            saveTodos();
+            renderTodos();
+            showToast('已清除 ' + doneCount + ' 项已完成待办');
+        }
+
+        // 提醒相关函数
+        function openReminderDialog(todoId) {
+            currentReminderTodoId = todoId;
+            var hasReminder = !!reminders[todoId];
+
+            reminderRemoveBtn.style.display = hasReminder ? '' : 'none';
+
+            if (hasReminder) {
+                var reminderTime = reminders[todoId].reminderTime;
+                var date = new Date(reminderTime);
+                var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+                reminderCustomTime.value = date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+            } else {
+                reminderCustomTime.value = '';
+            }
+
+            reminderDialogOverlay.classList.add('visible');
+        }
+
+        function closeReminderDialog() {
+            reminderDialogOverlay.classList.remove('visible');
+            currentReminderTodoId = null;
+        }
+
+        function setReminder(todoId, reminderTime) {
+            var todo = null;
+            for (var i = 0; i < todos.length; i++) {
+                if (todos[i].id === todoId) { todo = todos[i]; break; }
+            }
+            if (!todo) return;
+
+            reminders[todoId] = { reminderTime: reminderTime };
+            saveReminders();
+
+            if (window.TodoListPreload) {
+                window.TodoListPreload.setReminder(todoId, todo.text, reminderTime);
+            }
+
+            renderTodos();
+            showToast('已设置提醒');
+        }
+
+        function cancelReminder(todoId) {
+            delete reminders[todoId];
+            saveReminders();
+
+            if (window.TodoListPreload) {
+                window.TodoListPreload.cancelReminder(todoId);
+            }
+
+            renderTodos();
+        }
+
+        function saveReminders() {
+            try {
+                localStorage.setItem('neowarp_todo_reminders', JSON.stringify(reminders));
+            } catch(e) {}
+        }
+
+        function loadReminders() {
+            try {
+                var raw = localStorage.getItem('neowarp_todo_reminders');
+                if (raw) {
+                    reminders = JSON.parse(raw);
+                    if (typeof reminders !== 'object' || reminders === null) reminders = {};
+                }
+            } catch(e) {
+                reminders = {};
+            }
+        }
+
+        function restoreReminders() {
+            if (!window.TodoListPreload) return;
+
+            for (var todoId in reminders) {
+                var todo = null;
+                for (var i = 0; i < todos.length; i++) {
+                    if (todos[i].id === todoId) { todo = todos[i]; break; }
+                }
+                if (todo) {
+                    window.TodoListPreload.setReminder(todoId, todo.text, reminders[todoId].reminderTime);
+                }
+            }
+
+            window.TodoListPreload.onReminderTriggered(function(data) {
+                var todoId = data.todoId;
+                delete reminders[todoId];
+                saveReminders();
+                renderTodos();
+            });
+        }
+
+        function applyTheme(t) {
+            theme = t;
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+
+        function initTheme() {
+            if (window.TodoListPreload) {
+                window.TodoListPreload.getTheme().then(function(t) {
+                    applyTheme(t);
+                });
+                window.TodoListPreload.onThemeChanged(function(data) {
+                    applyTheme(data.theme || 'light');
+                });
+            }
+        }
+
+        loadTodos();
+        loadReminders();
+
+        addBtn.addEventListener('click', addTodo);
+        addInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                addTodo();
+            }
+        });
+        clearDoneBtn.addEventListener('click', clearCompleted);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (editingId) {
+                    cancelEdit();
+                    e.preventDefault();
+                } else if (reminderDialogOverlay.classList.contains('visible')) {
+                    closeReminderDialog();
+                    e.preventDefault();
+                }
+            }
+        });
+
+        // 提醒对话框事件
+        reminderPresetGroup.addEventListener('click', function(e) {
+            if (e.target.classList.contains('reminder-preset-btn')) {
+                var minutes = parseInt(e.target.getAttribute('data-minutes'));
+                var now = new Date();
+                var targetTime = new Date(now.getTime() + minutes * 60000);
+                var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+                reminderCustomTime.value = targetTime.getFullYear() + '-' + pad(targetTime.getMonth() + 1) + '-' + pad(targetTime.getDate()) + 'T' + pad(targetTime.getHours()) + ':' + pad(targetTime.getMinutes());
+            }
+        });
+
+        reminderCancelBtn.addEventListener('click', function() {
+            closeReminderDialog();
+        });
+
+        reminderRemoveBtn.addEventListener('click', function() {
+            if (currentReminderTodoId && reminders[currentReminderTodoId]) {
+                cancelReminder(currentReminderTodoId);
+                closeReminderDialog();
+                showToast('已取消提醒');
+            }
+        });
+
+        reminderConfirmBtn.addEventListener('click', function() {
+            if (!currentReminderTodoId) return;
+
+            var reminderTime = reminderCustomTime.value;
+            if (!reminderTime) {
+                showToast('请选择提醒时间');
+                return;
+            }
+
+            setReminder(currentReminderTodoId, reminderTime);
+            closeReminderDialog();
+        });
+
+        reminderDialogOverlay.addEventListener('click', function(e) {
+            if (e.target === reminderDialogOverlay) {
+                closeReminderDialog();
+            }
+        });
+
+        initTheme();
+        renderTodos();
+        restoreReminders();
+
+        setTimeout(function() {
+            addInput.focus();
+        }, 200);
+    })();
+    </script>
+</body>
+</html>

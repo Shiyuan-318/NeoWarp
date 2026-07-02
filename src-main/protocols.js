@@ -40,6 +40,10 @@ const FILE_SCHEMES = {
     root: path.resolve(__dirname, '../src-renderer/about'),
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
   },
+  'tw-contact': {
+    root: path.resolve(__dirname, '../src-renderer/contact'),
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
+  },
   'tw-packager': {
     root: path.resolve(__dirname, '../src-renderer/packager'),
     standard: true,
@@ -76,6 +80,36 @@ const FILE_SCHEMES = {
   },
   'tw-detached-stage': {
     root: path.resolve(__dirname, '../src-renderer/detached-stage'),
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
+  },
+  'tw-ai-assistant': {
+    root: path.resolve(__dirname, '../src-renderer/ai-assistant'),
+    standard: true,
+    secure: true,
+    csp: "default-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'unsafe-inline'; connect-src *; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net"
+  },
+  'tw-todo-list': {
+    root: path.resolve(__dirname, '../src-renderer/todo-list'),
+    standard: true,
+    secure: true,
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
+  },
+  'tw-project-analysis': {
+    root: path.resolve(__dirname, '../src-renderer/project-analysis'),
+    standard: true,
+    secure: true,
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline' 'self'; img-src 'self' data:"
+  },
+  'tw-task-manager': {
+    root: path.resolve(__dirname, '../src-renderer/task-manager'),
+    standard: true,
+    secure: true,
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline' 'self'; img-src 'self' data:"
+  },
+  'tw-collaboration': {
+    root: path.resolve(__dirname, '../src-renderer/collaboration'),
+    standard: true,
+    secure: true,
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
   }
 };

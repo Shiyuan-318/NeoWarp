@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>项目分析</title>
+    <style>
+        :root {
+            --bg: #f2f2f7;
+            --surface: #ffffff;
+            --surface-secondary: #f2f2f7;
+            --text: #1c1c1e;
+            --text-secondary: #8e8e93;
+            --text-tertiary: #aeaeb2;
+            --border: rgba(60, 60, 67, 0.12);
+            --accent: #007aff;
+            --accent-light: rgba(0, 122, 255, 0.08);
+            --shadow: 0 0.5px 0 rgba(0,0,0,0.04);
+            --shadow-lg: 0 2px 16px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.08);
+            --radius: 16px;
+            --radius-sm: 12px;
+            --radius-xs: 8px;
+            --transition: 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+            --motion: #4C97FF;
+            --looks: #9966FF;
+            --sound: #CF63CF;
+            --events: #FFBF00;
+            --control: #FFAB19;
+            --sensing: #5CB1D6;
+            --operators: #59C059;
+            --variables: #FF8C1A;
+            --myblocks: #FF6680;
+            --other: #8E8E93;
+            --warn: #FF9500;
+            --warn-light: rgba(255, 149, 0, 0.1);
+            --good: #34C759;
+            --good-light: rgba(52, 199, 89, 0.1);
+            --danger: #FF3B30;
+            --danger-light: rgba(255, 59, 48, 0.1);
+            --separator: rgba(60, 60, 67, 0.12);
+        }
+
+        [data-theme="dark"] {
+            --bg: #000000;
+            --surface: #1c1c1e;
+            --surface-secondary: #2c2c2e;
+            --text: #f5f5f7;
+            --text-secondary: #98989d;
+            --text-tertiary: #636366;
+            --border: rgba(84, 84, 88, 0.65);
+            --accent: #0a84ff;
+            --accent-light: rgba(10, 132, 255, 0.12);
+            --shadow: 0 0.5px 0 rgba(255,255,255,0.04);
+            --shadow-lg: 0 2px 16px rgba(0,0,0,0.24), 0 0 1px rgba(255,255,255,0.06);
+            --warn-light: rgba(255, 149, 0, 0.15);
+            --good-light: rgba(52, 199, 89, 0.15);
+            --danger-light: rgba(255, 59, 48, 0.15);
+            --separator: rgba(84, 84, 88, 0.65);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+            transition: background var(--transition), color var(--transition);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            border-bottom: 0.5px solid var(--separator);
+            background: rgba(242, 242, 247, 0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            z-index: 100;
+            -webkit-app-region: drag;
+            transition: background var(--transition), border-color var(--transition);
+        }
+
+        [data-theme="dark"] .header {
+            background: rgba(0, 0, 0, 0.72);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: -0.4px;
+        }
+
+        .export-btn {
+            -webkit-app-region: no-drag;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: var(--radius-xs);
+            background: var(--surface-secondary);
+            color: var(--accent);
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .export-btn:hover {
+            background: var(--accent-light);
+        }
+        .export-btn:active {
+            transform: scale(0.92);
+            opacity: 0.7;
+        }
+
+        .analysis-footer {
+            text-align: center;
+            padding: 20px 0 12px;
+            color: var(--text-tertiary);
+        }
+        .analysis-time {
+            font-size: 12px;
+        }
+        .analysis-brand {
+            font-size: 11px;
+            margin-top: 2px;
+            letter-spacing: 0.5px;
+        }
+
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            gap: 16px;
+            padding-top: 60px;
+            color: var(--text-tertiary);
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 56px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .main-content::-webkit-scrollbar {
+            width: 0;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow-lg);
+            transition: all var(--transition);
+        }
+
+        .card-header {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: -0.1px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: none;
+        }
+
+        .metric-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .metric-card {
+            flex: 1;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text);
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
+        }
+        .metric-value.accent { color: var(--accent); }
+        .metric-value.warn { color: var(--warn); }
+        .metric-value.good { color: var(--good); }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: -0.1px;
+        }
+
+        .project-name {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.6px;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+        .project-meta {
+            font-size: 13px;
+            color: var(--text-secondary);
+            letter-spacing: -0.1px;
+        }
+
+        .chart-section {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .donut-container {
+            flex-shrink: 0;
+            position: relative;
+            width: 140px;
+            height: 140px;
+        }
+
+        .donut-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .donut-total {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            line-height: 1.1;
+        }
+        .donut-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .donut-svg {
+            width: 140px;
+            height: 140px;
+            transform: rotate(-90deg);
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            padding: 4px 0;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .legend-name {
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .legend-count {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
+            font-size: 13px;
+            min-width: 24px;
+            text-align: right;
+        }
+
+        .legend-pct {
+            color: var(--text-tertiary);
+            font-variant-numeric: tabular-nums;
+            font-size: 12px;
+            min-width: 36px;
+            text-align: right;
+        }
+
+        .empty-legend {
+            color: var(--text-tertiary);
+            font-size: 13px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .optimization-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            line-height: 1.5;
+            letter-spacing: -0.1px;
+        }
+        .optimization-box.good {
+            background: var(--good-light);
+            color: var(--good);
+        }
+        .optimization-box.warn {
+            background: var(--warn-light);
+            color: var(--warn);
+        }
+        .optimization-box svg {
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .progress-fill.low { background: var(--good); }
+        .progress-fill.medium { background: var(--warn); }
+        .progress-fill.high { background: var(--danger); }
+
+        .error-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            gap: 12px;
+            padding-top: 60px;
+            color: var(--text-tertiary);
+        }
+        .error-state svg {
+            width: 40px;
+            height: 40px;
+            opacity: 0.4;
+        }
+
+        @media (min-width: 700px) {
+            .main-content {
+                padding: 60px 24px 24px;
+                gap: 24px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .card-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+            .card-grid .card {
+                height: 100%;
+            }
+
+            .chart-section {
+                gap: 28px;
+            }
+
+            .donut-container {
+                width: 170px;
+                height: 170px;
+            }
+            .donut-svg {
+                width: 170px;
+                height: 170px;
+            }
+            .donut-total {
+                font-size: 32px;
+            }
+
+            .legend {
+                gap: 7px;
+            }
+            .legend-item {
+                font-size: 14px;
+            }
+
+            .metric-value {
+                font-size: 32px;
+            }
+            .metric-card {
+                padding: 14px 16px;
+            }
+
+            .project-name {
+                font-size: 24px;
+            }
+        }
+
+        @media (min-width: 900px) {
+            .main-content {
+                max-width: 960px;
+                margin: 0 auto;
+                width: 100%;
+                padding: 64px 32px 28px;
+                gap: 28px;
+            }
+
+            .card-grid {
+                gap: 24px;
+            }
+
+            .donut-container {
+                width: 200px;
+                height: 200px;
+            }
+            .donut-svg {
+                width: 200px;
+                height: 200px;
+            }
+            .donut-total {
+                font-size: 36px;
+            }
+
+            .chart-section {
+                gap: 36px;
+            }
+
+            .legend-item {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-left">
+            <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path>
+            </svg>
+            <span class="header-title">项目分析</span>
+        </div>
+        <button class="export-btn" id="exportBtn" title="导出为图片">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+        </button>
+    </div>
+
+    <div class="loading-state" id="loadingState">
+        <div class="spinner"></div>
+        <span>正在分析项目...</span>
+    </div>
+
+    <div class="main-content" id="mainContent" style="display:none;">
+        <div class="card" id="overviewCard">
+            <div class="project-name" id="projectName">-</div>
+            <div class="project-meta" id="projectMeta">-</div>
+        </div>
+
+        <div class="card-grid">
+            <div class="card">
+                <div class="card-header">基本信息</div>
+            <div class="metric-row">
+                <div class="metric-card">
+                    <div class="metric-value accent" id="spriteCount">0</div>
+                    <div class="metric-label">角色</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value accent" id="backdropCount">0</div>
+                    <div class="metric-label">背景</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value accent" id="soundCount">0</div>
+                    <div class="metric-label">声音</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">代码构成</div>
+            <div class="chart-section">
+                <div class="donut-container">
+                    <svg class="donut-svg" viewBox="0 0 160 160" id="donutSvg"></svg>
+                    <div class="donut-center">
+                        <div class="donut-total" id="blockTotal">0</div>
+                        <div class="donut-label">总积木数</div>
+                    </div>
+                </div>
+                <div class="legend" id="legendContainer">
+                    <div class="empty-legend">暂无积木</div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <div class="card" id="complexityCard">
+            <div class="card-header">代码复杂度</div>
+            <div id="complexityContent"></div>
+        </div>
+
+        <div class="card" id="qualityCard">
+            <div class="card-header">代码质量</div>
+            <div id="qualityContent"></div>
+        </div>
+
+        <div class="card" id="healthCard">
+            <div class="card-header">项目健康度</div>
+            <div id="healthContent"></div>
+        </div>
+
+        <div class="analysis-footer">
+            <div class="analysis-time" id="analysisTime">-</div>
+            <div class="analysis-brand">NeoWarp</div>
+        </div>
+    </div>
+
+    <div class="error-state" id="errorState" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span id="errorText">无法获取项目数据</span>
+    </div>
+
+    <script src="html2canvas.min.js"></script>
+    <script>
+    (function() {
+        var theme = 'light';
+
+        var CATEGORY_COLORS = {
+            motion: '#4C97FF',
+            looks: '#9966FF',
+            sound: '#CF63CF',
+            events: '#FFBF00',
+            control: '#FFAB19',
+            sensing: '#5CB1D6',
+            operators: '#59C059',
+            variables: '#FF8C1A',
+            myBlocks: '#FF6680',
+            other: '#AAAAAA'
+        };
+
+        var CATEGORY_NAMES = {
+            motion: '运动',
+            looks: '外观',
+            sound: '声音',
+            events: '事件',
+            control: '控制',
+            sensing: '侦测',
+            operators: '运算',
+            variables: '变量',
+            myBlocks: '自制积木',
+            other: '其他'
+        };
+
+        function applyTheme(t) {
+            theme = t;
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+
+        function initTheme() {
+            if (window.ProjectAnalysisPreload) {
+                window.ProjectAnalysisPreload.getTheme().then(function(t) {
+                    applyTheme(t);
+                });
+                window.ProjectAnalysisPreload.onThemeChanged(function(data) {
+                    applyTheme(data.theme || 'light');
+                });
+            }
+        }
+
+        function show(el) { el.style.display = ''; }
+        function hide(el) { el.style.display = 'none'; }
+
+        function getSubstackDepth(block, blocks, visited) {
+            if (!block || visited.has(block)) return 0;
+            visited.add(block);
+
+            var maxSub = 0;
+            var inputs = block.inputs || {};
+            ['SUBSTACK', 'SUBSTACK2'].forEach(function(name) {
+                var input = inputs[name];
+                if (input && Array.isArray(input) && input.length >= 2) {
+                    var subBlockId = input[1];
+                    if (typeof subBlockId === 'string' && blocks[subBlockId]) {
+                        var subDepth = getSubstackDepth(blocks[subBlockId], blocks, visited);
+                        maxSub = Math.max(maxSub, subDepth + 1);
+                    }
+                }
+            });
+
+            if (block.next && typeof block.next === 'string' && blocks[block.next]) {
+                var nextDepth = getSubstackDepth(blocks[block.next], blocks, visited);
+                maxSub = Math.max(maxSub, nextDepth);
+            }
+
+            return maxSub;
+        }
+
+        function analyzeProject(projectJSON, openTime, projectTitle, assetSize) {
+            var data;
+            try {
+                data = typeof projectJSON === 'string' ? JSON.parse(projectJSON) : projectJSON;
+            } catch(e) {
+                hide(document.getElementById('loadingState'));
+                hide(document.getElementById('mainContent'));
+                show(document.getElementById('errorState'));
+                document.getElementById('errorText').textContent = '项目数据解析失败';
+                return;
+            }
+
+            if (!data) {
+                hide(document.getElementById('loadingState'));
+                hide(document.getElementById('mainContent'));
+                show(document.getElementById('errorState'));
+                return;
+            }
+
+            var targets = data.targets || [];
+            var stage = null;
+            var sprites = [];
+
+            targets.forEach(function(t) {
+                if (t.isStage) {
+                    stage = t;
+                } else {
+                    sprites.push(t);
+                }
+            });
+
+            var projectName = (projectTitle && projectTitle !== 'NeoWarp') ? projectTitle : ((stage && stage.name && stage.name !== 'Stage') ? stage.name : '未命名项目');
+            var backdropCount = stage ? (stage.costumes || []).length : 0;
+            var spriteCount = sprites.length;
+
+            var totalSounds = 0;
+            sprites.forEach(function(s) {
+                totalSounds += (s.sounds || []).length;
+            });
+            if (stage && stage.sounds) totalSounds += stage.sounds.length;
+
+            var totalMemory = assetSize || 0;
+
+            targets.forEach(function(target) {
+                var blocksSize = target.blocks ? JSON.stringify(target.blocks).length : 0;
+                totalMemory += blocksSize;
+            });
+
+            var categoryCounts = {};
+            Object.keys(CATEGORY_NAMES).forEach(function(k) { categoryCounts[k] = 0; });
+            var totalBlocks = 0;
+            var varCount = 0;
+            var listCount = 0;
+
+            // 统计变量：target.variables 存放普通变量([name, value])，target.lists 存放列表([name, items])
+            var stageBlocks = 0;
+            targets.forEach(function(target) {
+                if (target.variables) {
+                    varCount += Object.keys(target.variables).length;
+                }
+                if (target.lists) {
+                    listCount += Object.keys(target.lists).length;
+                }
+
+                if (target.blocks) {
+                    Object.keys(target.blocks).forEach(function(blockId) {
+                        var block = target.blocks[blockId];
+                        if (!block || !block.opcode) return;
+                        if (block.shadow) return;
+
+                        totalBlocks++;
+                        if (target.isStage) stageBlocks++;
+
+                        var opcode = block.opcode;
+                        var cat = 'other';
+
+                        if (opcode.startsWith('motion_')) cat = 'motion';
+                        else if (opcode.startsWith('looks_')) cat = 'looks';
+                        else if (opcode.startsWith('sound_')) cat = 'sound';
+                        else if (opcode.startsWith('event_')) cat = 'events';
+                        else if (opcode.startsWith('control_')) cat = 'control';
+                        else if (opcode.startsWith('sensing_')) cat = 'sensing';
+                        else if (opcode.startsWith('operator_')) cat = 'operators';
+                        else if (opcode.startsWith('data_')) cat = 'variables';
+                        else if (opcode.startsWith('procedures_')) cat = 'myBlocks';
+
+                        categoryCounts[cat]++;
+                    });
+                }
+            });
+
+            // 代码复杂度和质量分析数据收集
+            var scriptData = [];
+            var maxNestingDepth = 0;
+            var loopCount = 0;
+            var conditionalCount = 0;
+            var commentCount = 0;
+            var usedVarNames = {};
+            var allVarNames = {};
+
+            targets.forEach(function(target) {
+                var blocks = target.blocks || {};
+                var comments = target.comments || {};
+                commentCount += Object.keys(comments).length;
+
+                if (target.variables) {
+                    Object.keys(target.variables).forEach(function(varId) {
+                        var v = target.variables[varId];
+                        var name = Array.isArray(v) ? v[0] : (v.name || varId);
+                        allVarNames[name] = true;
+                    });
+                }
+                if (target.lists) {
+                    Object.keys(target.lists).forEach(function(listId) {
+                        var l = target.lists[listId];
+                        allVarNames[Array.isArray(l) ? l[0] : listId] = true;
+                    });
+                }
+
+                Object.keys(blocks).forEach(function(blockId) {
+                    var block = blocks[blockId];
+                    if (!block || block.shadow) return;
+
+                    var op = block.opcode;
+                    if (op === 'control_repeat' || op === 'control_repeat_until' || op === 'control_forever') loopCount++;
+                    if (op === 'control_if' || op === 'control_if_else') conditionalCount++;
+
+                    if (op === 'data_variable' || op === 'data_listcontents') {
+                        var fields = block.fields || {};
+                        if (fields.VARIABLE && fields.VARIABLE[0]) usedVarNames[fields.VARIABLE[0]] = true;
+                        if (fields.LIST && fields.LIST[0]) usedVarNames[fields.LIST[0]] = true;
+                    }
+
+                    if (block.topLevel) {
+                        var opcodes = [];
+                        var current = block;
+                        var visited = new Set();
+                        var blockCount = 0;
+
+                        while (current && !visited.has(current)) {
+                            visited.add(current);
+                            opcodes.push(current.opcode);
+                            blockCount++;
+
+                            if (current.next && blocks[current.next]) {
+                                current = blocks[current.next];
+                            } else {
+                                break;
+                            }
+                        }
+
+                        var depth = getSubstackDepth(block, blocks, new Set());
+                        if (depth > maxNestingDepth) maxNestingDepth = depth;
+
+                        scriptData.push({
+                            opcodes: opcodes,
+                            blockCount: blockCount,
+                            isEmpty: blockCount <= 1
+                        });
+                    }
+                });
+            });
+
+            var scriptCount = scriptData.length;
+            var longestScript = 0;
+            var totalScriptBlocks = 0;
+            scriptData.forEach(function(s) {
+                if (s.blockCount > longestScript) longestScript = s.blockCount;
+                totalScriptBlocks += s.blockCount;
+            });
+            var avgScriptLength = scriptCount > 0 ? (totalScriptBlocks / scriptCount).toFixed(1) : '0';
+
+            var emptyScriptCount = scriptData.filter(function(s) { return s.isEmpty; }).length;
+
+            var signatures = {};
+            var duplicateScriptCount = 0;
+            scriptData.forEach(function(s) {
+                if (s.opcodes.length < 2) return;
+                var sig = s.opcodes.join(',');
+                if (signatures[sig]) {
+                    duplicateScriptCount++;
+                } else {
+                    signatures[sig] = true;
+                }
+            });
+
+            var unusedVarCount = 0;
+            Object.keys(allVarNames).forEach(function(name) {
+                if (!usedVarNames[name]) unusedVarCount++;
+            });
+
+            document.getElementById('projectName').textContent = projectName;
+            document.getElementById('projectMeta').textContent =
+                spriteCount + ' 个角色 · ' + backdropCount + ' 个背景 · ' + totalBlocks + ' 个积木' +
+                (stageBlocks > 0 ? '（其中舞台 ' + stageBlocks + ' 个）' : '');
+
+            document.getElementById('spriteCount').textContent = spriteCount;
+            document.getElementById('backdropCount').textContent = backdropCount;
+            document.getElementById('soundCount').textContent = totalSounds;
+            document.getElementById('blockTotal').textContent = totalBlocks;
+
+            renderDonut(categoryCounts, totalBlocks);
+
+            renderHealth(openTime, totalMemory, spriteCount, totalBlocks);
+
+            renderComplexity(scriptCount, longestScript, avgScriptLength, maxNestingDepth, loopCount, conditionalCount);
+
+            renderQuality(unusedVarCount, emptyScriptCount, duplicateScriptCount, commentCount, scriptCount);
+
+            var now = new Date();
+            var timeStr = now.getFullYear() + '/' +
+                String(now.getMonth() + 1).padStart(2, '0') + '/' +
+                String(now.getDate()).padStart(2, '0') + ' ' +
+                String(now.getHours()).padStart(2, '0') + ':' +
+                String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('analysisTime').textContent = '分析时间：' + timeStr;
+
+            hide(document.getElementById('loadingState'));
+            show(document.getElementById('mainContent'));
+        }
+
+        function renderDonut(categoryCounts, totalBlocks) {
+            var svg = document.getElementById('donutSvg');
+            var legendContainer = document.getElementById('legendContainer');
+
+            if (totalBlocks === 0) {
+                var cx = 80, cy = 80, r = 64, sw = 18;
+                svg.innerHTML =
+                    '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="var(--border)" stroke-width="' + sw + '"/>';
+                legendContainer.innerHTML = '<div class="empty-legend">暂无积木</div>';
+                return;
+            }
+
+            var categories = Object.keys(CATEGORY_NAMES);
+            var entries = [];
+
+            categories.forEach(function(cat) {
+                var count = categoryCounts[cat] || 0;
+                if (count > 0) {
+                    entries.push({ cat: cat, count: count });
+                }
+            });
+
+            entries.sort(function(a, b) { return b.count - a.count; });
+
+            var cx = 80, cy = 80, r = 60, sw = 16;
+            var circumference = 2 * Math.PI * r;
+            var cumulativeAngle = 0;
+
+            var svgParts = [];
+
+            entries.forEach(function(entry) {
+                var fraction = entry.count / totalBlocks;
+                var dashLength = fraction * circumference;
+                var rotationDeg = (cumulativeAngle / (2 * Math.PI)) * 360;
+
+                svgParts.push(
+                    '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none"' +
+                    ' stroke="' + CATEGORY_COLORS[entry.cat] + '"' +
+                    ' stroke-width="' + sw + '"' +
+                    ' stroke-dasharray="' + dashLength.toFixed(2) + ' ' + (circumference - dashLength).toFixed(2) + '"' +
+                    ' stroke-dashoffset="0"' +
+                    ' transform="rotate(' + rotationDeg.toFixed(2) + ' ' + cx + ' ' + cy + ')"' +
+                    '/>'
+                );
+
+                cumulativeAngle += fraction * 2 * Math.PI;
+            });
+
+            svg.innerHTML = svgParts.join('');
+
+            var legendParts = [];
+            entries.forEach(function(entry) {
+                var pct = ((entry.count / totalBlocks) * 100).toFixed(1);
+                legendParts.push(
+                    '<div class="legend-item">' +
+                    '<div class="legend-dot" style="background:' + CATEGORY_COLORS[entry.cat] + '"></div>' +
+                    '<span class="legend-name">' + (CATEGORY_NAMES[entry.cat] || entry.cat) + '</span>' +
+                    '<span class="legend-count">' + entry.count + '</span>' +
+                    '<span class="legend-pct">' + pct + '%</span>' +
+                    '</div>'
+                );
+            });
+            legendContainer.innerHTML = legendParts.join('');
+        }
+
+        function renderHealth(openTime, memoryBytes, spriteCount, totalBlocks) {
+            var container = document.getElementById('healthContent');
+
+            var now = Date.now();
+            var elapsedMs = now - (openTime || now);
+            var elapsedMin = Math.floor(elapsedMs / 60000);
+            var elapsedHours = Math.floor(elapsedMin / 60);
+            var remainingMin = elapsedMin % 60;
+
+            var timeDisplay;
+            if (elapsedHours > 0) {
+                timeDisplay = elapsedHours + ' 小时 ' + remainingMin + ' 分钟';
+            } else {
+                timeDisplay = elapsedMin + ' 分钟';
+            }
+
+            var memoryKB = Math.round(memoryBytes / 1024);
+            var memoryMB = (memoryBytes / (1024 * 1024)).toFixed(2);
+            var memoryDisplay;
+            if (memoryBytes >= 1024 * 1024) {
+                memoryDisplay = memoryMB + ' MB';
+            } else {
+                memoryDisplay = memoryKB + ' KB';
+            }
+
+            var memoryLevel = '低';
+            var memoryClass = 'good';
+            if (memoryBytes > 50 * 1024 * 1024) { memoryLevel = '高'; memoryClass = 'high'; }
+            else if (memoryBytes > 10 * 1024 * 1024) { memoryLevel = '中'; memoryClass = 'medium'; }
+            else { memoryClass = 'low'; }
+
+            var memoryPct = Math.min(100, Math.round((memoryBytes / (80 * 1024 * 1024)) * 100));
+
+            var elapsedScore = elapsedMin > 120 ? 2 : (elapsedMin > 60 ? 1 : 0);
+            var memoryScore = memoryBytes > 50 * 1024 * 1024 ? 2 : (memoryBytes > 10 * 1024 * 1024 ? 1 : 0);
+            var totalScore = elapsedScore + memoryScore;
+
+            var overallLevel = totalScore <= 1 ? '健康' : (totalScore <= 2 ? '一般' : '需关注');
+            var overallClass = totalScore <= 1 ? 'good' : (totalScore <= 2 ? 'warn' : 'warn');
+
+            var html = '';
+
+            html += '<div class="metric-row">' +
+                '<div class="metric-card">' +
+                '<div class="metric-value" style="font-size:22px;">' + timeDisplay + '</div>' +
+                '<div class="metric-label">项目已打开时长</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                '<div class="metric-value ' + (memoryLevel === '高' ? 'warn' : (memoryLevel === '中' ? 'warn' : 'good')) + '" style="font-size:22px;">' + memoryDisplay + '</div>' +
+                '<div class="metric-label">内存占用</div>' +
+                '<div class="progress-bar"><div class="progress-fill ' + memoryClass + '" style="width:' + memoryPct + '%"></div></div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                '<div class="metric-value ' + overallClass + '" style="font-size:22px;">' + overallLevel + '</div>' +
+                '<div class="metric-label">综合健康度</div>' +
+                '</div>' +
+                '</div>';
+
+            var suggestions = [];
+
+            if (elapsedMin > 120) {
+                suggestions.push({
+                    type: 'warn',
+                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
+                    text: '项目已打开超过 2 小时，建议保存并稍作休息，避免眼疲劳。'
+                });
+            } else if (elapsedMin > 60) {
+                suggestions.push({
+                    type: 'warn',
+                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
+                    text: '项目已打开超过 1 小时，记得定时保存您的作品。'
+                });
+            }
+
+            if (memoryBytes > 50 * 1024 * 1024) {
+                suggestions.push({
+                    type: 'warn',
+                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+                    text: '内存占用较高（' + memoryDisplay + '），建议清理不用的造型和声音文件以优化加载速度。'
+                });
+            } else if (memoryBytes > 10 * 1024 * 1024) {
+                suggestions.push({
+                    type: 'warn',
+                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
+                    text: '内存占用中等（' + memoryDisplay + '），仍在合理范围内，但建议注意资源管理。'
+                });
+            }
+
+            if (totalBlocks > 20000) {
+                suggestions.push({
+                    type: 'warn',
+                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+                    text: '积木数量较多（' + totalBlocks + ' 个），建议合理使用自制积木（函数）来组织代码结构，提高可维护性。'
+                });
+            }
+
+            if (spriteCount > 100) {
+                suggestions.push({
+                    type: 'warn',
+                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+                    text: '角色数量较多（' + spriteCount + ' 个），考虑是否有多余的未使用角色可以清理。'
+                });
+            }
+
+            if (suggestions.length === 0) {
+                suggestions.push({
+                    type: 'good',
+                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
+                    text: '项目状态良好！内存占用合理，继续保持。'
+                });
+            }
+
+            suggestions.forEach(function(s) {
+                html += '<div class="optimization-box ' + s.type + '">' + s.icon + '<span>' + s.text + '</span></div>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderComplexity(scriptCount, longestScript, avgScriptLength, maxNestingDepth, loopCount, conditionalCount) {
+            var container = document.getElementById('complexityContent');
+
+            var complexityScore = 0;
+            if (maxNestingDepth >= 5) complexityScore += 3;
+            else if (maxNestingDepth >= 3) complexityScore += 2;
+            else if (maxNestingDepth >= 1) complexityScore += 1;
+
+            if (longestScript >= 50) complexityScore += 3;
+            else if (longestScript >= 30) complexityScore += 2;
+            else if (longestScript >= 15) complexityScore += 1;
+
+            if (loopCount >= 20) complexityScore += 2;
+            else if (loopCount >= 10) complexityScore += 1;
+
+            if (conditionalCount >= 20) complexityScore += 2;
+            else if (conditionalCount >= 10) complexityScore += 1;
+
+            var complexityLevel = complexityScore <= 2 ? '低' : (complexityScore <= 5 ? '中' : '高');
+            var complexityClass = complexityScore <= 2 ? 'good' : 'warn';
+            var complexityBarClass = complexityScore <= 2 ? 'low' : (complexityScore <= 5 ? 'medium' : 'high');
+            var complexityPct = Math.min(100, complexityScore * 10);
+
+            var html = '';
+            html += '<div class="metric-row">' +
+                '<div class="metric-card">' +
+                '<div class="metric-value accent" style="font-size:22px;">' + maxNestingDepth + '</div>' +
+                '<div class="metric-label">最大嵌套深度</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                '<div class="metric-value accent" style="font-size:22px;">' + scriptCount + '</div>' +
+                '<div class="metric-label">脚本数量</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                '<div class="metric-value accent" style="font-size:22px;">' + longestScript + '</div>' +
+                '<div class="metric-label">最长脚本</div>' +
+                '</div>' +
+                '</div>';
+
+            html += '<div class="metric-row" style="margin-top:12px;">' +
+                '<div class="metric-card">' +
+                '<div class="metric-value accent" style="font-size:22px;">' + avgScriptLength + '</div>' +
+                '<div class="metric-label">平均脚本长度</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                '<div class="metric-value accent" style="font-size:22px;">' + loopCount + '</div>' +
+                '<div class="metric-label">循环数量</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                '<div class="metric-value accent" style="font-size:22px;">' + conditionalCount + '</div>' +
+                '<div class="metric-label">条件判断</div>' +
+                '</div>' +
+                '</div>';
+
+            html += '<div style="margin-top:14px;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                '<span style="font-size:13px;color:var(--text-secondary);">复杂度等级</span>' +
+                '<span class="metric-value ' + complexityClass + '" style="font-size:16px;">' + complexityLevel + '</span>' +
+                '</div>' +
+                '<div class="progress-bar"><div class="progress-fill ' + complexityBarClass + '" style="width:' + complexityPct + '%"></div></div>' +
+                '</div>';
+
+            container.innerHTML = html;
+        }
+
+        function renderQuality(unusedVarCount, emptyScriptCount, duplicateScriptCount, commentCount, scriptCount) {
+            var container = document.getElementById('qualityContent');
+
+            var html = '';
+            html += '<div class="metric-row">' +
+                '<div class="metric-card">' +
+                '<div class="metric-value ' + (unusedVarCount > 0 ? 'warn' : 'good') + '" style="font-size:22px;">' + unusedVarCount + '</div>' +
+                '<div class="metric-label">未使用变量</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                '<div class="metric-value ' + (emptyScriptCount > 0 ? 'warn' : 'good') + '" style="font-size:22px;">' + emptyScriptCount + '</div>' +
+                '<div class="metric-label">空脚本</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                '<div class="metric-value ' + (duplicateScriptCount > 0 ? 'warn' : 'good') + '" style="font-size:22px;">' + duplicateScriptCount + '</div>' +
+                '<div class="metric-label">重复脚本</div>' +
+                '</div>' +
+                '<div class="metric-card">' +
+                '<div class="metric-value good" style="font-size:22px;">' + commentCount + '</div>' +
+                '<div class="metric-label">注释数</div>' +
+                '</div>' +
+                '</div>';
+
+            var warnIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+            var goodIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+
+            var suggestions = [];
+
+            if (unusedVarCount > 0) {
+                suggestions.push({ type: 'warn', text: '发现 ' + unusedVarCount + ' 个未使用的变量，建议删除以保持代码整洁。' });
+            }
+            if (emptyScriptCount > 0) {
+                suggestions.push({ type: 'warn', text: '发现 ' + emptyScriptCount + ' 个空脚本（仅有帽子积木），建议删除或补充代码。' });
+            }
+            if (duplicateScriptCount > 0) {
+                suggestions.push({ type: 'warn', text: '发现 ' + duplicateScriptCount + ' 个结构重复的脚本，建议使用自制积木来复用代码。' });
+            }
+            if (commentCount === 0 && scriptCount > 3) {
+                suggestions.push({ type: 'warn', text: '项目中没有注释，建议为复杂脚本添加注释以提高可读性。' });
+            }
+            if (suggestions.length === 0) {
+                suggestions.push({ type: 'good', text: '代码质量良好！没有发现明显的质量问题。' });
+            }
+
+            suggestions.forEach(function(s) {
+                var icon = s.type === 'good' ? goodIcon : warnIcon;
+                html += '<div class="optimization-box ' + s.type + '" style="margin-top:8px;">' + icon + '<span>' + s.text + '</span></div>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        function loadData() {
+            if (window.ProjectAnalysisPreload) {
+                window.ProjectAnalysisPreload.getProjectData().then(function(result) {
+                    if (result && result.projectJSON) {
+                        analyzeProject(result.projectJSON, result.openTime, result.projectTitle, result.assetSize);
+                    } else {
+                        hide(document.getElementById('loadingState'));
+                        hide(document.getElementById('mainContent'));
+                        show(document.getElementById('errorState'));
+                    }
+                }).catch(function() {
+                    hide(document.getElementById('loadingState'));
+                    hide(document.getElementById('mainContent'));
+                    show(document.getElementById('errorState'));
+                });
+            } else {
+                setTimeout(function() {
+                    hide(document.getElementById('loadingState'));
+                    hide(document.getElementById('mainContent'));
+                    show(document.getElementById('errorState'));
+                }, 500);
+            }
+        }
+
+        initTheme();
+        loadData();
+
+        var exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', function() {
+                var mainContent = document.getElementById('mainContent');
+                if (!mainContent || mainContent.style.display === 'none') return;
+
+                exportBtn.disabled = true;
+                exportBtn.style.opacity = '0.5';
+
+                if (window.ProjectAnalysisPreload && window.html2canvas) {
+                    var bodyBg = getComputedStyle(document.body).backgroundColor;
+
+                    // 临时展开容器以捕获完整内容
+                    var savedOverflow = mainContent.style.overflow;
+                    var savedHeight = mainContent.style.height;
+                    var savedFlex = mainContent.style.flex;
+                    mainContent.style.overflow = 'visible';
+                    mainContent.style.height = 'auto';
+                    mainContent.style.flex = 'none';
+
+                    window.html2canvas(mainContent, {
+                        backgroundColor: bodyBg,
+                        scale: 2,
+                        useCORS: true,
+                        logging: false
+                    }).then(function(canvas) {
+                        var dataUrl = canvas.toDataURL('image/png');
+                        return window.ProjectAnalysisPreload.saveImage(dataUrl);
+                    }).finally(function() {
+                        // 恢复容器样式
+                        mainContent.style.overflow = savedOverflow;
+                        mainContent.style.height = savedHeight;
+                        mainContent.style.flex = savedFlex;
+                        exportBtn.disabled = false;
+                        exportBtn.style.opacity = '';
+                    });
+                } else {
+                    exportBtn.disabled = false;
+                    exportBtn.style.opacity = '';
+                }
+            });
+        }
+    })();
+    </script>
+</body>
+</html>

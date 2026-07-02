@@ -43,7 +43,7 @@
     </style>
   </head>
   <body>
-    <div class="splash-screen" id="spash-waiting-for-js" hidden>
+    <div class="splash-screen" id="splash-waiting-for-js" hidden>
       <div class="splash-spinner"></div>
     </div>
 
@@ -81,7 +81,7 @@
           theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
 
-        var splash = document.getElementById('spash-waiting-for-js');
+        var splash = document.getElementById('splash-waiting-for-js');
         splash.setAttribute('data-theme', theme);
         if (theme !== 'dark') {
           splash.style.backgroundColor = accent;

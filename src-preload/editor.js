@@ -13,9 +13,15 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   openNewWindow: () => ipcRenderer.invoke('open-new-window'),
   openAddonSettings: (search) => ipcRenderer.invoke('open-addon-settings', search),
   openPackager: () => ipcRenderer.invoke('open-packager'),
+  showEncryptedSaveFilePicker: (suggestedName) => ipcRenderer.invoke('show-encrypted-save-file-picker', suggestedName),
+  encryptAndSave: (fileId, data, password) => ipcRenderer.invoke('encrypt-and-save', fileId, data, password),
+  decryptNpnpFile: (fileId, password) => ipcRenderer.invoke('decrypt-npnp-file', fileId, password),
+  showViewsb3SaveFilePicker: (suggestedName) => ipcRenderer.invoke('show-viewsb3-save-file-picker', suggestedName),
+  encryptAndSaveViewsb3: (fileId, data) => ipcRenderer.invoke('encrypt-and-save-viewsb3', fileId, data),
   openDesktopSettings: () => ipcRenderer.invoke('open-desktop-settings'),
   openPrivacy: () => ipcRenderer.invoke('open-privacy'),
   openAbout: () => ipcRenderer.invoke('open-about'),
+  openContact: () => ipcRenderer.invoke('open-contact'),
   getPreferredMediaDevices: () => ipcRenderer.invoke('get-preferred-media-devices'),
   getAdvancedCustomizations: () => ipcRenderer.invoke('get-advanced-customizations'),
   setExportForPackager: (callback) => {
@@ -36,7 +42,95 @@ contextBridge.exposeInMainWorld('EditorPreload', {
     detachedStageInputCallback = callback;
   },
   getCodeAreaBackgroundImage: () => ipcRenderer.sendSync('get-code-area-background-image'),
-  setCodeAreaBackgroundImage: (imageData) => ipcRenderer.invoke('set-code-area-background-image', imageData)
+  setCodeAreaBackgroundImage: (imageData) => ipcRenderer.invoke('set-code-area-background-image', imageData),
+  getStageAreaBackgroundImage: () => ipcRenderer.sendSync('get-stage-area-background-image'),
+  setStageAreaBackgroundImage: (imageData) => ipcRenderer.invoke('set-stage-area-background-image', imageData),
+  getTopBarDeviceStats: () => ipcRenderer.sendSync('get-top-bar-device-stats'),
+  openAI: () => ipcRenderer.invoke('open-ai-assistant'),
+  openTodoList: () => ipcRenderer.invoke('open-todo-list'),
+  openProjectAnalysis: () => ipcRenderer.invoke('open-project-analysis'),
+  openTaskManager: () => ipcRenderer.invoke('open-task-manager'),
+  onRequestProjectJSON: (callback) => {
+    ipcRenderer.on('request-project-json', (event, data) => {
+      callback(data);
+    });
+  },
+  sendProjectJSON: (data) => {
+    ipcRenderer.send('project-json-response', data);
+  },
+  onApplyProject: (callback) => {
+    ipcRenderer.on('apply-project', (event, data) => {
+      callback(data);
+    });
+  },
+  onApplySprite: (callback) => {
+    ipcRenderer.on('apply-sprite', (event, data) => {
+      callback(data);
+    });
+  },
+  onRequestSpriteLibrary: (callback) => {
+    ipcRenderer.on('request-sprite-library', () => {
+      callback();
+    });
+  },
+  sendSpriteLibrary: (data) => {
+    ipcRenderer.send('sprite-library-response', data);
+  },
+  fetchImage: (url) => ipcRenderer.invoke('fetch-image', url),
+  onAIToolCall: (callback) => {
+    ipcRenderer.on('ai-tool-call', (event, data) => {
+      callback(data);
+    });
+  },
+  sendAIToolResponse: (data) => {
+    ipcRenderer.send('ai-tool-response', data);
+  },
+  onRequestTheme: (callback) => {
+    ipcRenderer.on('request-theme', (event, data) => {
+      callback(data);
+    });
+  },
+  sendTheme: (data) => {
+    ipcRenderer.send('theme-response', data);
+  },
+  notifyThemeChanged: (theme) => {
+    ipcRenderer.send('theme-changed', { theme });
+  },
+  onRequestSpriteStats: (callback) => {
+    ipcRenderer.on('request-sprite-stats', (event, data) => {
+      callback(data);
+    });
+  },
+  sendSpriteStats: (data) => {
+    ipcRenderer.send('sprite-stats-response', data);
+  },
+  removeAllAIListeners: () => {
+    ipcRenderer.removeAllListeners('request-project-json');
+    ipcRenderer.removeAllListeners('apply-project');
+    ipcRenderer.removeAllListeners('apply-sprite');
+    ipcRenderer.removeAllListeners('ai-tool-call');
+    ipcRenderer.removeAllListeners('request-theme');
+  },
+  openCollaborationHost: () => ipcRenderer.invoke('open-collaboration-host'),
+  openCollaborationJoin: () => ipcRenderer.invoke('open-collaboration-join'),
+  endCollaboration: () => ipcRenderer.invoke('end-collaboration'),
+  leaveCollaboration: () => ipcRenderer.invoke('leave-collaboration'),
+  openCollaborationChat: () => ipcRenderer.invoke('open-collaboration-chat'),
+  checkCollaborationPermission: (action) => ipcRenderer.invoke('check-collaboration-permission', action),
+  onCollaborationStateChange: (callback) => {
+    ipcRenderer.on('collaboration-state-changed', (event, data) => callback(data));
+  },
+  onCollaborationChatMessage: (callback) => {
+    ipcRenderer.on('collaboration-chat-message', (event, data) => callback(data));
+  },
+  onCollaborationEnded: (callback) => {
+    ipcRenderer.on('collaboration-ended', (event, data) => callback(data));
+  },
+  removeAllCollaborationListeners: () => {
+    ipcRenderer.removeAllListeners('collaboration-state-changed');
+    ipcRenderer.removeAllListeners('collaboration-chat-message');
+    ipcRenderer.removeAllListeners('collaboration-ended');
+  }
 });
 
 let exportForPackager = () => Promise.reject(new Error('exportForPackager missing'));

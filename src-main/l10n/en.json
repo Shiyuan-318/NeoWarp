@@ -51,6 +51,14 @@
     "string": "Package Project",
     "developer_comment": "macOS menu bar item to package the project opened in the editor"
   },
+  "menu.encrypted-save": {
+    "string": "Encrypted Save",
+    "developer_comment": "macOS menu bar item to save project with encryption"
+  },
+  "menu.viewsb3-save": {
+    "string": "Save as View-only",
+    "developer_comment": "macOS menu bar item to save project as view-only .viewsb3 format"
+  },
   "menu.reload": {
     "string": "Reload",
     "developer_comment": "macOS menu bar item to reload window, like a browser"
@@ -167,6 +175,18 @@
     "string": "Source Code",
     "developer_comment": "Part of the in-app (?) button's menu. Opens link to source code."
   },
+  "in-app-about.feedback": {
+    "string": "NeoWarp Feedback",
+    "developer_comment": "Part of the in-app (?) button's menu. Opens link to feedback issues."
+  },
+  "in-app-about.contact-us": {
+    "string": "Contact Us",
+    "developer_comment": "Part of the in-app (?) button's menu. Opens contact information window."
+  },
+  "contact-us.title": {
+    "string": "Contact Us",
+    "developer_comment": "Title of the contact us window."
+  },
   "desktop-settings.title": {
     "string": "Desktop Settings",
     "developer_comment": "Title of desktop settings window"
@@ -278,6 +298,38 @@
   "desktop-settings.open-user-data": {
     "string": "Open User Data",
     "developer_comment": "Button in desktop settings to open the user data folder"
+  },
+  "desktop-settings.top-bar-device-stats": {
+    "string": "Show device usage in top bar",
+    "developer_comment": "Option in desktop settings advanced section to show CPU and memory usage in the editor's top bar"
+  },
+  "desktop-settings.check-for-updates": {
+    "string": "Check for Updates",
+    "developer_comment": "Label in desktop settings for manual update check"
+  },
+  "desktop-settings.check-for-updates-desc": {
+    "string": "Manually check for the latest version",
+    "developer_comment": "Description in desktop settings for manual update check"
+  },
+  "desktop-settings.check-now": {
+    "string": "Check Now",
+    "developer_comment": "Button text in desktop settings to check for updates"
+  },
+  "desktop-settings.checking": {
+    "string": "Checking...",
+    "developer_comment": "Status text shown while checking for updates"
+  },
+  "desktop-settings.check-error": {
+    "string": "Error checking for updates: {error}",
+    "developer_comment": "Error message when update check fails"
+  },
+  "desktop-settings.update-available": {
+    "string": "Update {version} is available!",
+    "developer_comment": "Message shown when an update is available"
+  },
+  "desktop-settings.no-update": {
+    "string": "You are using the latest version!",
+    "developer_comment": "Message shown when no update is available"
   },
   "migrate.title": {
     "string": "Finishing update...",
@@ -490,5 +542,49 @@
   "detached-stage.title": {
     "string": "Detached Stage",
     "developer_comment": "Title of window when the stage is detached into a separate window."
+  },
+  "encrypted-save.title": {
+    "string": "Encrypted Save",
+    "developer_comment": "Title of the encrypted save dialog"
+  },
+  "encrypted-save.title-label": {
+    "string": "Title",
+    "developer_comment": "Label for the project title input in the encrypted save dialog"
+  },
+  "encrypted-save.password-label": {
+    "string": "Password",
+    "developer_comment": "Label for the password input in the encrypted save dialog"
+  },
+  "encrypted-save.confirm-password-label": {
+    "string": "Confirm Password",
+    "developer_comment": "Label for the confirm password input in the encrypted save dialog"
+  },
+  "encrypted-save.save-button": {
+    "string": "Encrypt & Save",
+    "developer_comment": "Button to confirm encrypted save"
+  },
+  "encrypted-save.cancel-button": {
+    "string": "Cancel",
+    "developer_comment": "Button to cancel the encrypted save dialog"
+  },
+  "encrypted-save.password-mismatch": {
+    "string": "Passwords do not match",
+    "developer_comment": "Error shown when the two password entries don't match"
+  },
+  "encrypted-save.empty-password": {
+    "string": "Password cannot be empty",
+    "developer_comment": "Error shown when password is empty in the encrypted save dialog"
+  },
+  "encrypted-save.empty-title": {
+    "string": "Title cannot be empty",
+    "developer_comment": "Error shown when title is empty in the encrypted save dialog"
+  },
+  "encrypted-save.wrong-password": {
+    "string": "Wrong password. Please try again.",
+    "developer_comment": "Error shown when the password is incorrect when opening an encrypted file"
+  },
+  "encrypted-save.ok-button": {
+    "string": "OK",
+    "developer_comment": "Button to confirm password in the decrypt dialog"
   }
 }

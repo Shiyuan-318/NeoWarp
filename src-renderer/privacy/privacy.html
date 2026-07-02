@@ -1,29 +1,92 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
+      :root {
+        --bg: #f5f5f7;
+        --card-bg: #ffffff;
+        --text: #1d1d1f;
+        --text-secondary: #6e6e73;
+        --text-tertiary: #98989d;
+        --border: #e5e5ea;
+        --accent: #3b82f6;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+        --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+        --radius: 12px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1c1c1e;
+          --card-bg: #2c2c2e;
+          --text: #f5f5f7;
+          --text-secondary: #a1a1a6;
+          --text-tertiary: #6e6e73;
+          --border: #3a3a3c;
+          --accent: #60a5fa;
+          --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+          --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+        }
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
-        margin: 0;
-        padding: 0;
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-        color: black;
-        background-color: white;
+        font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+        font-size: 14px;
+        line-height: 1.7;
       }
       main {
-        padding: 20px;
-        box-sizing: border-box;
-        width: 100%;
-        min-height: 100vh;
-        border: 20px solid hsla(0, 100%, 65%, 1);
+        padding: 32px 28px;
+        max-width: 780px;
+        margin: 20px auto;
       }
-      pre {
-        font-size: 0.8em;
-        overflow-x: hidden;
+      .page-header {
+        margin-bottom: 28px;
       }
       h1 {
-        margin-top: 0;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+      }
+      .update-date {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px 24px;
+        margin-bottom: 12px;
+        box-shadow: var(--shadow-sm);
+      }
+      h2 {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--accent);
+        margin-bottom: 8px;
+      }
+      p {
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+      }
+      p:last-child { margin-bottom: 0; }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover { text-decoration: underline; }
+
+      .intro-card {
+        background: var(--accent-light, #eff6ff);
+        border-color: var(--accent);
+      }
+      @media (prefers-color-scheme: dark) {
+        .intro-card { background: #1e293b; }
       }
 
       [update-checker="false"] .if-update-checker {
@@ -37,20 +100,65 @@
         document.body.setAttribute('update-checker', PrivacyPreload.isUpdateCheckerAllowed());
       </script>
 
-      <h1>Privacy Policy</h1>
+      <div class="page-header">
+        <h1>Privacy Policy / 隐私政策</h1>
+        <p class="update-date">Updated September 27, 2025</p>
+      </div>
 
-      <p><i>Updated September 27, 2025</i></p>
+      <div class="card intro-card">
+        <p>A comprehensive privacy policy for all of TurboWarp can be found at <a href="https://turbowarp.org/privacy.html">turbowarp.org/privacy.html</a>. Here, we have simplified it down to just the parts relevant to the desktop app.</p>
+      </div>
 
-      <p>A comprehensive privacy policy for all of TurboWarp can be found at <a href="https://turbowarp.org/privacy.html">https://turbowarp.org/privacy.html</a>. Here, we have simplified it down to just the parts relevant to the desktop app.</p>
+      <div class="card if-update-checker">
+        <h2>Update Checker / 更新检查</h2>
+        <p>The desktop app contains an update checker which <a href="#" class="open-desktop-settings">can be disabled in desktop settings</a>.</p>
+      </div>
 
-      <h2 class="if-update-checker">Update Checker</h2>
-      <p class="if-update-checker">The desktop app contains an update checker which <a href="#" class="open-desktop-settings">can be disabled in desktop settings</a>.</p>
+      <div class="card">
+        <h2>Abuse / 滥用防护</h2>
+        <p>When a service is being abused, we may take measures to collect information to protect the service. For example, we could log IP addresses making excessive amounts of requests. We strive to do this carefully so that no one is caught in the crossfire. Data is kept only as long as needed to stop the abuse.</p>
+      </div>
 
-      <h2>Abuse</h2>
-      <p>When a service is being abused, we may take measures to collect information to protect the service. For example, we could log IP addresses making excessive amounts of requests. We strive to do this carefully so that no one is caught in the crossfire. Data is kept only as long as needed to stop the abuse.</p>
+      <div class="card">
+        <h2>Rich Presence</h2>
+        <p>The desktop app has a disabled-by-default option to enable "Rich Presence" which shares the name of the project you have open and how long it has been open with chat apps running on your computer, which may be displayed on your public profile. This <a href="#" class="open-desktop-settings">can be configured in desktop settings</a>.</p>
+      </div>
 
-      <h2>Rich Presence</h2>
-      <p>The desktop app has a disabled-by-default option to enable "Rich Presence" which shares the name of the project you have open and how long it has been open with chat apps running on your computer, which may be displayed on your public profile. This <a href="#" class="open-desktop-settings">can be configured in desktop settings</a>.</p>
+      <div class="card">
+        <h2>Loading Projects / 加载项目</h2>
+        <p>When you load a project from another website, you are subject to the privacy practices of that website. For example, when loading projects from Scratch, you are subject to the <a href="https://scratch.mit.edu/privacy_policy">Scratch privacy policy</a>. When loading projects from Scratch specifically, the project ID will also be shared with TurboWarp as part of Scratch's API does not allow direct access. We may briefly log the project ID for caching.</p>
+      </div>
+
+      <div class="card">
+        <h2>Cloud Variables / 云变量</h2>
+        <p>When connecting to our cloud variable servers, the project ID and username may be logged for 14 days. Data in cloud variables is public and sent to anyone else connected at the same time. Custom cloud variable servers are outside of our control.</p>
+      </div>
+
+      <div class="card">
+        <h2>Extensions / 扩展</h2>
+        <p>Some extensions must communicate with external APIs to function. For example, the translate and text-to-speech extensions rely on the Scratch API, which is covered by the <a href="https://scratch.mit.edu/privacy_policy">Scratch privacy policy</a>. To improve performance, some extensions access TurboWarp's APIs instead where both the request and the result after forwarding to Scratch may be cached.</p>
+        <p>Most extensions on the <a href="https://extensions.turbowarp.org/">official extension gallery</a> will ask for permission when the project attempts to use the extension to access an untrusted website, however we cannot guarantee this is 100% reliable.</p>
+        <p>When loading a custom extension from a place other than the official gallery such as a URL or file on your computer, the editor will ask for permission to load the extension. If you approve this dialog, the extension can bypass the permission dialogs that official extensions show.</p>
+      </div>
+
+      <div class="card">
+        <h2>NeoWarp Packager / 打包工具</h2>
+        <p>The integrated copy of the TurboWarp Packager may download files such as Electron binaries from a server controlled by TurboWarp. These downloads will be cached after being downloaded.</p>
+        <p>When packaging a project using custom extensions, the packager may access those websites to download the extensions.</p>
+      </div>
+
+      <div class="card">
+        <h2>Packaged Projects / 打包后的项目</h2>
+        <p>Packaged projects include all scripts, costumes, and sounds to run the project. The packager tries to include all custom extensions too, but in some cases, the packaged project may need to download certain extensions each time it runs.</p>
+        <p>Advanced features such as third-party custom extensions, custom cloud host, custom JS, and custom CSS are outside of our control.</p>
+        <p>Note that, unlike the TurboWarp editor, custom extensions in packaged projects will not ask for permission before contacting websites.</p>
+        <p>You are responsible for informing end users about the privacy practices of the files you distribute. Do not link to this document as your project's privacy policy as it may change in the future. You must write your own.</p>
+      </div>
+
+      <div class="card">
+        <h2>Contact / 联系</h2>
+        <p>Any concerns related to privacy or any other matter should be sent to: <a href="mailto:contact@turbowarp.org">contact@turbowarp.org</a></p>
+      </div>
 
       <script>
         for (const el of document.querySelectorAll('.open-desktop-settings')) {
@@ -59,30 +167,6 @@
           });
         }
       </script>
-
-      <h2>Loading projects</h2>
-      <p>When you load a project from another website, you are subject to the privacy practices of that website. For example, when loading projects from Scratch, you are subject to the <a href="https://scratch.mit.edu/privacy_policy">Scratch privacy policy</a>. When loading projects from Scratch specifically, the project ID will also be shared with TurboWarp as part of Scratch's API does not allow direct access. We may briefly log the project ID for caching.</p>
-
-      <h2>Cloud variables</h2>
-      <p>When connecting to our cloud variable servers, the project ID and username may be logged for 14 days. Data in cloud variables is public and sent to anyone else connected at the same time. Custom cloud variable servers are outside of our control.</p>
-
-      <h2>Extensions</h2>
-      <p>Some extensions must communicate with external APIs to function. For example, the translate and text-to-speech extensions rely on the Scratch API, which is covered by the <a href="https://scratch.mit.edu/privacy_policy">Scratch privacy policy</a>. To improve performance, some extensions access TurboWarp's APIs instead where both the request (for example, the text being translated) and the result after forwarding to Scratch (for example, the translated version of the text) may be cached.</p>
-      <p>Most extensions on the <a href="https://extensions.turbowarp.org/">official extension gallery</a> will ask for permission when the project attempts to use the extension to access an untrusted website, however we cannot guarantee this is 100% reliable.</p>
-      <p>When loading a custom extension from a place other than the official gallery such as a URL or file on your computer, the editor will ask for permission to load the extension. If you approve this dialog, the extension can bypass the permission dialogs that official extensions show.</p>
-
-      <h2>TurboWarp Packager</h2>
-      <p>The integrated copy of the TurboWarp Packager may download files such as Electron binaries from a server controlled by TurboWarp. These downloads will be cached after being downloaded.</p>
-      <p>When packaging a project using custom extensions, the packager may access those websites to download the extensions.</p>
-
-      <h2>Projects generated by the TurboWarp Packager</h2>
-      <p>Packaged projects include all scripts, costumes, and sounds to run the project. The packager tries to include all custom extensions too, but in some cases, the packaged project may need to download certain extensions each time it runs.</p>
-      <p>Advanced features such as third-party custom extensions, custom cloud host, custom JS, and custom CSS are outside of our control.</p>
-      <p>Note that, unlike the TurboWarp editor, custom extensions in packaged projects will not ask for permission before contacting websites.</p>
-      <p>You are responsible for informing end users about the privacy practices of the files you distribute. Do not link to this document as your project's privacy policy as it may change in the future. You must write your own.</p>
-
-      <h2>Contact</h2>
-      <p>Any concerns related to privacy or any other matter should be sent to: <a href="mailto:contact@turbowarp.org">contact@turbowarp.org</a></p>
     </main>
   </body>
 </html>

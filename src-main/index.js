@@ -9,7 +9,7 @@ if (!process.mas && !app.requestSingleInstanceLock()) {
 const path = require('path');
 const AbstractWindow = require('./windows/abstract');
 const EditorWindow = require('./windows/editor');
-const {checkForUpdates} = require('./update-checker');
+const {checkForUpdatesOnStartup} = require('./update-checker');
 const {tranlateOrNull} = require('./l10n');
 const migrate = require('./migrate');
 const settings = require('./settings');
@@ -252,7 +252,7 @@ app.whenReady().then(() => {
       app.quit();
     }
 
-    checkForUpdates()
+    checkForUpdatesOnStartup()
       .catch((error) => {
         // We don't want to show a full error message when updates couldn't be fetched.
         // The website might be down, the internet might be broken, might be a school

@@ -10,6 +10,7 @@ const AddonsWindow = require('./addons');
 const DesktopSettingsWindow = require('./desktop-settings');
 const PrivacyWindow = require('./privacy');
 const AboutWindow = require('./about');
+const ContactWindow = require('./contact');
 const PackagerWindow = require('./packager');
 const {createAtomicWriteStream} = require('../atomic-write-stream');
 const {translate, updateLocale, getStrings} = require('../l10n');
@@ -21,11 +22,133 @@ const RichPresence = require('../rich-presence.js');
 const FileAccessWindow = require('./file-access-window.js');
 const ExtensionDocumentationWindow = require('./extension-documentation.js');
 const DetachedStageWindow = require('./detached-stage.js');
+const AIAssistantWindow = require('./ai-assistant');
+const TodoListWindow = require('./todo-list');
+const ProjectAnalysisWindow = require('./project-analysis');
+const TaskManagerWindow = require('./task-manager');
+const CollaborationWindow = require('./collaboration');
+const AbstractWindow = require('./abstract');
 
 const TYPE_FILE = 'file';
 const TYPE_URL = 'url';
 const TYPE_SCRATCH = 'scratch';
 const TYPE_SAMPLE = 'sample';
+
+// .npnp encrypted file format constants
+const NPNP_MAGIC = Buffer.from('NPNP\x01');
+const NPNP_SALT_LENGTH = 16;
+const NPNP_IV_LENGTH = 12; // For AES-256-GCM
+const NPNP_AUTH_TAG_LENGTH = 16;
+const NPNP_PBKDF2_ITERATIONS = 100000;
+
+// .viewsb3 encrypted file format constants (fixed-key encryption for view-only sharing)
+const VSB3_MAGIC = Buffer.from('VSB3\x01');
+const VSB3_SALT = Buffer.from('NeoWarpViewSb3FixedSalt2024', 'utf8');
+const VSB3_IV = Buffer.from('ViewSb3FixIV', 'utf8');
+const VSB3_PBKDF2_PASSWORD = 'neowarp-viewsb3-viewonly-v1';
+const VSB3_PBKDF2_ITERATIONS = 10000;
+
+/**
+ * Get the fixed key for viewsb3 encryption/decryption
+ * @returns {Buffer} 32-byte key
+ */
+const getViewSb3Key = () => {
+  return nodeCrypto.pbkdf2Sync(VSB3_PBKDF2_PASSWORD, VSB3_SALT, VSB3_PBKDF2_ITERATIONS, 32, 'sha256');
+};
+
+/**
+ * Encrypt data for .viewsb3 format using AES-256-GCM with a fixed key
+ * @param {Buffer} data - The data to encrypt
+ * @returns {Buffer} The encrypted data in .viewsb3 format
+ */
+const encryptViewSb3 = (data) => {
+  const key = getViewSb3Key();
+  const iv = VSB3_IV;
+
+  const cipher = nodeCrypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+
+  return Buffer.concat([VSB3_MAGIC, iv, authTag, encrypted]);
+};
+
+/**
+ * Decrypt .viewsb3 file data
+ * @param {Buffer} data - The encrypted file data
+ * @returns {Buffer} The decrypted sb3 data
+ * @throws {Error} If the file is not a valid .viewsb3 file
+ */
+const decryptViewSb3 = (data) => {
+  if (data.length < 5 + 12 + 16 ||
+      !data.slice(0, 5).equals(VSB3_MAGIC)) {
+    throw new Error('Not a valid .viewsb3 file');
+  }
+
+  const iv = data.slice(5, 5 + 12);
+  const authTag = data.slice(5 + 12, 5 + 12 + 16);
+  const encrypted = data.slice(5 + 12 + 16);
+
+  const key = getViewSb3Key();
+
+  const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+
+  try {
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]);
+  } catch (e) {
+    throw new Error('Corrupted .viewsb3 file');
+  }
+};
+
+/**
+ * Encrypt data using AES-256-GCM with a password-derived key
+ * @param {Buffer} data - The data to encrypt
+ * @param {string} password - The encryption password
+ * @returns {Buffer} The encrypted data in .npnp format
+ */
+const encryptNpnp = (data, password) => {
+  const salt = nodeCrypto.randomBytes(NPNP_SALT_LENGTH);
+  const iv = nodeCrypto.randomBytes(NPNP_IV_LENGTH);
+
+  const key = nodeCrypto.pbkdf2Sync(password, salt, NPNP_PBKDF2_ITERATIONS, 32, 'sha512');
+
+  const cipher = nodeCrypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+
+  return Buffer.concat([NPNP_MAGIC, salt, iv, authTag, encrypted]);
+};
+
+/**
+ * Decrypt .npnp file data
+ * @param {Buffer} data - The encrypted file data
+ * @param {string} password - The decryption password
+ * @returns {Buffer} The decrypted sb3 data
+ * @throws {Error} If the file is not a valid .npnp file or the password is wrong
+ */
+const decryptNpnp = (data, password) => {
+  // Verify magic bytes
+  if (data.length < 5 + NPNP_SALT_LENGTH + NPNP_IV_LENGTH + NPNP_AUTH_TAG_LENGTH ||
+      !data.slice(0, 5).equals(NPNP_MAGIC)) {
+    throw new Error('Not a valid .npnp file');
+  }
+
+  const salt = data.slice(5, 5 + NPNP_SALT_LENGTH);
+  const iv = data.slice(5 + NPNP_SALT_LENGTH, 5 + NPNP_SALT_LENGTH + NPNP_IV_LENGTH);
+  const authTag = data.slice(5 + NPNP_SALT_LENGTH + NPNP_IV_LENGTH, 5 + NPNP_SALT_LENGTH + NPNP_IV_LENGTH + NPNP_AUTH_TAG_LENGTH);
+  const encrypted = data.slice(5 + NPNP_SALT_LENGTH + NPNP_IV_LENGTH + NPNP_AUTH_TAG_LENGTH);
+
+  const key = nodeCrypto.pbkdf2Sync(password, salt, NPNP_PBKDF2_ITERATIONS, 32, 'sha512');
+
+  const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+
+  try {
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]);
+  } catch (e) {
+    throw new Error('Wrong password or corrupted file');
+  }
+};
 
 class OpenedFile {
   constructor (type, path) {
@@ -315,6 +438,43 @@ class EditorWindow extends ProjectRunningWindow {
     this.ipc.handle('get-file', async (event, id) => {
       const file = getFileById(id);
       const {name, data} = await file.read();
+
+      // Check if this is a .viewsb3 view-only file
+      const isViewSb3 = name.endsWith('.viewsb3') ||
+        (data && data.length >= 5 && data.slice(0, 5).equals(VSB3_MAGIC));
+      if (isViewSb3) {
+        try {
+          const decrypted = decryptViewSb3(data);
+          return {
+            name,
+            type: file.type,
+            data: decrypted,
+            isViewOnly: true
+          };
+        } catch (e) {
+          console.error('Failed to decrypt .viewsb3 file:', e.message);
+          return {
+            name,
+            type: file.type,
+            data: null,
+            isViewOnly: true,
+            error: 'Failed to open .viewsb3 file'
+          };
+        }
+      }
+
+      // Check if this is an encrypted .npnp file
+      const isNpnp = name.endsWith('.npnp') ||
+        (data && data.length >= 5 && data.slice(0, 5).equals(NPNP_MAGIC));
+      if (isNpnp) {
+        return {
+          name,
+          type: file.type,
+          data: null,
+          isEncrypted: true
+        };
+      }
+
       return {
         name,
         type: file.type,
@@ -333,6 +493,15 @@ class EditorWindow extends ProjectRunningWindow {
 
         // Let the save happen in the background, not important
         Promise.resolve().then(() => settings.save());
+
+        // Broadcast locale change to AI assistant window
+        const AbstractWindow = require('./abstract');
+        const aiWindows = AbstractWindow.getWindowsByClass(AIAssistantWindow);
+        aiWindows.forEach((win) => {
+          if (win.window && !win.window.isDestroyed()) {
+            win.window.webContents.send('ai-locale-changed', { locale });
+          }
+        });
       }
       event.returnValue = {
         strings: getStrings()
@@ -365,7 +534,7 @@ class EditorWindow extends ProjectRunningWindow {
         filters: [
           {
             name: 'Scratch Project',
-            extensions: ['sb3', 'sb2', 'sb'],
+            extensions: ['np1', 'sb3', 'sb2', 'sb', 'npnp', 'viewsb3'],
           }
         ]
       });
@@ -390,6 +559,10 @@ class EditorWindow extends ProjectRunningWindow {
       const result = await dialog.showSaveDialog(this.window, {
         defaultPath: path.join(settings.lastDirectory, suggestedName),
         filters: [
+          {
+            name: 'NeoWarp Project',
+            extensions: ['np1'],
+          },
           {
             name: 'Scratch 3 Project',
             extensions: ['sb3'],
@@ -521,6 +694,125 @@ class EditorWindow extends ProjectRunningWindow {
       PackagerWindow.forEditor(this);
     });
 
+    this.ipc.handle('show-encrypted-save-file-picker', async (event, suggestedName) => {
+      const result = await dialog.showSaveDialog(this.window, {
+        defaultPath: path.join(settings.lastDirectory, suggestedName + '.npnp'),
+        filters: [
+          {
+            name: 'NeoWarp Encrypted Project',
+            extensions: ['npnp'],
+          }
+        ]
+      });
+      if (result.canceled) {
+        return null;
+      }
+
+      const filePath = result.filePath;
+
+      const unsafePath = getUnsafePaths().find(i => isChildPath(i.path, filePath));
+      if (unsafePath) {
+        dialog.showMessageBox(this.window, {
+          type: 'error',
+          title: APP_NAME,
+          message: translate('unsafe-path.title'),
+          detail: translate(`unsafe-path.details`)
+            .replace('{APP_NAME}', unsafePath.app)
+            .replace('{file}', filePath),
+          noLink: true
+        });
+        return null;
+      }
+
+      settings.lastDirectory = path.dirname(filePath);
+      await settings.save();
+
+      const id = generateFileId();
+      this.openedFiles.set(id, new OpenedFile(TYPE_FILE, filePath));
+
+      return {
+        id,
+        name: path.basename(filePath)
+      };
+    });
+
+    this.ipc.handle('encrypt-and-save', async (event, fileId, data, password) => {
+      const file = getFileById(fileId);
+      if (file.type !== TYPE_FILE) {
+        throw new Error('Not a file');
+      }
+
+      const encryptedData = encryptNpnp(Buffer.from(data), password);
+      await fsPromises.writeFile(file.path, encryptedData);
+    });
+
+    this.ipc.handle('decrypt-npnp-file', async (event, fileId, password) => {
+      const file = getFileById(fileId);
+      const {data} = await file.read();
+      return decryptNpnp(data, password);
+    });
+
+    this.ipc.handle('show-viewsb3-save-file-picker', async (event, suggestedName) => {
+      const result = await dialog.showSaveDialog(this.window, {
+        defaultPath: path.join(settings.lastDirectory, suggestedName + '.viewsb3'),
+        filters: [
+          {
+            name: 'NeoWarp View-only Project',
+            extensions: ['viewsb3'],
+          }
+        ]
+      });
+      if (result.canceled) {
+        return null;
+      }
+
+      const filePath = result.filePath;
+
+      const unsafePath = getUnsafePaths().find(i => isChildPath(i.path, filePath));
+      if (unsafePath) {
+        dialog.showMessageBox(this.window, {
+          type: 'error',
+          title: APP_NAME,
+          message: translate('unsafe-path.title'),
+          detail: translate('unsafe-path.details')
+            .replace('{APP_NAME}', unsafePath.app)
+            .replace('{file}', filePath),
+          noLink: true
+        });
+        return null;
+      }
+
+      settings.lastDirectory = path.dirname(filePath);
+      await settings.save();
+
+      const id = generateFileId();
+      this.openedFiles.set(id, new OpenedFile(TYPE_FILE, filePath));
+
+      return {
+        id,
+        name: path.basename(filePath)
+      };
+    });
+
+    this.ipc.handle('encrypt-and-save-viewsb3', async (event, fileId, data) => {
+      const file = getFileById(fileId);
+      if (file.type !== TYPE_FILE) {
+        throw new Error('Not a file');
+      }
+
+      const encryptedData = encryptViewSb3(Buffer.from(data));
+      await fsPromises.writeFile(file.path, encryptedData);
+    });
+
+    this.ipc.handle('fetch-image', async (event, url) => {
+      try {
+        const buffer = await privilegedFetch(url);
+        return buffer;
+      } catch (e) {
+        throw new Error('Failed to fetch image: ' + e.message);
+      }
+    });
+
     this.ipc.handle('open-new-window', () => {
       EditorWindow.newWindow();
     });
@@ -539,6 +831,66 @@ class EditorWindow extends ProjectRunningWindow {
 
     this.ipc.handle('open-about', () => {
       AboutWindow.show();
+    });
+
+    this.ipc.handle('open-contact', () => {
+      ContactWindow.show();
+    });
+
+    this.ipc.handle('open-ai-assistant', () => {
+      AIAssistantWindow.show(this);
+    });
+
+    this.ipc.handle('open-todo-list', () => {
+      TodoListWindow.show(this);
+    });
+
+    this.ipc.handle('open-project-analysis', () => {
+      ProjectAnalysisWindow.show(this);
+    });
+
+    this.ipc.handle('open-task-manager', () => {
+      TaskManagerWindow.show(this);
+    });
+
+    this.ipc.on('project-json-response', (event, data) => {
+      const aiWindows = AbstractWindow.getWindowsByClass(AIAssistantWindow);
+      aiWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('project-code-response', data);
+      });
+    });
+
+    this.ipc.on('sprite-library-response', (event, data) => {
+      const aiWindows = AbstractWindow.getWindowsByClass(AIAssistantWindow);
+      aiWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('sprite-library-response', data);
+      });
+    });
+
+    this.ipc.on('sprite-stats-response', (event, data) => {
+      const tmWindows = AbstractWindow.getWindowsByClass(TaskManagerWindow);
+      tmWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('sprite-stats-response', data);
+      });
+    });
+
+    this.ipc.on('theme-changed', (event, data) => {
+      const aiWindows = AbstractWindow.getWindowsByClass(AIAssistantWindow);
+      aiWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('ai-theme-changed', data);
+      });
+      const todoWindows = AbstractWindow.getWindowsByClass(TodoListWindow);
+      todoWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('todo-theme-changed', data);
+      });
+      const paWindows = AbstractWindow.getWindowsByClass(ProjectAnalysisWindow);
+      paWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('pa-theme-changed', data);
+      });
+      const tmWindows = AbstractWindow.getWindowsByClass(TaskManagerWindow);
+      tmWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('tm-theme-changed', data);
+      });
     });
 
     this.ipc.handle('get-advanced-customizations', async () => {
@@ -562,6 +914,20 @@ class EditorWindow extends ProjectRunningWindow {
 
     this.ipc.handle('set-code-area-background-image', async (event, imageData) => {
       settings.codeAreaBackgroundImage = imageData;
+      AbstractWindow.settingsChanged();
+      await settings.save();
+    });
+
+    this.ipc.on('get-stage-area-background-image', (event) => {
+      event.returnValue = settings.stageAreaBackgroundImage;
+    });
+
+    this.ipc.on('get-top-bar-device-stats', (event) => {
+      event.returnValue = settings.topBarDeviceStats;
+    });
+
+    this.ipc.handle('set-stage-area-background-image', async (event, imageData) => {
+      settings.stageAreaBackgroundImage = imageData;
       AbstractWindow.settingsChanged();
       await settings.save();
     });
@@ -618,6 +984,14 @@ class EditorWindow extends ProjectRunningWindow {
     // NeoWarp: Detached stage window
     this.detachedStageWindow = null;
 
+    // NeoWarp: Collaboration state
+    this.collaborationState = {
+      isCollaborating: false,
+      role: null, // 'host' or 'participant'
+      onlineCount: 0,
+      permissions: null
+    };
+
     this.ipc.handle('detach-stage', () => {
       if (this.detachedStageWindow) {
         return;
@@ -637,6 +1011,81 @@ class EditorWindow extends ProjectRunningWindow {
       if (this.detachedStageWindow) {
         this.detachedStageWindow.sendFrame(dataURL);
       }
+    });
+
+    // NeoWarp: Collaboration
+    this.ipc.handle('open-collaboration-host', () => {
+      CollaborationWindow.showHost(this);
+    });
+
+    this.ipc.handle('open-collaboration-join', () => {
+      CollaborationWindow.showJoin(this);
+    });
+
+    this.ipc.handle('end-collaboration', () => {
+      // Forward to collaboration window if it exists
+      const collabWindows = AbstractWindow.getWindowsByClass(CollaborationWindow);
+      if (collabWindows.length > 0) {
+        collabWindows[0].window.webContents.send('collab-end-requested');
+      }
+    });
+
+    this.ipc.handle('leave-collaboration', () => {
+      const collabWindows = AbstractWindow.getWindowsByClass(CollaborationWindow);
+      if (collabWindows.length > 0) {
+        collabWindows[0].window.webContents.send('collab-leave-requested');
+      }
+    });
+
+    this.ipc.handle('open-collaboration-chat', () => {
+      CollaborationWindow.focusChat(this);
+    });
+
+    this.ipc.handle('check-collaboration-permission', (event, action) => {
+      if (!this.collaborationState.isCollaborating) {
+        return { allowed: true };
+      }
+      // Host always has full permissions
+      if (this.collaborationState.role === 'host') {
+        return { allowed: true };
+      }
+      // Participant: check permissions
+      const perms = this.collaborationState.permissions || {};
+      const permissionMap = {
+        'add-extension': perms.allowAddExtension !== false,
+        'delete-extension': perms.allowDeleteExtension !== false,
+        'delete-sprite': perms.allowDeleteSprite !== false
+      };
+      return { allowed: permissionMap[action] !== false };
+    });
+
+    // Listen for collaboration state changes from collaboration window
+    this.ipc.on('collab-state-change', (event, data) => {
+      this.collaborationState = {
+        isCollaborating: data.isCollaborating,
+        role: data.role,
+        onlineCount: data.onlineCount || 0,
+        permissions: data.permissions || null
+      };
+      // Push to renderer
+      this.window.webContents.send('collaboration-state-changed', this.collaborationState);
+    });
+
+    // Listen for chat messages to forward to editor renderer
+    this.ipc.on('collab-chat-forward', (event, data) => {
+      this.window.webContents.send('collaboration-chat-message', data);
+    });
+
+    // Listen for collaboration ended
+    this.ipc.on('collab-ended-forward', (event, data) => {
+      this.collaborationState = {
+        isCollaborating: false,
+        role: null,
+        onlineCount: 0,
+        permissions: null
+      };
+      this.window.webContents.send('collaboration-ended', data);
+      this.window.webContents.send('collaboration-state-changed', this.collaborationState);
     });
 
     this.loadURL('tw-editor://./gui/gui.html');

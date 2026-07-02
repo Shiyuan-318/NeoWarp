@@ -1,6 +1,6 @@
 const fsPromises = require('fs/promises');
 const path = require('path')
-const AbtractWindow = require('./abstract');
+const AbstractWindow = require('./abstract');
 const settings = require('../settings');
 const askForMediaAccess = require('../media-permissions');
 const SecurityPromptWindow = require('./security-prompt');
@@ -36,7 +36,7 @@ const getProtocol = url => {
 
 const WEB_PROTOCOLS = ['http:', 'https:'];
 
-class ProjectRunningWindow extends AbtractWindow {
+class ProjectRunningWindow extends AbstractWindow {
   handlePermissionCheck (permission, details) {
     return (
       // Autoplay audio and media device enumeration

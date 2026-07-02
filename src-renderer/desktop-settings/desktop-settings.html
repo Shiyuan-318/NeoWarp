@@ -4,52 +4,274 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-      body {
-        margin: 0;
-        padding: 0;
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-        color: black;
-        background-color: white;
-        accent-color: #ff4c4c;
+      :root {
+        --bg: #f5f5f7;
+        --card-bg: #ffffff;
+        --text: #1d1d1f;
+        --text-secondary: #6e6e73;
+        --text-tertiary: #98989d;
+        --border: #e5e5ea;
+        --accent: #3b82f6;
+        --accent-hover: #2563eb;
+        --accent-light: #eff6ff;
+        --danger: #ef4444;
+        --danger-bg: #fef2f2;
+        --danger-border: #fecaca;
+        --warning: #f59e0b;
+        --warning-bg: #fffbeb;
+        --warning-border: #fde68a;
+        --success: #22c55e;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+        --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+        --radius: 12px;
+        --radius-sm: 8px;
+        --transition: 0.2s ease;
       }
-      main {
-        padding: 20px;
-        box-sizing: border-box;
-        width: 100%;
-        min-height: 100vh;
-        border: 20px solid hsla(0, 100%, 65%, 1);
-      }
-      .title {
-        margin-top: 0;
-      }
-      label {
-        display: block;
-        margin: 0.5rem 0;
-      }
-      .label {
-        font-weight: bold;
-        margin-bottom: 0.25rem;
-      }
-      select {
-        width: 100%;
-        font: inherit;
-      }
-      button {
-        display: block;
-        cursor: pointer;
-        font: inherit;
-        margin: 0.5rem 0;
-      }
-      .warning {
-        background-color: yellow;
-        color: black;
-        border: 1px solid black;
-        border-radius: 0.25rem;
-        padding: 0.5rem;
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1c1c1e;
+          --card-bg: #2c2c2e;
+          --text: #f5f5f7;
+          --text-secondary: #a1a1a6;
+          --text-tertiary: #6e6e73;
+          --border: #3a3a3c;
+          --accent: #60a5fa;
+          --accent-hover: #93c5fd;
+          --accent-light: #1e293b;
+          --danger: #f87171;
+          --danger-bg: #3b1a1a;
+          --danger-border: #7f1d1d;
+          --warning-bg: #422006;
+          --warning-border: #78350f;
+          --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+          --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+        }
       }
 
-      [hidden] {
-        display: none !important;
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+        accent-color: var(--accent);
+        -webkit-font-smoothing: antialiased;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      main {
+        padding: 28px;
+        max-width: 620px;
+        margin: 0 auto;
+        min-height: 100vh;
+      }
+
+      .page-header {
+        margin-bottom: 24px;
+      }
+      .page-title {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+        margin-bottom: 4px;
+      }
+      .page-subtitle {
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
+
+      /* Card */
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 12px;
+        box-shadow: var(--shadow-sm);
+      }
+      .card-header {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--text-tertiary);
+        margin-bottom: 16px;
+      }
+
+      /* Setting row */
+      .setting-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 0;
+      }
+      .setting-row + .setting-row {
+        border-top: 1px solid var(--border);
+      }
+      .setting-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .setting-label {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text);
+        margin-bottom: 2px;
+      }
+      .setting-desc {
+        font-size: 12px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        margin-top: 4px;
+      }
+      .setting-control {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        min-height: 32px;
+      }
+
+      /* Toggle Switch */
+      .toggle {
+        position: relative;
+        width: 44px;
+        height: 26px;
+        display: inline-block;
+      }
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-slider {
+        position: absolute;
+        inset: 0;
+        background: #d1d1d6;
+        border-radius: 13px;
+        cursor: pointer;
+        transition: background var(--transition);
+      }
+      @media (prefers-color-scheme: dark) {
+        .toggle-slider { background: #48484a; }
+      }
+      .toggle-slider::before {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 20px;
+        height: 20px;
+        background: #fff;
+        border-radius: 50%;
+        transition: transform var(--transition);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      }
+      .toggle input:checked + .toggle-slider {
+        background: var(--accent);
+      }
+      .toggle input:checked + .toggle-slider::before {
+        transform: translateX(18px);
+      }
+      .toggle input:disabled + .toggle-slider {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* Select */
+      .select-control {
+        padding: 8px 32px 8px 12px;
+        font: inherit;
+        font-size: 13px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--card-bg);
+        color: var(--text);
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2398989d' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        min-width: 160px;
+        outline: none;
+        transition: border-color var(--transition);
+      }
+      .select-control:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-light);
+      }
+
+      /* Warning / Info card */
+      .alert {
+        padding: 10px 14px;
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        line-height: 1.5;
+        margin-top: 10px;
+        border: 1px solid;
+      }
+      .alert-warning {
+        background: var(--warning-bg);
+        border-color: var(--warning-border);
+        color: var(--warning);
+      }
+      .alert-danger {
+        background: var(--danger-bg);
+        border-color: var(--danger-border);
+        color: var(--danger);
+      }
+      @media (prefers-color-scheme: dark) {
+        .alert-warning { color: #fcd34d; }
+        .alert-danger { color: #fca5a5; }
+      }
+
+      /* Button */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 18px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--card-bg);
+        color: var(--text);
+        cursor: pointer;
+        transition: all var(--transition);
+      }
+      .btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-light);
+      }
+      .btn svg {
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+      }
+
+      /* More info link */
+      .more-info {
+        font-size: 12px;
+        color: var(--accent);
+        text-decoration: none;
+        margin-left: 6px;
+      }
+      .more-info:hover {
+        text-decoration: underline;
+      }
+
+      /* Misc */
+      [hidden] { display: none !important; }
+
+      .update-message {
+        font-size: 13px;
+        color: var(--text-secondary);
+        padding: 8px 0;
       }
     </style>
   </head>
@@ -60,163 +282,285 @@
         document.documentElement.lang = locale;
       </script>
 
-      <h1 class="title"></h1>
-      <script>document.querySelector('.title').textContent = strings['desktop-settings.title'];</script>
+      <div class="page-header">
+        <h1 class="page-title"></h1>
+        <p class="page-subtitle">NeoWarp · Desktop Settings</p>
+        <script>document.querySelector('.page-title').textContent = strings['desktop-settings.title'];</script>
+      </div>
 
-      <p class="update-checker-disabled"></p>
-      <label class="update-checker-outer">
-        <div class="label update-checker-label"></div>
-        <select class="update-checker-select" autocomplete="off">
-          <option value="unstable"></option>
-          <option value="stable"></option>
-          <option value="security"></option>
-          <option value="never"></option>
-        </select>
-      </label>
-      <div class="warning update-checker-warning"></div>
-      <script>
-        const updateCheckerDisabledMessage = document.querySelector('.update-checker-disabled');
-        const updateCheckerOuter = document.querySelector('.update-checker-outer');
-        const updateCheckerWarning = document.querySelector('.update-checker-warning');
+      <!-- Update Checker -->
+      <div class="card">
+        <div class="card-header">Updates / 更新</div>
 
-        updateCheckerDisabledMessage.hidden = settings.updateCheckerAllowed;
-        updateCheckerOuter.hidden = !settings.updateCheckerAllowed;
-        updateCheckerWarning.hidden = !settings.updateCheckerAllowed;
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label check-update-label"></div>
+            <div class="setting-desc check-update-desc" style="font-size:11px;color:var(--text-tertiary);"></div>
+          </div>
+          <div class="setting-control">
+            <button class="btn check-for-updates-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+              </svg>
+              <span class="check-btn-text"></span>
+            </button>
+          </div>
+        </div>
+        <p class="update-status-message" style="font-size:12px;color:var(--text-secondary);margin-top:8px;"></p>
 
-        if (settings.updateCheckerAllowed) {
-          const updateCheckerSelect = document.querySelector('.update-checker-select');
-          updateCheckerSelect.onchange = () => {
-            DesktopSettingsPreload.setUpdateChecker(updateCheckerSelect.value);
-            updateCheckerWarning.hidden = updateCheckerSelect.value !== 'never';
+        <script>
+          // Manual check for updates
+          const checkForUpdatesBtn = document.querySelector('.check-for-updates-btn');
+          const checkBtnText = document.querySelector('.check-btn-text');
+          const updateStatusMessage = document.querySelector('.update-status-message');
+          const checkUpdateLabel = document.querySelector('.check-update-label');
+          const checkUpdateDesc = document.querySelector('.check-update-desc');
+
+          checkUpdateLabel.textContent = strings['desktop-settings.check-for-updates'] || '检查更新';
+          checkUpdateDesc.textContent = strings['desktop-settings.check-for-updates-desc'] || '从 GitHub 手动检查最新版本';
+          checkBtnText.textContent = strings['desktop-settings.check-now'] || '立即检查';
+
+          let isChecking = false;
+          checkForUpdatesBtn.onclick = async () => {
+            if (isChecking) return;
+            isChecking = true;
+            checkBtnText.textContent = strings['desktop-settings.checking'] || '检查中...';
+            checkForUpdatesBtn.disabled = true;
+            updateStatusMessage.textContent = '';
+
+            try {
+              const result = await DesktopSettingsPreload.checkForUpdates();
+
+              if (result.error) {
+                updateStatusMessage.textContent = (strings['desktop-settings.check-error'] || '检查更新失败：{error}').replace('{error}', result.error);
+                updateStatusMessage.style.color = 'var(--danger)';
+              } else if (result.hasUpdate) {
+                updateStatusMessage.innerHTML = (strings['desktop-settings.update-available'] || '发现新版本 {version}！')
+                  .replace('{version}', result.latestVersion) + ' <a href="' + result.releaseUrl + '" style="color:var(--accent);">前往下载</a>';
+                updateStatusMessage.style.color = 'var(--success)';
+              } else {
+                updateStatusMessage.textContent = strings['desktop-settings.no-update'] || '已是最新版本！';
+                updateStatusMessage.style.color = 'var(--success)';
+              }
+            } catch (error) {
+              updateStatusMessage.textContent = (strings['desktop-settings.check-error'] || '检查更新失败：{error}').replace('{error}', error.message);
+              updateStatusMessage.style.color = 'var(--danger)';
+            }
+
+            isChecking = false;
+            checkBtnText.textContent = strings['desktop-settings.check-now'] || '立即检查';
+            checkForUpdatesBtn.disabled = false;
           };
-          updateCheckerSelect.value = settings.updateChecker;
-          updateCheckerWarning.hidden = updateCheckerSelect.value !== 'never';
-  
-          document.querySelector('.update-checker-label').textContent = strings['desktop-settings.update-checker'];
-          updateCheckerSelect.querySelector('[value=unstable]').textContent = strings['desktop-settings.notify-unstable'];
-          updateCheckerSelect.querySelector('[value=stable]').textContent = strings['desktop-settings.notify-stable'];
-          updateCheckerSelect.querySelector('[value=security]').textContent = strings['desktop-settings.notify-security'];
-          updateCheckerSelect.querySelector('[value=never]').textContent = strings['desktop-settings.notify-never'];
-          updateCheckerWarning.textContent = strings['desktop-settings.disabled-updates'];
-        } else {
-          updateCheckerDisabledMessage.textContent = strings['desktop-settings.update-checker-not-allowed'];
-        }
-      </script>
+        </script>
+      </div>
 
-      <label>
-        <div class="label selected-microphone-label"></div>
-        <select class="selected-microphone-select" autocomplete="off">
-          <option selected disabled></option>
-        </select>
+      <!-- Media Devices -->
+      <div class="card">
+        <div class="card-header">Media Devices / 媒体设备</div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label selected-microphone-label"></div>
+          </div>
+          <div class="setting-control">
+            <select class="select-control selected-microphone-select" autocomplete="off">
+              <option selected disabled></option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label selected-camera-label"></div>
+          </div>
+          <div class="setting-control">
+            <select class="select-control selected-camera-select" autocomplete="off">
+              <option selected disabled></option>
+            </select>
+          </div>
+        </div>
+
+        <div class="alert alert-warning media-device-warning" hidden></div>
+
         <script>
           const selectedMicrophoneSelect = document.querySelector('.selected-microphone-select');
+          const selectedCameraSelect = document.querySelector('.selected-camera-select');
+          const mediaDeviceWarning = document.querySelector('.media-device-warning');
+          mediaDeviceWarning.textContent = strings['desktop-settings.media-devices-changed'];
+
+          document.querySelector('.selected-microphone-label').textContent = strings['desktop-settings.microphone'];
+          document.querySelector('.selected-camera-label').textContent = strings['desktop-settings.camera'];
+
+          selectedMicrophoneSelect.firstChild.textContent = strings['desktop-settings.loading'];
+          selectedCameraSelect.firstChild.textContent = strings['desktop-settings.loading'];
+
           selectedMicrophoneSelect.onchange = () => {
             DesktopSettingsPreload.setMicrophone(selectedMicrophoneSelect.value);
             mediaDeviceWarning.hidden = false;
           };
-
-          document.querySelector('.selected-microphone-label').textContent = strings['desktop-settings.microphone'];
-          selectedMicrophoneSelect.firstChild.textContent = strings['desktop-settings.loading'];
-        </script>
-      </label>
-
-      <label>
-        <div class="label selected-camera-label"></div>
-        <select class="selected-camera-select" autocomplete="off">
-          <option selected disabled></option>
-        </select>
-        <script>
-          const selectedCameraSelect = document.querySelector('.selected-camera-select');
           selectedCameraSelect.onchange = () => {
             DesktopSettingsPreload.setCamera(selectedCameraSelect.value);
             mediaDeviceWarning.hidden = false;
           };
-          selectedCameraSelect.value = settings.microphone;
 
-          document.querySelector('.selected-camera-label').textContent = strings['desktop-settings.camera'];
-          selectedCameraSelect.firstChild.textContent = strings['desktop-settings.loading'];
+          const createStatusMessageOption = (text) => {
+            const option = document.createElement('option');
+            option.selected = true;
+            option.disabled = true;
+            option.textContent = text;
+            return option;
+          };
+
+          const addLoadingOption = (element) => {
+            while (element.firstChild) element.removeChild(element.firstChild);
+            element.appendChild(createStatusMessageOption(strings['desktop-settings.loading']));
+          };
+
+          const addOptions = (element, selected, devices) => {
+            while (element.firstChild) element.removeChild(element.firstChild);
+            if (devices.length === 0) {
+              element.appendChild(createStatusMessageOption(strings['desktop-settings.no-devices']));
+            } else {
+              for (const device of devices) {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.textContent = device.label;
+                element.appendChild(option);
+              }
+              if (selected) element.value = selected;
+            }
+          };
+
+          const addErrorOption = (element, error) => {
+            while (element.firstChild) element.removeChild(element.firstChild);
+            const message = `${error}`.includes('Editor must be open') ?
+              strings['desktop-settings.editor-must-be-open'] :
+              strings['desktop-settings.error'].replace('{error}', error);
+            element.appendChild(createStatusMessageOption(message));
+          };
+
+          const updateLists = async () => {
+            addLoadingOption(selectedCameraSelect);
+            addLoadingOption(selectedMicrophoneSelect);
+            try {
+              const mediaDevices = await DesktopSettingsPreload.enumerateMediaDevices();
+              addOptions(selectedMicrophoneSelect, settings.microphone, mediaDevices.filter((i) => i.kind === 'audioinput'));
+              addOptions(selectedCameraSelect, settings.camera, mediaDevices.filter((i) => i.kind === 'videoinput'));
+            } catch (error) {
+              console.error(error);
+              addErrorOption(selectedMicrophoneSelect, error);
+              addErrorOption(selectedCameraSelect, error);
+            }
+          };
+          updateLists();
         </script>
-      </label>
+      </div>
 
-      <div class="warning media-device-warning" hidden></div>
+      <!-- Performance -->
+      <div class="card">
+        <div class="card-header">Performance / 性能</div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label hardware-acceleration-label"></div>
+            <div class="setting-desc" style="font-size:11px;color:var(--text-tertiary);">Restart required / 重启后生效</div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" class="hardware-acceleration-checkbox" autocomplete="off">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="alert alert-danger hardware-acceleration-warning"></div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label background-throttling-label"></div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" class="background-throttling-checkbox" autocomplete="off">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="alert alert-warning background-throttling-warning"></div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label" id="exitFullscreenLabel"></div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" class="exit-fullscreen-on-escape-checkbox" autocomplete="off">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Privacy & Security -->
+      <div class="card">
+        <div class="card-header">Privacy &amp; Security / 隐私与安全</div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label bypass-cors-label"></div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" class="bypass-cors-checkbox" autocomplete="off">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="alert alert-danger bypass-cors-warning"></div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label spellchecker-label"></div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" class="spellchecker-checkbox" autocomplete="off">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rich Presence -->
+      <div class="card">
+        <div class="card-header">Integrations / 集成</div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label rich-presence-label"></div>
+            <a class="more-info rich-presence-more-information" href="https://docs.turbowarp.org/desktop/rich-presence" target="_blank" rel="noreferrer"></a>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input type="checkbox" class="rich-presence-checkbox" autocomplete="off">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced -->
+      <div class="card">
+        <div class="card-header">Advanced / 高级</div>
+        <button class="btn open-user-data">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"></path>
+          </svg>
+          <span></span>
+        </button>
+      </div>
 
       <script>
-        const mediaDeviceWarning = document.querySelector('.media-device-warning');
-        mediaDeviceWarning.textContent = strings['desktop-settings.media-devices-changed'];
-
-        const createStatusMessageOption = (text) => {
-          const option = document.createElement('option');
-          option.selected = true;
-          option.disabled = true;
-          option.textContent = text;
-          return option;
-        };
-
-        const addLoadingOption = (element) => {
-          while (element.firstChild) {
-            element.removeChild(element.firstChild);
-          }
-          element.appendChild(createStatusMessageOption(strings['desktop-settings.loading']));
-        };
-
-        const addOptions = (element, selected, devices) => {
-          while (element.firstChild) {
-            element.removeChild(element.firstChild);
-          }
-
-          if (devices.length === 0) {
-            element.appendChild(createStatusMessageOption(strings['desktop-settings.no-devices']));
-          } else {
-            for (const device of devices) {
-              const option = document.createElement('option');
-              option.value = device.deviceId;
-              option.textContent = device.label;
-              element.appendChild(option);
-            }
-            if (selected) {
-              element.value = selected;
-            }
-          }
-        };
-
-        const addErrorOption = (element, error) => {
-          while (element.firstChild) {
-            element.removeChild(element.firstChild);
-          }
-          const message = `${error}`.includes('Editor must be open') ? (
-            strings['desktop-settings.editor-must-be-open']
-          ) : (
-            strings['desktop-settings.error'].replace('{error}', error)
-          );
-          element.appendChild(createStatusMessageOption(message));
-        };
-
-        const updateLists = async () => {
-          addLoadingOption(selectedCameraSelect);
-          addLoadingOption(selectedMicrophoneSelect);
-          try {
-            // We can't use enumerateDevices() directly because we run on a different origin than the editor,
-            // and the browser randomizes the IDs per origin for privacy (which is silly for us, but thankfully
-            // easy to work around)
-            const mediaDevices = await DesktopSettingsPreload.enumerateMediaDevices();
-            addOptions(selectedMicrophoneSelect, settings.microphone, mediaDevices.filter((i) => i.kind === 'audioinput'));
-            addOptions(selectedCameraSelect, settings.camera, mediaDevices.filter((i) => i.kind === 'videoinput'));
-          } catch (error) {
-            console.error(error);
-            addErrorOption(selectedMicrophoneSelect, error);
-            addErrorOption(selectedCameraSelect, error);
-          }
-        };
-
-        updateLists();
-      </script>
-
-      <label>
-        <input type="checkbox" class="hardware-acceleration-checkbox" autocomplete="off">
-        <span class="hardware-acceleration-label"></span>
-      </label>
-      <div class="warning hardware-acceleration-warning"></div>
-      <script>
+        // Hardware Acceleration
         const hardwareAcceleration = document.querySelector('.hardware-acceleration-checkbox');
         const hardwareAccelerationWarning = document.querySelector('.hardware-acceleration-warning');
         hardwareAcceleration.onchange = () => {
@@ -228,21 +572,13 @@
 
         const chromiumMajorVersion = +(navigator.userAgent.match(/Chrome\/(\d+)/)[1]);
         document.querySelector('.hardware-acceleration-label').textContent = (
-          // Chromium 139 no longer does software fallback for WebGL by default
-          // https://chromestatus.com/feature/5166674414927872
           chromiumMajorVersion >= 139 ?
           strings['desktop-settings.hardware-acceleration'] :
           strings['desktop-settings.hardware-acceleration-when-available']
         );
         hardwareAccelerationWarning.textContent = strings['desktop-settings.hardware-acceleration-disabled'];
-      </script>
 
-      <label>
-        <input type="checkbox" class="background-throttling-checkbox" autocomplete="off">
-        <span class="background-throttling-label"></span>
-      </label>
-      <div class="warning background-throttling-warning"></div>
-      <script>
+        // Background Throttling
         const backgroundThrottling = document.querySelector('.background-throttling-checkbox');
         const backgroundThrottlingWarning = document.querySelector('.background-throttling-warning');
         backgroundThrottling.onchange = () => {
@@ -251,17 +587,18 @@
         };
         backgroundThrottling.checked = settings.backgroundThrottling;
         backgroundThrottlingWarning.hidden = backgroundThrottling.checked;
-
         document.querySelector('.background-throttling-label').textContent = strings['desktop-settings.background-throttling'];
         backgroundThrottlingWarning.textContent = strings['desktop-settings.background-throttling-disabled'];
-      </script>
 
-      <label>
-        <input type="checkbox" class="bypass-cors-checkbox" autocomplete="off">
-        <span class="bypass-cors-label"></span>
-      </label>
-      <div class="warning bypass-cors-warning"></div>
-      <script>
+        // Exit Fullscreen on Escape
+        const exitFullscreenOnEscape = document.querySelector('.exit-fullscreen-on-escape-checkbox');
+        exitFullscreenOnEscape.onchange = () => {
+          DesktopSettingsPreload.setExitFullscreenOnEscape(exitFullscreenOnEscape.checked);
+        };
+        exitFullscreenOnEscape.checked = settings.exitFullscreenOnEscape;
+        document.querySelector('#exitFullscreenLabel').textContent = strings['desktop-settings.exit-fullscreen-on-escape'];
+
+        // Bypass CORS
         const bypassCORS = document.querySelector('.bypass-cors-checkbox');
         const bypassCORSWarning = document.querySelector('.bypass-cors-warning');
         bypassCORS.onchange = () => {
@@ -270,43 +607,18 @@
         };
         bypassCORS.checked = settings.bypassCORS;
         bypassCORSWarning.hidden = !bypassCORS.checked;
-
         document.querySelector('.bypass-cors-label').textContent = strings['desktop-settings.bypass-cors'];
         bypassCORSWarning.textContent = strings['desktop-settings.bypass-cors-enabled'];
-      </script>
 
-      <label>
-        <input type="checkbox" class="spellchecker-checkbox" autocomplete="off">
-        <span class="spellchecker-label"></span>
-      </label>
-      <script>
+        // Spellchecker
         const spellchecker = document.querySelector('.spellchecker-checkbox');
         spellchecker.onchange = () => {
           DesktopSettingsPreload.setSpellchecker(spellchecker.checked);
         };
         spellchecker.checked = settings.spellchecker;
         document.querySelector('.spellchecker-label').textContent = strings['desktop-settings.spellchecker'];
-      </script>
 
-      <label>
-        <input type="checkbox" class="exit-fullscreen-on-escape-checkbox" autocomplete="off">
-        <span class="exit-fullscreen-on-escape-label"></span>
-      </label>
-      <script>
-        const exitFullscreenOnEscape = document.querySelector('.exit-fullscreen-on-escape-checkbox');
-        exitFullscreenOnEscape.onchange = () => {
-          DesktopSettingsPreload.setExitFullscreenOnEscape(exitFullscreenOnEscape.checked);
-        };
-        exitFullscreenOnEscape.checked = settings.exitFullscreenOnEscape;
-        document.querySelector('.exit-fullscreen-on-escape-label').textContent = strings['desktop-settings.exit-fullscreen-on-escape'];
-      </script>
-
-      <label>
-        <input type="checkbox" class="rich-presence-checkbox" autocomplete="off">
-        <span class="rich-presence-label"></span>
-        <a class="rich-presence-more-information" href="https://docs.turbowarp.org/desktop/rich-presence" target="_blank" rel="noreferrer"></a>
-      </label>
-      <script>
+        // Rich Presence
         const richPresence = document.querySelector('.rich-presence-checkbox');
         const richPresenceLabel = document.querySelector('.rich-presence-label');
         const richPresenceMoreInformation = document.querySelector('.rich-presence-more-information');
@@ -323,16 +635,21 @@
           richPresenceMoreInformation.href += '#supported-platforms';
         }
         richPresenceMoreInformation.textContent = strings['desktop-settings.more-information'];
-      </script>
 
-      <button class="open-user-data"></button>
-      <script>
+        // Top Bar Device Stats
+        const topBarDeviceStats = document.querySelector('.top-bar-device-stats-checkbox');
+        topBarDeviceStats.onchange = () => {
+          DesktopSettingsPreload.setTopBarDeviceStats(topBarDeviceStats.checked);
+        };
+        topBarDeviceStats.checked = settings.topBarDeviceStats;
+        document.querySelector('.top-bar-device-stats-label').textContent = strings['desktop-settings.top-bar-device-stats'];
+
+        // Open User Data
         const openUserData = document.querySelector('.open-user-data');
         openUserData.addEventListener('click', () => {
           DesktopSettingsPreload.openUserData();
         });
-
-        openUserData.textContent = strings['desktop-settings.open-user-data'];
+        openUserData.querySelector('span').textContent = strings['desktop-settings.open-user-data'];
       </script>
     </main>
   </body>

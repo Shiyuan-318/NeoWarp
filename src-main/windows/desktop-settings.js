@@ -3,7 +3,7 @@ const AbstractWindow = require('./abstract');
 const {translate, getStrings, getLocale} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const settings = require('../settings');
-const {isUpdateCheckerAllowed} = require('../update-checker');
+const {manualCheck} = require('../update-checker');
 const RichPresence = require('../rich-presence');
 
 class DesktopSettingsWindow extends AbstractWindow {
@@ -19,7 +19,7 @@ class DesktopSettingsWindow extends AbstractWindow {
         locale: getLocale(),
         strings: getStrings(),
         settings: {
-          updateCheckerAllowed: isUpdateCheckerAllowed(),
+          updateCheckerAllowed: true,
           updateChecker: settings.updateChecker,
           microphone: settings.microphone,
           camera: settings.camera,
@@ -30,7 +30,8 @@ class DesktopSettingsWindow extends AbstractWindow {
           exitFullscreenOnEscape: settings.exitFullscreenOnEscape,
           richPresenceAvailable: RichPresence.isAvailable(),
           richPresence: settings.richPresence,
-          codeAreaBackgroundImage: settings.codeAreaBackgroundImage
+          codeAreaBackgroundImage: settings.codeAreaBackgroundImage,
+          stageAreaBackgroundImage: settings.stageAreaBackgroundImage
         }
       };
     });
@@ -38,6 +39,19 @@ class DesktopSettingsWindow extends AbstractWindow {
     this.ipc.handle('set-update-checker', async (event, updateChecker) => {
       settings.updateChecker = updateChecker;
       await settings.save();
+    });
+
+    this.ipc.handle('check-for-updates', async () => {
+      try {
+        const result = await manualCheck();
+        return result;
+      } catch (error) {
+        console.error('Error checking for updates:', error);
+        return {
+          hasUpdate: false,
+          error: error.message
+        };
+      }
     });
 
     this.ipc.handle('enumerate-media-devices', async () => {
@@ -104,6 +118,18 @@ class DesktopSettingsWindow extends AbstractWindow {
 
     this.ipc.handle('set-code-area-background-image', async (event, imageData) => {
       settings.codeAreaBackgroundImage = imageData;
+      AbstractWindow.settingsChanged();
+      await settings.save();
+    });
+
+    this.ipc.handle('set-stage-area-background-image', async (event, imageData) => {
+      settings.stageAreaBackgroundImage = imageData;
+      AbstractWindow.settingsChanged();
+      await settings.save();
+    });
+
+    this.ipc.handle('set-top-bar-device-stats', async (event, topBarDeviceStats) => {
+      settings.topBarDeviceStats = topBarDeviceStats;
       AbstractWindow.settingsChanged();
       await settings.save();
     });

@@ -2,6 +2,11 @@ This document is the authoritative source for TurboWarp's changelogs. Everything
 
 Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **formatting** or [links](https://desktop.turbowarp.org/).
 
+# 1.0.8 (2026-06-16)
+
+ - Added ability to add costumes and sprites from URL in AI assistant
+ - Added stage screenshot tool for multimodal AI models to visually inspect the project
+
 # 1.15.5 (2026-03-30)
 
  - Added "online?" block, like the new Scratch block with the same name

@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x.scratch.np1">
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.np1" />
+    <comment>NeoWarp Project (Uncompressed)</comment>
+    <acronym>NP1</acronym>
+    <generic-icon name="org.turbowarp.TurboWarp" />
+  </mime-type>
   <mime-type type="application/x.scratch.sb3">
     <sub-class-of type="application/zip"/>
     <glob pattern="*.sb3" />

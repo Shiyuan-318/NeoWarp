@@ -33,6 +33,14 @@ class DetachedStageWindow extends AbstractWindow {
     return 'detached-stage';
   }
 
+  getWindowOptions() {
+    const opts = super.getWindowOptions();
+    if (this.parentWindow) {
+      opts.parent = this.parentWindow;
+    }
+    return opts;
+  }
+
   getDimensions() {
     // Stage native size is 480x360, scale to 2x for better visibility (960x720)
     // Add some extra space for borders/title bar

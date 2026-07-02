@@ -15,6 +15,13 @@
     can set TurboWarp (or any other app) as the associated app without affecting normal zip files.
   -->
 
+  <mime-type type="application/x.scratch.np1">
+    <sub-class-of type="application/zip" />
+    <glob pattern="*.np1" />
+    <comment>NeoWarp Project (Uncompressed)</comment>
+    <acronym>NP1</acronym>
+    <generic-icon name="x-office-document" />
+  </mime-type>
   <mime-type type="application/x.scratch.sb3">
     <sub-class-of type="application/zip" />
     <glob pattern="*.sb3" />

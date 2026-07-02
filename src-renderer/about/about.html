@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,37 +7,131 @@
       body {
         margin: 0;
         padding: 0;
-        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-        color: black;
-        background-color: white;
+        font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: #1d1d1f;
+        background-color: #f5f5f7;
       }
       main {
-        padding: 20px;
+        padding: 32px 28px;
         box-sizing: border-box;
         width: 100%;
         min-height: 100vh;
-        border: 20px solid hsla(0, 100%, 65%, 1);
-      }
-      pre {
-        font-size: inherit;
-        overflow-x: hidden;
+        max-width: 780px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 12px;
+        margin-top: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
       }
       h1 {
         margin-top: 0;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      h2 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-top: 24px;
+        margin-bottom: 8px;
+        color: #3b82f6;
+      }
+      .meta {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 20px;
+      }
+      p {
+        font-size: 14px;
+        line-height: 1.7;
+        color: #333;
+      }
+      a {
+        color: #3b82f6;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      pre {
+        font-size: 11px;
+        line-height: 1.5;
+        overflow-x: auto;
+        background: #f9f9fb;
+        border: 1px solid #e5e5ea;
+        border-radius: 8px;
+        padding: 16px;
+        color: #555;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .features {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 12px 0 20px;
+      }
+      .feature-item {
+        background: #f0f4ff;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: #1e40af;
+      }
+      @media (max-width: 600px) {
+        .features {
+          grid-template-columns: 1fr;
+        }
+        main {
+          margin: 0;
+          border-radius: 0;
+          padding: 20px 16px;
+        }
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>TurboWarp Desktop <span class="version"></span></h1>
-      <p class="more-version"></p>
+      <h1>NeoWarp <span class="version"></span></h1>
+      <p class="meta"></p>
       <script>
         var info = AboutPreload.getInfo();
         document.querySelector('.version').textContent = info.version;
-        document.querySelector('.more-version').textContent = `(Debug info: Electron ${info.electron}, Platform ${info.platform} ${info.arch}, Distribution ${info.dist})`;
+        document.querySelector('.meta').textContent = 'Electron ' + info.electron + '  |  ' + info.platform + ' ' + info.arch + '  |  ' + info.dist;
       </script>
-      <p>TurboWarp is a better offline editor for Scratch 3. Learn more at <a href="https://desktop.turbowarp.org/">https://desktop.turbowarp.org/</a>.</p>
-      <p>TurboWarp Desktop is licensed under the GNU General Public License v3.0. The source code is published <a href="https://github.com/TurboWarp/" target="_blank" rel="noreferrer">on GitHub</a>. You can read the license below:</p>
+
+      <p>NeoWarp 是一款基于 Scratch 3.0 的离线编辑器，提供更快、更强的编程体验。基于 <a href="https://desktop.turbowarp.org/" target="_blank" rel="noreferrer">TurboWarp Desktop</a> 二次开发。</p>
+
+      <h2>特色功能</h2>
+      <div class="features" id="features"></div>
+      <script>
+        var allFeatures = [
+          '内置 AI 编程助手（支持 DeepSeek 等模型）',
+          '更快的编译器和运行引擎',
+          '丰富的扩展支持',
+          '自定义角色和背景',
+          '自动跟随系统深色/浅色模式',
+          '项目打包为独立可执行文件',
+          '绘制圆角矩形、梯形、三角形、箭头',
+          '任务管理器',
+          'np1 快速保存格式',
+          'npnp 加密保存格式',
+          '多维度项目分析'
+        ];
+        // 随机选取 3 个并打乱顺序
+        var picked = allFeatures.slice().sort(function() { return Math.random() - 0.5; }).slice(0, 9);
+        var container = document.getElementById('features');
+        picked.forEach(function(f) {
+          var div = document.createElement('div');
+          div.className = 'feature-item';
+          div.textContent = f;
+          container.appendChild(div);
+        });
+      </script>
+
+      <h2>开源许可</h2>
+      <p>NeoWarp 遵循 <strong>GNU General Public License v3.0</strong> 开源协议。源代码在 <a href="https://github.com/Shiyuan-318/Neowarp" target="_blank" rel="noreferrer">GitHub</a> 公开发布。您可以在下方阅读完整许可条款：</p>
+
       <pre>
                     GNU GENERAL PUBLIC LICENSE
                         Version 3, 29 June 2007

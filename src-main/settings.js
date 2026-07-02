@@ -184,6 +184,34 @@ class Settings {
   set codeAreaBackgroundImage (codeAreaBackgroundImage) {
     this.data.codeAreaBackgroundImage = codeAreaBackgroundImage;
   }
+
+  get stageAreaBackgroundImage () {
+    return this.data.stageAreaBackgroundImage || null;
+  }
+  set stageAreaBackgroundImage (stageAreaBackgroundImage) {
+    this.data.stageAreaBackgroundImage = stageAreaBackgroundImage;
+  }
+
+  get aiProviders () {
+    return this.data.aiProviders || {};
+  }
+  set aiProviders (aiProviders) {
+    this.data.aiProviders = aiProviders;
+  }
+
+  get topBarDeviceStats () {
+    return this.data.topBarDeviceStats === true;
+  }
+  set topBarDeviceStats (topBarDeviceStats) {
+    this.data.topBarDeviceStats = topBarDeviceStats;
+  }
+
+  get lastUpdateCheckDate () {
+    return this.data.lastUpdateCheckDate || null;
+  }
+  set lastUpdateCheckDate (lastUpdateCheckDate) {
+    this.data.lastUpdateCheckDate = lastUpdateCheckDate;
+  }
 }
 
 module.exports = new Settings();

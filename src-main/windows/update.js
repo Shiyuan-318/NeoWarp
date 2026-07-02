@@ -4,7 +4,7 @@ const {APP_NAME} = require('../brand');
 const openExternal = require('../open-external');
 
 class UpdateWindow extends AbstractWindow {
-  constructor (currentVersion, latestVersion, security) {
+  constructor (currentVersion, latestVersion, security, releaseUrl) {
     super();
 
     this.window.setTitle(`${translate('update.window-title')} - ${APP_NAME}`);
@@ -28,10 +28,15 @@ class UpdateWindow extends AbstractWindow {
     this.ipc.handle('download', () => {
       this.window.destroy();
 
-      const params = new URLSearchParams();
-      params.set('from', currentVersion);
-      params.set('to', latestVersion);
-      openExternal(`https://desktop.turbowarp.org/update_available?${params}`);
+      // Use GitHub release URL if provided, otherwise fallback to GitHub releases page
+      if (releaseUrl) {
+        openExternal(releaseUrl);
+      } else {
+        const params = new URLSearchParams();
+        params.set('from', currentVersion);
+        params.set('to', latestVersion);
+        openExternal(`https://github.com/Shiyuan-318/NeoWarp/releases?${params}`);
+      }
     });
 
     const ignore = (permanently) => {
@@ -87,8 +92,8 @@ class UpdateWindow extends AbstractWindow {
     return true;
   }
 
-  static updateAvailable (currentVersion, latestVersion, isSecurity) {
-    new UpdateWindow(currentVersion, latestVersion, isSecurity);
+  static updateAvailable (currentVersion, latestVersion, isSecurity, releaseUrl) {
+    new UpdateWindow(currentVersion, latestVersion, isSecurity, releaseUrl);
   }
 }
 

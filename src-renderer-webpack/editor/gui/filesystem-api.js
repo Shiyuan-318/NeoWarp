@@ -115,8 +115,38 @@ class WrappedFileHandle {
   }
 
   async getFile () {
-    const data = await EditorPreload.getFile(this.id);
-    return new File([data.data], this.name);
+    const result = await EditorPreload.getFile(this.id);
+
+    // Handle encrypted .npnp files
+    if (result.isEncrypted) {
+      const { showPasswordDialog } = require('../encrypted-save-dialog/encrypted-save-dialog.js');
+      let decrypted = false;
+      let projectData = null;
+      while (!decrypted) {
+        const password = await showPasswordDialog();
+        if (!password) {
+          throw new AbortError('User cancelled password input');
+        }
+        try {
+          projectData = await EditorPreload.decryptNpnpFile(this.id, password);
+          decrypted = true;
+        } catch (e) {
+          // Wrong password, show dialog again
+          continue;
+        }
+      }
+      return new File([projectData], this.name);
+    }
+
+    // Handle .viewsb3 view-only files (already decrypted by main process)
+    if (result.isViewOnly) {
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return new File([result.data], this.name);
+    }
+
+    return new File([result.data], this.name);
   }
 
   async createWritable () {
@@ -147,8 +177,17 @@ const showSaveFilePicker = async (options) => {
   return new WrappedFileHandle(result.id, result.name);
 };
 
+const showViewsb3SaveFilePicker = async (suggestedName) => {
+  const result = await EditorPreload.showViewsb3SaveFilePicker(suggestedName);
+  if (result === null) {
+    throw new AbortError('No file selected');
+  }
+  return new WrappedFileHandle(result.id, result.name);
+};
+
 export {
   WrappedFileHandle,
   showOpenFilePicker,
-  showSaveFilePicker
+  showSaveFilePicker,
+  showViewsb3SaveFilePicker
 };

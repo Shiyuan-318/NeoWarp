@@ -64,6 +64,9 @@ module.exports = [
             filename: 'index.js'
         },
         entry: './src-renderer-webpack/editor/gui/index.jsx',
+        externals: {
+            electron: 'commonjs2 electron'
+        },
         plugins: [
             new DefinePlugin({
                 'process.env.ROOT': '""'
@@ -94,6 +97,8 @@ module.exports = [
             alias: {
                 'scratch-gui$': path.resolve(__dirname, 'node_modules/scratch-gui/src/index.js'),
                 'scratch-render-fonts$': path.resolve(__dirname, 'node_modules/scratch-gui/src/lib/tw-scratch-render-fonts'),
+                // Fix: override menuHeightAdjustment from 88 to 44 for proper fullscreen stage sizing
+                'scratch-gui/src/lib/screen-utils': path.resolve(__dirname, 'src-renderer-webpack/editor/lib/screen-utils.js'),
             }
         }
     },
