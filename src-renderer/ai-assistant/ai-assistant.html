@@ -48,7 +48,9 @@
             --transition-slow: 0.35s cubic-bezier(0.32, 0.72, 0, 1);
             --font-mono: 'SF Mono', 'SFMono-Regular', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
             --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            --sidebar-width: 260px;
+            --sidebar-width: clamp(240px, 16vw, 300px);
+            --content-width: 820px;
+            --content-width-lg: 980px;
             --glass-bg: rgba(255, 255, 255, 0.72);
             --glass-border: rgba(255, 255, 255, 0.45);
             --glass-blur: 20px;
@@ -560,7 +562,7 @@
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
             min-height: 0;
-            max-width: 800px;
+            max-width: var(--content-width);
             width: 100%;
             margin: 0 auto;
         }
@@ -580,13 +582,13 @@
 
         .welcome-message {
             text-align: center;
-            padding: 60px 20px 40px;
+            padding: clamp(28px, 6vw, 60px) 20px 40px;
             color: var(--text-secondary);
             animation: fadeInUp 0.6s ease-out;
         }
         .welcome-icon {
-            width: 72px;
-            height: 72px;
+            width: clamp(56px, 8vw, 72px);
+            height: clamp(56px, 8vw, 72px);
             border-radius: 22px;
             background: linear-gradient(135deg, var(--accent), #5e5ce6);
             display: flex;
@@ -594,12 +596,12 @@
             justify-content: center;
             margin: 0 auto 18px;
             color: #fff;
-            font-size: 32px;
+            font-size: clamp(24px, 4vw, 32px);
             box-shadow: 0 10px 28px rgba(0, 122, 255, 0.3);
         }
         .welcome-title {
             font-weight: 700;
-            font-size: 24px;
+            font-size: clamp(18px, 2.5vw, 24px);
             margin-bottom: 8px;
             color: var(--text);
             letter-spacing: -0.6px;
@@ -633,7 +635,7 @@
             max-width: 85%;
             padding: 12px 17px;
             border-radius: var(--radius-xl);
-            font-size: 15px;
+            font-size: clamp(13.5px, 1.4vw, 15px);
             line-height: 1.6;
             word-break: break-word;
             position: relative;
@@ -1151,7 +1153,7 @@
             flex-shrink: 0;
             z-index: 10;
             position: relative;
-            max-width: 800px;
+            max-width: var(--content-width);
             width: 100%;
             margin: 0 auto;
             border-top: 0.5px solid var(--glass-border);
@@ -1261,7 +1263,7 @@
             overflow-x: auto;
             background: var(--bg);
             flex-shrink: 0;
-            max-width: 800px;
+            max-width: var(--content-width);
             width: 100%;
             margin: 0 auto;
         }
@@ -2001,10 +2003,33 @@
             .agent-panel {
                 width: 280px;
             }
+            .app-title { display: none; }
+            .top-bar { padding: 6px 10px; min-height: 44px; }
+            .welcome-message { padding: 24px 16px 32px; }
         }
         @media (min-width: 641px) {
             .model-select-btn span.model-short { display: none; }
             .model-select-btn span.model-name { display: inline; }
+        }
+        @media (max-width: 400px) {
+            .icon-btn { width: 32px; height: 32px; }
+            .icon-btn svg { width: 16px; height: 16px; }
+            .send-btn { width: 38px; height: 38px; }
+            .send-btn svg { width: 16px; height: 16px; }
+            .image-upload-btn { width: 38px; height: 38px; }
+            .model-select-btn { padding: 0 8px; max-width: 88px; }
+            .input-area { gap: 5px; padding: 8px 10px 12px; }
+            .chat-area { padding: 10px 10px 6px; }
+            .new-chat-btn { width: 30px; height: 30px; }
+            .app-logo { width: 26px; height: 26px; }
+        }
+        @media (min-width: 1280px) {
+            .chat-area,
+            .input-area,
+            .image-preview-bar {
+                max-width: var(--content-width-lg);
+            }
+            .welcome-message { padding: 72px 24px 48px; }
         }
 
         .dialog-overlay {
@@ -2249,7 +2274,7 @@
             border-right: 1px solid var(--border);
         }
         .agent-panel {
-            width: 360px;
+            width: clamp(280px, 26vw, 400px);
             flex-shrink: 0;
             display: none;
             flex-direction: column;

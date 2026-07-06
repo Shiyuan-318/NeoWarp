@@ -423,6 +423,24 @@ class EditorWindow extends ProjectRunningWindow {
     });
     this.window.setTitle(APP_NAME);
 
+    // Clean up collaboration when editor closes
+    this.window.on('closed', () => {
+      const collabWindows = AbstractWindow.getWindowsByClass(CollaborationWindow);
+      for (const cw of collabWindows) {
+        cw.forceClose = true;
+        if (cw.server) {
+          cw.server.end().then(() => { cw.server = null; });
+        }
+        if (cw.ws) {
+          try { cw.ws.close(); } catch (e) {}
+          cw.ws = null;
+        }
+        if (cw.window && !cw.window.isDestroyed()) {
+          cw.window.destroy();
+        }
+      }
+    });
+
     this.window.on('focus', () => {
       this.updateRichPresence();
     });
