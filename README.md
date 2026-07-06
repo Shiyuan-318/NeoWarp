@@ -1,3 +1,5 @@
+[中文](README.md) | [English](README_en.md)
+
 # NeoWarp
 
 > 一款基于 **TurboWarp Desktop** 二次开发的 Scratch 编辑器
@@ -64,8 +66,6 @@
 
 
 > 由于本项目是个人二次开发作品，发布渠道与签名策略可能与上游 TurboWarp 不同，请以实际发布的 Releases 为准。
-
----
 
 
 
