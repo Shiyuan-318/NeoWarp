@@ -101,8 +101,18 @@ const handleClickFeedback = () => {
   window.open('https://github.com/Shiyuan-318/Neowarp/issues');
 };
 
-const handleDetachStage = () => {
-  EditorPreload.detachStage();
+const handleDetachStage = (vm) => {
+  let stageWidth = 480;
+  let stageHeight = 360;
+  try {
+    if (vm && vm.runtime && vm.runtime.renderer) {
+      stageWidth = vm.runtime.renderer._width || stageWidth;
+      stageHeight = vm.runtime.renderer._height || stageHeight;
+    }
+  } catch (e) {
+    // ignore - fall back to defaults
+  }
+  EditorPreload.detachStage(stageWidth, stageHeight);
 };
 
 const handleReattachStage = () => {
@@ -282,6 +292,65 @@ const DesktopHOC = function (WrappedComponent) {
           this.wrapVMWithPermissions();
         });
       });
+
+      // NeoWarp: Collaboration - Host receives request for project JSON
+      EditorPreload.onCollabRequestProjectJSON((data) => {
+        try {
+          const json = this.props.vm.toJSON();
+          EditorPreload.sendCollabProjectJSON(json, data.targetUsername);
+        } catch (e) {
+          console.error('Collab: failed to export project JSON', e);
+        }
+      });
+
+      // NeoWarp: Collaboration - Receive project update from host/other participant
+      this._collabLoadingProject = false;
+      EditorPreload.onCollabProjectUpdate((data) => {
+        if (this._collabLoadingProject) return;
+        this._collabLoadingProject = true;
+        try {
+          const project = typeof data.project === 'string' ? JSON.parse(data.project) : data.project;
+          this.props.vm.loadProject(project).then(() => {
+            this._collabLoadingProject = false;
+          }).catch(() => {
+            this._collabLoadingProject = false;
+          });
+        } catch (e) {
+          this._collabLoadingProject = false;
+        }
+      });
+
+      // NeoWarp: Collaboration - Broadcast project changes to others (debounced)
+      this._collabSyncTimer = null;
+      this._collabBroadcastProject = () => {
+        if (this._collabSyncTimer) clearTimeout(this._collabSyncTimer);
+        this._collabSyncTimer = setTimeout(() => {
+          try {
+            const json = this.props.vm.toJSON();
+            const collabState = this.state.collaborationState;
+            if (collabState && collabState.isCollaborating) {
+              if (collabState.role === 'host') {
+                EditorPreload.sendCollabProjectJSON(json, null);
+              } else {
+                EditorPreload.sendCollabProjectUpdate(json);
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }, 1000);
+      };
+
+      // Listen for VM PROJECT_CHANGED events to trigger collaboration sync
+      if (this.props.vm) {
+        this.props.vm.on('PROJECT_CHANGED', () => {
+          if (this._collabLoadingProject) return;
+          const collabState = this.state.collaborationState;
+          if (collabState && collabState.isCollaborating) {
+            this._collabBroadcastProject();
+          }
+        });
+      }
 
       // Wrap VM methods for permission control
       this._originalDeleteSprite = null;
@@ -2538,7 +2607,7 @@ const DesktopHOC = function (WrappedComponent) {
           onClickAI={handleClickAI}
           onClickTodoList={handleClickTodoList}
           onClickProjectAnalysis={handleClickProjectAnalysis}
-          onClickDetachStage={isStageDetached ? handleReattachStage : handleDetachStage}
+          onClickDetachStage={isStageDetached ? handleReattachStage : () => handleDetachStage(this.props.vm)}
           onClickCollaborationHost={handleClickCollaborationHost}
           onClickCollaborationJoin={handleClickCollaborationJoin}
           onClickCollaborationChat={handleClickCollaborationChat}
