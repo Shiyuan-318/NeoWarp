@@ -1,0 +1,82 @@
+diff --git a/node_modules/scratch-paint/src/helper/view.js b/node_modules/scratch-paint/src/helper/view.js
+index 0000000..1111111 100644
+--- a/node_modules/scratch-paint/src/helper/view.js
++++ b/node_modules/scratch-paint/src/helper/view.js
+@@ -38,6 +38,22 @@
+ };
+ resizeView(480, 360);
+ 
++// NeoWarp: When unlimited costume drawing is enabled, use a much larger workspace
++const UNLIMITED_SCALE = 100; // 100x the normal art board size
++const isUnlimitedCostumeDrawing = () =>
++    typeof window !== 'undefined' && window.__neowarpUnlimitedCostumeDrawing === true;
++
++const getEffectiveMaxWorkspaceBounds = () => {
++    if (isUnlimitedCostumeDrawing()) {
++        return new paper.Rectangle(
++            -ART_BOARD_WIDTH * UNLIMITED_SCALE,
++            -ART_BOARD_HEIGHT * UNLIMITED_SCALE,
++            ART_BOARD_WIDTH * UNLIMITED_SCALE * 2,
++            ART_BOARD_HEIGHT * UNLIMITED_SCALE * 2);
++    }
++    return MAX_WORKSPACE_BOUNDS;
++};
++
+ let _workspaceBounds = ART_BOARD_BOUNDS;
+ 
+ const getWorkspaceBounds = () => _workspaceBounds;
+@@ -65,7 +81,7 @@
+         bounds = bounds.unite(item.bounds.expand(BUFFER));
+     }
+     // Limit to max workspace bounds
+-    bounds = bounds.intersect(MAX_WORKSPACE_BOUNDS.expand(BUFFER));
++    bounds = bounds.intersect(getEffectiveMaxWorkspaceBounds().expand(BUFFER));
+     let top = bounds.top;
+     let left = bounds.left;
+     let bottom = bounds.bottom;
+@@ -173,9 +189,9 @@
+  */
+ const getActionBounds = isBitmap => {
+     if (isBitmap) {
+-        return ART_BOARD_BOUNDS;
++        return isUnlimitedCostumeDrawing() ? getEffectiveMaxWorkspaceBounds() : ART_BOARD_BOUNDS;
+     }
+-    return paper.view.bounds.unite(ART_BOARD_BOUNDS).intersect(MAX_WORKSPACE_BOUNDS);
++    return paper.view.bounds.unite(ART_BOARD_BOUNDS).intersect(getEffectiveMaxWorkspaceBounds());
+ };
+ 
+ const zoomToFit = isBitmap => {
+@@ -232,5 +248,6 @@
+     resizeCrosshair,
+     zoomOnSelection,
+     zoomOnFixedPoint,
+-    zoomToFit
++    zoomToFit,
++    getEffectiveMaxWorkspaceBounds
+ };
+diff --git a/node_modules/scratch-paint/src/containers/paper-canvas.jsx b/node_modules/scratch-paint/src/containers/paper-canvas.jsx
+index 0000000..1111111 100644
+--- a/node_modules/scratch-paint/src/containers/paper-canvas.jsx
++++ b/node_modules/scratch-paint/src/containers/paper-canvas.jsx
+@@ -13,7 +13,8 @@
+ import {clearSelectedItems} from '../reducers/selected-items';
+ import {
+     ART_BOARD_WIDTH, ART_BOARD_HEIGHT, CENTER, MAX_WORKSPACE_BOUNDS,
+-    clampViewBounds, resetZoom, setWorkspaceBounds, zoomToFit, resizeCrosshair
++    clampViewBounds, resetZoom, setWorkspaceBounds, zoomToFit, resizeCrosshair,
++    getEffectiveMaxWorkspaceBounds
+ } from '../helper/view';
+ import {ensureClockwise, scaleWithStrokes} from '../helper/math';
+ import {clearHoveredItem} from '../reducers/hover';
+@@ -278,8 +279,9 @@
+         mask.locked = true;
+         mask.matrix = new paper.Matrix(); // Identity
+         // Set the artwork to get clipped at the max costume size
+-        mask.size.height = MAX_WORKSPACE_BOUNDS.height;
+-        mask.size.width = MAX_WORKSPACE_BOUNDS.width;
++        const effectiveBounds = getEffectiveMaxWorkspaceBounds();
++        mask.size.height = effectiveBounds.height;
++        mask.size.width = effectiveBounds.width;
+         mask.setPosition(CENTER);
+         paper.project.activeLayer.addChild(mask);
+         mask.clipMask = true;

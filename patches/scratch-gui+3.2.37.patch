@@ -1,0 +1,172 @@
+diff --git a/node_modules/scratch-gui/src/addons/addons/find-bar/userstyle.css b/node_modules/scratch-gui/src/addons/addons/find-bar/userstyle.css
+index 0000000..1111111 100644
+--- a/node_modules/scratch-gui/src/addons/addons/find-bar/userstyle.css
++++ b/node_modules/scratch-gui/src/addons/addons/find-bar/userstyle.css
+@@ -59,7 +59,7 @@
+   height: 1.5rem;
+ 
+   /* Change Scratch default styles */
+-  border-radius: 0.25rem;
++  border-radius: 0.75rem;
+   font-size: 0.75rem;
+   padding-left: 0.4em;
+ }
+diff --git a/node_modules/scratch-gui/src/components/tw-settings-modal/settings-modal.jsx b/node_modules/scratch-gui/src/components/tw-settings-modal/settings-modal.jsx
+index 0000000..1111111 100644
+--- a/node_modules/scratch-gui/src/components/tw-settings-modal/settings-modal.jsx
++++ b/node_modules/scratch-gui/src/components/tw-settings-modal/settings-modal.jsx
+@@ -619,6 +619,10 @@
+                 value={props.infiniteClones}
+                 onChange={props.onInfiniteClonesChange}
+             />
++            <UnlimitedCostumeDrawing
++                value={props.unlimitedCostumeDrawing}
++                onChange={props.onUnlimitedCostumeDrawingChange}
++            />
+             <RemoveFencing
+                 value={props.removeFencing}
+                 onChange={props.onRemoveFencingChange}
+@@ -682,6 +686,8 @@
+     onInterpolationChange: PropTypes.func,
+     infiniteClones: PropTypes.bool,
+     onInfiniteClonesChange: PropTypes.func,
++    unlimitedCostumeDrawing: PropTypes.bool,
++    onUnlimitedCostumeDrawingChange: PropTypes.func,
+     removeFencing: PropTypes.bool,
+     onRemoveFencingChange: PropTypes.func,
+     removeLimits: PropTypes.bool,
+diff --git a/node_modules/scratch-gui/src/containers/tw-settings-modal.jsx b/node_modules/scratch-gui/src/containers/tw-settings-modal.jsx
+index 0000000..1111111 100644
+--- a/node_modules/scratch-gui/src/containers/tw-settings-modal.jsx
++++ b/node_modules/scratch-gui/src/containers/tw-settings-modal.jsx
+@@ -6,6 +6,7 @@
+ import {closeSettingsModal} from '../reducers/modals';
+ import SettingsModalComponent from '../components/tw-settings-modal/settings-modal.jsx';
+ import {defaultStageSize} from '../reducers/custom-stage-size';
++import {setUnlimitedCostumeDrawingState} from '../reducers/tw';
+ 
+ const messages = defineMessages({
+     newFramerate: {
+@@ -24,6 +25,7 @@
+             'handleHighQualityPenChange',
+             'handleInterpolationChange',
+             'handleInfiniteClonesChange',
++            'handleUnlimitedCostumeDrawingChange',
+             'handleRemoveFencingChange',
+             'handleRemoveLimitsChange',
+             'handleWarpTimerChange',
+@@ -76,6 +78,13 @@
+             maxClones: e.target.checked ? Infinity : 300
+         });
+     }
++    handleUnlimitedCostumeDrawingChange (e) {
++        const enabled = e.target.checked;
++        if (typeof window !== 'undefined') {
++            window.__neowarpUnlimitedCostumeDrawing = enabled;
++        }
++        this.props.setUnlimitedCostumeDrawing(enabled);
++    }
+     handleRemoveFencingChange (e) {
+         this.props.vm.setRuntimeOptions({
+             fencing: !e.target.checked
+@@ -236,6 +245,7 @@
+                 onHighQualityPenChange={this.handleHighQualityPenChange}
+                 onInterpolationChange={this.handleInterpolationChange}
+                 onInfiniteClonesChange={this.handleInfiniteClonesChange}
++                onUnlimitedCostumeDrawingChange={this.handleUnlimitedCostumeDrawingChange}
+                 onRemoveFencingChange={this.handleRemoveFencingChange}
+                 onRemoveLimitsChange={this.handleRemoveLimitsChange}
+                 onWarpTimerChange={this.handleWarpTimerChange}
+@@ -280,6 +290,7 @@
+     highQualityPen: PropTypes.bool,
+     interpolation: PropTypes.bool,
+     infiniteClones: PropTypes.bool,
++    unlimitedCostumeDrawing: PropTypes.bool,
+     removeFencing: PropTypes.bool,
+     removeLimits: PropTypes.bool,
+     warpTimer: PropTypes.bool,
+@@ -297,6 +308,7 @@
+     highQualityPen: state.scratchGui.tw.highQualityPen,
+     interpolation: state.scratchGui.tw.interpolation,
+     infiniteClones: state.scratchGui.tw.runtimeOptions.maxClones === Infinity,
++    unlimitedCostumeDrawing: state.scratchGui.tw.unlimitedCostumeDrawing,
+     removeFencing: !state.scratchGui.tw.runtimeOptions.fencing,
+     removeLimits: !state.scratchGui.tw.runtimeOptions.miscLimits,
+     warpTimer: state.scratchGui.tw.compilerOptions.warpTimer,
+@@ -305,7 +317,8 @@
+ });
+ 
+ const mapDispatchToProps = dispatch => ({
+-    onClose: () => dispatch(closeSettingsModal())
++    onClose: () => dispatch(closeSettingsModal()),
++    setUnlimitedCostumeDrawing: enabled => dispatch(setUnlimitedCostumeDrawingState(enabled))
+ });
+ 
+ export default injectIntl(connect(
+diff --git a/node_modules/scratch-gui/src/reducers/tw.js b/node_modules/scratch-gui/src/reducers/tw.js
+index 0000000..1111111 100644
+--- a/node_modules/scratch-gui/src/reducers/tw.js
++++ b/node_modules/scratch-gui/src/reducers/tw.js
+@@ -17,6 +17,7 @@
+ const SET_CLOUD_HOST = 'tw/SET_CLOUD_HOST';
+ const SET_PLATFORM_MISMATCH_DETAILS = 'tw/SET_PLATFORM_MISMATCH_DETAILS';
+ const SET_PROJECT_ERROR = 'tw/SET_PROJECT_ERROR';
++const SET_UNLIMITED_COSTUME_DRAWING = 'tw/SET_UNLIMITED_COSTUME_DRAWING';
+ 
+ export const initialState = {
+     framerate: 30,
+@@ -52,7 +53,8 @@
+         platform: null,
+         callback: null
+     },
+-    projectError: null
++    projectError: null,
++    unlimitedCostumeDrawing: false
+ };
+ 
+ const reducer = function (state, action) {
+@@ -140,6 +142,10 @@
+         return Object.assign({}, state, {
+             projectError: action.projectError
+         });
++    case SET_UNLIMITED_COSTUME_DRAWING:
++        return Object.assign({}, state, {
++            unlimitedCostumeDrawing: action.unlimitedCostumeDrawing
++        });
+     default:
+         return state;
+     }
+@@ -277,6 +283,12 @@
+         projectError
+     };
+ };
++
++const setUnlimitedCostumeDrawingState = function (unlimitedCostumeDrawing) {
++    return {
++        type: SET_UNLIMITED_COSTUME_DRAWING,
++        unlimitedCostumeDrawing: unlimitedCostumeDrawing
++    };
+ };
+ 
+ export {
+@@ -300,5 +312,6 @@
+     setHasCloudVariables,
+     setCloudHost,
+     setPlatformMismatchDetails,
+-    setProjectError
++    setProjectError,
++    setUnlimitedCostumeDrawingState
+ };
+diff --git a/node_modules/scratch-gui/src/lib/tw-translations/generated-translations.json b/node_modules/scratch-gui/src/lib/tw-translations/generated-translations.json
+index 0000000..1111111 100644
+--- a/node_modules/scratch-gui/src/lib/tw-translations/generated-translations.json
++++ b/node_modules/scratch-gui/src/lib/tw-translations/generated-translations.json
+@@ -4926,6 +4926,8 @@
+         "tw.settingsModal.highQualityPenHelp": "允许有画笔的作品以更高的分辨率渲染，并且避免编辑器中的一些坐标精度丢失。该功能可能会影响运行性能，且不是所有作品都适合该功能。",
+         "tw.settingsModal.infiniteClones": "无限克隆",
+         "tw.settingsModal.infiniteClonesHelp": "取消 Scratch 的 300 个克隆体限制。",
++        "tw.settingsModal.unlimitedCostumeDrawing": "无限造型绘制",
++        "tw.settingsModal.unlimitedCostumeDrawingHelp": "移除造型绘制区的大小限制，允许画布向任意方向无限拓展。",
+         "tw.settingsModal.interpolation": "补帧",
+         "tw.settingsModal.interpolationHelp": "通过在角色的运动中插入帧使角色运动看起来更平滑。此功能不应该在 3D、光线追踪、纯画笔作品等运算量大的作品中使用，这会使它们运行得更慢而没有明显的平滑效果。",
+         "tw.settingsModal.largeStageWarning": "我们不推荐使用自定义舞台大小！请使用具有相同长宽比的较低尺寸，并让用户开启全屏模式将其放大以匹配显示器来代替它。",

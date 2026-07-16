@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #fff;
+      }
+      #stage-canvas {
+        display: block;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage-canvas"></canvas>
+    <script>
+      (function() {
+        var canvas = document.getElementById('stage-canvas');
+        var ctx = canvas.getContext('2d');
+        // Default stage size; updated when dimensions arrive from the main process
+        // or inferred from the first frame image.
+        var STAGE_WIDTH = 480;
+        var STAGE_HEIGHT = 360;
+
+        function setStageDimensions(width, height) {
+          width = Math.max(1, Math.round(width));
+          height = Math.max(1, Math.round(height));
+          if (STAGE_WIDTH !== width || STAGE_HEIGHT !== height) {
+            STAGE_WIDTH = width;
+            STAGE_HEIGHT = height;
+            canvas.width = STAGE_WIDTH;
+            canvas.height = STAGE_HEIGHT;
+            resizeCanvas();
+          }
+        }
+
+        function resizeCanvas() {
+          var windowWidth = window.innerWidth;
+          var windowHeight = window.innerHeight;
+          var scale = Math.min(windowWidth / STAGE_WIDTH, windowHeight / STAGE_HEIGHT);
+          var displayWidth = Math.round(STAGE_WIDTH * scale);
+          var displayHeight = Math.round(STAGE_HEIGHT * scale);
+          canvas.style.width = displayWidth + 'px';
+          canvas.style.height = displayHeight + 'px';
+          canvas.style.position = 'absolute';
+          canvas.style.left = Math.round((windowWidth - displayWidth) / 2) + 'px';
+          canvas.style.top = Math.round((windowHeight - displayHeight) / 2) + 'px';
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Receive the actual stage dimensions from the main process.
+        if (DetachedStagePreload.onDimensions) {
+          DetachedStagePreload.onDimensions(function(dimensions) {
+            if (dimensions && dimensions.width && dimensions.height) {
+              setStageDimensions(dimensions.width, dimensions.height);
+            }
+          });
+        }
+
+        DetachedStagePreload.onFrame(function(dataURL) {
+          var img = new Image();
+          img.onload = function() {
+            // Adapt to the frame's native resolution as a fallback so custom
+            // stage sizes never get distorted.
+            if (img.naturalWidth && img.naturalHeight) {
+              setStageDimensions(img.naturalWidth, img.naturalHeight);
+            }
+            ctx.drawImage(img, 0, 0, STAGE_WIDTH, STAGE_HEIGHT);
+          };
+          img.src = dataURL;
+        });
+
+        DetachedStagePreload.onClose(function() {
+          window.close();
+        });
+
+        function getCanvasCoords(e) {
+          var rect = canvas.getBoundingClientRect();
+          var scaleX = STAGE_WIDTH / rect.width;
+          var scaleY = STAGE_HEIGHT / rect.height;
+          return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY,
+            canvasWidth: STAGE_WIDTH,
+            canvasHeight: STAGE_HEIGHT
+          };
+        }
+
+        canvas.addEventListener('mousedown', function(e) {
+          var coords = getCanvasCoords(e);
+          DetachedStagePreload.sendInput({
+            type: 'mousedown',
+            x: coords.x,
+            y: coords.y,
+            button: e.button,
+            canvasWidth: coords.canvasWidth,
+            canvasHeight: coords.canvasHeight
+          });
+        });
+
+        canvas.addEventListener('mouseup', function(e) {
+          var coords = getCanvasCoords(e);
+          DetachedStagePreload.sendInput({
+            type: 'mouseup',
+            x: coords.x,
+            y: coords.y,
+            button: e.button,
+            canvasWidth: coords.canvasWidth,
+            canvasHeight: coords.canvasHeight
+          });
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+          var coords = getCanvasCoords(e);
+          DetachedStagePreload.sendInput({
+            type: 'mousemove',
+            x: coords.x,
+            y: coords.y,
+            canvasWidth: coords.canvasWidth,
+            canvasHeight: coords.canvasHeight
+          });
+        });
+
+        canvas.addEventListener('wheel', function(e) {
+          e.preventDefault();
+          DetachedStagePreload.sendInput({
+            type: 'wheel',
+            deltaX: e.deltaX,
+            deltaY: e.deltaY
+          });
+        }, { passive: false });
+
+        canvas.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+          DetachedStagePreload.sendInput({
+            type: 'contextmenu'
+          });
+        });
+
+        document.addEventListener('keydown', function(e) {
+          DetachedStagePreload.sendInput({
+            type: 'keydown',
+            key: e.key,
+            code: e.code,
+            keyCode: e.keyCode
+          });
+        });
+
+        document.addEventListener('keyup', function(e) {
+          DetachedStagePreload.sendInput({
+            type: 'keyup',
+            key: e.key,
+            code: e.code,
+            keyCode: e.keyCode
+          });
+        });
+
+        DetachedStagePreload.ready();
+      })();
+    </script>
+  </body>
+</html>

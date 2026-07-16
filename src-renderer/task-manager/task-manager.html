@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任务管理器</title>
+<style>
+:root {
+  --bg: #000000;
+  --bg-card: #111111;
+  --bg-card-hover: #1a1a1a;
+  --bg-header: #1a1a1a;
+  --text: #e0e0e0;
+  --text-dim: #777777;
+  --accent: #00d2ff;
+  --accent2: #7b2ff7;
+  --cpu-color: #00d2ff;
+  --ram-color: #7b2ff7;
+  --border: rgba(255,255,255,0.08);
+  --grid-line: rgba(255,255,255,0.06);
+  --grid-text: rgba(255,255,255,0.3);
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+:root.light {
+  --bg: #ffffff;
+  --bg-card: #f5f5f5;
+  --bg-card-hover: #eeeeee;
+  --bg-header: #e8e8e8;
+  --text: #1a1a1a;
+  --text-dim: #888888;
+  --accent: #0099cc;
+  --accent2: #6622cc;
+  --cpu-color: #0099cc;
+  --ram-color: #6622cc;
+  --border: rgba(0,0,0,0.08);
+  --grid-line: rgba(0,0,0,0.06);
+  --grid-text: rgba(0,0,0,0.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+.header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.header h1 {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header h1 svg { width: 16px; height: 16px; }
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 16px;
+}
+.content::-webkit-scrollbar { width: 6px; }
+.content::-webkit-scrollbar-track { background: transparent; }
+.content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* 实时指标卡片 */
+.stats-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.stat-card {
+  flex: 1;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+}
+.stat-card .label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stat-card .label .dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+}
+.stat-card .value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.stat-card .sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.cpu-dot { background: var(--cpu-color); }
+.ram-dot { background: var(--ram-color); }
+.cpu-value { color: var(--cpu-color); }
+.ram-value { color: var(--ram-color); }
+
+/* 图表区域 */
+.chart-section {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+}
+.chart-section .chart-title {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.chart-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+}
+.chart-legend span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chart-legend .leg-dot {
+  width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+}
+#chart-canvas {
+  width: 100%;
+  height: 140px;
+  display: block;
+  border-radius: var(--radius-sm);
+}
+
+/* 角色列表 */
+.sprite-section {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.sprite-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-header);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.sprite-header .col {
+  cursor: pointer;
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.sprite-header .col:hover { color: var(--text); }
+.sprite-header .col.active { color: var(--accent); }
+.sprite-header .col .sort-arrow {
+  font-size: 9px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.sprite-header .col.active .sort-arrow { opacity: 1; }
+
+.col-name { flex: 1; min-width: 0; }
+.col-threads { width: 56px; text-align: center; }
+.col-cpu { width: 72px; text-align: center; }
+.col-mem { width: 80px; text-align: center; }
+.col-blocks { width: 56px; text-align: center; }
+.col-costumes { width: 56px; text-align: center; }
+
+.sprite-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+.sprite-list::-webkit-scrollbar { width: 4px; }
+.sprite-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.sprite-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+  font-size: 12px;
+}
+.sprite-item:last-child { border-bottom: none; }
+.sprite-item:hover { background: var(--bg-card-hover); }
+.sprite-item.is-stage { opacity: 0.6; }
+
+.sprite-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  margin-right: 8px;
+  background: var(--bg-header);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.sprite-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.sprite-threads { width: 56px; text-align: center; color: var(--text-dim); }
+.sprite-cpu { width: 72px; text-align: center; }
+.sprite-mem { width: 80px; text-align: center; color: var(--text-dim); }
+.sprite-blocks { width: 56px; text-align: center; color: var(--text-dim); }
+.sprite-costumes { width: 56px; text-align: center; color: var(--text-dim); }
+
+.cpu-bar {
+  display: inline-block;
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+  overflow: hidden;
+}
+.cpu-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--cpu-color);
+  transition: width 0.3s;
+}
+
+.empty-state {
+  padding: 30px 14px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="1" width="5" height="5" rx="1"/>
+      <rect x="10" y="1" width="5" height="5" rx="1"/>
+      <rect x="1" y="10" width="5" height="5" rx="1"/>
+      <rect x="10" y="10" width="5" height="5" rx="1"/>
+    </svg>
+    任务管理器
+  </h1>
+</div>
+
+<div class="content">
+  <!-- 实时指标 -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="label"><span class="dot cpu-dot"></span>CPU</div>
+      <div class="value cpu-value" id="cpu-value">0%</div>
+      <div class="sub" id="cpu-sub">0 核心 / 0 线程</div>
+    </div>
+    <div class="stat-card">
+      <div class="label"><span class="dot ram-dot"></span>RAM</div>
+      <div class="value ram-value" id="ram-value">0 MB</div>
+      <div class="sub" id="ram-sub">共 0 MB</div>
+    </div>
+  </div>
+
+  <!-- 折线图 -->
+  <div class="chart-section">
+    <div class="chart-title">
+      资源使用趋势
+      <div class="chart-legend">
+        <span><span class="leg-dot" style="background:var(--cpu-color)"></span>CPU</span>
+        <span><span class="leg-dot" style="background:var(--ram-color)"></span>RAM</span>
+      </div>
+    </div>
+    <canvas id="chart-canvas"></canvas>
+  </div>
+
+  <!-- 角色列表 -->
+  <div class="sprite-section">
+    <div class="sprite-header">
+      <div class="col col-name active" data-sort="name">名称 <span class="sort-arrow">▲</span></div>
+      <div class="col col-threads" data-sort="threads">线程 <span class="sort-arrow">▲</span></div>
+      <div class="col col-cpu" data-sort="cpu">CPU <span class="sort-arrow">▲</span></div>
+      <div class="col col-mem" data-sort="mem">内存 <span class="sort-arrow">▲</span></div>
+      <div class="col col-blocks" data-sort="blocks">积木 <span class="sort-arrow">▲</span></div>
+      <div class="col col-costumes" data-sort="costumes">造型 <span class="sort-arrow">▲</span></div>
+    </div>
+    <div class="sprite-list" id="sprite-list">
+      <div class="empty-state">加载中...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // 数据存储
+  var MAX_HISTORY = 60;
+  var cpuHistory = [];
+  var ramHistory = [];
+  var timeLabels = [];
+  var currentSort = 'name';
+  var sortAsc = true;
+  var spriteData = [];
+  var cpuCores = 0;
+  var isDark = true;
+
+  // DOM 元素
+  var cpuValueEl = document.getElementById('cpu-value');
+  var cpuSubEl = document.getElementById('cpu-sub');
+  var ramValueEl = document.getElementById('ram-value');
+  var ramSubEl = document.getElementById('ram-sub');
+  var spriteListEl = document.getElementById('sprite-list');
+  var canvas = document.getElementById('chart-canvas');
+  var ctx = canvas.getContext('2d');
+
+  // 主题
+  function applyTheme(theme) {
+    isDark = theme !== 'light';
+    if (isDark) {
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+    }
+    drawChart();
+  }
+
+  // 初始化主题
+  if (window.TaskManagerPreload) {
+    window.TaskManagerPreload.getTheme().then(applyTheme);
+    window.TaskManagerPreload.onThemeChanged(function(data) {
+      applyTheme(data.theme || 'dark');
+    });
+  }
+
+  // 排序
+  document.querySelectorAll('.sprite-header .col').forEach(function(col) {
+    col.addEventListener('click', function() {
+      var sort = col.dataset.sort;
+      if (currentSort === sort) {
+        sortAsc = !sortAsc;
+      } else {
+        currentSort = sort;
+        sortAsc = sort === 'name';
+      }
+      document.querySelectorAll('.sprite-header .col').forEach(function(c) { c.classList.remove('active'); });
+      col.classList.add('active');
+      var arrow = col.querySelector('.sort-arrow');
+      arrow.textContent = sortAsc ? '▲' : '▼';
+      renderSpriteList();
+    });
+  });
+
+  // 图表绘制
+  function drawChart() {
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    var w = rect.width;
+    var h = rect.height;
+    var padTop = 8;
+    var padBottom = 20;
+    var padLeft = 36;
+    var padRight = 12;
+    var chartW = w - padLeft - padRight;
+    var chartH = h - padTop - padBottom;
+
+    ctx.clearRect(0, 0, w, h);
+
+    var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    var textColor = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.35)';
+
+    // 网格线
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    for (var i = 0; i <= 4; i++) {
+      var y = padTop + (chartH / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(w - padRight, y);
+      ctx.stroke();
+    }
+
+    // Y 轴标签
+    ctx.fillStyle = textColor;
+    ctx.font = '9px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (var i = 0; i <= 4; i++) {
+      var y = padTop + (chartH / 4) * i;
+      var val = 100 - i * 25;
+      ctx.fillText(val + '%', padLeft - 6, y);
+    }
+
+    // 绘制线条函数
+    function drawLine(data, color, fillColor) {
+      if (data.length < 2) return;
+      var step = chartW / (MAX_HISTORY - 1);
+
+      // 填充区域
+      ctx.beginPath();
+      ctx.moveTo(padLeft + (MAX_HISTORY - data.length) * step, padTop + chartH);
+      for (var i = 0; i < data.length; i++) {
+        var x = padLeft + (MAX_HISTORY - data.length + i) * step;
+        var y = padTop + chartH - (data[i].v / 100) * chartH;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(padLeft + (MAX_HISTORY - 1) * step, padTop + chartH);
+      ctx.closePath();
+      var grad = ctx.createLinearGradient(0, padTop, 0, padTop + chartH);
+      grad.addColorStop(0, fillColor);
+      grad.addColorStop(1, isDark ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // 线条
+      ctx.beginPath();
+      for (var i = 0; i < data.length; i++) {
+        var x = padLeft + (MAX_HISTORY - data.length + i) * step;
+        var y = padTop + chartH - (data[i].v / 100) * chartH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // 最后一个点
+      if (data.length > 0) {
+        var lastX = padLeft + (MAX_HISTORY - 1) * step;
+        var lastY = padTop + chartH - (data[data.length - 1].v / 100) * chartH;
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+    }
+
+    // RAM 百分比
+    var ramPercents = ramHistory.map(function(r) { return { v: r.percent, t: r.t }; });
+    var cpuColor = isDark ? '#00d2ff' : '#0099cc';
+    var ramColor = isDark ? '#7b2ff7' : '#6622cc';
+    var cpuFill = isDark ? 'rgba(0,210,255,0.12)' : 'rgba(0,153,204,0.1)';
+    var ramFill = isDark ? 'rgba(123,47,247,0.08)' : 'rgba(102,34,204,0.06)';
+    drawLine(cpuHistory, cpuColor, cpuFill);
+    drawLine(ramPercents, ramColor, ramFill);
+
+    // X 轴时间标签 - 基于 CPU 数据点的实际时间戳
+    ctx.fillStyle = textColor;
+    ctx.font = '9px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    var now = Date.now();
+    var labelPositions = [0, 0.5, 1]; // 左、中、右
+    for (var i = 0; i < labelPositions.length; i++) {
+      var pos = labelPositions[i];
+      var dataIdx = Math.round(pos * (cpuHistory.length - 1));
+      if (cpuHistory.length === 0) continue;
+      var x = padLeft + pos * chartW;
+      var secAgo = 0;
+      if (pos < 1) {
+        secAgo = Math.round((now - cpuHistory[dataIdx].t) / 1000);
+      }
+      if (secAgo <= 0) {
+        ctx.fillText('现在', x, padTop + chartH + 5);
+      } else {
+        ctx.fillText('-' + secAgo + 's', x, padTop + chartH + 5);
+      }
+    }
+  }
+
+  // 渲染角色列表
+  function renderSpriteList() {
+    var sorted = spriteData.slice().sort(function(a, b) {
+      var va, vb;
+      switch (currentSort) {
+        case 'name': va = a.name.toLowerCase(); vb = b.name.toLowerCase(); break;
+        case 'threads': va = a.threads; vb = b.threads; break;
+        case 'cpu': va = a.cpuPercent; vb = b.cpuPercent; break;
+        case 'mem': va = a.memEstimateKB; vb = b.memEstimateKB; break;
+        case 'blocks': va = a.blockCount; vb = b.blockCount; break;
+        case 'costumes': va = a.costumeCount; vb = b.costumeCount; break;
+        default: va = 0; vb = 0;
+      }
+      if (typeof va === 'string') {
+        return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+      }
+      return sortAsc ? va - vb : vb - va;
+    });
+
+    if (sorted.length === 0) {
+      spriteListEl.innerHTML = '<div class="empty-state">暂无角色数据</div>';
+      return;
+    }
+
+    spriteListEl.innerHTML = sorted.map(function(s) {
+      var cpuPercent = Math.min(s.cpuPercent, 100);
+      var cpuColor = cpuPercent > 50 ? '#ff6b6b' : cpuPercent > 20 ? '#ffd93d' : 'var(--cpu-color)';
+      var memStr = s.memEstimateKB >= 1024
+        ? (s.memEstimateKB / 1024).toFixed(1) + ' MB'
+        : s.memEstimateKB + ' KB';
+      return '<div class="sprite-item' + (s.isStage ? ' is-stage' : '') + '">' +
+        '<div class="sprite-icon">' + (s.isStage ? '🎬' : '🐱') + '</div>' +
+        '<div class="sprite-name" title="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</div>' +
+        '<div class="sprite-threads">' + s.threads + '</div>' +
+        '<div class="sprite-cpu">' +
+          '<span class="cpu-bar"><span class="cpu-bar-fill" style="width:' + cpuPercent + '%;background:' + cpuColor + '"></span></span>' +
+          cpuPercent.toFixed(1) + '%' +
+        '</div>' +
+        '<div class="sprite-mem">' + memStr + '</div>' +
+        '<div class="sprite-blocks">' + s.blockCount + '</div>' +
+        '<div class="sprite-costumes">' + s.costumeCount + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // 数据更新
+  var lastTotalThreads = 0;
+  function updateData() {
+    if (!window.TaskManagerPreload) return;
+
+    window.TaskManagerPreload.getSystemStats().then(function(stats) {
+      cpuValueEl.textContent = stats.cpuPercent + '%';
+      cpuSubEl.textContent = (cpuCores || '?') + ' 核心 / ' + lastTotalThreads + ' 线程';
+      ramValueEl.textContent = stats.ramUsedMB + ' MB';
+      ramSubEl.textContent = '共 ' + stats.ramTotalMB + ' MB';
+
+      var now = Date.now();
+      cpuHistory.push({ v: stats.cpuPercent, t: now });
+      if (cpuHistory.length > MAX_HISTORY) cpuHistory.shift();
+
+      var ramPercent = stats.ramTotalMB > 0 ? (stats.ramUsedMB / stats.ramTotalMB * 100) : 0;
+      ramHistory.push({ percent: ramPercent, usedMB: stats.ramUsedMB, totalMB: stats.ramTotalMB, t: now });
+      if (ramHistory.length > MAX_HISTORY) ramHistory.shift();
+
+      drawChart();
+    }).catch(function(e) {
+      console.error('获取系统统计失败:', e);
+    });
+
+    window.TaskManagerPreload.getSpriteStats().then(function(spriteStats) {
+      if (spriteStats) {
+        lastTotalThreads = spriteStats.totalThreads || 0;
+        cpuSubEl.textContent = (cpuCores || '?') + ' 核心 / ' + lastTotalThreads + ' 线程';
+      }
+      if (spriteStats && spriteStats.sprites && spriteStats.sprites.length > 0) {
+        spriteData = spriteStats.sprites;
+        renderSpriteList();
+      } else if (spriteData.length === 0) {
+        // 首次加载无数据时显示提示
+        spriteListEl.innerHTML = '<div class="empty-state">暂无角色数据</div>';
+      }
+      // 如果之前有数据但现在获取失败，保留上次的数据
+    }).catch(function(e) {
+      console.error('获取角色统计失败:', e);
+    });
+  }
+
+  // 获取 CPU 核心数
+  try {
+    cpuCores = navigator.hardwareConcurrency || 0;
+  } catch (e) {}
+
+  // 启动
+  updateData();
+  setInterval(updateData, 1500);
+
+  // 窗口大小变化时重绘图表
+  window.addEventListener('resize', drawChart);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+const {app, shell, ipcMain} = require('electron');
+const AbstractWindow = require('./abstract');
+const {translate, getStrings, getLocale} = require('../l10n');
+const {APP_NAME} = require('../brand');
+const settings = require('../settings');
+const {manualCheck} = require('../update-checker');
+const RichPresence = require('../rich-presence');
+
+class DesktopSettingsWindow extends AbstractWindow {
+  constructor () {
+    super();
+
+    this.window.setTitle(`${translate('desktop-settings.title')} - ${APP_NAME}`);
+    this.window.setMinimizable(false);
+    this.window.setMaximizable(false);
+
+    this.ipc.handle('ds-get-theme', () => {
+      const EditorWindow = require('./editor');
+      const anEditorWindow = AbstractWindow.getWindowsByClass(EditorWindow)[0];
+      if (!anEditorWindow || anEditorWindow.window.isDestroyed()) {
+        return 'light';
+      }
+      return new Promise((resolve) => {
+        const requestId = Date.now().toString();
+        const handler = (event, data) => {
+          if (data && data.requestId === requestId) {
+            ipcMain.removeListener('theme-response', handler);
+            resolve(data.theme || 'light');
+          }
+        };
+        ipcMain.on('theme-response', handler);
+        anEditorWindow.window.webContents.send('request-theme', { requestId });
+        setTimeout(() => {
+          ipcMain.removeListener('theme-response', handler);
+          resolve('light');
+        }, 3000);
+      });
+    });
+
+    this.ipc.on('init', (event) => {
+      event.returnValue = {
+        locale: getLocale(),
+        strings: getStrings(),
+        settings: {
+          updateCheckerAllowed: true,
+          updateChecker: settings.updateChecker,
+          microphone: settings.microphone,
+          camera: settings.camera,
+          hardwareAcceleration: settings.hardwareAcceleration,
+          backgroundThrottling: settings.backgroundThrottling,
+          bypassCORS: settings.bypassCORS,
+          spellchecker: settings.spellchecker,
+          exitFullscreenOnEscape: settings.exitFullscreenOnEscape,
+          richPresenceAvailable: RichPresence.isAvailable(),
+          richPresence: settings.richPresence,
+          codeAreaBackgroundImage: settings.codeAreaBackgroundImage,
+          stageAreaBackgroundImage: settings.stageAreaBackgroundImage
+        }
+      };
+    });
+
+    this.ipc.handle('set-update-checker', async (event, updateChecker) => {
+      settings.updateChecker = updateChecker;
+      await settings.save();
+    });
+
+    this.ipc.handle('check-for-updates', async () => {
+      try {
+        const result = await manualCheck();
+        return result;
+      } catch (error) {
+        console.error('Error checking for updates:', error);
+        return {
+          hasUpdate: false,
+          error: error.message
+        };
+      }
+    });
+
+    this.ipc.handle('enumerate-media-devices', async () => {
+      // Imported late due to circular dependencies
+      const EditorWindow = require('./editor');
+      const anEditorWindow = AbstractWindow.getWindowsByClass(EditorWindow)[0];
+      if (!anEditorWindow) {
+        // If you change this error message, please make sure to update desktop settings' error handling
+        throw new Error('Editor must be open');
+      }
+      return anEditorWindow.enumerateMediaDevices();
+    });
+
+    this.ipc.handle('set-microphone', async (event, microphone) => {
+      settings.microphone = microphone;
+      await settings.save();
+    });
+
+    this.ipc.handle('set-camera', async (event, camera) => {
+      settings.camera = camera;
+      await settings.save();
+    });
+
+    this.ipc.handle('set-hardware-acceleration', async (event, hardwareAcceleration) => {
+      settings.hardwareAcceleration = hardwareAcceleration;
+      await settings.save();
+    });
+
+    this.ipc.handle('set-background-throttling', async (event, backgroundThrottling) => {
+      settings.backgroundThrottling = backgroundThrottling;
+      AbstractWindow.settingsChanged();
+      await settings.save();
+    });
+
+    this.ipc.handle('set-bypass-cors', async (event, bypassCORS) => {
+      settings.bypassCORS = bypassCORS;
+      await settings.save();
+    });
+
+    this.ipc.handle('set-spellchecker', async (event, spellchecker) => {
+      settings.spellchecker = spellchecker;
+      AbstractWindow.settingsChanged();
+      await settings.save();
+    });
+
+    this.ipc.handle('set-exit-fullscreen-on-escape', async (event, exitFullscreenOnEscape) => {
+      settings.exitFullscreenOnEscape = exitFullscreenOnEscape;
+      await settings.save();
+    });
+
+    this.ipc.handle('set-rich-presence', async (event, richPresence) => {
+      settings.richPresence = richPresence;
+      if (richPresence) {
+        RichPresence.enable();
+      } else {
+        RichPresence.disable();
+      }
+      await settings.save();
+    });
+
+    this.ipc.handle('open-user-data', async () => {
+      shell.showItemInFolder(app.getPath('userData'));
+    });
+
+    this.ipc.handle('set-code-area-background-image', async (event, imageData) => {
+      settings.codeAreaBackgroundImage = imageData;
+      AbstractWindow.settingsChanged();
+      await settings.save();
+    });
+
+    this.ipc.handle('set-stage-area-background-image', async (event, imageData) => {
+      settings.stageAreaBackgroundImage = imageData;
+      AbstractWindow.settingsChanged();
+      await settings.save();
+    });
+
+    this.ipc.handle('set-top-bar-device-stats', async (event, topBarDeviceStats) => {
+      settings.topBarDeviceStats = topBarDeviceStats;
+      AbstractWindow.settingsChanged();
+      await settings.save();
+    });
+
+    this.loadURL('tw-desktop-settings://./desktop-settings.html');
+  }
+
+  getDimensions () {
+    return {
+      width: 550,
+      height: 500
+    };
+  }
+
+  getPreload () {
+    return 'desktop-settings';
+  }
+
+  isPopup () {
+    return true;
+  }
+
+  static show () {
+    const window = AbstractWindow.singleton(DesktopSettingsWindow);
+    window.show();
+  }
+}
+
+module.exports = DesktopSettingsWindow;

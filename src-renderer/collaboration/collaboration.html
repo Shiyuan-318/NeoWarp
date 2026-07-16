@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>协作</title>
+  <style>
+    :root {
+      --bg: #f2f2f7;
+      --surface: #ffffff;
+      --surface-grouped: #ffffff;
+      --surface-secondary: #f2f2f7;
+      --text: #1c1c1e;
+      --text-secondary: #8e8e93;
+      --text-tertiary: #c7c7cc;
+      --separator: #e5e5ea;
+      --separator-opaque: #d1d1d6;
+      --accent: #007AFF;
+      --accent-hover: #0051D5;
+      --accent-light: #e8f0fe;
+      --danger: #FF3B30;
+      --danger-light: #ffeceb;
+      --success: #34C759;
+      --warning: #FF9500;
+      --bubble-other: #e9e9eb;
+      --bubble-self: #007AFF;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-lg: 16px;
+      --radius-full: 20px;
+      --shadow-sm: 0 0.5px 0 rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 2px 8px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.06);
+      --transition: 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+      font-size: 15px;
+      letter-spacing: -0.2px;
+    }
+
+    /* === Scrollbar === */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 3px; opacity: 0.5; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+    /* === Views === */
+    .view {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      animation: view-fade 0.25s ease;
+    }
+    .view.visible { display: flex; }
+    @keyframes view-fade { from { opacity: 0; } to { opacity: 1; } }
+
+    /* === Setup views (host/join) === */
+    .setup-container {
+      padding: 0 20px 24px 20px;
+    }
+    .setup-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 32px 0 24px 0;
+    }
+    .hero-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #007AFF, #5856D6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
+    }
+    .hero-icon svg { width: 34px; height: 34px; color: #ffffff; }
+    .hero-icon.join {
+      background: linear-gradient(135deg, #34C759, #30B0C7);
+      box-shadow: 0 4px 16px rgba(52, 199, 89, 0.3);
+    }
+    .setup-hero h2 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      margin-bottom: 4px;
+    }
+    .setup-hero p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* === Grouped list (iOS Settings style) === */
+    .grouped-list {
+      background: var(--surface-grouped);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .group-header {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 0 4px 6px 4px;
+      margin-top: 20px;
+    }
+    .list-item {
+      display: flex;
+      align-items: center;
+      min-height: 50px;
+      padding: 10px 16px;
+      border-bottom: 0.5px solid var(--separator);
+      position: relative;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-item-label {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .list-item-value {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-right: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+    .list-item input[type="text"],
+    .list-item input[type="password"],
+    .list-item input[type="number"] {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+      text-align: right;
+      -webkit-appearance: none;
+      padding: 4px 0;
+    }
+    .list-item input::placeholder { color: var(--text-tertiary); text-align: right; }
+    .list-item input[type="number"] { -moz-appearance: textfield; }
+    .list-item input[type="number"]::-webkit-outer-spin-button,
+    .list-item input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    /* iOS Toggle Switch */
+    .toggle {
+      position: relative;
+      width: 51px;
+      height: 31px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #e9e9eb;
+      border-radius: 31px;
+      transition: background 0.25s ease;
+    }
+    .toggle-slider:before {
+      content: "";
+      position: absolute;
+      height: 27px;
+      width: 27px;
+      left: 2px;
+      bottom: 2px;
+      background: #ffffff;
+      border-radius: 50%;
+      transition: transform 0.25s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    .toggle input:checked + .toggle-slider { background: var(--success); }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+    /* === IP Display Card === */
+    .ip-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    .ip-card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--accent-light);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .ip-card-icon svg { width: 22px; height: 22px; }
+    .ip-card-info { flex: 1; }
+    .ip-card-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 2px; }
+    .ip-card-value {
+      font-size: 17px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.3px;
+    }
+    .ip-copy-btn {
+      width: 32px; height: 32px;
+      border: none;
+      background: var(--surface-secondary);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background var(--transition);
+    }
+    .ip-copy-btn:hover { background: var(--separator); }
+    .ip-copy-btn svg { width: 16px; height: 16px; color: var(--text-secondary); }
+
+    /* === Primary Button === */
+    .btn-primary {
+      width: 100%;
+      height: 50px;
+      border: none;
+      border-radius: var(--radius-full);
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      outline: none;
+      font-family: inherit;
+      letter-spacing: -0.2px;
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:active { transform: scale(0.97); opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+    /* === Error Message === */
+    .error-msg {
+      color: var(--danger);
+      font-size: 13px;
+      margin-top: 12px;
+      text-align: center;
+      min-height: 18px;
+      line-height: 1.4;
+    }
+
+    /* === Avatar Picker === */
+    .avatar-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+    }
+    .avatar-preview {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--surface-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+      border: 0.5px solid var(--separator);
+      overflow: hidden;
+    }
+    .avatar-picker {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      flex: 1;
+      padding: 2px 0;
+      scrollbar-width: thin;
+    }
+    .avatar-option {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1.5px solid transparent;
+      background: var(--surface-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all var(--transition);
+      padding: 0;
+      font-family: inherit;
+    }
+    .avatar-option:hover { background: var(--separator); }
+    .avatar-option.selected {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      transform: scale(1.08);
+    }
+
+    /* === Discovery List === */
+    .group-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px 6px 4px;
+      margin-top: 20px;
+    }
+    .group-header-row .group-header { margin-top: 0; }
+    .refresh-btn {
+      height: 26px;
+      padding: 0 12px;
+      border: none;
+      border-radius: var(--radius-full);
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      outline: none;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .refresh-btn:hover { background: var(--accent); color: #ffffff; }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .refresh-btn svg { width: 13px; height: 13px; }
+    .refresh-btn.spinning svg { animation: spin 0.9s linear infinite; }
+    @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+    .discovery-list {
+      margin-bottom: 20px;
+    }
+    .discovery-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: var(--shadow-sm);
+      border: 1.5px solid transparent;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+    }
+    .discovery-item:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+    .discovery-item:active { transform: translateY(0); }
+    .discovery-item.selected {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .discovery-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--surface-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .discovery-info { flex: 1; min-width: 0; }
+    .discovery-name {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .discovery-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .discovery-arrow {
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+    .discovery-arrow svg { width: 18px; height: 18px; }
+    .discovery-status {
+      padding: 18px 16px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 13px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+    .discovery-status.loading::before {
+      content: "";
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--separator);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    /* === Chat message avatar === */
+    .message-sender { display: flex; align-items: center; gap: 5px; }
+    .sender-avatar {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--surface-secondary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    /* === Collaboration Active View === */
+    #collab-active-view { padding: 0; }
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      padding-top: max(10px, env(safe-area-inset-top));
+      background: rgba(242, 242, 247, 0.82);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 0.5px solid var(--separator);
+      flex-shrink: 0;
+      -webkit-app-region: drag;
+      z-index: 10;
+    }
+    .nav-bar-left {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      -webkit-app-region: no-drag;
+    }
+    .nav-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.4px;
+    }
+    .nav-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .nav-status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .btn-leave {
+      height: 32px;
+      padding: 0 14px;
+      border: none;
+      border-radius: var(--radius-full);
+      background: var(--danger-light);
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      outline: none;
+      font-family: inherit;
+      flex-shrink: 0;
+      -webkit-app-region: no-drag;
+    }
+    .btn-leave:hover { background: var(--danger); color: #ffffff; }
+    .btn-leave:active { transform: scale(0.95); }
+
+    /* === Chat Messages === */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px;
+      scroll-behavior: smooth;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .message-row {
+      display: flex;
+      flex-direction: column;
+      max-width: 72%;
+      animation: bubble-in 0.28s cubic-bezier(0.25, 0.1, 0.25, 1);
+      margin-top: 3px;
+    }
+    @keyframes bubble-in {
+      from { opacity: 0; transform: translateY(6px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .message-row.message-self {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+    .message-row.message-other {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+    .message-sender {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin: 0 12px 2px 12px;
+      font-weight: 500;
+    }
+    .message-bubble {
+      padding: 8px 14px;
+      font-size: 15px;
+      line-height: 1.4;
+      word-break: break-word;
+      position: relative;
+    }
+    .message-other .message-bubble {
+      background: var(--bubble-other);
+      color: var(--text);
+      border-radius: 18px 18px 18px 4px;
+    }
+    .message-self .message-bubble {
+      background: var(--bubble-self);
+      color: #ffffff;
+      border-radius: 18px 18px 4px 18px;
+    }
+    .message-timestamp {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      margin: 2px 12px 0 12px;
+    }
+    .message-system {
+      align-self: center;
+      max-width: 85%;
+      background: rgba(0,0,0,0.06);
+      color: var(--text-secondary);
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      text-align: center;
+      line-height: 1.4;
+      margin: 4px 0;
+    }
+
+    /* === Chat Input === */
+    .chat-input-bar {
+      display: flex;
+      gap: 8px;
+      padding: 8px 12px;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+      background: rgba(242, 242, 247, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 0.5px solid var(--separator);
+      flex-shrink: 0;
+    }
+    #chat-input {
+      flex: 1;
+      height: 36px;
+      border: 1px solid var(--separator);
+      border-radius: var(--radius-full);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 15px;
+      padding: 0 16px;
+      outline: none;
+      transition: all var(--transition);
+      font-family: inherit;
+      -webkit-appearance: none;
+    }
+    #chat-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
+    }
+    #chat-input::placeholder { color: var(--text-tertiary); }
+    .btn-send {
+      height: 36px;
+      width: 36px;
+      border: none;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #ffffff;
+      cursor: pointer;
+      transition: all var(--transition);
+      outline: none;
+      font-family: inherit;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-send svg { width: 18px; height: 18px; }
+    .btn-send:hover { background: var(--accent-hover); }
+    .btn-send:active { transform: scale(0.9); }
+    .btn-send:disabled { opacity: 0.3; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <!-- Host setup view -->
+  <div id="host-setup-view" class="view">
+    <div class="setup-container">
+      <div class="setup-hero">
+        <div class="hero-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <h2>发起协作</h2>
+        <p>创建协作房间，邀请局域网内的伙伴加入</p>
+      </div>
+
+      <div class="ip-card">
+        <div class="ip-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <div class="ip-card-info">
+          <div class="ip-card-label">本机 IP 地址</div>
+          <div class="ip-card-value" id="host-local-ip">获取中...</div>
+        </div>
+        <button class="ip-copy-btn" id="btn-copy-ip" title="复制 IP">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="group-header">个人信息</div>
+      <div class="grouped-list">
+        <div class="list-item">
+          <span class="list-item-label">昵称</span>
+          <input type="text" id="host-nickname" placeholder="输入昵称" maxlength="16">
+        </div>
+        <div class="avatar-row">
+          <div class="avatar-preview" id="host-avatar-preview">🏠</div>
+          <div class="avatar-picker" id="host-avatar-picker"></div>
+        </div>
+      </div>
+
+      <div class="group-header">连接设置</div>
+      <div class="grouped-list">
+        <div class="list-item">
+          <span class="list-item-label">密码</span>
+          <input type="password" id="host-password" placeholder="设置密码">
+        </div>
+        <div class="list-item">
+          <span class="list-item-label">端口</span>
+          <input type="number" id="host-port" value="8080" min="1" max="65535" style="width: 80px;">
+        </div>
+      </div>
+
+      <div class="group-header">协作者权限</div>
+      <div class="grouped-list">
+        <div class="list-item">
+          <span class="list-item-label">添加扩展</span>
+          <label class="toggle">
+            <input type="checkbox" id="perm-add-extension" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="list-item">
+          <span class="list-item-label">删除扩展</span>
+          <label class="toggle">
+            <input type="checkbox" id="perm-delete-extension" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="list-item">
+          <span class="list-item-label">删除角色</span>
+          <label class="toggle">
+            <input type="checkbox" id="perm-delete-sprite" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <button id="btn-start-host" class="btn-primary">发起协作</button>
+      <div id="host-error" class="error-msg"></div>
+    </div>
+  </div>
+
+  <!-- Join setup view -->
+  <div id="join-setup-view" class="view">
+    <div class="setup-container">
+      <div class="setup-hero">
+        <div class="hero-icon join">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 6.5l-4 4-2-2-4 4 1.5 1.5L9 10l2 2 4-4 2 2 4-4-1.5-1.5L17 4.5z"/>
+            <path d="M3 12v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          </svg>
+        </div>
+        <h2>加入协作</h2>
+        <p>自动搜索内网协作，点击即可加入</p>
+      </div>
+
+      <div class="group-header">个人信息</div>
+      <div class="grouped-list">
+        <div class="list-item">
+          <span class="list-item-label">昵称</span>
+          <input type="text" id="join-nickname" placeholder="输入昵称" maxlength="16">
+        </div>
+        <div class="avatar-row">
+          <div class="avatar-preview" id="join-avatar-preview">👤</div>
+          <div class="avatar-picker" id="join-avatar-picker"></div>
+        </div>
+      </div>
+
+      <div class="group-header-row">
+        <span class="group-header">可加入的协作</span>
+        <button class="refresh-btn" id="btn-refresh-discovery">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          刷新
+        </button>
+      </div>
+      <div class="discovery-list" id="discovery-list">
+        <div class="discovery-status loading">正在搜索内网...</div>
+      </div>
+
+      <div class="group-header">或手动输入</div>
+      <div class="grouped-list">
+        <div class="list-item">
+          <span class="list-item-label">IP 地址</span>
+          <input type="text" id="join-ip" placeholder="192.168.1.100">
+        </div>
+        <div class="list-item">
+          <span class="list-item-label">端口</span>
+          <input type="number" id="join-port" value="8080" min="1" max="65535" style="width: 80px;">
+        </div>
+        <div class="list-item">
+          <span class="list-item-label">密码</span>
+          <input type="password" id="join-password" placeholder="输入密码">
+        </div>
+      </div>
+
+      <button id="btn-join" class="btn-primary">加入协作</button>
+      <div id="join-error" class="error-msg"></div>
+    </div>
+  </div>
+
+  <!-- Collaboration active view (chat) -->
+  <div id="collab-active-view" class="view">
+    <div class="nav-bar">
+      <div class="nav-bar-left">
+        <span class="nav-title" id="collab-role-label"></span>
+        <span class="nav-subtitle"><span class="nav-status-dot"></span><span id="collab-online-count">1 人在线</span></span>
+      </div>
+      <button id="btn-end-collab" class="btn-leave"></button>
+    </div>
+    <div id="chat-messages" class="chat-messages"></div>
+    <div class="chat-input-bar">
+      <input type="text" id="chat-input" placeholder="iMessage">
+      <button id="btn-send" class="btn-send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+      var Preload = window.CollaborationPreload;
+
+      var hostSetupView = document.getElementById('host-setup-view');
+      var joinSetupView = document.getElementById('join-setup-view');
+      var collabActiveView = document.getElementById('collab-active-view');
+      var hostPassword = document.getElementById('host-password');
+      var hostPort = document.getElementById('host-port');
+      var hostNickname = document.getElementById('host-nickname');
+      var hostAvatarPicker = document.getElementById('host-avatar-picker');
+      var hostAvatarPreview = document.getElementById('host-avatar-preview');
+      var permAddExtension = document.getElementById('perm-add-extension');
+      var permDeleteExtension = document.getElementById('perm-delete-extension');
+      var permDeleteSprite = document.getElementById('perm-delete-sprite');
+      var btnStartHost = document.getElementById('btn-start-host');
+      var hostError = document.getElementById('host-error');
+      var hostLocalIp = document.getElementById('host-local-ip');
+      var btnCopyIp = document.getElementById('btn-copy-ip');
+      var joinIp = document.getElementById('join-ip');
+      var joinPort = document.getElementById('join-port');
+      var joinPassword = document.getElementById('join-password');
+      var joinNickname = document.getElementById('join-nickname');
+      var joinAvatarPicker = document.getElementById('join-avatar-picker');
+      var joinAvatarPreview = document.getElementById('join-avatar-preview');
+      var btnJoin = document.getElementById('btn-join');
+      var joinError = document.getElementById('join-error');
+      var discoveryList = document.getElementById('discovery-list');
+      var btnRefreshDiscovery = document.getElementById('btn-refresh-discovery');
+      var collabRoleLabel = document.getElementById('collab-role-label');
+      var collabOnlineCount = document.getElementById('collab-online-count');
+      var btnEndCollab = document.getElementById('btn-end-collab');
+      var chatMessages = document.getElementById('chat-messages');
+      var chatInput = document.getElementById('chat-input');
+      var btnSend = document.getElementById('btn-send');
+
+      var currentMode = null;
+      var onlineCount = 1;
+
+      var AVATAR_PRESETS = ['🏠','👤','🐱','🐶','🦊','🐼','🐧','🦁','🐯','🐸','🦉','🐙','🦄','🐝','🤖','👻','🎃','🌟','🎨','🚀','🎮'];
+      var hostAvatar = '🏠';
+      var joinAvatar = '👤';
+      var discoveryScanning = false;
+
+      function initAvatarPicker(container, previewEl, defaultAvatar, onSelect) {
+        var current = defaultAvatar;
+        container.innerHTML = '';
+        AVATAR_PRESETS.forEach(function(emoji) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'avatar-option' + (emoji === current ? ' selected' : '');
+          btn.textContent = emoji;
+          btn.addEventListener('click', function() {
+            current = emoji;
+            previewEl.textContent = emoji;
+            var opts = container.querySelectorAll('.avatar-option');
+            for (var i = 0; i < opts.length; i++) opts[i].classList.remove('selected');
+            btn.classList.add('selected');
+            if (onSelect) onSelect(emoji);
+          });
+          container.appendChild(btn);
+        });
+        previewEl.textContent = current;
+      }
+      initAvatarPicker(hostAvatarPicker, hostAvatarPreview, '🏠', function(e) { hostAvatar = e; });
+      initAvatarPicker(joinAvatarPicker, joinAvatarPreview, '👤', function(e) { joinAvatar = e; });
+
+      function showView(view) {
+        hostSetupView.classList.remove('visible');
+        joinSetupView.classList.remove('visible');
+        collabActiveView.classList.remove('visible');
+        if (view === 'host') {
+          hostSetupView.classList.add('visible');
+        } else if (view === 'join') {
+          joinSetupView.classList.add('visible');
+        } else if (view === 'active') {
+          collabActiveView.classList.add('visible');
+        }
+      }
+
+      function showError(element, msg) { element.textContent = msg; }
+
+      function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+      }
+
+      function formatTimestamp(ts) {
+        var d = new Date(ts);
+        var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+        return pad(d.getHours()) + ':' + pad(d.getMinutes());
+      }
+
+      function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
+
+      function renderMessage(data) {
+        if (data.isSystem || data.type === 'system') {
+          var sysEl = document.createElement('div');
+          sysEl.className = 'message-system';
+          sysEl.textContent = data.text;
+          chatMessages.appendChild(sysEl);
+          scrollToBottom();
+          return;
+        }
+        var row = document.createElement('div');
+        row.className = 'message-row ' + (data.isSelf ? 'message-self' : 'message-other');
+        if (!data.isSelf && data.from) {
+          var sender = document.createElement('div');
+          sender.className = 'message-sender';
+          if (data.avatar) {
+            var av = document.createElement('span');
+            av.className = 'sender-avatar';
+            av.textContent = data.avatar;
+            sender.appendChild(av);
+          }
+          var nameEl = document.createElement('span');
+          nameEl.textContent = data.from;
+          sender.appendChild(nameEl);
+          row.appendChild(sender);
+        }
+        var bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.textContent = data.text;
+        row.appendChild(bubble);
+        if (data.timestamp) {
+          var time = document.createElement('div');
+          time.className = 'message-timestamp';
+          time.textContent = formatTimestamp(data.timestamp);
+          row.appendChild(time);
+        }
+        chatMessages.appendChild(row);
+        scrollToBottom();
+      }
+
+      function renderDiscoveryResults(sessions) {
+        discoveryList.innerHTML = '';
+        if (!sessions || sessions.length === 0) {
+          discoveryList.innerHTML = '<div class="discovery-status">未发现内网协作，请确认主机已发起，或手动输入 IP 加入</div>';
+          return;
+        }
+        sessions.forEach(function(s) {
+          var item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'discovery-item';
+          item.innerHTML =
+            '<div class="discovery-avatar">' + escapeHtml(s.hostAvatar || '🏠') + '</div>' +
+            '<div class="discovery-info">' +
+              '<div class="discovery-name">' + escapeHtml(s.hostName || '主机') + ' 的协作</div>' +
+              '<div class="discovery-meta">' + escapeHtml(s.ip) + ':' + escapeHtml(String(s.port)) + ' · ' + (s.onlineCount || 1) + ' 人在线</div>' +
+            '</div>' +
+            '<div class="discovery-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>';
+          item.addEventListener('click', function() {
+            // Fill IP/port and focus password (only password needed)
+            joinIp.value = s.ip;
+            joinPort.value = s.port;
+            // Mark as selected
+            var all = discoveryList.querySelectorAll('.discovery-item');
+            for (var i = 0; i < all.length; i++) all[i].classList.remove('selected');
+            item.classList.add('selected');
+            joinPassword.focus();
+            joinPassword.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+          discoveryList.appendChild(item);
+        });
+      }
+
+      function runDiscovery() {
+        if (discoveryScanning) return;
+        discoveryScanning = true;
+        btnRefreshDiscovery.classList.add('spinning');
+        btnRefreshDiscovery.disabled = true;
+        discoveryList.innerHTML = '<div class="discovery-status loading">正在搜索内网...</div>';
+        var port = parseInt(joinPort.value, 10) || 8080;
+        Preload.discoverSessions(port).then(function(res) {
+          discoveryScanning = false;
+          btnRefreshDiscovery.classList.remove('spinning');
+          btnRefreshDiscovery.disabled = false;
+          if (res && res.success) {
+            renderDiscoveryResults(res.sessions || []);
+          } else {
+            discoveryList.innerHTML = '<div class="discovery-status">搜索失败，请重试或手动输入 IP</div>';
+          }
+        });
+      }
+
+      btnRefreshDiscovery.addEventListener('click', runDiscovery);
+      // Re-scan when port changes (debounced)
+      joinPort.addEventListener('change', runDiscovery);
+
+      function updateOnlineCount(count) {
+        onlineCount = count;
+        collabOnlineCount.textContent = count + ' 人在线';
+      }
+
+      function sendChat() {
+        var text = chatInput.value.trim();
+        if (!text) return;
+        Preload.sendMessage(text);
+        chatInput.value = '';
+        chatInput.focus();
+      }
+
+      // Fetch local IP for host view
+      Preload.getLocalIP().then(function(ip) {
+        hostLocalIp.textContent = ip;
+      });
+
+      // Copy IP button
+      btnCopyIp.addEventListener('click', function() {
+        var ip = hostLocalIp.textContent;
+        if (ip && ip !== '获取中...') {
+          navigator.clipboard.writeText(ip).then(function() {
+            var original = btnCopyIp.innerHTML;
+            btnCopyIp.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+            setTimeout(function() { btnCopyIp.innerHTML = original; }, 1500);
+          });
+        }
+      });
+
+      btnStartHost.addEventListener('click', function() {
+        var password = hostPassword.value.trim();
+        var port = parseInt(hostPort.value, 10);
+        var nickname = hostNickname.value.trim();
+        var permissions = {
+          allowAddExtension: permAddExtension.checked,
+          allowDeleteExtension: permDeleteExtension.checked,
+          allowDeleteSprite: permDeleteSprite.checked
+        };
+        if (!password) { showError(hostError, '请设置密码'); return; }
+        if (!port || port < 1 || port > 65535) { showError(hostError, '请输入有效端口号 (1-65535)'); return; }
+        showError(hostError, '');
+        btnStartHost.disabled = true;
+        btnStartHost.textContent = '正在启动...';
+        Preload.startHost(password, port, permissions, nickname, hostAvatar);
+      });
+
+      btnJoin.addEventListener('click', function() {
+        var ip = joinIp.value.trim();
+        var port = parseInt(joinPort.value, 10);
+        var password = joinPassword.value.trim();
+        var nickname = joinNickname.value.trim();
+        if (!ip) { showError(joinError, '请输入 IP 地址'); return; }
+        if (!port || port < 1 || port > 65535) { showError(joinError, '请输入有效端口号 (1-65535)'); return; }
+        if (!password) { showError(joinError, '请输入密码'); return; }
+        showError(joinError, '');
+        btnJoin.disabled = true;
+        btnJoin.textContent = '正在连接...';
+        Preload.joinConnect(ip, port, password, nickname, joinAvatar);
+      });
+
+      btnSend.addEventListener('click', sendChat);
+      chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
+      });
+
+      btnEndCollab.addEventListener('click', function() {
+        if (currentMode === 'host') {
+          btnEndCollab.disabled = true;
+          Preload.endHost().then(function() { Preload.closeWindow(); });
+        } else if (currentMode === 'join') {
+          Preload.leave().then(function() { Preload.closeWindow(); });
+        }
+      });
+
+      Preload.onHostStarted(function(data) {
+        btnStartHost.disabled = false;
+        btnStartHost.textContent = '发起协作';
+        if (data.success) {
+          currentMode = 'host';
+          collabRoleLabel.textContent = '管理员';
+          btnEndCollab.textContent = '结束协作';
+          updateOnlineCount(data.onlineCount || 1);
+          showView('active');
+          renderMessage({ isSystem: true, text: '协作已启动，等待其他人加入...' });
+          setTimeout(function() { chatInput.focus(); }, 100);
+        } else {
+          showError(hostError, data.error || '启动失败');
+        }
+      });
+
+      Preload.onJoinConnected(function(data) {
+        btnJoin.disabled = false;
+        btnJoin.textContent = '加入协作';
+        if (data.success) {
+          currentMode = 'join';
+          collabRoleLabel.textContent = '参与者';
+          btnEndCollab.textContent = '退出协作';
+          updateOnlineCount(1);
+          showView('active');
+          renderMessage({ isSystem: true, text: '已加入协作房间' });
+          setTimeout(function() { chatInput.focus(); }, 100);
+        } else {
+          showError(joinError, data.error || '连接失败');
+        }
+      });
+
+      Preload.onChatMessage(function(data) { renderMessage(data); });
+
+      Preload.onClientJoin(function(data) {
+        renderMessage({ isSystem: true, text: data.username + ' 加入了协作' });
+        if (data.onlineCount !== undefined) { updateOnlineCount(data.onlineCount); }
+      });
+
+      Preload.onClientLeave(function(data) {
+        renderMessage({ isSystem: true, text: data.username + ' 离开了协作' });
+        if (data.onlineCount !== undefined) { updateOnlineCount(data.onlineCount); }
+        else { updateOnlineCount(Math.max(1, onlineCount - 1)); }
+      });
+
+      Preload.onCollaborationEnded(function(data) {
+        var reason = data.reason === 'host-ended' ? '主机已结束协作' : '协作已结束';
+        renderMessage({ isSystem: true, text: reason });
+        setTimeout(function() {
+          alert(reason);
+          btnStartHost.disabled = false;
+          btnStartHost.textContent = '发起协作';
+          btnJoin.disabled = false;
+          btnJoin.textContent = '加入协作';
+          showError(hostError, '');
+          showError(joinError, '');
+          if (currentMode === 'host') { showView('host'); }
+          else { showView('join'); }
+          currentMode = null;
+        }, 500);
+      });
+
+      if (Preload.onFocusChat) {
+        Preload.onFocusChat(function() {
+          if (collabActiveView.classList.contains('visible')) { chatInput.focus(); }
+        });
+      }
+
+      if (Preload.onEndRequested) {
+        Preload.onEndRequested(function() {
+          if (currentMode === 'host') {
+            btnEndCollab.disabled = true;
+            Preload.endHost().then(function() { Preload.closeWindow(); });
+          }
+        });
+      }
+
+      if (Preload.onLeaveRequested) {
+        Preload.onLeaveRequested(function() {
+          if (currentMode === 'join') {
+            Preload.leave().then(function() { Preload.closeWindow(); });
+          }
+        });
+      }
+
+      Preload.getMode().then(function(mode) {
+        currentMode = mode;
+        if (mode === 'host') {
+          showView('host');
+        } else {
+          showView('join');
+          // Auto-scan LAN for available collaborations
+          runDiscovery();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
