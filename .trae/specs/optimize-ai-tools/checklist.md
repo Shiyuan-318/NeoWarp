@@ -1,0 +1,18 @@
+- [x] TOOLS 数组包含全部 40+ 个已实现工具的声明（含 addScript、executeOperations、addSprite、addBackdrop、deleteSprite、changeCostume、changeBackdrop、getStageInfo、getStageScreenshot、getInstalledExtensions、searchExtensions、developExtension、installExtension、addCostumeFromUrl、searchAndAddCostume、addSpriteFromUrl、setStageSize、renameProject、getSystemTime、getSystemInfo）
+- [x] 每个新增工具声明包含完整的 name、description、parameters（含 type、properties、required）。无参数工具与现有工具（clickGreenFlag 等）保持一致，省略 required（OpenAI API 中 required 可选，默认为空数组）
+- [x] addScript 工具声明中 blocks 参数说明包含 Scratch opcode 格式（"category_action"）和使用示例
+- [x] executeOperations 工具声明中 operations 参数说明包含所有操作类型（add_script, delete_block, modify_input, add_comment, delete_comment, explain）
+- [x] buildSystemPrompt 在项目 JSON 超过 5000 字符时仅注入结构化摘要
+- [x] 结构化摘要包含每个精灵的名称、位置、大小、方向、积木数、变量名、列表名
+- [x] 系统提示词中的工具列表与 TOOLS 数组完全一致
+- [x] 系统提示词包含 Scratch 常用 opcode 参考表（motion, looks, sound, control, sensing, operators, data 分类）
+- [x] buildSystemPrompt 返回值包含项目压缩状态标记（{prompt, compressed}）
+- [x] webSearch 对排名前 3 的结果进行页面内容抓取
+- [x] extractPageContent 函数正确去除 HTML 标签和噪声元素，提取正文纯文本
+- [x] 页面内容摘要截断至 2000 字符
+- [x] 内容抓取失败时静默跳过，不影响其他搜索结果
+- [x] 搜索结果对象包含可选的 content 字段
+- [x] runConversationLoop 中工具结果超过 4000 字符时被截断并附加 [结果已截断]
+- [x] 压缩模式下聊天历史保留 30 条消息，全量模式保留 20 条
+- [x] 现有 22 个工具的功能不受影响
+- [x] 现有 LLM 提供商配置和流式响应功能不受影响

@@ -1,4 +1,4 @@
-const {app, shell} = require('electron');
+const {app, shell, ipcMain} = require('electron');
 const AbstractWindow = require('./abstract');
 const {translate, getStrings, getLocale} = require('../l10n');
 const {APP_NAME} = require('../brand');
@@ -13,6 +13,29 @@ class DesktopSettingsWindow extends AbstractWindow {
     this.window.setTitle(`${translate('desktop-settings.title')} - ${APP_NAME}`);
     this.window.setMinimizable(false);
     this.window.setMaximizable(false);
+
+    this.ipc.handle('ds-get-theme', () => {
+      const EditorWindow = require('./editor');
+      const anEditorWindow = AbstractWindow.getWindowsByClass(EditorWindow)[0];
+      if (!anEditorWindow || anEditorWindow.window.isDestroyed()) {
+        return 'light';
+      }
+      return new Promise((resolve) => {
+        const requestId = Date.now().toString();
+        const handler = (event, data) => {
+          if (data && data.requestId === requestId) {
+            ipcMain.removeListener('theme-response', handler);
+            resolve(data.theme || 'light');
+          }
+        };
+        ipcMain.on('theme-response', handler);
+        anEditorWindow.window.webContents.send('request-theme', { requestId });
+        setTimeout(() => {
+          ipcMain.removeListener('theme-response', handler);
+          resolve('light');
+        }, 3000);
+      });
+    });
 
     this.ipc.on('init', (event) => {
       event.returnValue = {

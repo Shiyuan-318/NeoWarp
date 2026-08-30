@@ -30,3 +30,569 @@ p {
   border-radius: 8px;
   margin: 2px 4px;
 }
+
+/* NeoWarp: 角色与造型右键菜单（react-contextmenu）圆角
+   scratch-gui 的 ContextMenu 组件（context-menu.css）被角色列表与造型列表
+   共用的 SpriteSelectorItem 复用，此处一处覆盖即可同时作用于两个菜单。
+   CSS Modules 编译后类名带 hash，沿用 [class*="..."] 属性选择器匹配，
+   与上方 .blocklyContextMenu 及 menu-bar 覆盖写法一致。 */
+:global([class*="context-menu_context-menu_"]) {
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+:global([class*="context-menu_context-menu_"] [class*="context-menu_menu-item"]) {
+  border-radius: 8px;
+  margin: 2px 4px;
+}
+
+/* ============================================================
+   NeoWarp: 扩展库面板（Library / Extension Modal）Apple Design 风格
+   说明：
+   1. CSS Modules 编译后类名带 hash，使用属性选择器覆盖；
+   2. 颜色一律使用 scratch-gui 的主题 CSS 变量（var(--ui-*) / var(--text-primary)
+      / var(--looks-secondary) 等），深浅主题自动适配，无需 [theme="dark"]；
+   3. 卡片用直接子选择器 ">" 精确匹配，避免误伤 library-item-name /
+      library-item-image 等内部子元素；
+   4. 区分「容器」与「内容」类名时利用编译后类名的尾部下划线，
+      如 [class*="library-item-image_"] 只命中 <img>，不会命中
+      library-item-image-container（后者编译为 ...-image-container_hash）。
+   ============================================================ */
+
+/* 动效令牌：统一缓动曲线与时长，便于整体调节节奏 */
+:global(:root) {
+  /* 标准进入/退出曲线，接近 Apple 的 ease-out 观感 */
+  --nw-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* 轻微回弹，用于选中态强调 */
+  --nw-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --nw-dur-fast: 0.16s;
+  --nw-dur: 0.26s;
+  --nw-dur-slow: 0.4s;
+}
+
+/* 弹窗遮罩：更柔和的暗化 + 更强模糊，并淡入出现 */
+@keyframes neowarpOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+:global([class*="modal-overlay"]) {
+  background-color: var(--ui-modal-overlay) !important;
+  backdrop-filter: saturate(160%) blur(20px) !important;
+  -webkit-backdrop-filter: saturate(160%) blur(20px) !important;
+  animation: neowarpOverlayIn var(--nw-dur) var(--nw-ease) backwards;
+}
+
+/* NeoWarp: 弹窗主体通用规则（所有模态）——去白色描边，背景/前景跟随主题 */
+:global([class*="modal-content"]) {
+  border: none !important;
+  overflow: hidden;
+  background: var(--ui-modal-background) !important;
+  color: var(--ui-modal-foreground) !important;
+}
+
+/* 全屏模态（扩展库）：整体从 98% 缩放淡入，营造"面板推进"观感 */
+@keyframes neowarpPanelIn {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* 非全屏模态（设置、我的扩展等）：从下方微微升起 */
+@keyframes neowarpDialogIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* NeoWarp: 全屏模态（扩展库）专属——去掉圆角与阴影，呈全屏面板观感。
+   动画不用 both 填充，避免结束后残留 transform：全屏面板一旦成为
+   containing block，内部 position: fixed 元素的定位基准会改变。 */
+:global([class*="modal-content"][class*="full-screen"]) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  animation: neowarpPanelIn var(--nw-dur-slow) var(--nw-ease);
+  transform-origin: center center;
+}
+
+/* NeoWarp: 非全屏模态（如高级设置弹窗）——恢复圆角与柔和阴影，与右键菜单风格一致 */
+:global([class*="modal-content"]:not([class*="full-screen"])) {
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), 0 24px 64px rgba(0, 0, 0, 0.16) !important;
+  animation: neowarpDialogIn var(--nw-dur-slow) var(--nw-ease);
+}
+
+/* 头部：毛玻璃 + 主题色，去掉原 Scratch 蓝色 */
+:global([class*="modal-content"] [class*="header"]) {
+  background: color-mix(in srgb, var(--ui-modal-header-background) 72%, transparent) !important;
+  backdrop-filter: saturate(180%) blur(20px) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px) !important;
+  color: var(--ui-modal-header-foreground) !important;
+  border-bottom: 0.5px solid var(--ui-black-transparent) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.2px !important;
+}
+
+/* NeoWarp: 分节标题（位于 .body 内的 .header，如高级设置弹窗的"特色/移除限制/外观"等）
+   还原为简洁样式，避免被上方标题栏主题色规则误伤 */
+:global([class*="modal-content"] [class*="body"] [class*="header"]) {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
+  color: var(--text-primary) !important;
+  font-weight: 700 !important;
+  letter-spacing: normal !important;
+}
+
+/* 标题栏左侧「返回」按钮与右侧关闭按钮：加入 hover/active 反馈。
+   scratch-gui 的 Button 组件本身无过渡，这里补齐。 */
+:global([class*="modal-content"] [class*="back-button"]) {
+  border-radius: 999px !important;
+  padding: 0.25rem 0.6rem !important;
+  transition:
+    background var(--nw-dur-fast) var(--nw-ease),
+    transform var(--nw-dur-fast) var(--nw-ease) !important;
+}
+:global([class*="modal-content"] [class*="back-button"]:hover) {
+  background: color-mix(in srgb, var(--ui-modal-header-foreground) 16%, transparent) !important;
+}
+:global([class*="modal-content"] [class*="back-button"]:active) {
+  transform: scale(0.94);
+}
+:global([class*="modal-content"] [class*="close-button"]) {
+  transition:
+    background var(--nw-dur-fast) var(--nw-ease),
+    transform var(--nw-dur-fast) var(--nw-ease) !important;
+}
+:global([class*="modal-content"] [class*="close-button"]:hover) {
+  transform: scale(1.08);
+}
+:global([class*="modal-content"] [class*="close-button"]:active) {
+  transform: scale(0.92);
+}
+
+/* 过滤栏：背景透明，与头部融合。
+   注意：library.jsx 给搜索框、分隔条、每个标签都加了 filterBarItem，
+   编译后类名含 "filter-bar"，所以只能用 library_filter-bar_ 精确命中
+   容器本身，否则 padding/背景会被错误地套到子元素上。 */
+:global([class*="library_filter-bar_"]) {
+  background: transparent !important;
+  padding: 0.85rem 1.25rem !important;
+}
+
+/* 标签容器：原生固定 2.5rem 高且顶对齐，chip 变矮后会贴顶，改为垂直居中 */
+:global([class*="library_tag-wrapper_"]) {
+  align-items: center;
+  gap: 0.4rem;
+}
+/* 标签由 gap 控制间距，去掉原生 filterBarItem 的 margin-right 避免间距翻倍 */
+:global([class*="library_tag-wrapper_"] [class*="tag-button_tag-button_"]) {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* 过滤栏内的竖直虚线分隔条：改为极细实线，降低视觉噪声 */
+:global([class*="library_divider_"]) {
+  border-right: 1px solid var(--ui-black-transparent) !important;
+  transform: none !important;
+  height: 1.25rem !important;
+  align-self: center;
+  opacity: 0.7;
+}
+
+/* 搜索框：Filter 组件是"外层大胶囊容器 div.filter + 内层 input.filter-input"。
+   容器用 filter.css 的编译名 filter_filter_ 精确命中（不会误伤
+   filter_filter-icon_ / filter_filter-input_，它们第二段后接连字符），
+   保留外层大圆角胶囊，内层 input 完全透明无框。 */
+:global([class*="filter_filter_"]) {
+  border-radius: 999px !important;
+  background: var(--input-background) !important;
+  border: 0.5px solid var(--ui-black-transparent) !important;
+  transition:
+    background var(--nw-dur) var(--nw-ease),
+    border-color var(--nw-dur) var(--nw-ease),
+    box-shadow var(--nw-dur) var(--nw-ease) !important;
+}
+:global([class*="filter_filter_"]:focus-within) {
+  background: var(--ui-white) !important;
+  border-color: var(--looks-secondary) !important;
+  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--looks-secondary) 22%, transparent) !important;
+}
+/* 内层输入框：透明无框，仅保留文字与宽度动画 */
+:global([class*="filter-input"]) {
+  border: none !important;
+  background: transparent !important;
+  font-size: 13px !important;
+  color: var(--text-primary) !important;
+  transition: width var(--nw-dur-slow) var(--nw-ease) !important;
+}
+/* 清空按钮（x）：hover 由原生 scale(1.2) 改为更克制的缩放并加过渡 */
+:global([class*="filter_x-icon-wrapper_"]) {
+  transition: opacity var(--nw-dur-fast) var(--nw-ease), transform var(--nw-dur-fast) var(--nw-ease) !important;
+}
+:global([class*="filter_x-icon-wrapper_"]:hover) {
+  transform: scale(1.12) !important;
+}
+
+/* 标签按钮：iOS 风格胶囊 chip，颜色跟随主题，切换带平滑过渡。
+   原生 height 固定为 2.5rem（filter bar 高度），会把 12px 文字撑成方块观感，
+   改为由 padding 决定高度。 */
+:global([class*="tag-button_tag-button_"]) {
+  border-radius: 999px !important;
+  border: 0.5px solid var(--ui-black-transparent) !important;
+  background: color-mix(in srgb, var(--ui-black-transparent) 40%, transparent) !important;
+  color: var(--text-primary) !important;
+  font-weight: 500 !important;
+  padding: 0.35rem 0.9rem !important;
+  font-size: 12px !important;
+  height: auto !important;
+  transition:
+    background var(--nw-dur) var(--nw-ease),
+    color var(--nw-dur) var(--nw-ease),
+    border-color var(--nw-dur) var(--nw-ease),
+    transform var(--nw-dur-fast) var(--nw-ease),
+    box-shadow var(--nw-dur) var(--nw-ease) !important;
+}
+:global([class*="tag-button_tag-button_"]:hover) {
+  background: color-mix(in srgb, var(--ui-black-transparent) 70%, transparent) !important;
+  transform: translateY(-1px);
+}
+:global([class*="tag-button_tag-button_"]:active) {
+  transform: scale(0.96);
+}
+@keyframes neowarpTagPop {
+  0% { transform: scale(0.92); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+:global([class*="tag-button_tag-button_"][class*="active"]) {
+  background: var(--looks-secondary) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--looks-secondary) 35%, transparent) !important;
+  animation: neowarpTagPop var(--nw-dur-slow) var(--nw-ease-spring) !important;
+}
+:global([class*="tag-button_tag-button_"][class*="active"]:hover) {
+  background: var(--looks-secondary) !important;
+  transform: translateY(-1px);
+}
+
+/* 切换顶部分类时，卡片网格内容错落淡入过渡 */
+@keyframes neowarpLibraryFadeIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+:global([class*="library-scroll-grid"] > [class*="library-item"]),
+:global([class*="library-scroll-grid"] > [class*="featured-item"]) {
+  animation: neowarpLibraryFadeIn var(--nw-dur-slow) var(--nw-ease) backwards;
+}
+
+/* 前 12 张卡片错开延迟营造瀑布感；超出部分立即播放避免等待过久。
+   注意 :nth-child 基于"父元素的子元素位置"，Separator 分隔符也计入计数，
+   但视觉上仍能呈现自然的错落效果，无需精确按可见卡片序号延迟。 */
+:global([class*="library-scroll-grid"] > *:nth-child(1)) { animation-delay: 0ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(2)) { animation-delay: 30ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(3)) { animation-delay: 60ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(4)) { animation-delay: 90ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(5)) { animation-delay: 120ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(6)) { animation-delay: 150ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(7)) { animation-delay: 180ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(8)) { animation-delay: 205ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(9)) { animation-delay: 230ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(10)) { animation-delay: 250ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(11)) { animation-delay: 270ms; }
+:global([class*="library-scroll-grid"] > *:nth-child(12)) { animation-delay: 285ms; }
+
+/* 滚动网格：底色跟随主题，卡片间距更均匀，滚动更顺滑。
+   注意卡片自带 margin: 0.5rem，gap 仅做微调，避免行列间距过宽。 */
+:global([class*="library-scroll-grid"]) {
+  background: var(--ui-secondary) !important;
+  padding: 0.75rem 1rem 1.5rem 1rem !important;
+  gap: 0.25rem;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* 细滚动条，避免默认宽滚动条割裂全屏面板 */
+:global([class*="library-scroll-grid"]::-webkit-scrollbar) {
+  width: 10px;
+}
+:global([class*="library-scroll-grid"]::-webkit-scrollbar-track) {
+  background: transparent;
+}
+:global([class*="library-scroll-grid"]::-webkit-scrollbar-thumb) {
+  background: color-mix(in srgb, var(--text-primary) 22%, transparent);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+:global([class*="library-scroll-grid"]::-webkit-scrollbar-thumb:hover) {
+  background: color-mix(in srgb, var(--text-primary) 38%, transparent);
+  background-clip: content-box;
+}
+
+/* 扩展卡片：直接子选择器精确匹配卡片容器本身，排除 name/image 等子元素
+   去掉粗描边 → 柔和阴影 + 圆角，hover 微浮起；颜色跟随主题 */
+:global([class*="library-scroll-grid"] > [class*="library-item"]) {
+  background: var(--ui-modal-background) !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+  transition:
+    transform var(--nw-dur) var(--nw-ease),
+    box-shadow var(--nw-dur) var(--nw-ease) !important;
+  color: var(--text-primary) !important;
+}
+:global([class*="library-scroll-grid"] > [class*="library-item"]:hover) {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), 0 14px 32px rgba(0, 0, 0, 0.13) !important;
+  border: none !important;
+}
+/* 按下时轻微回落，形成"可点击"的物理反馈 */
+:global([class*="library-scroll-grid"] > [class*="library-item"]:active) {
+  transform: translateY(-1px) scale(0.985);
+  transition-duration: var(--nw-dur-fast) !important;
+}
+/* 键盘聚焦可见轮廓，保证无障碍可达性 */
+:global([class*="library-scroll-grid"] > [class*="library-item"]:focus-visible) {
+  outline: none;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--looks-secondary) 55%, transparent),
+    0 14px 32px rgba(0, 0, 0, 0.13) !important;
+}
+/* 禁用（Coming Soon）卡片不参与浮起反馈 */
+:global([class*="library-scroll-grid"] > [class*="library-item"][class*="disabled"]:hover),
+:global([class*="library-scroll-grid"] > [class*="library-item"][class*="disabled"]:active) {
+  transform: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+}
+/* featured 大卡片同样匹配 */
+:global([class*="library-scroll-grid"] > [class*="featured-item"]) {
+  border: none !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* 卡片图标：hover 时随卡片一起轻微放大，增强响应感。
+   末尾下划线确保只命中 <img class="library-item-image_hash">，
+   不会误伤 library-item-image-container_hash。 */
+:global([class*="library-item-image_"]),
+:global([class*="featured-image_"]) {
+  transition: transform var(--nw-dur-slow) var(--nw-ease);
+}
+:global([class*="library-item"]:hover [class*="library-item-image_"]),
+:global([class*="library-item"]:hover [class*="featured-image_"]) {
+  transform: scale(1.05);
+}
+
+/* 卡片标题与描述：文字层级更清晰 */
+:global([class*="library-scroll-grid"] [class*="library-item-name"]) {
+  letter-spacing: -0.1px;
+}
+:global([class*="library-scroll-grid"] [class*="featured-description"]) {
+  opacity: 0.78;
+}
+
+/* NeoWarp 本地扩展（Expands 目录）：
+   大图与 Logo 均要求"自适应填充"，img 默认的 fill 拉伸会变形，改用 cover 裁切。
+   library-item-extension 类挂在所有扩展卡片上（不含服装/造型库）。 */
+:global([class*="library-item-extension"] [class*="featured-image_"]) {
+  object-fit: cover;
+}
+:global([class*="library-item-inset-image"]) {
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* 收藏按钮：从"display 切换"改为透明度+缩放淡入，避免突然弹出 */
+:global([class*="favorite-container"]) {
+  display: block !important;
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+  transition:
+    opacity var(--nw-dur) var(--nw-ease),
+    transform var(--nw-dur) var(--nw-ease);
+}
+:global([class*="favorite-container"][class*="active"]),
+:global([class*="library-item"]:hover [class*="favorite-container"]),
+:global([class*="library-item"]:focus-within [class*="favorite-container"]) {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+:global([class*="favorite-container"]:hover) {
+  transform: scale(1.12);
+}
+:global([class*="favorite-container"]:active) {
+  transform: scale(0.92);
+}
+
+/* 分隔符：更细更柔，替换原生 2px 实线。
+   编译后类名为 separator_separator_hash（[name]_[local]_[hash]）。 */
+:global([class*="separator_separator"]) {
+  border-top: 0.5px solid var(--ui-black-transparent) !important;
+  margin: 1rem 0 0.75rem 0 !important;
+  opacity: 0.8;
+}
+
+/* 加载 spinner 区域：淡入，避免闪烁 */
+:global([class*="spinner-wrapper"]) {
+  animation: neowarpOverlayIn var(--nw-dur) var(--nw-ease) both;
+}
+
+/* 深色模式下阴影增强。
+   跟随 scratch-gui 应用内主题（desktop-hoc.jsx 在 <html> 上维护
+   data-gui-theme），而非 OS 的 prefers-color-scheme——应用设为深色但系统为
+   浅色时，深色卡片上不应继续使用浅色阴影。 */
+[data-gui-theme="dark"] :global([class*="library-scroll-grid"] > [class*="library-item"]) {
+  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.06) inset, 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+[data-gui-theme="dark"] :global([class*="library-scroll-grid"] > [class*="library-item"]:hover) {
+  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.08) inset, 0 12px 32px rgba(0, 0, 0, 0.55) !important;
+}
+[data-gui-theme="dark"] :global([class*="library-scroll-grid"] > [class*="library-item"][class*="disabled"]:hover) {
+  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.06) inset, 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 尊重系统"减弱动态效果"设置：关闭位移/缩放类动效，仅保留必要的淡入 */
+@media (prefers-reduced-motion: reduce) {
+  :global([class*="modal-content"]),
+  :global([class*="library-scroll-grid"] > [class*="library-item"]),
+  :global([class*="library-scroll-grid"] > [class*="featured-item"]),
+  :global([class*="tag-button_tag-button_"][class*="active"]) {
+    animation: none !important;
+  }
+  :global([class*="library-scroll-grid"] > [class*="library-item"]:hover),
+  :global([class*="library-scroll-grid"] > [class*="library-item"]:active),
+  :global([class*="tag-button_tag-button_"]:hover),
+  :global([class*="library-item"]:hover [class*="library-item-image_"]),
+  :global([class*="library-item"]:hover [class*="featured-image_"]) {
+    transform: none !important;
+  }
+  :global([class*="library-scroll-grid"]) {
+    scroll-behavior: auto;
+  }
+}
+
+/* ============================================================
+   NeoWarp: 扩展卡片右键菜单（extension-library.css）
+   编译后类名为 extension-library_context-menu_hash，与上方
+   react-contextmenu 的 context-menu_context-menu_ 不同，需单独覆盖。
+   ============================================================ */
+@keyframes neowarpMenuIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+:global([class*="extension-library_context-menu_"]) {
+  background: color-mix(in srgb, var(--ui-modal-background) 88%, transparent) !important;
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border: 0.5px solid var(--ui-black-transparent) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+  animation: neowarpMenuIn var(--nw-dur-fast) var(--nw-ease);
+  transform-origin: top left;
+}
+:global([class*="extension-library_context-menu-button_"]) {
+  transition:
+    background var(--nw-dur-fast) var(--nw-ease),
+    color var(--nw-dur-fast) var(--nw-ease),
+    transform var(--nw-dur-fast) var(--nw-ease) !important;
+}
+:global([class*="extension-library_context-menu-button_"]:active) {
+  transform: scale(0.97);
+}
+
+/* ============================================================
+   NeoWarp: 我的扩展弹窗（tw-my-extension-modal）
+   与扩展库卡片风格对齐：更大圆角、更清晰的输入态、按钮反馈。
+   ============================================================ */
+:global([class*="my-extension-modal_setting_"]) {
+  border-radius: 12px !important;
+  transition: background var(--nw-dur) var(--nw-ease) !important;
+}
+:global([class*="my-extension-modal_setting-input_"]) {
+  border: 0.5px solid var(--ui-black-transparent) !important;
+  border-radius: 10px !important;
+  background: var(--input-background) !important;
+  color: var(--text-primary) !important;
+  transition:
+    border-color var(--nw-dur) var(--nw-ease),
+    box-shadow var(--nw-dur) var(--nw-ease),
+    background var(--nw-dur) var(--nw-ease) !important;
+}
+:global([class*="my-extension-modal_setting-input_"]:focus) {
+  outline: none;
+  border-color: var(--looks-secondary) !important;
+  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--looks-secondary) 22%, transparent) !important;
+}
+:global([class*="my-extension-modal_file-button_"]),
+:global([class*="my-extension-modal_save-button_"]),
+:global([class*="my-extension-modal_cancel-button_"]) {
+  border-radius: 10px !important;
+  transition:
+    background var(--nw-dur-fast) var(--nw-ease),
+    box-shadow var(--nw-dur-fast) var(--nw-ease),
+    transform var(--nw-dur-fast) var(--nw-ease),
+    opacity var(--nw-dur-fast) var(--nw-ease) !important;
+}
+:global([class*="my-extension-modal_file-button_"]:hover),
+:global([class*="my-extension-modal_save-button_"]:not(:disabled):hover) {
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--looks-secondary) 35%, transparent) !important;
+}
+:global([class*="my-extension-modal_cancel-button_"]:hover) {
+  background: color-mix(in srgb, var(--ui-black-transparent) 50%, transparent) !important;
+}
+:global([class*="my-extension-modal_file-button_"]:active),
+:global([class*="my-extension-modal_save-button_"]:not(:disabled):active),
+:global([class*="my-extension-modal_cancel-button_"]:active) {
+  transform: scale(0.96);
+}
+:global([class*="my-extension-modal_image-preview_"]) {
+  border-radius: 12px !important;
+  border: 0.5px solid var(--ui-black-transparent) !important;
+}
+/* 警告条：从生硬的红框改为柔和的强调条，并淡入出现 */
+:global([class*="my-extension-modal_warning_"]) {
+  border: none !important;
+  border-radius: 10px !important;
+  border-left: 3px solid var(--error-primary, #ff5151) !important;
+  background: color-mix(in srgb, var(--error-primary, #ff5151) 14%, transparent) !important;
+  animation: neowarpDialogIn var(--nw-dur) var(--nw-ease);
+}
+
+/* 减弱动态效果时，这两处也只保留淡入 */
+@media (prefers-reduced-motion: reduce) {
+  :global([class*="extension-library_context-menu_"]),
+  :global([class*="my-extension-modal_warning_"]) {
+    animation: none !important;
+  }
+  :global([class*="extension-library_context-menu-button_"]:active),
+  :global([class*="my-extension-modal_file-button_"]:active),
+  :global([class*="my-extension-modal_save-button_"]:not(:disabled):active),
+  :global([class*="my-extension-modal_cancel-button_"]:active) {
+    transform: none !important;
+  }
+}
+
+/* ============================================================
+   NeoWarp: 编辑器顶栏（menu-bar）主题适配
+   亮色模式：原生样式（直角贴边），不做任何覆盖
+   深色模式：圆角悬浮 + 柔和阴影
+   ============================================================ */
+/* 注意：css-loader v1 camelCase:true 只转换 JS 导出的 key，
+   DOM 上实际 class 的 [local] 部分仍是原始类名（含连字符）。
+   因此选择器用 menu-bar_menu-bar_（连字符），而非 menu-bar_menuBar_（驼峰）。 */
+
+/* 深色模式（跟随 scratch-gui 应用内主题设置，而非 OS 偏好）：圆角悬浮 */
+[data-gui-theme="dark"] :global([class*="menu-bar_menu-bar_"]) {
+  margin: 6px 10px 0 10px !important;
+  height: calc(3rem - 6px) !important;
+  border-radius: 12px !important;
+  background-color: var(--menu-bar-background, #333333) !important;
+  box-shadow:
+    0 0.5px 0 rgba(255, 255, 255, 0.08) inset,
+    0 8px 28px rgba(0, 0, 0, 0.45) !important;
+  outline: 0.5px solid var(--ui-black-transparent) !important;
+  outline-offset: -0.5px;
+}

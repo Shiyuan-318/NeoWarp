@@ -12,9 +12,15 @@
         --text-tertiary: #98989d;
         --border: #e5e5ea;
         --accent: #3b82f6;
+        --accent-light: #eff6ff;
+        --accent-light-dark: #1e293b;
         --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
         --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
         --radius: 12px;
+        --btn-bg: rgba(0, 0, 0, 0.04);
+        --btn-bg-hover: rgba(0, 0, 0, 0.08);
+        --btn-active-bg: var(--accent);
+        --btn-active-text: #ffffff;
       }
       @media (prefers-color-scheme: dark) {
         :root {
@@ -25,8 +31,11 @@
           --text-tertiary: #6e6e73;
           --border: #3a3a3c;
           --accent: #60a5fa;
+          --accent-light: #1e293b;
           --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
           --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+          --btn-bg: rgba(255, 255, 255, 0.08);
+          --btn-bg-hover: rgba(255, 255, 255, 0.14);
         }
       }
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -82,11 +91,47 @@
       a:hover { text-decoration: underline; }
 
       .intro-card {
-        background: var(--accent-light, #eff6ff);
+        background: var(--accent-light);
         border-color: var(--accent);
       }
-      @media (prefers-color-scheme: dark) {
-        .intro-card { background: #1e293b; }
+
+      .lang-switcher {
+        display: inline-flex;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 3px;
+        margin-bottom: 16px;
+        box-shadow: var(--shadow-sm);
+      }
+      .lang-btn {
+        appearance: none;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 500;
+        font-family: inherit;
+        padding: 6px 18px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background 0.18s ease, color 0.18s ease;
+        line-height: 1.4;
+      }
+      .lang-btn:hover {
+        background: var(--btn-bg-hover);
+        color: var(--text);
+      }
+      .lang-btn.active {
+        background: var(--btn-active-bg);
+        color: var(--btn-active-text);
+      }
+
+      .lang-content {
+        display: none;
+      }
+      .lang-content.active {
+        display: block;
       }
 
       [update-checker="false"] .if-update-checker {
@@ -100,72 +145,189 @@
         document.body.setAttribute('update-checker', PrivacyPreload.isUpdateCheckerAllowed());
       </script>
 
-      <div class="page-header">
-        <h1>Privacy Policy / 隐私政策</h1>
-        <p class="update-date">Updated September 27, 2025</p>
+      <div class="lang-switcher" role="tablist" aria-label="Language / 语言">
+        <button type="button" class="lang-btn active" data-lang="zh" role="tab" aria-selected="true">中文</button>
+        <button type="button" class="lang-btn" data-lang="en" role="tab" aria-selected="false">English</button>
       </div>
 
-      <div class="card intro-card">
-        <p>A comprehensive privacy policy for all of TurboWarp can be found at <a href="https://turbowarp.org/privacy.html">turbowarp.org/privacy.html</a>. Here, we have simplified it down to just the parts relevant to the desktop app.</p>
+      <!-- ============ 中文版 ============ -->
+      <div class="lang-content active" data-lang-content="zh">
+        <div class="page-header">
+          <h1>隐私政策</h1>
+          <p class="update-date">更新于 2026 年 7 月 20 日</p>
+        </div>
+
+        <div class="card intro-card">
+          <p>NeoWarp 是基于 <a href="https://desktop.turbowarp.org/" target="_blank" rel="noreferrer">TurboWarp Desktop</a> 二次开发的离线编辑器。TurboWarp 完整的隐私政策可在 <a href="https://turbowarp.org/privacy.html" target="_blank" rel="noreferrer">turbowarp.org/privacy.html</a> 查看，本页面仅就桌面端相关的部分进行说明。</p>
+        </div>
+
+        <div class="card if-update-checker">
+          <h2>更新检查</h2>
+          <p>NeoWarp 桌面端内置更新检查功能，可<a href="#" class="open-desktop-settings">在桌面设置中关闭</a>。关闭后，应用不会主动连接服务器检查新版本。</p>
+        </div>
+
+        <div class="card">
+          <h2>滥用防护</h2>
+          <p>当服务遭到滥用时，我们可能采取措施收集必要信息以保护服务。例如，我们可能会记录发起过量请求的 IP 地址。我们会谨慎处理，尽量避免误伤正常用户。相关数据仅在停止滥用行为所需的时间内保留。</p>
+        </div>
+
+        <div class="card">
+          <h2>Rich Presence（在线状态展示）</h2>
+          <p>桌面端提供「Rich Presence」功能（默认关闭）。启用后，会将当前打开的项目名称及已打开时长共享给运行于本机的聊天软件，并可能显示在您的公开状态中。此功能可<a href="#" class="open-desktop-settings">在桌面设置中配置</a>。</p>
+        </div>
+
+        <div class="card">
+          <h2>加载项目</h2>
+          <p>当您从其他网站加载项目时，将受该网站隐私政策的约束。例如从 Scratch 加载项目时，您将受 <a href="https://scratch.mit.edu/privacy_policy" target="_blank" rel="noreferrer">Scratch 隐私政策</a>的约束。具体来说，加载 Scratch 项目时，由于 Scratch 的部分 API 不允许直接访问，项目 ID 也会被发送给 TurboWarp。我们可能短暂记录项目 ID 用于缓存。</p>
+        </div>
+
+        <div class="card">
+          <h2>云变量</h2>
+          <p>当连接云变量服务器时，项目 ID 和用户名可能会被记录 14 天。云变量中的数据是公开的，会发送给所有同时在线的其他用户。自定义云变量服务器不在我们的控制范围内。</p>
+        </div>
+
+        <div class="card">
+          <h2>扩展</h2>
+          <p>部分扩展需要与外部 API 通信才能工作。例如翻译和文本转语音扩展依赖 Scratch API，受 <a href="https://scratch.mit.edu/privacy_policy" target="_blank" rel="noreferrer">Scratch 隐私政策</a>约束。为提升性能，部分扩展会访问 TurboWarp 的 API，其中请求内容及转发到 Scratch 后的结果都可能被缓存。</p>
+          <p><a href="https://extensions.turbowarp.org/" target="_blank" rel="noreferrer">官方扩展库</a>中的大多数扩展，在项目尝试访问不受信任的网站时会询问权限，但我们无法保证 100% 可靠。</p>
+          <p>从官方扩展库以外位置（如 URL 或本地文件）加载自定义扩展时，编辑器会询问是否允许加载。一旦批准，该扩展可绕过官方扩展所展示的权限询问对话框。</p>
+        </div>
+
+        <div class="card">
+          <h2>NeoWarp 打包工具</h2>
+          <p>集成的 NeoWarp 打包工具可能从 TurboWarp 控制的服务器下载文件（例如 Electron 二进制文件）。下载完成后这些文件会被缓存。</p>
+          <p>使用自定义扩展打包项目时，打包工具可能会访问相应网站下载扩展。</p>
+        </div>
+
+        <div class="card">
+          <h2>打包后的项目</h2>
+          <p>打包后的项目包含运行所需的全部脚本、造型和声音。打包工具会尽量包含所有自定义扩展，但在某些情况下，打包后的项目每次运行时仍需下载某些扩展。</p>
+          <p>第三方自定义扩展、自定义云主机、自定义 JS、自定义 CSS 等高级功能不在我们的控制范围内。</p>
+          <p>请注意，与 TurboWarp 编辑器不同，打包项目中的自定义扩展在联系网站前不会询问权限。</p>
+          <p>您有责任告知最终用户您所分发文件的隐私实践。请勿将本页面作为您项目的隐私政策链接，因其可能随时变更，您需自行撰写。</p>
+        </div>
+
+        <div class="card">
+          <h2>本地数据</h2>
+          <p>NeoWarp 作为桌面应用，您的项目文件、设置和缓存均保存在本地计算机上。除非您主动通过上述网络功能（如加载在线项目、连接云变量服务器等）发起请求，否则应用不会向服务器发送您的项目内容。</p>
+          <p>AI 编程助手功能：使用 AI 助手时，您输入的对话内容和项目结构信息会发送给您配置的 AI 服务提供商（如 DeepSeek）。这些数据的处理受相应服务提供商隐私政策约束。</p>
+        </div>
+
+        <div class="card">
+          <h2>联系方式</h2>
+          <p>如有任何与隐私或其他相关的问题，请通过以下方式联系：</p>
+          <p>邮箱：<a href="mailto:Shiyuan318@outlook.com">Shiyuan318@outlook.com</a></p>
+          <p>QQ 群：517453896</p>
+          <p>官方网站：<a href="http://np.sy1.top" target="_blank" rel="noreferrer">np.sy1.top</a></p>
+          <p>GitHub：<a href="https://github.com/Shiyuan-318/Neowarp" target="_blank" rel="noreferrer">github.com/Shiyuan-318/Neowarp</a></p>
+        </div>
       </div>
 
-      <div class="card if-update-checker">
-        <h2>Update Checker / 更新检查</h2>
-        <p>The desktop app contains an update checker which <a href="#" class="open-desktop-settings">can be disabled in desktop settings</a>.</p>
-      </div>
+      <!-- ============ English Version ============ -->
+      <div class="lang-content" data-lang-content="en">
+        <div class="page-header">
+          <h1>Privacy Policy</h1>
+          <p class="update-date">Updated July 20, 2026</p>
+        </div>
 
-      <div class="card">
-        <h2>Abuse / 滥用防护</h2>
-        <p>When a service is being abused, we may take measures to collect information to protect the service. For example, we could log IP addresses making excessive amounts of requests. We strive to do this carefully so that no one is caught in the crossfire. Data is kept only as long as needed to stop the abuse.</p>
-      </div>
+        <div class="card intro-card">
+          <p>NeoWarp is an offline editor built on top of <a href="https://desktop.turbowarp.org/" target="_blank" rel="noreferrer">TurboWarp Desktop</a>. The comprehensive privacy policy for TurboWarp can be found at <a href="https://turbowarp.org/privacy.html" target="_blank" rel="noreferrer">turbowarp.org/privacy.html</a>. Here, we have simplified it down to just the parts relevant to the desktop app.</p>
+        </div>
 
-      <div class="card">
-        <h2>Rich Presence</h2>
-        <p>The desktop app has a disabled-by-default option to enable "Rich Presence" which shares the name of the project you have open and how long it has been open with chat apps running on your computer, which may be displayed on your public profile. This <a href="#" class="open-desktop-settings">can be configured in desktop settings</a>.</p>
-      </div>
+        <div class="card if-update-checker">
+          <h2>Update Checker</h2>
+          <p>The NeoWarp desktop app contains an update checker which <a href="#" class="open-desktop-settings">can be disabled in desktop settings</a>. When disabled, the app will not proactively contact the server to check for new versions.</p>
+        </div>
 
-      <div class="card">
-        <h2>Loading Projects / 加载项目</h2>
-        <p>When you load a project from another website, you are subject to the privacy practices of that website. For example, when loading projects from Scratch, you are subject to the <a href="https://scratch.mit.edu/privacy_policy">Scratch privacy policy</a>. When loading projects from Scratch specifically, the project ID will also be shared with TurboWarp as part of Scratch's API does not allow direct access. We may briefly log the project ID for caching.</p>
-      </div>
+        <div class="card">
+          <h2>Abuse</h2>
+          <p>When a service is being abused, we may take measures to collect information to protect the service. For example, we could log IP addresses making excessive amounts of requests. We strive to do this carefully so that no one is caught in the crossfire. Data is kept only as long as needed to stop the abuse.</p>
+        </div>
 
-      <div class="card">
-        <h2>Cloud Variables / 云变量</h2>
-        <p>When connecting to our cloud variable servers, the project ID and username may be logged for 14 days. Data in cloud variables is public and sent to anyone else connected at the same time. Custom cloud variable servers are outside of our control.</p>
-      </div>
+        <div class="card">
+          <h2>Rich Presence</h2>
+          <p>The desktop app has a disabled-by-default option to enable "Rich Presence" which shares the name of the project you have open and how long it has been open with chat apps running on your computer, which may be displayed on your public profile. This <a href="#" class="open-desktop-settings">can be configured in desktop settings</a>.</p>
+        </div>
 
-      <div class="card">
-        <h2>Extensions / 扩展</h2>
-        <p>Some extensions must communicate with external APIs to function. For example, the translate and text-to-speech extensions rely on the Scratch API, which is covered by the <a href="https://scratch.mit.edu/privacy_policy">Scratch privacy policy</a>. To improve performance, some extensions access TurboWarp's APIs instead where both the request and the result after forwarding to Scratch may be cached.</p>
-        <p>Most extensions on the <a href="https://extensions.turbowarp.org/">official extension gallery</a> will ask for permission when the project attempts to use the extension to access an untrusted website, however we cannot guarantee this is 100% reliable.</p>
-        <p>When loading a custom extension from a place other than the official gallery such as a URL or file on your computer, the editor will ask for permission to load the extension. If you approve this dialog, the extension can bypass the permission dialogs that official extensions show.</p>
-      </div>
+        <div class="card">
+          <h2>Loading Projects</h2>
+          <p>When you load a project from another website, you are subject to the privacy practices of that website. For example, when loading projects from Scratch, you are subject to the <a href="https://scratch.mit.edu/privacy_policy" target="_blank" rel="noreferrer">Scratch privacy policy</a>. When loading projects from Scratch specifically, the project ID will also be shared with TurboWarp as part of Scratch's API does not allow direct access. We may briefly log the project ID for caching.</p>
+        </div>
 
-      <div class="card">
-        <h2>NeoWarp Packager / 打包工具</h2>
-        <p>The integrated copy of the TurboWarp Packager may download files such as Electron binaries from a server controlled by TurboWarp. These downloads will be cached after being downloaded.</p>
-        <p>When packaging a project using custom extensions, the packager may access those websites to download the extensions.</p>
-      </div>
+        <div class="card">
+          <h2>Cloud Variables</h2>
+          <p>When connecting to our cloud variable servers, the project ID and username may be logged for 14 days. Data in cloud variables is public and sent to anyone else connected at the same time. Custom cloud variable servers are outside of our control.</p>
+        </div>
 
-      <div class="card">
-        <h2>Packaged Projects / 打包后的项目</h2>
-        <p>Packaged projects include all scripts, costumes, and sounds to run the project. The packager tries to include all custom extensions too, but in some cases, the packaged project may need to download certain extensions each time it runs.</p>
-        <p>Advanced features such as third-party custom extensions, custom cloud host, custom JS, and custom CSS are outside of our control.</p>
-        <p>Note that, unlike the TurboWarp editor, custom extensions in packaged projects will not ask for permission before contacting websites.</p>
-        <p>You are responsible for informing end users about the privacy practices of the files you distribute. Do not link to this document as your project's privacy policy as it may change in the future. You must write your own.</p>
-      </div>
+        <div class="card">
+          <h2>Extensions</h2>
+          <p>Some extensions must communicate with external APIs to function. For example, the translate and text-to-speech extensions rely on the Scratch API, which is covered by the <a href="https://scratch.mit.edu/privacy_policy" target="_blank" rel="noreferrer">Scratch privacy policy</a>. To improve performance, some extensions access TurboWarp's APIs instead where both the request (for example, the text being translated) and the result after forwarding to Scratch (for example, the translated version of the text) may be cached.</p>
+          <p>Most extensions on the <a href="https://extensions.turbowarp.org/" target="_blank" rel="noreferrer">official extension gallery</a> will ask for permission when the project attempts to use the extension to access an untrusted website, however we cannot guarantee this is 100% reliable.</p>
+          <p>When loading a custom extension from a place other than the official gallery such as a URL or file on your computer, the editor will ask for permission to load the extension. If you approve this dialog, the extension can bypass the permission dialogs that official extensions show.</p>
+        </div>
 
-      <div class="card">
-        <h2>Contact / 联系</h2>
-        <p>Any concerns related to privacy or any other matter should be sent to: <a href="mailto:contact@turbowarp.org">contact@turbowarp.org</a></p>
+        <div class="card">
+          <h2>NeoWarp Packager</h2>
+          <p>The integrated copy of the NeoWarp Packager may download files such as Electron binaries from a server controlled by TurboWarp. These downloads will be cached after being downloaded.</p>
+          <p>When packaging a project using custom extensions, the packager may access those websites to download the extensions.</p>
+        </div>
+
+        <div class="card">
+          <h2>Packaged Projects</h2>
+          <p>Packaged projects include all scripts, costumes, and sounds to run the project. The packager tries to include all custom extensions too, but in some cases, the packaged project may need to download certain extensions each time it runs.</p>
+          <p>Advanced features such as third-party custom extensions, custom cloud host, custom JS, and custom CSS are outside of our control.</p>
+          <p>Note that, unlike the TurboWarp editor, custom extensions in packaged projects will not ask for permission before contacting websites.</p>
+          <p>You are responsible for informing end users about the privacy practices of the files you distribute. Do not link to this document as your project's privacy policy as it may change in the future. You must write your own.</p>
+        </div>
+
+        <div class="card">
+          <h2>Local Data</h2>
+          <p>As a desktop application, NeoWarp stores your project files, settings, and cache locally on your computer. Unless you actively initiate a request through the network features above (such as loading an online project or connecting to a cloud variable server), the app will not send your project content to any server.</p>
+          <p>AI Assistant: When using the AI assistant, your conversation content and project structure information will be sent to the AI service provider you have configured (such as DeepSeek). The handling of this data is governed by the corresponding provider's privacy policy.</p>
+        </div>
+
+        <div class="card">
+          <h2>Contact</h2>
+          <p>Any concerns related to privacy or any other matter should be sent via the following channels:</p>
+          <p>Email: <a href="mailto:Shiyuan318@outlook.com">Shiyuan318@outlook.com</a></p>
+          <p>QQ Group: 517453896</p>
+          <p>Website: <a href="http://np.sy1.top" target="_blank" rel="noreferrer">np.sy1.top</a></p>
+          <p>GitHub: <a href="https://github.com/Shiyuan-318/Neowarp" target="_blank" rel="noreferrer">github.com/Shiyuan-318/Neowarp</a></p>
+        </div>
       </div>
 
       <script>
-        for (const el of document.querySelectorAll('.open-desktop-settings')) {
-          el.addEventListener('click', () => {
-            PrivacyPreload.openDesktopSettings();
+        (function () {
+          // 语言切换逻辑
+          var buttons = document.querySelectorAll('.lang-btn');
+          var contents = document.querySelectorAll('.lang-content');
+
+          function setLang(lang) {
+            buttons.forEach(function (btn) {
+              var isActive = btn.dataset.lang === lang;
+              btn.classList.toggle('active', isActive);
+              btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+            contents.forEach(function (c) {
+              c.classList.toggle('active', c.dataset.langContent === lang);
+            });
+            document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+          }
+
+          buttons.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              setLang(btn.dataset.lang);
+            });
           });
-        }
+
+          // 打开桌面设置链接
+          for (const el of document.querySelectorAll('.open-desktop-settings')) {
+            el.addEventListener('click', (e) => {
+              e.preventDefault();
+              PrivacyPreload.openDesktopSettings();
+            });
+          }
+        })();
       </script>
     </main>
   </body>

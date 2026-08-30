@@ -1,0 +1,27 @@
+- [x] OPCODE_SCHEMA 常量定义在 desktop-hoc.jsx 中，覆盖 Motion/Looks/Sound/Control/Sensing/Operators/Data/Events 八大分类的核心 opcode
+- [x] OPCODE_SCHEMA 中每个条目含 args 数组（每项 {name, kind}，kind 为 input 或 field，按视觉顺序排列）和可选的 substack/substack2 标记
+- [x] 有菜单阴影的 opcode（motion_goto/sensing_keypressed 等）的菜单参数在 schema 中标记为 kind: 'field'，与 MENU_SHADOW_OPCODES 逻辑兼容
+- [x] C 型积木 opcode（control_if, control_if_else, control_repeat, control_forever, control_repeat_until）在 schema 中标记 substack: true，control_if_else 额外标记 substack2: true
+- [x] tokenizeArgs 函数正确识别裸数字（含负数和小数）、双引号字符串（含空格）、$变量、@列表、(嵌套报告块)
+- [x] 嵌套报告块支持递归解析，如 (operator_add (operator_multiply 2 3) 4) 正确解析
+- [x] 嵌套报告块内引号字符串中的空格不破坏词法分析，如 operator_join "Hello World" "Foo Bar" 正确解析为两个字符串参数
+- [x] parseScratchDSL 函数正确处理缩进树：2空格为一级，缩进更大的行归入上一行 C 型积木的 substack
+- [x] parseScratchDSL 正确处理 else 关键字：else 之前的行归入 substack，之后的行归入 substack2（仅对 control_if_else）
+- [x] parseScratchDSL 忽略空行和 # 开头的注释行
+- [x] parseScratchDSL 第一行 hat opcode 正确识别并提取 hat fields（如 event_whenkeypressed 的 KEY_OPTION）
+- [x] parseScratchDSL 第一行非 hat opcode 时默认添加 event_whenflagclicked 作为 hat
+- [x] $varName 在 data_* 积木中作为 field VARIABLE 处理，在其他积木中作为 {opcode:"data_variable",fields:{VARIABLE:"varName"}} 嵌套报告块处理
+- [x] @listName 在 data_* 积木中作为 field LIST 处理，在其他积木中作为 {opcode:"data_listcontents",fields:{LIST:"listName"}} 嵌套报告块处理
+- [x] 未知 opcode（不在 OPCODE_SCHEMA 中）回退为所有参数视为 input，命名为 ARG1/ARG2/...
+- [x] addScript case 分支读取 params.script（string），调用 parseScratchDSL，将输出传入 buildBlockStructure
+- [x] addScript 错误处理：DSL 解析失败返回 {success:false, error:"DSL parse error: ..."} 含行号
+- [x] executeOperations 的 add_script case 读取 op.script（DSL 字符串），调用 parseScratchDSL
+- [x] TOOLS 数组中 addScript 声明使用 script 参数（string, required），无 hat/blocks/hatKey/hatMessage/hatBackdrop
+- [x] TOOLS 数组中 executeOperations 声明的 operations 描述说明 add_script 的 script 字段为 DSL 文本
+- [x] buildSystemPrompt 的 toolList 中 addScript 说明为 DSL 格式
+- [x] buildSystemPrompt 新增 "## Scratch DSL Syntax" 章节，含语法规则和 3+ 示例
+- [x] buildSystemPrompt 的 opcode 参考表升级为 "opcode(PARAM1, PARAM2)[C]" 格式，标注参数顺序和 C 型标记
+- [x] buildSystemPrompt 删除 rules 中旧的 JSON block 格式说明（"Blocks: opcode, next, parent, inputs, fields, shadow, topLevel, x, y."）
+- [x] 现有的 createShadowBlock、buildBlockStructure、buildSubstackChain 辅助函数未被修改，解析器输出格式与它们兼容
+- [x] 现有 40+ 个工具中除 addScript 和 executeOperations 外的其他工具功能不受影响
+- [x] LLM 提供商配置和流式响应功能不受影响

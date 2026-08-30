@@ -16,5 +16,9 @@ contextBridge.exposeInMainWorld('DesktopSettingsPreload', {
   openUserData: () => ipcRenderer.invoke('open-user-data'),
   setCodeAreaBackgroundImage: (imageData) => ipcRenderer.invoke('set-code-area-background-image', imageData),
   setStageAreaBackgroundImage: (imageData) => ipcRenderer.invoke('set-stage-area-background-image', imageData),
-  setTopBarDeviceStats: (topBarDeviceStats) => ipcRenderer.invoke('set-top-bar-device-stats', topBarDeviceStats)
+  setTopBarDeviceStats: (topBarDeviceStats) => ipcRenderer.invoke('set-top-bar-device-stats', topBarDeviceStats),
+  getTheme: () => ipcRenderer.invoke('ds-get-theme'),
+  onThemeChanged: (callback) => {
+    ipcRenderer.on('ds-theme-changed', (event, data) => callback(data));
+  }
 });

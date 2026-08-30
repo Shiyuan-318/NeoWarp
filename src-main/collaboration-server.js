@@ -12,21 +12,88 @@ const OPCODE_PING = 0x9;
 const OPCODE_PONG = 0xA;
 
 class CollaborationServer {
-  constructor ({ password, port, permissions }) {
+  constructor ({ password, port, permissions, hostName, hostAvatar, heartbeatIntervalMs, heartbeatTimeoutMs, authTimeoutMs }) {
     this.password = password;
     this.port = port;
     this.permissions = permissions;
+    this.hostName = hostName || '主机';
+    this.hostAvatar = hostAvatar || '🏠';
+    // Heartbeat: the server pings all clients periodically and drops the ones
+    // that have not sent anything (incl. pongs) within the timeout window.
+    this.heartbeatIntervalMs = heartbeatIntervalMs || 30000;
+    this.heartbeatTimeoutMs = heartbeatTimeoutMs || 65000;
+    // Unauthenticated sockets are dropped after this long.
+    this.authTimeoutMs = authTimeoutMs || 30000;
+    // Frames larger than this are treated as hostile and the socket dropped.
+    this.maxBufferBytes = 64 * 1024 * 1024;
     this.server = null;
+    this.heartbeatTimer = null;
     this.clients = new Map(); // socket -> client info
     this.clientCounter = 0;
     this.onClientJoin = null;
     this.onClientLeave = null;
     this.onChatMessage = null;
+    this.onProjectRequest = null;
+    this.onProjectUpdate = null;
+  }
+
+  // Returns discovery metadata for LAN scanning clients
+  getDiscoveryInfo () {
+    return {
+      ok: true,
+      roomName: `${this.hostName} 的协作`,
+      hostName: this.hostName,
+      hostAvatar: this.hostAvatar,
+      onlineCount: this.getTotalOnlineCount(),
+      port: this.port
+    };
+  }
+
+  getOnlineCount () {
+    let count = 0;
+    for (const client of this.clients.values()) {
+      if (client.authenticated) count++;
+    }
+    return count;
+  }
+
+  // Total humans in the room: connected clients plus the host.
+  getTotalOnlineCount () {
+    return this.getOnlineCount() + 1;
+  }
+
+  // Host calls this to broadcast project JSON to all clients (or a specific client)
+  broadcastProject (projectJson, targetUsername) {
+    const data = JSON.stringify({
+      type: 'project-update',
+      project: projectJson
+    });
+    for (const client of this.clients.values()) {
+      if (!client.authenticated) continue;
+      if (targetUsername && client.username !== targetUsername) continue;
+      this.sendToClient(client, data);
+    }
   }
 
   start () {
     return new Promise((resolve) => {
       this.server = http.createServer((req, res) => {
+        // Discovery endpoint: GET /discover or ?discover=1
+        let pathParts = req.url || '';
+        try {
+          const parsed = new URL(pathParts, `http://${req.headers.host || 'localhost'}`);
+          if (parsed.pathname === '/discover' || parsed.searchParams.get('discover') === '1') {
+            const info = this.getDiscoveryInfo();
+            res.writeHead(200, {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Access-Control-Allow-Origin': '*'
+            });
+            res.end(JSON.stringify(info));
+            return;
+          }
+        } catch (e) {
+          // fall through to plain text
+        }
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end('NeoWarp Collaboration Server');
       });
@@ -50,12 +117,26 @@ class CollaborationServer {
       this.server.listen(this.port, () => {
         if (resolved) return;
         resolved = true;
+        this.startHeartbeat();
         resolve({ success: true, port: this.port });
       });
     });
   }
 
   handleUpgrade (req, socket, head) {
+    // Only accept WebSocket upgrades on the root path with a version we support
+    let pathname = '/';
+    try {
+      pathname = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname;
+    } catch (e) {
+      socket.destroy();
+      return;
+    }
+    if (pathname !== '/' || req.headers['sec-websocket-version'] !== '13') {
+      socket.destroy();
+      return;
+    }
+
     const key = req.headers['sec-websocket-key'];
     if (!key) {
       socket.destroy();
@@ -79,10 +160,19 @@ class CollaborationServer {
       id: clientId,
       socket: socket,
       username: null,
+      avatar: null,
       authenticated: false,
       buffer: Buffer.alloc(0),
-      closed: false
+      closed: false,
+      lastSeen: Date.now(),
+      authTimeout: null
     };
+
+    client.authTimeout = setTimeout(() => {
+      if (!client.authenticated) {
+        try { socket.destroy(); } catch (e) {}
+      }
+    }, this.authTimeoutMs);
 
     this.clients.set(socket, client);
 
@@ -104,7 +194,12 @@ class CollaborationServer {
   }
 
   handleData (client, data) {
+    client.lastSeen = Date.now();
     client.buffer = Buffer.concat([client.buffer, data]);
+    if (client.buffer.length > this.maxBufferBytes) {
+      try { client.socket.destroy(); } catch (e) {}
+      return;
+    }
 
     while (client.buffer.length >= 2) {
       const frame = this.parseFrame(client.buffer);
@@ -181,6 +276,7 @@ class CollaborationServer {
     }
 
     if (opcode === OPCODE_PONG) {
+      client.lastSeen = Date.now();
       return;
     }
 
@@ -198,21 +294,60 @@ class CollaborationServer {
       return;
     }
 
+    // App-level liveness probe from participants (works even when the
+    // OS-level connection appears healthy but the peer is unreachable).
+    if (message.type === 'ping') {
+      client.lastSeen = Date.now();
+      this.sendToClient(client, JSON.stringify({
+        type: 'pong',
+        onlineCount: this.getTotalOnlineCount()
+      }));
+      return;
+    }
+
     if (message.type === 'auth') {
-      if (message.password === this.password) {
+      // Hash both sides so the comparison is constant-time
+      const givenHash = crypto.createHash('sha256').update(String(message.password == null ? '' : message.password)).digest();
+      const expectedHash = crypto.createHash('sha256').update(String(this.password == null ? '' : this.password)).digest();
+      if (crypto.timingSafeEqual(givenHash, expectedHash)) {
         client.authenticated = true;
+        if (client.authTimeout) {
+          clearTimeout(client.authTimeout);
+          client.authTimeout = null;
+        }
         const num = Math.floor(1000 + Math.random() * 9000);
-        client.username = `用户-${num}`;
+        const requestedName = String(message.nickname || '').trim();
+        client.username = this.getUniqueUsername(requestedName || `用户-${num}`);
+        client.avatar = String(message.avatar || '').trim() || '👤';
 
         this.sendToClient(client, JSON.stringify({
           type: 'auth-result',
           success: true,
           permissions: this.permissions,
-          username: client.username
+          username: client.username,
+          avatar: client.avatar,
+          onlineCount: this.getTotalOnlineCount(),
+          hostName: this.hostName
         }));
 
+        // Tell the other clients about the new member
+        for (const otherClient of this.clients.values()) {
+          if (otherClient === client || !otherClient.authenticated) continue;
+          this.sendToClient(otherClient, JSON.stringify({
+            type: 'member-joined',
+            username: client.username,
+            avatar: client.avatar,
+            onlineCount: this.getTotalOnlineCount()
+          }));
+        }
+
         if (this.onClientJoin) {
-          this.onClientJoin(client.username);
+          this.onClientJoin(client.username, client.avatar);
+        }
+
+        // Request host to send current project state to the new client
+        if (this.onProjectRequest) {
+          this.onProjectRequest(client.username);
         }
       } else {
         this.sendToClient(client, JSON.stringify({
@@ -235,6 +370,7 @@ class CollaborationServer {
       const chatData = {
         type: 'chat',
         from: client.username,
+        avatar: client.avatar,
         text: String(message.text || ''),
         timestamp: timestamp
       };
@@ -262,12 +398,50 @@ class CollaborationServer {
           isSelf: false
         });
       }
+      return;
     }
+
+    // Project sync: a client or host broadcasts project state
+    if (message.type === 'project-update') {
+      // Broadcast to all OTHER authenticated clients
+      const updateData = {
+        type: 'project-update',
+        project: message.project,
+        from: client.username
+      };
+      for (const otherClient of this.clients.values()) {
+        if (otherClient === client) continue;
+        if (!otherClient.authenticated) continue;
+        this.sendToClient(otherClient, JSON.stringify(updateData));
+      }
+      // Forward to host window (host is not a WebSocket client)
+      if (this.onProjectUpdate) {
+        this.onProjectUpdate(updateData);
+      }
+      return;
+    }
+  }
+
+  // Ensure no two members share a username, so targeted project pushes
+  // (broadcastProject by username) always reach exactly one client.
+  getUniqueUsername (base) {
+    const taken = new Set();
+    for (const c of this.clients.values()) {
+      if (c.authenticated && c.username) taken.add(c.username);
+    }
+    if (!taken.has(base)) return base;
+    let i = 2;
+    while (taken.has(`${base}-${i}`)) i++;
+    return `${base}-${i}`;
   }
 
   sendToClient (client, message) {
     if (client.closed) return;
-    this.sendFrame(client.socket, OPCODE_TEXT, Buffer.from(message, 'utf8'));
+    try {
+      this.sendFrame(client.socket, OPCODE_TEXT, Buffer.from(message, 'utf8'));
+    } catch (e) {
+      // socket already gone
+    }
   }
 
   sendFrame (socket, opcode, payload) {
@@ -303,17 +477,41 @@ class CollaborationServer {
     }
   }
 
-  getOnlineCount () {
-    let count = 0;
-    for (const client of this.clients.values()) {
-      if (client.authenticated) count++;
+  startHeartbeat () {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      const now = Date.now();
+      for (const client of Array.from(this.clients.values())) {
+        if (client.closed) continue;
+        if (now - client.lastSeen > this.heartbeatTimeoutMs) {
+          // No pong or any other traffic within the window: the peer is gone
+          try { client.socket.destroy(); } catch (e) {}
+        } else {
+          try {
+            this.sendFrame(client.socket, OPCODE_PING, Buffer.alloc(0));
+          } catch (e) {
+            // socket already gone
+          }
+        }
+      }
+    }, this.heartbeatIntervalMs);
+  }
+
+  stopHeartbeat () {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
-    return count;
   }
 
   handleClose (client) {
     if (client.closed) return;
     client.closed = true;
+
+    if (client.authTimeout) {
+      clearTimeout(client.authTimeout);
+      client.authTimeout = null;
+    }
 
     const wasAuthenticated = client.authenticated;
     const username = client.username;
@@ -326,13 +524,26 @@ class CollaborationServer {
       // ignore
     }
 
-    if (wasAuthenticated && this.onClientLeave) {
-      this.onClientLeave(username);
+    if (wasAuthenticated) {
+      // Notify remaining clients so their member list stays accurate
+      for (const otherClient of this.clients.values()) {
+        if (!otherClient.authenticated) continue;
+        this.sendToClient(otherClient, JSON.stringify({
+          type: 'member-left',
+          username: username,
+          onlineCount: this.getTotalOnlineCount()
+        }));
+      }
+      if (this.onClientLeave) {
+        this.onClientLeave(username);
+      }
     }
   }
 
   end () {
     return new Promise((resolve) => {
+      this.stopHeartbeat();
+
       const endMessage = JSON.stringify({
         type: 'collaboration-ended',
         reason: 'host-ended'

@@ -28,8 +28,22 @@
       (function() {
         var canvas = document.getElementById('stage-canvas');
         var ctx = canvas.getContext('2d');
+        // Default stage size; updated when dimensions arrive from the main process
+        // or inferred from the first frame image.
         var STAGE_WIDTH = 480;
         var STAGE_HEIGHT = 360;
+
+        function setStageDimensions(width, height) {
+          width = Math.max(1, Math.round(width));
+          height = Math.max(1, Math.round(height));
+          if (STAGE_WIDTH !== width || STAGE_HEIGHT !== height) {
+            STAGE_WIDTH = width;
+            STAGE_HEIGHT = height;
+            canvas.width = STAGE_WIDTH;
+            canvas.height = STAGE_HEIGHT;
+            resizeCanvas();
+          }
+        }
 
         function resizeCanvas() {
           var windowWidth = window.innerWidth;
@@ -47,11 +61,23 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
+        // Receive the actual stage dimensions from the main process.
+        if (DetachedStagePreload.onDimensions) {
+          DetachedStagePreload.onDimensions(function(dimensions) {
+            if (dimensions && dimensions.width && dimensions.height) {
+              setStageDimensions(dimensions.width, dimensions.height);
+            }
+          });
+        }
+
         DetachedStagePreload.onFrame(function(dataURL) {
           var img = new Image();
           img.onload = function() {
-            canvas.width = STAGE_WIDTH;
-            canvas.height = STAGE_HEIGHT;
+            // Adapt to the frame's native resolution as a fallback so custom
+            // stage sizes never get distorted.
+            if (img.naturalWidth && img.naturalHeight) {
+              setStageDimensions(img.naturalWidth, img.naturalHeight);
+            }
             ctx.drawImage(img, 0, 0, STAGE_WIDTH, STAGE_HEIGHT);
           };
           img.src = dataURL;

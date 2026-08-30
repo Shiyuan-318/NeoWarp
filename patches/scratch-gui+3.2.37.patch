@@ -1,0 +1,1200 @@
+diff --git a/node_modules/scratch-gui/src/addons/addons/find-bar/userstyle.css b/node_modules/scratch-gui/src/addons/addons/find-bar/userstyle.css
+index 7eb6bef..ba3c0fa 100644
+--- a/node_modules/scratch-gui/src/addons/addons/find-bar/userstyle.css
++++ b/node_modules/scratch-gui/src/addons/addons/find-bar/userstyle.css
+@@ -59,7 +59,7 @@
+   height: 1.5rem;
+ 
+   /* Change Scratch default styles */
+-  border-radius: 0.25rem;
++  border-radius: 0.75rem;
+   font-size: 0.75rem;
+   padding-left: 0.4em;
+ }
+diff --git a/node_modules/scratch-gui/src/components/tw-settings-modal/settings-modal.jsx b/node_modules/scratch-gui/src/components/tw-settings-modal/settings-modal.jsx
+index 52b6334..a2ab822 100644
+--- a/node_modules/scratch-gui/src/components/tw-settings-modal/settings-modal.jsx
++++ b/node_modules/scratch-gui/src/components/tw-settings-modal/settings-modal.jsx
+@@ -235,6 +235,28 @@ const InfiniteClones = props => (
+     />
+ );
+ 
++const UnlimitedCostumeDrawing = props => (
++    <BooleanSetting
++        {...props}
++        label={
++            <FormattedMessage
++                defaultMessage="Unlimited Costume Drawing"
++                description="Unlimited Costume Drawing setting"
++                id="tw.settingsModal.unlimitedCostumeDrawing"
++            />
++        }
++        help={
++            <FormattedMessage
++                // eslint-disable-next-line max-len
++                defaultMessage="Removes the size limit of the costume drawing area, allowing the canvas to expand infinitely in any direction."
++                description="Unlimited Costume Drawing setting help"
++                id="tw.settingsModal.unlimitedCostumeDrawingHelp"
++            />
++        }
++        slug="unlimited-costume-drawing"
++    />
++);
++
+ const RemoveFencing = props => (
+     <BooleanSetting
+         {...props}
+@@ -422,6 +444,128 @@ StoreProjectOptions.propTypes = {
+     onStoreProjectOptions: PropTypes.func
+ };
+ 
++const CodeAreaBackground = ({codeAreaBackgroundImage, onCodeAreaBackgroundChange, onClearCodeAreaBackground}) => (
++    <div className={styles.setting}>
++        <div>
++            <div className={styles.label}>
++                <FormattedMessage
++                    defaultMessage="代码区背景："
++                    description="Code area background setting"
++                    id="neowarp.settingsModal.codeAreaBackground"
++                />
++            </div>
++            <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px'}}>
++                {codeAreaBackgroundImage && (
++                    <img
++                        src={codeAreaBackgroundImage}
++                        alt="Background preview"
++                        style={{maxWidth: '100px', maxHeight: '75px', borderRadius: '4px', border: '1px solid #ddd'}}
++                    />
++                )}
++                <div style={{display: 'flex', gap: '8px'}}>
++                    <button
++                        onClick={onCodeAreaBackgroundChange}
++                        className={styles.button}
++                        style={{backgroundColor: '#4c97ff'}}
++                    >
++                        <FormattedMessage
++                            defaultMessage="选择图片"
++                            description="Button to select background image"
++                            id="neowarp.settingsModal.selectBackground"
++                        />
++                    </button>
++                    {codeAreaBackgroundImage && (
++                        <button
++                            onClick={onClearCodeAreaBackground}
++                            className={styles.button}
++                            style={{backgroundColor: '#ff4c4c'}}
++                        >
++                            <FormattedMessage
++                                defaultMessage="清除"
++                                description="Button to clear background image"
++                                id="neowarp.settingsModal.clearBackground"
++                            />
++                        </button>
++                    )}
++                </div>
++            </div>
++            <p style={{marginTop: '8px', fontSize: '12px', color: '#666'}}>
++                <FormattedMessage
++                    defaultMessage="为代码区（积木工作区）设置自定义背景图片。"
++                    description="Help text for code area background"
++                    id="neowarp.settingsModal.codeAreaBackgroundHelp"
++                />
++            </p>
++        </div>
++    </div>
++);
++CodeAreaBackground.propTypes = {
++    codeAreaBackgroundImage: PropTypes.string,
++    onCodeAreaBackgroundChange: PropTypes.func.isRequired,
++    onClearCodeAreaBackground: PropTypes.func.isRequired
++};
++
++const StageAreaBackground = ({stageAreaBackgroundImage, onStageAreaBackgroundChange, onClearStageAreaBackground}) => (
++    <div className={styles.setting}>
++        <div>
++            <div className={styles.label}>
++                <FormattedMessage
++                    defaultMessage="舞台区背景："
++                    description="Stage area background setting"
++                    id="neowarp.settingsModal.stageAreaBackground"
++                />
++            </div>
++            <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px'}}>
++                {stageAreaBackgroundImage && (
++                    <img
++                        src={stageAreaBackgroundImage}
++                        alt="Background preview"
++                        style={{maxWidth: '100px', maxHeight: '75px', borderRadius: '4px', border: '1px solid #ddd'}}
++                    />
++                )}
++                <div style={{display: 'flex', gap: '8px'}}>
++                    <button
++                        onClick={onStageAreaBackgroundChange}
++                        className={styles.button}
++                        style={{backgroundColor: '#4c97ff'}}
++                    >
++                        <FormattedMessage
++                            defaultMessage="选择图片"
++                            description="Button to select background image"
++                            id="neowarp.settingsModal.selectBackground"
++                        />
++                    </button>
++                    {stageAreaBackgroundImage && (
++                        <button
++                            onClick={onClearStageAreaBackground}
++                            className={styles.button}
++                            style={{backgroundColor: '#ff4c4c'}}
++                        >
++                            <FormattedMessage
++                                defaultMessage="清除"
++                                description="Button to clear background image"
++                                id="neowarp.settingsModal.clearBackground"
++                            />
++                        </button>
++                    )}
++                </div>
++            </div>
++            <p style={{marginTop: '8px', fontSize: '12px', color: '#666'}}>
++                <FormattedMessage
++                    defaultMessage="为舞台区设置自定义背景图片。"
++                    description="Help text for stage area background"
++                    id="neowarp.settingsModal.stageAreaBackgroundHelp"
++                />
++            </p>
++        </div>
++    </div>
++);
++StageAreaBackground.propTypes = {
++    stageAreaBackgroundImage: PropTypes.string,
++    onStageAreaBackgroundChange: PropTypes.func.isRequired,
++    onClearStageAreaBackground: PropTypes.func.isRequired
++};
++
+ const Header = props => (
+     <div className={styles.header}>
+         {props.children}
+@@ -475,6 +619,10 @@ const SettingsModalComponent = props => (
+                 value={props.infiniteClones}
+                 onChange={props.onInfiniteClonesChange}
+             />
++            <UnlimitedCostumeDrawing
++                value={props.unlimitedCostumeDrawing}
++                onChange={props.onUnlimitedCostumeDrawingChange}
++            />
+             <RemoveFencing
+                 value={props.removeFencing}
+                 onChange={props.onRemoveFencingChange}
+@@ -504,6 +652,23 @@ const SettingsModalComponent = props => (
+                     {...props}
+                 />
+             )}
++            <Header>
++                <FormattedMessage
++                    defaultMessage="外观"
++                    description="Settings modal section for appearance"
++                    id="neowarp.settingsModal.appearance"
++                />
++            </Header>
++            <CodeAreaBackground
++                codeAreaBackgroundImage={props.codeAreaBackgroundImage}
++                onCodeAreaBackgroundChange={props.onCodeAreaBackgroundChange}
++                onClearCodeAreaBackground={props.onClearCodeAreaBackground}
++            />
++            <StageAreaBackground
++                stageAreaBackgroundImage={props.stageAreaBackgroundImage}
++                onStageAreaBackgroundChange={props.onStageAreaBackgroundChange}
++                onClearStageAreaBackground={props.onClearStageAreaBackground}
++            />
+         </Box>
+     </Modal>
+ );
+@@ -521,6 +686,8 @@ SettingsModalComponent.propTypes = {
+     onInterpolationChange: PropTypes.func,
+     infiniteClones: PropTypes.bool,
+     onInfiniteClonesChange: PropTypes.func,
++    unlimitedCostumeDrawing: PropTypes.bool,
++    onUnlimitedCostumeDrawingChange: PropTypes.func,
+     removeFencing: PropTypes.bool,
+     onRemoveFencingChange: PropTypes.func,
+     removeLimits: PropTypes.bool,
+@@ -528,7 +695,13 @@ SettingsModalComponent.propTypes = {
+     warpTimer: PropTypes.bool,
+     onWarpTimerChange: PropTypes.func,
+     disableCompiler: PropTypes.bool,
+-    onDisableCompilerChange: PropTypes.func
++    onDisableCompilerChange: PropTypes.func,
++    codeAreaBackgroundImage: PropTypes.string,
++    onCodeAreaBackgroundChange: PropTypes.func,
++    onClearCodeAreaBackground: PropTypes.func,
++    stageAreaBackgroundImage: PropTypes.string,
++    onStageAreaBackgroundChange: PropTypes.func,
++    onClearStageAreaBackground: PropTypes.func
+ };
+ 
+ export default injectIntl(SettingsModalComponent);
+diff --git a/node_modules/scratch-gui/src/containers/tw-settings-modal.jsx b/node_modules/scratch-gui/src/containers/tw-settings-modal.jsx
+index a7c3bf0..b6798ee 100644
+--- a/node_modules/scratch-gui/src/containers/tw-settings-modal.jsx
++++ b/node_modules/scratch-gui/src/containers/tw-settings-modal.jsx
+@@ -6,6 +6,7 @@ import {connect} from 'react-redux';
+ import {closeSettingsModal} from '../reducers/modals';
+ import SettingsModalComponent from '../components/tw-settings-modal/settings-modal.jsx';
+ import {defaultStageSize} from '../reducers/custom-stage-size';
++import {setUnlimitedCostumeDrawingState} from '../reducers/tw';
+ 
+ const messages = defineMessages({
+     newFramerate: {
+@@ -24,14 +25,35 @@ class UsernameModal extends React.Component {
+             'handleHighQualityPenChange',
+             'handleInterpolationChange',
+             'handleInfiniteClonesChange',
++            'handleUnlimitedCostumeDrawingChange',
+             'handleRemoveFencingChange',
+             'handleRemoveLimitsChange',
+             'handleWarpTimerChange',
+             'handleStageWidthChange',
+             'handleStageHeightChange',
+             'handleDisableCompilerChange',
+-            'handleStoreProjectOptions'
++            'handleStoreProjectOptions',
++            'handleCodeAreaBackgroundChange',
++            'handleClearCodeAreaBackground',
++            'handleStageAreaBackgroundChange',
++            'handleClearStageAreaBackground'
+         ]);
++        this.state = {
++            codeAreaBackgroundImage: null,
++            stageAreaBackgroundImage: null
++        };
++    }
++    componentDidMount () {
++        if (typeof EditorPreload !== 'undefined') {
++            if (EditorPreload.getCodeAreaBackgroundImage) {
++                const backgroundImage = EditorPreload.getCodeAreaBackgroundImage();
++                this.setState({codeAreaBackgroundImage: backgroundImage});
++            }
++            if (EditorPreload.getStageAreaBackgroundImage) {
++                const backgroundImage = EditorPreload.getStageAreaBackgroundImage();
++                this.setState({stageAreaBackgroundImage: backgroundImage});
++            }
++        }
+     }
+     handleFramerateChange (e) {
+         this.props.vm.setFramerate(e.target.checked ? 60 : 30);
+@@ -56,6 +78,13 @@ class UsernameModal extends React.Component {
+             maxClones: e.target.checked ? Infinity : 300
+         });
+     }
++    handleUnlimitedCostumeDrawingChange (e) {
++        const enabled = e.target.checked;
++        if (typeof window !== 'undefined') {
++            window.__neowarpUnlimitedCostumeDrawing = enabled;
++        }
++        this.props.setUnlimitedCostumeDrawing(enabled);
++    }
+     handleRemoveFencingChange (e) {
+         this.props.vm.setRuntimeOptions({
+             fencing: !e.target.checked
+@@ -85,6 +114,121 @@ class UsernameModal extends React.Component {
+     handleStoreProjectOptions () {
+         this.props.vm.storeProjectOptions();
+     }
++    handleCodeAreaBackgroundChange () {
++        const fileInput = document.createElement('input');
++        fileInput.type = 'file';
++        fileInput.accept = 'image/*';
++        fileInput.onchange = (e) => {
++            const file = e.target.files[0];
++            if (file) {
++                const reader = new FileReader();
++                reader.onload = (event) => {
++                    const imageData = event.target.result;
++                    this.setState({codeAreaBackgroundImage: imageData});
++                    if (typeof EditorPreload !== 'undefined' && EditorPreload.setCodeAreaBackgroundImage) {
++                        EditorPreload.setCodeAreaBackgroundImage(imageData);
++                    }
++                    this.applyCodeAreaBackground(imageData);
++                };
++                reader.readAsDataURL(file);
++            }
++        };
++        fileInput.click();
++    }
++    handleClearCodeAreaBackground () {
++        this.setState({codeAreaBackgroundImage: null});
++        if (typeof EditorPreload !== 'undefined' && EditorPreload.setCodeAreaBackgroundImage) {
++            EditorPreload.setCodeAreaBackgroundImage(null);
++        }
++        this.applyCodeAreaBackground(null);
++    }
++    handleStageAreaBackgroundChange () {
++        const fileInput = document.createElement('input');
++        fileInput.type = 'file';
++        fileInput.accept = 'image/*';
++        fileInput.onchange = (e) => {
++            const file = e.target.files[0];
++            if (file) {
++                const reader = new FileReader();
++                reader.onload = (event) => {
++                    const imageData = event.target.result;
++                    this.setState({stageAreaBackgroundImage: imageData});
++                    if (typeof EditorPreload !== 'undefined' && EditorPreload.setStageAreaBackgroundImage) {
++                        EditorPreload.setStageAreaBackgroundImage(imageData);
++                    }
++                    this.applyStageAreaBackground(imageData);
++                };
++                reader.readAsDataURL(file);
++            }
++        };
++        fileInput.click();
++    }
++    handleClearStageAreaBackground () {
++        this.setState({stageAreaBackgroundImage: null});
++        if (typeof EditorPreload !== 'undefined' && EditorPreload.setStageAreaBackgroundImage) {
++            EditorPreload.setStageAreaBackgroundImage(null);
++        }
++        this.applyStageAreaBackground(null);
++    }
++    applyCodeAreaBackground (backgroundImage) {
++        const applyBackground = () => {
++            const injectionDiv = document.querySelector('.injectionDiv');
++            if (injectionDiv) {
++                if (backgroundImage) {
++                    injectionDiv.style.backgroundImage = `url(${backgroundImage})`;
++                    injectionDiv.style.backgroundSize = 'cover';
++                    injectionDiv.style.backgroundPosition = 'center';
++                    injectionDiv.style.backgroundRepeat = 'no-repeat';
++                    injectionDiv.style.backgroundColor = 'transparent';
++                } else {
++                    injectionDiv.style.backgroundImage = '';
++                    injectionDiv.style.backgroundSize = '';
++                    injectionDiv.style.backgroundPosition = '';
++                    injectionDiv.style.backgroundRepeat = '';
++                    injectionDiv.style.backgroundColor = '';
++                }
++            }
++            const blocklySvg = injectionDiv ? injectionDiv.querySelector('.blocklySvg') : document.querySelector('.blocklySvg');
++            if (blocklySvg) {
++                if (backgroundImage) {
++                    blocklySvg.style.backgroundColor = 'transparent';
++                } else {
++                    blocklySvg.style.backgroundColor = '';
++                }
++            }
++            if (injectionDiv) {
++                if (backgroundImage) {
++                    injectionDiv.setAttribute('data-custom-background', 'true');
++                } else {
++                    injectionDiv.removeAttribute('data-custom-background');
++                }
++            }
++        };
++        applyBackground();
++        setTimeout(applyBackground, 500);
++        setTimeout(applyBackground, 1500);
++    }
++    applyStageAreaBackground (backgroundImage) {
++        const applyBackground = () => {
++            const stageArea = document.querySelector('[class*="stage-and-target-wrapper"]');
++            if (stageArea) {
++                if (backgroundImage) {
++                    stageArea.style.backgroundImage = `url(${backgroundImage})`;
++                    stageArea.style.backgroundSize = 'cover';
++                    stageArea.style.backgroundPosition = 'center';
++                    stageArea.style.backgroundRepeat = 'no-repeat';
++                } else {
++                    stageArea.style.backgroundImage = '';
++                    stageArea.style.backgroundSize = '';
++                    stageArea.style.backgroundPosition = '';
++                    stageArea.style.backgroundRepeat = '';
++                }
++            }
++        };
++        applyBackground();
++        setTimeout(applyBackground, 500);
++        setTimeout(applyBackground, 1500);
++    }
+     render () {
+         const {
+             /* eslint-disable no-unused-vars */
+@@ -101,6 +245,7 @@ class UsernameModal extends React.Component {
+                 onHighQualityPenChange={this.handleHighQualityPenChange}
+                 onInterpolationChange={this.handleInterpolationChange}
+                 onInfiniteClonesChange={this.handleInfiniteClonesChange}
++                onUnlimitedCostumeDrawingChange={this.handleUnlimitedCostumeDrawingChange}
+                 onRemoveFencingChange={this.handleRemoveFencingChange}
+                 onRemoveLimitsChange={this.handleRemoveLimitsChange}
+                 onWarpTimerChange={this.handleWarpTimerChange}
+@@ -114,6 +259,12 @@ class UsernameModal extends React.Component {
+                     this.props.customStageSize.height !== defaultStageSize.height
+                 }
+                 onStoreProjectOptions={this.handleStoreProjectOptions}
++                codeAreaBackgroundImage={this.state.codeAreaBackgroundImage}
++                onCodeAreaBackgroundChange={this.handleCodeAreaBackgroundChange}
++                onClearCodeAreaBackground={this.handleClearCodeAreaBackground}
++                stageAreaBackgroundImage={this.state.stageAreaBackgroundImage}
++                onStageAreaBackgroundChange={this.handleStageAreaBackgroundChange}
++                onClearStageAreaBackground={this.handleClearStageAreaBackground}
+                 {...props}
+             />
+         );
+@@ -139,6 +290,7 @@ UsernameModal.propTypes = {
+     highQualityPen: PropTypes.bool,
+     interpolation: PropTypes.bool,
+     infiniteClones: PropTypes.bool,
++    unlimitedCostumeDrawing: PropTypes.bool,
+     removeFencing: PropTypes.bool,
+     removeLimits: PropTypes.bool,
+     warpTimer: PropTypes.bool,
+@@ -156,6 +308,7 @@ const mapStateToProps = state => ({
+     highQualityPen: state.scratchGui.tw.highQualityPen,
+     interpolation: state.scratchGui.tw.interpolation,
+     infiniteClones: state.scratchGui.tw.runtimeOptions.maxClones === Infinity,
++    unlimitedCostumeDrawing: state.scratchGui.tw.unlimitedCostumeDrawing,
+     removeFencing: !state.scratchGui.tw.runtimeOptions.fencing,
+     removeLimits: !state.scratchGui.tw.runtimeOptions.miscLimits,
+     warpTimer: state.scratchGui.tw.compilerOptions.warpTimer,
+@@ -164,7 +317,8 @@ const mapStateToProps = state => ({
+ });
+ 
+ const mapDispatchToProps = dispatch => ({
+-    onClose: () => dispatch(closeSettingsModal())
++    onClose: () => dispatch(closeSettingsModal()),
++    setUnlimitedCostumeDrawing: enabled => dispatch(setUnlimitedCostumeDrawingState(enabled))
+ });
+ 
+ export default injectIntl(connect(
+diff --git a/node_modules/scratch-gui/src/reducers/tw.js b/node_modules/scratch-gui/src/reducers/tw.js
+index 332709b..8d50008 100644
+--- a/node_modules/scratch-gui/src/reducers/tw.js
++++ b/node_modules/scratch-gui/src/reducers/tw.js
+@@ -17,6 +17,7 @@ const SET_HAS_CLOUD_VARIABLES = 'tw/SET_HAS_CLOUD_VARIABLES';
+ const SET_CLOUD_HOST = 'tw/SET_CLOUD_HOST';
+ const SET_PLATFORM_MISMATCH_DETAILS = 'tw/SET_PLATFORM_MISMATCH_DETAILS';
+ const SET_PROJECT_ERROR = 'tw/SET_PROJECT_ERROR';
++const SET_UNLIMITED_COSTUME_DRAWING = 'tw/SET_UNLIMITED_COSTUME_DRAWING';
+ 
+ export const initialState = {
+     framerate: 30,
+@@ -52,7 +53,8 @@ export const initialState = {
+         platform: null,
+         callback: null
+     },
+-    projectError: null
++    projectError: null,
++    unlimitedCostumeDrawing: false
+ };
+ 
+ const reducer = function (state, action) {
+@@ -140,6 +142,10 @@ const reducer = function (state, action) {
+         return Object.assign({}, state, {
+             projectError: action.projectError
+         });
++    case SET_UNLIMITED_COSTUME_DRAWING:
++        return Object.assign({}, state, {
++            unlimitedCostumeDrawing: action.unlimitedCostumeDrawing
++        });
+     default:
+         return state;
+     }
+@@ -278,6 +284,13 @@ const setProjectError = function (projectError) {
+     };
+ };
+ 
++const setUnlimitedCostumeDrawingState = function (unlimitedCostumeDrawing) {
++    return {
++        type: SET_UNLIMITED_COSTUME_DRAWING,
++        unlimitedCostumeDrawing: unlimitedCostumeDrawing
++    };
++};
++
+ export {
+     reducer as default,
+     initialState as twInitialState,
+@@ -299,5 +312,6 @@ export {
+     setHasCloudVariables,
+     setCloudHost,
+     setPlatformMismatchDetails,
+-    setProjectError
++    setProjectError,
++    setUnlimitedCostumeDrawingState
+ };
+diff --git a/node_modules/scratch-gui/src/lib/tw-translations/generated-translations.json b/node_modules/scratch-gui/src/lib/tw-translations/generated-translations.json
+index 3d67643..8c3939a 100644
+--- a/node_modules/scratch-gui/src/lib/tw-translations/generated-translations.json
++++ b/node_modules/scratch-gui/src/lib/tw-translations/generated-translations.json
+@@ -1,7 +1,8 @@
+ {
+     "ar": {
+         "tw.footer.credits": "الاعتمادات",
+-        "tw.usernameModal.reset": "إعادة تعيين"
++        "tw.usernameModal.reset": "إعادة تعيين",
++        "tw.menuBar.encryptedSave": "حفظ مشفر"
+     },
+     "ca": {
+         "tw.alerts.creatingRestorePoint": "S'està creant un punt de restauració...",
+@@ -96,6 +97,7 @@
+         "tw.menuBar.moreSettings": "Configuració avançada",
+         "tw.menuBar.newFramerate": "Nova velocitat de fotogrames:",
+         "tw.menuBar.newWindow": "Nova finestra",
++        "tw.menuBar.encryptedSave": "Desa xifrat",
+         "tw.menuBar.package": "Empaquetar projecte",
+         "tw.menuBar.reportError2": "Això és un error. Informeu-ho si us plau.",
+         "tw.menuBar.restorePoints": "Punts de restauració",
+@@ -425,6 +427,7 @@
+         "tw.menuBar.moreSettings": "Erweitert",
+         "tw.menuBar.newFramerate": "Neue Framefrequenz:",
+         "tw.menuBar.newWindow": "Neues Fenster",
++        "tw.menuBar.encryptedSave": "Verschlüsselt speichern",
+         "tw.menuBar.package": "Paketisieren",
+         "tw.menuBar.reportError1": "Bei manchen Skripten sind Fehler aufgetreten.",
+         "tw.menuBar.reportError2": "Dies ist ein Fehler. Bitte melde ihn.",
+@@ -676,6 +679,7 @@
+         "tw.menuBar.moreSettings": "Ajustes Avanzados",
+         "tw.menuBar.newFramerate": "Nuevo FPS:",
+         "tw.menuBar.newWindow": "Nueva ventana",
++        "tw.menuBar.encryptedSave": "Guardado cifrado",
+         "tw.menuBar.package": "Convertir proyecto",
+         "tw.menuBar.reportError1": "Algunos scripts encontraron errores.",
+         "tw.menuBar.reportError2": "Esto es un bug. Por favor repórtelo.",
+@@ -928,6 +932,7 @@
+         "tw.menuBar.moreSettings": "Edistykselliset asetukset",
+         "tw.menuBar.newFramerate": "Uusi kuvataajuus:",
+         "tw.menuBar.newWindow": "Uusi ikkuna",
++        "tw.menuBar.encryptedSave": "Salaa salatusti",
+         "tw.menuBar.package": "Pakkaa projekti",
+         "tw.menuBar.reportError1": "Joissakin skripteissä tapahtui virheitä.",
+         "tw.menuBar.reportError2": "Tämä on bugi. Ilmoita siitä.",
+@@ -1117,6 +1122,7 @@
+         "tw.menuBar.moreSettings": "Paramètres Avancés",
+         "tw.menuBar.newFramerate": "Nouveau ratio d'images par seconde :",
+         "tw.menuBar.newWindow": "Nouvelle fenêtre",
++        "tw.menuBar.encryptedSave": "Sauvegarde chiffrée",
+         "tw.menuBar.package": "Empaqueter le projet",
+         "tw.menuBar.reportError2": "Ceci est un bug. Merci de le signaler.",
+         "tw.menuBar.saveAs": "Enregistrer sous {file}",
+@@ -1271,6 +1277,7 @@
+         "tw.menuBar.moreSettings": "הגדרות מתקדמות",
+         "tw.menuBar.newFramerate": "קצב חדש של מסגרות לשנייה:",
+         "tw.menuBar.newWindow": "חלון חדש",
++        "tw.menuBar.encryptedSave": "שמירה מוצפנת",
+         "tw.menuBar.package": "אריזת פרויקט",
+         "tw.menuBar.reportError2": "יש שגיאה. אנא צור איתי קשר בנושא.",
+         "tw.menuBar.restorePoints": "נקודות שחזור",
+@@ -1465,6 +1472,7 @@
+         "tw.menuBar.moreSettings": "Haladó beállítások",
+         "tw.menuBar.newFramerate": "Új képkockaarány:",
+         "tw.menuBar.newWindow": "Új ablak",
++        "tw.menuBar.encryptedSave": "Titkosított mentés",
+         "tw.menuBar.package": "Projekt csomagolása",
+         "tw.menuBar.reportError1": "Néhány szkript hibákat észlelt.",
+         "tw.menuBar.reportError2": "Ez egy hiba. Kérjük jelentsd.",
+@@ -1727,6 +1735,7 @@
+         "tw.menuBar.moreSettings": "Impostazioni Avanzate",
+         "tw.menuBar.newFramerate": "Nuovo framerate:",
+         "tw.menuBar.newWindow": "Nuova finestra",
++        "tw.menuBar.encryptedSave": "Salvataggio crittografato",
+         "tw.menuBar.package": "Crea pacchetto",
+         "tw.menuBar.reportError1": "L'esecuzione di alcuni script ha causato errori.",
+         "tw.menuBar.reportError2": "Si è verificato un problema. Ti invitiamo a segnalarlo.",
+@@ -1981,6 +1990,7 @@
+         "tw.menuBar.moreSettings": "高度な設定",
+         "tw.menuBar.newFramerate": "新しいフレームレート:",
+         "tw.menuBar.newWindow": "新しいウィンドウ",
++        "tw.menuBar.encryptedSave": "暗号化保存",
+         "tw.menuBar.package": "プロジェクトをパッケージ化する",
+         "tw.menuBar.reportError1": "スクリプトでエラーが発生しました。",
+         "tw.menuBar.reportError2": "これは不具合です。報告してください。",
+@@ -2137,6 +2147,7 @@
+         "tw.menuBar.desktopSettings": "デスクトップのせってい",
+         "tw.menuBar.moreSettings": "こうどなせってい",
+         "tw.menuBar.newFramerate": "あたらしいフレームレート:",
++        "tw.menuBar.encryptedSave": "暗号化保存",
+         "tw.menuBar.package": "プロジェクトをパッケージにする",
+         "tw.menuBar.reportError2": "これはバグです。ほうこくしてください。",
+         "tw.menuBar.saveAs": "{file}としてほぞんする",
+@@ -2324,6 +2335,7 @@
+         "tw.menuBar.moreSettings": "고급 설정",
+         "tw.menuBar.newFramerate": "사용할 FPS:",
+         "tw.menuBar.newWindow": "새 창 열기",
++        "tw.menuBar.encryptedSave": "암호화 저장",
+         "tw.menuBar.package": "프로젝트 패키징하기",
+         "tw.menuBar.reportError1": "일부 스크립트에서 오류가 발생했습니다.",
+         "tw.menuBar.reportError2": "오류가 발생했습니다. 해당 오류를 보고해주시길 부탁드립니다.",
+@@ -2485,6 +2497,7 @@
+         "tw.menuBar.desktopSettings": "Darbalaukio nustatymai",
+         "tw.menuBar.moreSettings": "Išplėstiniai nustatymai",
+         "tw.menuBar.newFramerate": "Naujas kadrų per sekundę greitis:",
++        "tw.menuBar.encryptedSave": "Šifruotas išsaugojimas",
+         "tw.menuBar.package": "Supakuoti projektą",
+         "tw.menuBar.reportError2": "Tai klaida. Prašau mums apie ją reportuoti.",
+         "tw.menuBar.saveAs": "Išsaugoti kaip {file}",
+@@ -2659,6 +2672,7 @@
+         "tw.menuBar.moreSettings": "Avansert innstillinger",
+         "tw.menuBar.newFramerate": "Nytt bildefrekvens:",
+         "tw.menuBar.newWindow": "Nytt vindu",
++        "tw.menuBar.encryptedSave": "Kryptert lagring",
+         "tw.menuBar.package": "Pakke prosjekt",
+         "tw.menuBar.reportError1": "Noen skript oppdaget feil.",
+         "tw.menuBar.reportError2": "Dette er en feil. Vennligst meld det.",
+@@ -2897,6 +2911,7 @@
+         "tw.menuBar.moreSettings": "Geavanceerde instellingen",
+         "tw.menuBar.newFramerate": "Nieuwe framerate:",
+         "tw.menuBar.newWindow": "Nieuw venster",
++        "tw.menuBar.encryptedSave": "Versleuteld opslaan",
+         "tw.menuBar.package": "Project packagen",
+         "tw.menuBar.reportError1": "Bij sommige scripts is een fout opgetreden.",
+         "tw.menuBar.reportError2": "Dit is een bug, meld deze alsjeblieft.",
+@@ -3288,6 +3303,7 @@
+         "tw.menuBar.moreSettings": "Configurações Avançadas",
+         "tw.menuBar.newFramerate": "Novo FPS:",
+         "tw.menuBar.newWindow": "Nova janela",
++        "tw.menuBar.encryptedSave": "Salvamento criptografado",
+         "tw.menuBar.package": "Exportar projeto",
+         "tw.menuBar.reportError1": "Alguns scripts apresentaram erros.",
+         "tw.menuBar.reportError2": "Isso é um bug. Por favor, reporte-o.",
+@@ -3572,6 +3588,7 @@
+         "tw.menuBar.moreSettings": "Расширенные Настройки",
+         "tw.menuBar.newFramerate": "Новая частота кадров:",
+         "tw.menuBar.newWindow": "Новое окно",
++        "tw.menuBar.encryptedSave": "Шифрованное сохранение",
+         "tw.menuBar.package": "Упаковать проект",
+         "tw.menuBar.reportError1": "В некоторых скриптах возникли ошибки.",
+         "tw.menuBar.reportError2": "Это баг. Пожалуйста, сообщите о ней.",
+@@ -3811,6 +3828,7 @@
+         "tw.menuBar.moreSettings": "Napredne nastavitve",
+         "tw.menuBar.newFramerate": "Nov FPS:",
+         "tw.menuBar.newWindow": "Novo okno",
++        "tw.menuBar.encryptedSave": "Šifrirana shranitev",
+         "tw.menuBar.package": "Zapakiraj projekt",
+         "tw.menuBar.reportError1": "V nekaterih skriptah je prišlo do napake.",
+         "tw.menuBar.reportError2": "To je napaka. Prosimo, da jo prijavite.",
+@@ -4057,6 +4075,7 @@
+         "tw.menuBar.desktopSettings": "Skrivbordsinställningar",
+         "tw.menuBar.moreSettings": "Avancerade inställningar",
+         "tw.menuBar.newFramerate": "Ny upplösningshastighet:",
++        "tw.menuBar.encryptedSave": "Krypterad sparning",
+         "tw.menuBar.package": "Packa projektet",
+         "tw.menuBar.reportError2": "Detta är en bugg. Snälla rapportera buggen. ",
+         "tw.menuBar.restorePoints": "Återställspunkter",
+@@ -4261,6 +4280,7 @@
+         "tw.menuBar.moreSettings": "Gelişmiş Ayarlar",
+         "tw.menuBar.newFramerate": "Yeni karehızı:",
+         "tw.menuBar.newWindow": "Yeni Pencere",
++        "tw.menuBar.encryptedSave": "Şifreli kaydetme",
+         "tw.menuBar.package": "Projeyi paketle",
+         "tw.menuBar.reportError1": "Bazı komut dosyaları hatalarla karşılaştı.",
+         "tw.menuBar.reportError2": "Bu bir hatadır. Lütfen bildirin.",
+@@ -4513,6 +4533,7 @@
+         "tw.menuBar.moreSettings": "Розширені Налаштування",
+         "tw.menuBar.newFramerate": "Нова частота кадрів:",
+         "tw.menuBar.newWindow": "Нове вікно",
++        "tw.menuBar.encryptedSave": "Шифроване збереження",
+         "tw.menuBar.package": "Упакувати проєкт",
+         "tw.menuBar.reportError1": "В деяких скриптах з'явилися помилки.",
+         "tw.menuBar.reportError2": "Це помилка. Будь-ласка, повідомте нам про це.",
+@@ -4652,6 +4673,7 @@
+         "tw.menuBar.cloudUnavailableAlert": "Không thể dùng biến đám mây, hầu như vì bạn mở phần chỉnh sửa",
+         "tw.menuBar.moreSettings": "Cài đặt nâng cao",
+         "tw.menuBar.newFramerate": "Tỷ lệ mới:",
++        "tw.menuBar.encryptedSave": "Lưu mã hóa",
+         "tw.menuBar.package": "Đóng gói dự án",
+         "tw.menuBar.reportError2": "Đây là một lỗi. Xin vui lòng báo cáo.",
+         "tw.menuBar.saveAs": "Lưu thành {file}",
+@@ -4832,6 +4854,8 @@
+         "tw.menuBar.moreSettings": "高级设置",
+         "tw.menuBar.newFramerate": "帧率：",
+         "tw.menuBar.newWindow": "新窗口",
++        "tw.menuBar.encryptedSave": "加密保存",
++        "tw.menuBar.saveAsViewOnly": "另存为仅查看格式",
+         "tw.menuBar.package": "打包作品",
+         "tw.menuBar.reportError1": "一些脚本在编译时发生了错误。",
+         "tw.menuBar.reportError2": "这是一个漏洞，请将它报告给开发团队。 ",
+@@ -4902,6 +4926,8 @@
+         "tw.settingsModal.highQualityPenHelp": "允许有画笔的作品以更高的分辨率渲染，并且避免编辑器中的一些坐标精度丢失。该功能可能会影响运行性能，且不是所有作品都适合该功能。",
+         "tw.settingsModal.infiniteClones": "无限克隆",
+         "tw.settingsModal.infiniteClonesHelp": "取消 Scratch 的 300 个克隆体限制。",
++        "tw.settingsModal.unlimitedCostumeDrawing": "无限造型绘制",
++        "tw.settingsModal.unlimitedCostumeDrawingHelp": "移除造型绘制区的大小限制，允许画布向任意方向无限拓展。",
+         "tw.settingsModal.interpolation": "补帧",
+         "tw.settingsModal.interpolationHelp": "通过在角色的运动中插入帧使角色运动看起来更平滑。此功能不应该在 3D、光线追踪、纯画笔作品等运算量大的作品中使用，这会使它们运行得更慢而没有明显的平滑效果。",
+         "tw.settingsModal.largeStageWarning": "我们不推荐使用自定义舞台大小！请使用具有相同长宽比的较低尺寸，并让用户开启全屏模式将其放大以匹配显示器来代替它。",
+@@ -4916,6 +4942,7 @@
+         "tw.settingsModal.warpTimer": "循环计时器",
+         "tw.settingsModal.warpTimerHelp": "让脚本检查它们是否卡在长循环或无限循环中，并以低帧率运行，从而避免它们在循环结束前使浏览器假死。这会解决大多数崩溃，但对性能有很大负面影响，所以它只在编辑器中默认启用。",
+         "tw.soundEditorNotSupported": "浏览器不支持声音编辑器。",
++        "gui.spriteSelector.addSpriteFromUrl": "从URL添加角色",
+         "tw.spriteSelectorItem.rename": "重命名",
+         "tw.stageHeader.full": "完整大小",
+         "tw.stereo": "双声道",
+@@ -4999,6 +5026,8 @@
+         "tw.menuBar.desktopSettings": "桌面設定",
+         "tw.menuBar.moreSettings": "進階設定",
+         "tw.menuBar.newWindow": "新窗口",
++        "tw.menuBar.encryptedSave": "加密儲存",
++        "tw.menuBar.saveAsViewOnly": "另存為僅查看格式",
+         "tw.menuBar.package": "打包作品",
+         "tw.menuBar.reportError1": "有些代碼在編譯時發生了錯誤",
+         "tw.menuBar.reportError2": "這是個錯誤，請回報。",
+@@ -5037,6 +5066,7 @@
+         "tw.settingsModal.title": "進階設定",
+         "tw.settingsModal.warpTimer": "防卡死",
+         "tw.settingsModal.warpTimerHelp": "程式卡在迴圈裡時會以低幀率運行，以防止卡死。這可以防止崩潰，但會影響性能，僅在編輯器預設啟用。",
++        "gui.spriteSelector.addSpriteFromUrl": "從URL添加角色",
+         "tw.spriteSelectorItem.rename": "重新命名",
+         "tw.stereo": "雙聲道",
+         "tw.studioview.authorAttribution": "作者：{author}",
+diff --git a/node_modules/scratch-gui/src/components/library/library.jsx b/node_modules/scratch-gui/src/components/library/library.jsx
+index 685ccce..36cd157 100644
+--- a/node_modules/scratch-gui/src/components/library/library.jsx
++++ b/node_modules/scratch-gui/src/components/library/library.jsx
+@@ -45,6 +45,7 @@ class LibraryComponent extends React.Component {
+             'handleSelect',
+             'handleFavorite',
+             'handleTagClick',
++            'handleContextMenu',
+             'setFilteredDataRef'
+         ]);
+         const favorites = this.readFavoritesFromStorage();
+@@ -82,8 +83,23 @@ class LibraryComponent extends React.Component {
+         }
+     }
+     handleSelect (id) {
+-        this.handleClose();
+-        this.props.onItemSelected(this.getFilteredData()[id]);
++        const item = this.getFilteredData()[id];
++        // For items that should keep the library open (e.g. "add my extension" card),
++        // don't close the library so that subsequent modals can be rendered on top.
++        if (item && item !== '---' && item.keepOpenOnSelect) {
++            this.props.onItemSelected(item);
++        } else {
++            this.handleClose();
++            this.props.onItemSelected(item);
++        }
++    }
++    handleContextMenu (id, event) {
++        if (this.props.onItemContextMenu) {
++            const item = this.getFilteredData()[id];
++            if (item && item !== '---') {
++                this.props.onItemContextMenu(item, event);
++            }
++        }
+     }
+     readFavoritesFromStorage () {
+         let data;
+@@ -172,6 +188,9 @@ class LibraryComponent extends React.Component {
+         this.setState({filterQuery: ''});
+     }
+     getFilteredData () {
++        const pinnedSet = this.props.pinnedKeys && this.props.pinnedKeys.length ?
++            new Set(this.props.pinnedKeys) : null;
++
+         // When no filtering, favorites get their own section
+         if (this.state.selectedTag === 'all' && !this.state.filterQuery) {
+             const favoriteItems = this.props.data
+@@ -187,9 +206,22 @@ class LibraryComponent extends React.Component {
+                 favoriteItems.push('---');
+             }
+ 
++            let dataItems = this.props.data;
++            if (pinnedSet) {
++                const pinnedData = dataItems.filter(dataItem => (
++                    dataItem !== '---' && pinnedSet.has(dataItem[this.props.persistableKey])
++                ));
++                const unpinnedData = dataItems.filter(dataItem => (
++                    dataItem === '---' || !pinnedSet.has(dataItem[this.props.persistableKey])
++                ));
++                if (pinnedData.length) {
++                    dataItems = [...pinnedData, '---', ...unpinnedData];
++                }
++            }
++
+             return [
+                 ...favoriteItems,
+-                ...this.props.data
++                ...dataItems
+             ];
+         }
+ 
+@@ -215,6 +247,17 @@ class LibraryComponent extends React.Component {
+             ));
+         }
+ 
++        if (this.props.pinnedKeys && this.props.pinnedKeys.length) {
++            const pinnedSetInner = new Set(this.props.pinnedKeys);
++            const pinnedItems = filteredItems.filter(dataItem => (
++                dataItem !== '---' && pinnedSetInner.has(dataItem[this.props.persistableKey])
++            ));
++            const unpinnedItems = filteredItems.filter(dataItem => (
++                dataItem === '---' || !pinnedSetInner.has(dataItem[this.props.persistableKey])
++            ));
++            filteredItems = pinnedItems.concat(unpinnedItems);
++        }
++
+         if (this.state.filterQuery) {
+             filteredItems = filteredItems.filter(dataItem => {
+                 const search = [...dataItem.tags];
+@@ -299,6 +342,7 @@ class LibraryComponent extends React.Component {
+                     </div>
+                 )}
+                 <div
++                    key={this.state.selectedTag}
+                     className={classNames(styles.libraryScrollGrid, {
+                         [styles.withFilterBar]: this.props.filterable || this.props.tags
+                     })}
+@@ -324,6 +368,7 @@ class LibraryComponent extends React.Component {
+                                 incompatibleWithScratch={dataItem.incompatibleWithScratch}
+                                 favorite={this.state.favorites.includes(dataItem[this.props.persistableKey])}
+                                 onFavorite={this.handleFavorite}
++                                onContextMenu={this.props.onItemContextMenu ? this.handleContextMenu : null}
+                                 insetIconURL={dataItem.insetIconURL}
+                                 internetConnectionRequired={dataItem.internetConnectionRequired}
+                                 isPlaying={this.state.playingItem === index}
+@@ -388,10 +433,12 @@ LibraryComponent.propTypes = {
+     id: PropTypes.string.isRequired,
+     persistableKey: PropTypes.string,
+     intl: intlShape.isRequired,
++    onItemContextMenu: PropTypes.func,
+     onItemMouseEnter: PropTypes.func,
+     onItemMouseLeave: PropTypes.func,
+     onItemSelected: PropTypes.func,
+     onRequestClose: PropTypes.func,
++    pinnedKeys: PropTypes.arrayOf(PropTypes.string),
+     setStopHandler: PropTypes.func,
+     showPlayButton: PropTypes.bool,
+     tags: PropTypes.arrayOf(PropTypes.shape(TagButton.propTypes)),
+diff --git a/node_modules/scratch-gui/src/components/sprite-selector/sprite-selector.jsx b/node_modules/scratch-gui/src/components/sprite-selector/sprite-selector.jsx
+index a3d3c24..406c61e 100644
+--- a/node_modules/scratch-gui/src/components/sprite-selector/sprite-selector.jsx
++++ b/node_modules/scratch-gui/src/components/sprite-selector/sprite-selector.jsx
+@@ -17,6 +17,8 @@ import spriteIcon from '../action-menu/icon--sprite.svg';
+ import surpriseIcon from '../action-menu/icon--surprise.svg';
+ import searchIcon from '../action-menu/icon--search.svg';
+ 
++const urlIcon = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
++
+ const messages = defineMessages({
+     addSpriteFromLibrary: {
+         id: 'gui.spriteSelector.addSpriteFromLibrary',
+@@ -37,6 +39,11 @@ const messages = defineMessages({
+         id: 'gui.spriteSelector.addSpriteFromFile',
+         description: 'Button to add a sprite in the target pane from file',
+         defaultMessage: 'Upload Sprite'
++    },
++    addSpriteFromUrl: {
++        id: 'gui.spriteSelector.addSpriteFromUrl',
++        description: 'Button to add a sprite from URL',
++        defaultMessage: 'Add Sprite from URL'
+     }
+ });
+ 
+@@ -60,6 +67,7 @@ const SpriteSelectorComponent = function (props) {
+         onNewSpriteClick,
+         onPaintSpriteClick,
+         onSelectSprite,
++        onSpriteFromUrlClick,
+         onSpriteUpload,
+         onSurpriseSpriteClick,
+         raised,
+@@ -136,6 +144,10 @@ const SpriteSelectorComponent = function (props) {
+                         title: intl.formatMessage(messages.addSpriteFromLibrary),
+                         img: searchIcon,
+                         onClick: onNewSpriteClick
++                    }, {
++                        title: intl.formatMessage(messages.addSpriteFromUrl),
++                        img: urlIcon,
++                        onClick: onSpriteFromUrlClick
+                     }
+                 ]}
+                 title={intl.formatMessage(messages.addSpriteFromLibrary)}
+@@ -168,6 +180,7 @@ SpriteSelectorComponent.propTypes = {
+     onNewSpriteClick: PropTypes.func,
+     onPaintSpriteClick: PropTypes.func,
+     onSelectSprite: PropTypes.func,
++    onSpriteFromUrlClick: PropTypes.func,
+     onSpriteUpload: PropTypes.func,
+     onSurpriseSpriteClick: PropTypes.func,
+     raised: PropTypes.bool,
+diff --git a/node_modules/scratch-gui/src/containers/costume-tab.jsx b/node_modules/scratch-gui/src/containers/costume-tab.jsx
+index 86a0f10..65c4950 100644
+--- a/node_modules/scratch-gui/src/containers/costume-tab.jsx
++++ b/node_modules/scratch-gui/src/containers/costume-tab.jsx
+@@ -13,6 +13,7 @@ import DragConstants from '../lib/drag-constants';
+ import {emptyCostume} from '../lib/empty-assets';
+ import sharedMessages from '../lib/shared-messages';
+ import downloadBlob from '../lib/download-blob';
++import fetchImageFromUrl from '../lib/tw-fetch-image-from-url';
+ 
+ import {
+     openCostumeLibrary,
+@@ -34,6 +35,8 @@ import paintIcon from '../components/action-menu/icon--paint.svg';
+ import surpriseIcon from '../components/action-menu/icon--surprise.svg';
+ import searchIcon from '../components/action-menu/icon--search.svg';
+ 
++const urlIcon = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
++
+ import {getCostumeLibrary, getBackdropLibrary} from '../lib/libraries/tw-async-libraries';
+ 
+ let messages = defineMessages({
+@@ -66,6 +69,11 @@ let messages = defineMessages({
+         defaultMessage: 'Upload Costume',
+         description: 'Button to add a costume by uploading a file in the editor tab',
+         id: 'gui.costumeTab.addFileCostume'
++    },
++    addCostumeFromUrlMsg: {
++        defaultMessage: 'Add from URL',
++        description: 'Button to add a costume from a URL',
++        id: 'gui.costumeTab.addCostumeFromUrl'
+     }
+ });
+ 
+@@ -85,6 +93,7 @@ class CostumeTab extends React.Component {
+             'handleSurpriseBackdrop',
+             'handleFileUploadClick',
+             'handleCostumeUpload',
++            'handleCostumeFromUrlClick',
+             'handleDrop',
+             'setFileInput'
+         ]);
+@@ -211,6 +220,36 @@ class CostumeTab extends React.Component {
+             }, this.props.onCloseImporting);
+         }, this.props.onCloseImporting);
+     }
++    async handleCostumeFromUrlClick () {
++        const isZh = /^zh/i.test(this.props.intl.locale || '');
++        // window.prompt is replaced by the desktop app with an async implementation
++        const url = await window.prompt(isZh ? '请输入图片URL：' : 'Enter image URL for the costume:');
++        if (!url) return;
++        try {
++            const {bytes, dataFormat} = await fetchImageFromUrl(url);
++
++            const storage = this.props.vm.runtime.storage;
++            const assetType = dataFormat === 'svg' ? storage.AssetType.ImageVector : storage.AssetType.ImageBitmap;
++            const asset = storage.builtinHelper._store(assetType, dataFormat, bytes, null);
++
++            const name = this.props.intl.formatMessage(sharedMessages.costume, {index: 1});
++            const md5ext = asset + '.' + dataFormat;
++            const costume = {
++                name: name,
++                md5: md5ext,
++                assetId: asset,
++                md5ext: md5ext,
++                dataFormat: dataFormat,
++                rotationCenterX: dataFormat === 'svg' ? 240 : 0,
++                rotationCenterY: dataFormat === 'svg' ? 180 : 0,
++                bitmapResolution: dataFormat === 'svg' ? 1 : 2
++            };
++
++            await this.handleNewCostume(costume, false, this.props.vm.editingTarget.id);
++        } catch (e) {
++            window.alert((isZh ? '从URL导入图片失败：' : 'Failed to add costume from URL: ') + e.message);
++        }
++    }
+     handleFileUploadClick () {
+         this.fileInput.click();
+     }
+@@ -304,6 +343,11 @@ class CostumeTab extends React.Component {
+                         title: intl.formatMessage(addLibraryMessage),
+                         img: searchIcon,
+                         onClick: addLibraryFunc
++                    },
++                    {
++                        title: intl.formatMessage(messages.addCostumeFromUrlMsg),
++                        img: urlIcon,
++                        onClick: this.handleCostumeFromUrlClick
+                     }
+                 ]}
+                 dragType={DragConstants.COSTUME}
+diff --git a/node_modules/scratch-gui/src/containers/target-pane.jsx b/node_modules/scratch-gui/src/containers/target-pane.jsx
+index 534cccf..074dff4 100644
+--- a/node_modules/scratch-gui/src/containers/target-pane.jsx
++++ b/node_modules/scratch-gui/src/containers/target-pane.jsx
+@@ -22,6 +22,7 @@ import {highlightTarget} from '../reducers/targets';
+ import {fetchSprite, fetchCode} from '../lib/backpack-api';
+ import randomizeSpritePosition from '../lib/randomize-sprite-position';
+ import downloadBlob from '../lib/download-blob';
++import fetchImageFromUrl from '../lib/tw-fetch-image-from-url';
+ import log from '../lib/log';
+ import {placeInViewport} from '../lib/backpack/code-payload.js';
+ 
+@@ -48,6 +49,7 @@ class TargetPane extends React.Component {
+             'handlePaintSpriteClick',
+             'handleFileUploadClick',
+             'handleSpriteUpload',
++            'handleSpriteFromUrlClick',
+             'setFileInput'
+         ]);
+     }
+@@ -157,6 +159,40 @@ class TargetPane extends React.Component {
+             }, this.props.onCloseImporting);
+         }, this.props.onCloseImporting);
+     }
++    async handleSpriteFromUrlClick () {
++        const isZh = /^zh/i.test(this.props.intl.locale || '');
++        // window.prompt is replaced by the desktop app with an async implementation
++        const url = await window.prompt(isZh ? '请输入图片URL（将创建为新角色）：' : 'Enter image URL for the new sprite:');
++        if (!url) return;
++        try {
++            const {bytes, dataFormat} = await fetchImageFromUrl(url);
++
++            const storage = this.props.vm.runtime.storage;
++            const assetType = dataFormat === 'svg' ? storage.AssetType.ImageVector : storage.AssetType.ImageBitmap;
++            const asset = storage.builtinHelper._store(assetType, dataFormat, bytes, null);
++
++            const costume = {
++                name: 'costume1',
++                assetId: asset,
++                md5ext: asset + '.' + dataFormat,
++                dataFormat: dataFormat,
++                rotationCenterX: dataFormat === 'svg' ? 47 : 0,
++                rotationCenterY: dataFormat === 'svg' ? 47 : 0,
++                bitmapResolution: dataFormat === 'svg' ? 1 : 2
++            };
++
++            const formatMessage = this.props.intl.formatMessage;
++            const emptyItem = emptySprite(
++                formatMessage(sharedMessages.sprite, {index: 1}),
++                formatMessage(sharedMessages.pop),
++                formatMessage(sharedMessages.costume, {index: 1})
++            );
++            emptyItem.costumes = [costume];
++            await this.props.vm.addSprite(JSON.stringify(emptyItem));
++        } catch (e) {
++            window.alert((isZh ? '从URL导入角色失败：' : 'Failed to add sprite from URL: ') + e.message);
++        }
++    }
+     setFileInput (input) {
+         this.fileInput = input;
+     }
+@@ -244,6 +280,7 @@ class TargetPane extends React.Component {
+                 onFileUploadClick={this.handleFileUploadClick}
+                 onPaintSpriteClick={this.handlePaintSpriteClick}
+                 onSelectSprite={this.handleSelectSprite}
++                onSpriteFromUrlClick={this.handleSpriteFromUrlClick}
+                 onSpriteUpload={this.handleSpriteUpload}
+                 onSurpriseSpriteClick={this.handleSurpriseSpriteClick}
+             />
+diff --git a/node_modules/scratch-gui/src/lib/tw-translations/index.js b/node_modules/scratch-gui/src/lib/tw-translations/index.js
+index ac9f8a2..618c79b 100644
+--- a/node_modules/scratch-gui/src/lib/tw-translations/index.js
++++ b/node_modules/scratch-gui/src/lib/tw-translations/index.js
+@@ -10,6 +10,23 @@ const addAdditionalTranslations = editorMessages => {
+ 
+     // We reuse our `es` translations for `es-419` instead of maintaining separate translations.
+     Object.assign(editorMessages['es-419'], twTranslations.es);
++
++    // NeoWarp: Chinese translations for the URL import buttons
++    const neowarpTranslations = {
++        'zh-cn': {
++            'gui.costumeTab.addCostumeFromUrl': '从URL添加造型',
++            'gui.spriteSelector.addSpriteFromUrl': '从URL添加角色'
++        },
++        'zh-tw': {
++            'gui.costumeTab.addCostumeFromUrl': '從URL添加造型',
++            'gui.spriteSelector.addSpriteFromUrl': '從URL添加角色'
++        }
++    };
++    for (const locale of Object.keys(neowarpTranslations)) {
++        if (editorMessages[locale]) {
++            Object.assign(editorMessages[locale], neowarpTranslations[locale]);
++        }
++    }
+ };
+ 
+ export default addAdditionalTranslations;
+diff --git a/node_modules/scratch-gui/src/lib/tw-fetch-image-from-url.js b/node_modules/scratch-gui/src/lib/tw-fetch-image-from-url.js
+new file mode 100644
+index 0000000..48cb377
+--- /dev/null
++++ b/node_modules/scratch-gui/src/lib/tw-fetch-image-from-url.js
+@@ -0,0 +1,90 @@
++/**
++ * Fetch an image from a user-provided URL or local file path and return it
++ * as bytes with the detected Scratch data format (png, jpg, gif, bmp, svg).
++ *
++ * Network images are downloaded through the desktop app's main process when
++ * available (EditorPreload.fetchImage), which bypasses the editor page's
++ * CORS restrictions and Content-Security-Policy, and can also read local
++ * files. URLs without a protocol are assumed to be https. data: URLs are
++ * decoded by the browser itself.
++ *
++ * @param {string} rawUrl URL or file path of the image
++ * @returns {Promise<{bytes: Uint8Array; dataFormat: string}>}
++ */
++export default async function fetchImageFromUrl (rawUrl) {
++    let url = String(rawUrl || '').trim();
++    if (!url) {
++        throw new Error('No URL provided');
++    }
++
++    // Normalize full-width punctuation that Chinese/Japanese input methods
++    // produce (：／．？＃＆＝) and strip all whitespace, neither of which can
++    // appear in a real URL.
++    url = url
++        .replace(/[\u3000\s]+/g, '')
++        .replace(/\uFF1A/g, ':')
++        .replace(/\uFF0F/g, '/')
++        .replace(/\uFF0E/g, '.')
++        .replace(/\uFF1F/g, '?')
++        .replace(/\uFF03/g, '#')
++        .replace(/\uFF06/g, '&')
++        .replace(/\uFF1D/g, '=');
++
++    let bytes;
++    if (/^data:/i.test(url)) {
++        const response = await fetch(url);
++        if (!response.ok) throw new Error(`HTTP ${response.status}`);
++        bytes = new Uint8Array(await response.arrayBuffer());
++    } else {
++        const isFile = /^(?:file:|[a-zA-Z]:[\\/]|\\\\)/i.test(url);
++        if (!isFile) {
++            // "example.com/image.png" should be treated as "https://example.com/image.png",
++            // otherwise fetch() would resolve it against the tw-editor:// page origin.
++            if (!/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)) {
++                url = `https://${url}`;
++            }
++            try {
++                // Fail fast with a clear message instead of an opaque error from IPC.
++                // eslint-disable-next-line no-new
++                new URL(url);
++            } catch (e) {
++                throw new Error(`Invalid URL: ${url}`);
++            }
++        }
++        if (typeof EditorPreload !== 'undefined' && EditorPreload.fetchImage) {
++            bytes = new Uint8Array(await EditorPreload.fetchImage(url));
++        } else {
++            const response = await fetch(url);
++            if (!response.ok) throw new Error(`HTTP ${response.status}`);
++            bytes = new Uint8Array(await response.arrayBuffer());
++        }
++    }
++
++    return {
++        bytes,
++        dataFormat: detectDataFormat(bytes, url)
++    };
++};
++
++/**
++ * Determine the Scratch data format from magic bytes, falling back to the
++ * URL's file extension, defaulting to png.
++ * @param {Uint8Array} bytes image data
++ * @param {string} url URL the data came from
++ * @returns {string} png | jpg | gif | bmp | svg
++ */
++const detectDataFormat = (bytes, url) => {
++    const head = String.fromCharCode.apply(null, bytes.slice(0, 512));
++    if (head.includes('<svg') || /^\s*(<\?xml|<!DOCTYPE)/i.test(head)) {
++        return 'svg';
++    }
++    if (bytes[0] === 0x89 && bytes[1] === 0x50) return 'png';
++    if (bytes[0] === 0xff && bytes[1] === 0xd8) return 'jpg';
++    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return 'gif';
++    if (bytes[0] === 0x42 && bytes[1] === 0x4d) return 'bmp';
++    const match = /\.(svg|jpe?g|gif|bmp|png)(?:[?#]|$)/i.exec(url);
++    if (match) {
++        return match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
++    }
++    return 'png';
++};

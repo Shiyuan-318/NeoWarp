@@ -23,7 +23,12 @@ const showCrashMessage = (window, type, code, reason) => {
 };
 
 app.on('render-process-gone', (event, webContents, details) => {
+  // 把崩溃原因打到控制台，便于在终端里直接看到确切原因（而非只能看弹窗文字）
   const abstractWindow = AbstractWindow.getWindowByWebContents(webContents);
+  console.error('[crash] renderer process gone:', JSON.stringify({
+    reason: details.reason,
+    exitCode: details.exitCode
+  }));
   const handled = (
     abstractWindow &&
     abstractWindow.handleRendererProcessGone(details)
@@ -35,5 +40,10 @@ app.on('render-process-gone', (event, webContents, details) => {
 });
 
 app.on('child-process-gone', (event, details) => {
+  console.error('[crash] child process gone:', JSON.stringify({
+    type: details.type,
+    reason: details.reason,
+    exitCode: details.exitCode
+  }));
   showCrashMessage(null, details.type, details.exitCode, details.reason);
 });

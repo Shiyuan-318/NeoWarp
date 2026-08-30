@@ -1,0 +1,7 @@
+- [x] addSprite 使用 `match.costumes[0].md5ext` 而非 `match.md5`
+- [x] addSprite 使用 `match.costumes[0].rotationCenterX/Y` 而非 `match.info`
+- [x] addSprite 多造型从 `match.costumes` 数组遍历
+- [x] 新增 `fetchAssetMultiSource(md5ext)` 多源回退函数
+- [x] addSprite 资源加载失败时自动尝试 cdn.assets.scratch.mit.edu
+- [x] addCostumeFromLibrary 同样使用多源回退
+- [x] GetDiagnostics 无错误

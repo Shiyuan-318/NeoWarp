@@ -6,45 +6,54 @@
     <title>待办清单</title>
     <style>
         :root {
-            --bg: #f5f5f7;
+            --bg: #f2f2f7;
             --surface: #ffffff;
-            --surface-secondary: #f0f0f2;
-            --text: #1d1d1f;
+            --surface-secondary: #f2f2f7;
+            --text: #1c1c1e;
             --text-secondary: #6e6e73;
             --text-tertiary: #aeaeb2;
-            --border: #e5e5e8;
-            --accent: #0071e3;
-            --accent-light: #e8f0fe;
-            --accent-hover: #0060c0;
+            --border: #e5e5ea;
+            --accent: #007aff;
+            --accent-light: #e6f2ff;
+            --accent-hover: #0058d0;
+            --accent-ghost: rgba(0, 122, 255, 0.08);
+            --accent-ring: rgba(0, 122, 255, 0.16);
             --danger: #ff3b30;
             --danger-light: #ffeceb;
             --success: #34c759;
             --success-light: #e8f8ed;
-            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-            --shadow-lg: 0 10px 30px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04);
-            --radius: 12px;
-            --radius-sm: 8px;
-            --radius-full: 50px;
-            --transition: 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+            --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.09), 0 2px 6px rgba(0,0,0,0.05);
+            --glass-bg: rgba(255, 255, 255, 0.78);
+            --glass-border: rgba(0, 0, 0, 0.06);
+            --radius: 14px;
+            --radius-sm: 10px;
+            --radius-full: 9999px;
+            --transition: 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+            --spring: 0.4s cubic-bezier(0.34, 1.4, 0.44, 1);
         }
 
         [data-theme="dark"] {
-            --bg: #1c1c1e;
-            --surface: #2c2c2e;
-            --surface-secondary: #3a3a3c;
-            --text: #f5f5f7;
+            --bg: #000000;
+            --surface: #1c1c1e;
+            --surface-secondary: #2c2c2e;
+            --text: #f2f2f7;
             --text-secondary: #aeaeb2;
             --text-tertiary: #636366;
-            --border: #48484a;
+            --border: #38383a;
             --accent: #0a84ff;
-            --accent-light: #1a3a5c;
+            --accent-light: #1c2f45;
             --accent-hover: #409cff;
+            --accent-ghost: rgba(10, 132, 255, 0.12);
+            --accent-ring: rgba(10, 132, 255, 0.28);
             --danger: #ff453a;
-            --danger-light: #3e1a1a;
+            --danger-light: #3a1d1c;
             --success: #30d158;
-            --success-light: #1a3a1c;
-            --shadow: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
-            --shadow-lg: 0 10px 30px rgba(0,0,0,0.3), 0 4px 10px rgba(0,0,0,0.2);
+            --success-light: #17351d;
+            --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.25);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.3);
+            --glass-bg: rgba(28, 28, 30, 0.78);
+            --glass-border: rgba(255, 255, 255, 0.08);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -59,21 +68,25 @@
             overflow: hidden;
             -webkit-user-select: none;
             user-select: none;
+            -webkit-font-smoothing: antialiased;
             transition: background var(--transition), color var(--transition);
         }
 
+        /* ---------- 顶栏（毛玻璃） ---------- */
         .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 14px 20px;
+            padding: 14px clamp(14px, 4vw, 22px);
             padding-top: max(14px, env(safe-area-inset-top));
-            border-bottom: 1px solid var(--border);
-            background: var(--surface);
+            background: var(--glass-bg);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 0.5px solid var(--glass-border);
             flex-shrink: 0;
             z-index: 10;
             -webkit-app-region: drag;
-            transition: background var(--transition), border-color var(--transition);
+            transition: background var(--transition);
         }
 
         .header-left {
@@ -82,49 +95,84 @@
             gap: 10px;
         }
 
-        .header-icon {
-            width: 22px;
-            height: 22px;
-            color: var(--accent);
+        .header-icon-badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, var(--accent) 0%, #5ac8fa 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 8px rgba(0, 122, 255, 0.32);
             flex-shrink: 0;
+        }
+        [data-theme="dark"] .header-icon-badge {
+            box-shadow: 0 3px 8px rgba(10, 132, 255, 0.4);
+        }
+
+        .header-icon {
+            width: 17px;
+            height: 17px;
+            color: #ffffff;
         }
 
         .header-title {
             font-size: 16px;
-            font-weight: 600;
-            letter-spacing: -0.2px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
         }
 
+        /* ---------- 统计与进度 ---------- */
         .stats-bar {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 10px 20px;
-            font-size: 13px;
+            gap: 14px;
+            padding: 12px clamp(18px, 4vw, 24px) 10px;
+            font-size: 12.5px;
             color: var(--text-secondary);
             flex-shrink: 0;
         }
 
         .stat {
             display: flex;
-            align-items: center;
+            align-items: baseline;
             gap: 4px;
         }
         .stat-value {
-            font-weight: 600;
-            color: var(--accent);
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text);
             font-variant-numeric: tabular-nums;
+        }
+        .stat-value.accent {
+            color: var(--accent);
+        }
+
+        .progress-track {
+            flex: 1;
+            height: 5px;
+            border-radius: var(--radius-full);
+            background: var(--border);
+            overflow: hidden;
+            min-width: 60px;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: var(--radius-full);
+            background: linear-gradient(90deg, var(--accent) 0%, #5ac8fa 100%);
+            transition: width 0.45s cubic-bezier(0.32, 0.72, 0, 1);
         }
 
         .main-content {
             flex: 1;
             overflow-y: auto;
-            padding: 0 16px 16px;
+            padding: 0 clamp(12px, 3vw, 18px) 16px;
             scroll-behavior: smooth;
         }
 
         .main-content::-webkit-scrollbar {
-            width: 6px;
+            width: 5px;
         }
         .main-content::-webkit-scrollbar-track {
             background: transparent;
@@ -134,41 +182,45 @@
             border-radius: 3px;
         }
 
+        /* ---------- 添加栏（吸顶毛玻璃） ---------- */
         .add-bar {
             display: flex;
             gap: 8px;
-            padding: 12px 4px 16px;
+            padding: 10px 2px 14px;
             position: sticky;
             top: 0;
-            background: var(--bg);
+            background: var(--glass-bg);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
             z-index: 5;
             transition: background var(--transition);
         }
 
         .add-input {
             flex: 1;
-            height: 44px;
-            border: 2px solid var(--border);
+            height: 42px;
+            border: 1.5px solid transparent;
             border-radius: var(--radius-sm);
             background: var(--surface);
+            box-shadow: var(--shadow);
             color: var(--text);
             font-size: 14px;
             padding: 0 14px;
             outline: none;
-            transition: all var(--transition);
+            transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
             font-family: inherit;
         }
         .add-input:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-light);
+            box-shadow: 0 0 0 3.5px var(--accent-ring);
         }
         .add-input::placeholder {
             color: var(--text-tertiary);
         }
 
         .add-btn {
-            height: 44px;
-            padding: 0 20px;
+            height: 42px;
+            padding: 0 18px;
             border: none;
             border-radius: var(--radius-sm);
             background: var(--accent);
@@ -176,89 +228,131 @@
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all var(--transition);
+            transition: background var(--transition), transform var(--transition), opacity var(--transition);
             flex-shrink: 0;
             outline: none;
             font-family: inherit;
             white-space: nowrap;
+            box-shadow: 0 3px 10px rgba(0, 122, 255, 0.28);
+        }
+        [data-theme="dark"] .add-btn {
+            box-shadow: 0 3px 10px rgba(10, 132, 255, 0.35);
         }
         .add-btn:hover { background: var(--accent-hover); }
-        .add-btn:active { transform: scale(0.96); }
+        .add-btn:active { transform: scale(0.95); }
         .add-btn:disabled {
             opacity: 0.4;
             cursor: not-allowed;
             transform: none;
         }
 
+        /* ---------- 空状态 ---------- */
         .empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 60px 20px;
+            padding: 64px 20px;
             color: var(--text-tertiary);
             text-align: center;
-            gap: 12px;
+            gap: 14px;
+            animation: fadeIn 0.4s ease;
         }
-        .empty-state svg {
-            width: 48px;
-            height: 48px;
-            opacity: 0.4;
+        .empty-state-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: var(--surface);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .empty-state-icon svg {
+            width: 30px;
+            height: 30px;
+            opacity: 0.45;
         }
         .empty-state-text {
-            font-size: 15px;
-            line-height: 1.5;
+            font-size: 14px;
+            line-height: 1.7;
         }
 
+        /* ---------- 待办列表 ---------- */
         .todo-list {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
+        }
+
+        @keyframes itemIn {
+            from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes checkPop {
+            0% { transform: scale(0.6); }
+            55% { transform: scale(1.18); }
+            100% { transform: scale(1); }
+        }
+        @keyframes springIn {
+            0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         .todo-item {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 11px;
             padding: 12px 14px;
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius);
             background: var(--surface);
-            border: 1px solid var(--border);
-            transition: all var(--transition);
+            border: 0.5px solid var(--border);
+            transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition), background var(--transition), opacity var(--transition);
             box-shadow: var(--shadow);
             position: relative;
-            group: true;
+            animation: itemIn 0.28s cubic-bezier(0.32, 0.72, 0, 1);
         }
         .todo-item:hover {
-            border-color: var(--text-tertiary);
             box-shadow: var(--shadow-lg);
+            transform: translateY(-1px);
         }
         .todo-item.dragging {
             opacity: 0.5;
             transform: scale(0.98);
+        }
+        .todo-item.completed {
+            background: var(--surface-secondary);
+            box-shadow: none;
         }
 
         .todo-checkbox {
             width: 22px;
             height: 22px;
             border-radius: 50%;
-            border: 2px solid var(--text-tertiary);
+            border: 1.8px solid var(--text-tertiary);
             background: transparent;
             cursor: pointer;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all var(--transition);
+            transition: border-color var(--transition), background var(--transition), transform var(--transition);
             position: relative;
         }
         .todo-checkbox:hover {
             border-color: var(--accent);
-            background: var(--accent-light);
+            background: var(--accent-ghost);
+            transform: scale(1.08);
         }
+        .todo-checkbox:active { transform: scale(0.92); }
         .todo-checkbox.checked {
             background: var(--success);
             border-color: var(--success);
+            animation: checkPop var(--spring);
         }
         .todo-checkbox.checked::after {
             content: '';
@@ -272,29 +366,30 @@
         .todo-text {
             flex: 1;
             font-size: 14px;
-            line-height: 1.4;
+            line-height: 1.5;
             color: var(--text);
             word-break: break-word;
             transition: color var(--transition), opacity var(--transition);
         }
         .todo-item.completed .todo-text {
             text-decoration: line-through;
-            opacity: 0.5;
+            text-decoration-color: var(--text-tertiary);
+            opacity: 0.55;
             color: var(--text-secondary);
         }
 
         .todo-edit-input {
             flex: 1;
             height: 32px;
-            border: 2px solid var(--accent);
-            border-radius: 6px;
+            border: 1.5px solid var(--accent);
+            border-radius: 8px;
             background: var(--surface);
             color: var(--text);
             font-size: 14px;
             padding: 0 10px;
             outline: none;
             font-family: inherit;
-            box-shadow: 0 0 0 3px var(--accent-light);
+            box-shadow: 0 0 0 3px var(--accent-ring);
         }
 
         .todo-actions {
@@ -312,7 +407,7 @@
         .todo-action-btn {
             width: 30px;
             height: 30px;
-            border-radius: 50%;
+            border-radius: 8px;
             border: none;
             background: transparent;
             color: var(--text-secondary);
@@ -320,7 +415,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all var(--transition);
+            transition: background var(--transition), color var(--transition), transform var(--transition);
             flex-shrink: 0;
             outline: none;
             -webkit-tap-highlight-color: transparent;
@@ -329,13 +424,17 @@
             background: var(--surface-secondary);
             color: var(--text);
         }
+        .todo-item.completed .todo-action-btn:hover {
+            background: var(--border);
+        }
+        .todo-action-btn:active { transform: scale(0.9); }
         .todo-action-btn.delete-btn:hover {
             background: var(--danger-light);
             color: var(--danger);
         }
         .todo-action-btn svg {
-            width: 14px;
-            height: 14px;
+            width: 15px;
+            height: 15px;
             pointer-events: none;
         }
 
@@ -343,54 +442,64 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 12px 4px;
+            padding: 14px 4px 4px;
         }
         .clear-btn {
-            height: 34px;
+            height: 32px;
             padding: 0 16px;
-            border: 1px solid var(--border);
+            border: none;
             border-radius: var(--radius-full);
-            background: var(--surface);
+            background: transparent;
             color: var(--text-secondary);
-            font-size: 13px;
+            font-size: 12.5px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all var(--transition);
+            transition: background var(--transition), color var(--transition), transform var(--transition);
             outline: none;
             font-family: inherit;
         }
         .clear-btn:hover {
             background: var(--danger-light);
             color: var(--danger);
-            border-color: var(--danger);
         }
+        .clear-btn:active { transform: scale(0.96); }
 
+        /* ---------- Toast ---------- */
         .toast {
             position: fixed;
-            bottom: 20px;
+            bottom: 22px;
             left: 50%;
             transform: translateX(-50%) translateY(80px);
-            background: var(--surface);
-            color: var(--text);
-            border: 1px solid var(--border);
+            background: rgba(28, 28, 30, 0.92);
+            color: #f2f2f7;
             border-radius: var(--radius-full);
-            padding: 10px 20px;
+            padding: 9px 18px;
             font-size: 13px;
             font-weight: 500;
             box-shadow: var(--shadow-lg);
             z-index: 100;
             opacity: 0;
-            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
             pointer-events: none;
             white-space: nowrap;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        [data-theme="dark"] .toast {
+            background: rgba(44, 44, 46, 0.95);
+            border: 0.5px solid var(--border);
         }
         .toast.visible {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
 
-        /* 提醒相关样式 */
+        /* ---------- 提醒相关 ---------- */
         .reminder-btn {
             position: relative;
+        }
+        .reminder-btn.has-reminder {
+            color: var(--accent);
         }
         .reminder-btn.has-reminder::after {
             content: '';
@@ -409,37 +518,44 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.36);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
         }
         .reminder-dialog-overlay.visible {
             display: flex;
+            animation: fadeIn 0.22s ease;
+        }
+        .reminder-dialog-overlay.visible .reminder-dialog {
+            animation: springIn 0.32s cubic-bezier(0.34, 1.3, 0.44, 1);
         }
 
         .reminder-dialog {
             background: var(--surface);
-            border-radius: var(--radius);
-            padding: 24px;
-            width: 320px;
+            border-radius: 18px;
+            padding: 22px;
+            width: 330px;
             max-width: 90vw;
             box-shadow: var(--shadow-lg);
+            border: 0.5px solid var(--border);
         }
 
         .reminder-dialog-title {
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             margin-bottom: 16px;
             color: var(--text);
+            letter-spacing: -0.2px;
         }
 
         .reminder-dialog-content {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
         }
 
         .reminder-preset-group {
@@ -450,7 +566,7 @@
 
         .reminder-preset-btn {
             flex: 1;
-            min-width: 70px;
+            min-width: 62px;
             height: 36px;
             border: 1px solid var(--border);
             border-radius: var(--radius-sm);
@@ -463,8 +579,9 @@
             font-family: inherit;
         }
         .reminder-preset-btn:hover {
-            background: var(--surface-secondary);
+            background: var(--accent-ghost);
             border-color: var(--accent);
+            color: var(--accent);
         }
         .reminder-preset-btn.selected {
             background: var(--accent);
@@ -474,25 +591,29 @@
 
         .reminder-custom-input {
             height: 40px;
-            border: 2px solid var(--border);
+            border: 1.5px solid var(--border);
             border-radius: var(--radius-sm);
             background: var(--surface);
             color: var(--text);
-            font-size: 14px;
+            font-size: 13.5px;
             padding: 0 12px;
             outline: none;
-            transition: all var(--transition);
+            transition: border-color var(--transition), box-shadow var(--transition);
             font-family: inherit;
+            color-scheme: light;
+        }
+        [data-theme="dark"] .reminder-custom-input {
+            color-scheme: dark;
         }
         .reminder-custom-input:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-light);
+            box-shadow: 0 0 0 3px var(--accent-ring);
         }
 
         .reminder-dialog-actions {
             display: flex;
             gap: 10px;
-            margin-top: 8px;
+            margin-top: 6px;
         }
 
         .reminder-dialog-btn {
@@ -503,10 +624,11 @@
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all var(--transition);
+            transition: background var(--transition), color var(--transition), transform var(--transition);
             outline: none;
             font-family: inherit;
         }
+        .reminder-dialog-btn:active { transform: scale(0.96); }
         .reminder-dialog-btn.cancel {
             background: var(--surface-secondary);
             color: var(--text);
@@ -530,18 +652,27 @@
             color: #ffffff;
         }
 
+        /* 提醒时间徽标 */
         .reminder-indicator {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             font-size: 11px;
+            font-weight: 500;
             color: var(--accent);
+            background: var(--accent-ghost);
+            border-radius: var(--radius-full);
+            padding: 2px 8px;
             margin-left: 8px;
-            opacity: 0.8;
+            vertical-align: 1px;
+            white-space: nowrap;
         }
         .reminder-indicator svg {
-            width: 12px;
-            height: 12px;
+            width: 11px;
+            height: 11px;
+        }
+        .todo-item.completed .reminder-indicator {
+            display: none;
         }
     </style>
 </head>
@@ -549,10 +680,12 @@
 
     <div class="header">
         <div class="header-left">
-            <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 11l3 3L22 4"></path>
-                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
-            </svg>
+            <div class="header-icon-badge">
+                <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 11l3 3L22 4"></path>
+                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                </svg>
+            </div>
             <span class="header-title">待办清单</span>
         </div>
 
@@ -566,8 +699,11 @@
         </div>
         <div class="stat">
             <span>已完成</span>
-            <span class="stat-value" id="doneCount">0</span>
+            <span class="stat-value accent" id="doneCount">0</span>
             <span>项</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
         </div>
     </div>
 
@@ -586,10 +722,12 @@
 
         <div class="todo-list" id="todoList"></div>
         <div class="empty-state" id="emptyState">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="5" width="18" height="14" rx="2" ry="2"></rect>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
+            <div class="empty-state-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2" ry="2"></rect>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+            </div>
             <div class="empty-state-text">暂无待办事项<br>在上方输入框添加新的任务吧</div>
         </div>
 
@@ -643,6 +781,7 @@
         var doneCount = document.getElementById('doneCount');
         var toast = document.getElementById('toast');
         var mainContent = document.getElementById('mainContent');
+        var progressFill = document.getElementById('progressFill');
 
         var reminderDialogOverlay = document.getElementById('reminderDialogOverlay');
         var reminderPresetGroup = document.getElementById('reminderPresetGroup');
@@ -733,6 +872,8 @@
             doneCount.textContent = done;
             emptyState.style.display = todos.length === 0 ? '' : 'none';
             clearBar.style.display = done > 0 ? '' : 'none';
+            var percent = todos.length > 0 ? Math.round(done / todos.length * 100) : 0;
+            progressFill.style.width = percent + '%';
         }
 
         function renderTodos() {

@@ -1,0 +1,14 @@
+diff --git a/node_modules/scratch-vm/src/extension-support/extension-manager.js b/node_modules/scratch-vm/src/extension-support/extension-manager.js
+index 0000000..1111111 100644
+--- a/node_modules/scratch-vm/src/extension-support/extension-manager.js
++++ b/node_modules/scratch-vm/src/extension-support/extension-manager.js
+@@ -190,7 +190,9 @@ class ExtensionManager {
+                 parsedURL.protocol === 'http:' ||
+                 parsedURL.protocol === 'data:' ||
+                 parsedURL.protocol === 'file:' ||
++                // NeoWarp: 本地 Expands 扩展目录（扩展库 NeoWarp 标签），
+                 // 由主进程 protocols.js 提供内容，仅限应用自身的 Expands 根目录
++                parsedURL.protocol === 'nw-expands:'
+             );
+         } catch (e) {
+             return false;

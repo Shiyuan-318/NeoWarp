@@ -2,6 +2,7 @@ const {contextBridge, ipcRenderer} = require('electron');
 
 let frameCallback = null;
 let closeCallback = null;
+let dimensionsCallback = null;
 
 contextBridge.exposeInMainWorld('DetachedStagePreload', {
   onFrame: (callback) => {
@@ -9,6 +10,9 @@ contextBridge.exposeInMainWorld('DetachedStagePreload', {
   },
   onClose: (callback) => {
     closeCallback = callback;
+  },
+  onDimensions: (callback) => {
+    dimensionsCallback = callback;
   },
   sendInput: (inputData) => {
     ipcRenderer.send('detached-stage-input', inputData);
@@ -27,5 +31,11 @@ ipcRenderer.on('stage-frame', (event, dataURL) => {
 ipcRenderer.on('close-detached-stage', () => {
   if (closeCallback) {
     closeCallback();
+  }
+});
+
+ipcRenderer.on('detached-stage-dimensions', (event, dimensions) => {
+  if (dimensionsCallback) {
+    dimensionsCallback(dimensions);
   }
 });

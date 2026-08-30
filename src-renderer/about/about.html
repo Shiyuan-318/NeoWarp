@@ -4,50 +4,98 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
+      :root {
+        --bg: #ffffff;
+        --text: #1d1d1f;
+        --text-secondary: #86868b;
+        --text-body: #48484a;
+        --accent: #007aff;
+        --accent-soft-bg: rgba(0, 122, 255, 0.1);
+        --accent-soft-text: #0055d4;
+        --pre-bg: rgba(0, 0, 0, 0.03);
+        --pre-border: rgba(0, 0, 0, 0.06);
+        --sep: rgba(0, 0, 0, 0.06);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #000000;
+          --text: #f5f5f7;
+          --text-secondary: #98989d;
+          --text-body: #d1d1d6;
+          --accent: #0a84ff;
+          --accent-soft-bg: rgba(10, 132, 255, 0.16);
+          --accent-soft-text: #6eb3ff;
+          --pre-bg: rgba(255, 255, 255, 0.04);
+          --pre-border: rgba(255, 255, 255, 0.08);
+          --sep: rgba(255, 255, 255, 0.08);
+        }
+      }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         padding: 0;
-        font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
-        color: #1d1d1f;
-        background-color: #f5f5f7;
+        font-family: "HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--text);
+        background-color: var(--bg);
+        -webkit-font-smoothing: antialiased;
       }
       main {
-        padding: 32px 28px;
-        box-sizing: border-box;
+        padding: 40px 32px 60px;
         width: 100%;
-        min-height: 100vh;
-        max-width: 780px;
+        max-width: 720px;
         margin: 0 auto;
-        background: #fff;
-        border-radius: 12px;
-        margin-top: 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      }
+      .header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding-bottom: 20px;
+        border-bottom: 0.5px solid var(--sep);
+        margin-bottom: 20px;
       }
       h1 {
-        margin-top: 0;
-        font-size: 22px;
+        margin: 0;
+        font-size: 30px;
         font-weight: 700;
+        letter-spacing: -0.6px;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
       }
-      h2 {
-        font-size: 16px;
-        font-weight: 600;
-        margin-top: 24px;
-        margin-bottom: 8px;
-        color: #3b82f6;
+      h1 .version {
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        letter-spacing: 0;
+        background: var(--accent-soft-bg);
+        padding: 2px 10px;
+        border-radius: 999px;
       }
       .meta {
+        font-size: 12.5px;
+        color: var(--text-secondary);
+        margin-top: 10px;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.1px;
+      }
+      h2 {
         font-size: 13px;
-        color: #888;
-        margin-bottom: 20px;
+        font-weight: 600;
+        margin-top: 26px;
+        margin-bottom: 12px;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
       }
       p {
         font-size: 14px;
-        line-height: 1.7;
-        color: #333;
+        line-height: 1.75;
+        color: var(--text-body);
+        margin: 0 0 4px;
       }
       a {
-        color: #3b82f6;
+        color: var(--accent);
         text-decoration: none;
       }
       a:hover {
@@ -55,49 +103,73 @@
       }
       pre {
         font-size: 11px;
-        line-height: 1.5;
+        line-height: 1.6;
         overflow-x: auto;
-        background: #f9f9fb;
-        border: 1px solid #e5e5ea;
-        border-radius: 8px;
-        padding: 16px;
-        color: #555;
+        background: var(--pre-bg);
+        border: 0.5px solid var(--pre-border);
+        border-radius: 12px;
+        padding: 16px 18px;
+        color: var(--text-secondary);
         white-space: pre-wrap;
         word-break: break-word;
+        max-height: 320px;
+        overflow-y: auto;
+        margin: 12px 0 0;
       }
+      pre::-webkit-scrollbar { width: 6px; height: 6px; }
+      pre::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 3px; }
       .features {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
-        margin: 12px 0 20px;
+        margin: 4px 0 0;
       }
       .feature-item {
-        background: #f0f4ff;
-        border-radius: 8px;
-        padding: 10px 14px;
+        background: var(--accent-soft-bg);
+        border: 0.5px solid transparent;
+        border-radius: 12px;
+        padding: 11px 15px;
         font-size: 13px;
-        color: #1e40af;
+        font-weight: 500;
+        color: var(--accent-soft-text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: transform 0.15s ease, border-color 0.15s ease;
+      }
+      .feature-item::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex-shrink: 0;
+      }
+      .feature-item:hover {
+        transform: translateY(-1px);
+        border-color: var(--accent);
       }
       @media (max-width: 600px) {
         .features {
           grid-template-columns: 1fr;
         }
         main {
-          margin: 0;
-          border-radius: 0;
-          padding: 20px 16px;
+          padding: 24px 18px;
         }
+        h1 { font-size: 26px; }
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>NeoWarp <span class="version"></span></h1>
-      <p class="meta"></p>
+      <div class="header">
+        <h1>NeoWarp <span class="version"></span></h1>
+        <div class="meta"></div>
+      </div>
       <script>
         var info = AboutPreload.getInfo();
         document.querySelector('.version').textContent = info.version;
-        document.querySelector('.meta').textContent = 'Electron ' + info.electron + '  |  ' + info.platform + ' ' + info.arch + '  |  ' + info.dist;
+        document.querySelector('.meta').textContent = 'Electron ' + info.electron + '  ·  ' + info.platform + ' ' + info.arch + '  ·  ' + info.dist;
       </script>
 
       <p>NeoWarp 是一款基于 Scratch 3.0 的离线编辑器，提供更快、更强的编程体验。基于 <a href="https://desktop.turbowarp.org/" target="_blank" rel="noreferrer">TurboWarp Desktop</a> 二次开发。</p>

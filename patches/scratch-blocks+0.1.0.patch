@@ -1,0 +1,126 @@
+diff --git a/node_modules/scratch-blocks/blockly_compressed_horizontal.js b/node_modules/scratch-blocks/blockly_compressed_horizontal.js
+index e8026d1..695c827 100644
+--- a/node_modules/scratch-blocks/blockly_compressed_horizontal.js
++++ b/node_modules/scratch-blocks/blockly_compressed_horizontal.js
+@@ -2263,4 +2263,4 @@ Blockly.statusButtonCallback=function(a){window.alert("status button was pressed
+ Blockly.defineBlocksWithJsonArray=function(a){for(var b=0;b<a.length;b++){var c=a[b];if(c){var d=c.type;null==d||""===d?console.warn("Block definition #"+b+" in JSON array is missing a type attribute. Skipping."):Blockly.Blocks[d]={init:Blockly.jsonInitFactory_(c)}}else console.warn("Block definition #"+b+" in JSON array is "+c+". Skipping.")}};
+ Blockly.bindEventWithChecks_=function(a,b,c,d,e,f){var g=!1,h=function(a){var b=!e;a=Blockly.Touch.splitEventByTouches(a);for(var f=0,h;h=a[f];f++)if(!b||Blockly.Touch.shouldHandleEvent(h))Blockly.Touch.setClientFromTouch(h),c?d.call(c,h):d(h),g=!0};a.addEventListener(b,h,!1);var k=[[a,b,h]];if(b in Blockly.Touch.TOUCH_MAP)for(var l=function(a){h(a);var b=!f;g&&b&&a.preventDefault()},m=0,n;n=Blockly.Touch.TOUCH_MAP[b][m];m++)a.addEventListener(n,l,!1),k.push([a,n,l]);return k};
+ Blockly.bindEvent_=function(a,b,c,d){var e=function(a){c?d.call(c,a):d(a)};a.addEventListener(b,e,!1);var f=[[a,b,e]];if(b in Blockly.Touch.TOUCH_MAP)for(var g=function(a){if(1==a.changedTouches.length){var b=a.changedTouches[0];a.clientX=b.clientX;a.clientY=b.clientY}e(a);a.preventDefault()},h=0,k;k=Blockly.Touch.TOUCH_MAP[b][h];h++)a.addEventListener(k,g,!1),f.push([a,k,g]);return f};Blockly.unbindEvent_=function(a){for(;a.length;){var b=a.pop(),c=b[2];b[0].removeEventListener(b[1],c,!1)}return c};
+-Blockly.isNumber=function(a){return!!a.match(/^\s*-?\d+(\.\d+)?\s*$/)};goog.global.console||(goog.global.console={log:function(){},warn:function(){}});goog.global.Blockly||(goog.global.Blockly={});goog.global.Blockly.getMainWorkspace=Blockly.getMainWorkspace;goog.global.Blockly.goog=goog;Blockly.goog=goog;
++Blockly.isNumber=function(a){return!!a.match(/^\s*-?\d+(\.\d+)?\s*$/)};goog.global.console||(goog.global.console={log:function(){},warn:function(){}});goog.global.Blockly||(goog.global.Blockly={});goog.global.Blockly.getMainWorkspace=Blockly.getMainWorkspace;goog.global.Blockly.goog=goog;Object.defineProperty(Blockly.BlockSvg,"TOP_LEFT_CORNER_START",{get:function(){return"m "+Blockly.BlockSvg.CORNER_RADIUS+",0"},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"TOP_LEFT_CORNER",{get:function(){return"A "+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS+" 0 0,0 0,"+Blockly.BlockSvg.CORNER_RADIUS},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"HAT_TOP_LEFT_CORNER_START",{get:function(){return"m "+Blockly.BlockSvg.HAT_CORNER_RADIUS+",0"},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"HAT_TOP_LEFT_CORNER",{get:function(){return"A "+Blockly.BlockSvg.HAT_CORNER_RADIUS+","+Blockly.BlockSvg.HAT_CORNER_RADIUS+" 0 0,0 0,"+Blockly.BlockSvg.HAT_CORNER_RADIUS},configurable:!0});Blockly.goog=goog;
+diff --git a/node_modules/scratch-blocks/blockly_compressed_vertical.js b/node_modules/scratch-blocks/blockly_compressed_vertical.js
+index 84da238..28768be 100644
+--- a/node_modules/scratch-blocks/blockly_compressed_vertical.js
++++ b/node_modules/scratch-blocks/blockly_compressed_vertical.js
+@@ -2064,7 +2064,7 @@ Blockly.HorizontalFlyout.prototype.isDragTowardWorkspace=function(a){a=Math.atan
+ Blockly.HorizontalFlyout.prototype.getClientRect=function(){if(!this.svgGroup_)return null;var a=this.svgGroup_.getBoundingClientRect(),b=a.top;a=a.height;if(this.toolboxPosition_==Blockly.TOOLBOX_AT_TOP)return new goog.math.Rect(-1E9,b-1E9,2E9,1E9+a);if(this.toolboxPosition_==Blockly.TOOLBOX_AT_BOTTOM)return new goog.math.Rect(-1E9,b,2E9,1E9+a)};
+ Blockly.HorizontalFlyout.prototype.reflowInternal_=function(a){this.workspace_.scale=this.targetWorkspace_.scale;for(var b=0,c=0,d;d=a[c];c++)b=Math.max(b,d.getHeightWidth().height);b+=1.5*this.MARGIN;b*=this.workspace_.scale;b+=Blockly.Scrollbar.scrollbarThickness;if(this.height_!=b){for(c=0;d=a[c];c++){var e=d.getHeightWidth();if(d.flyoutRect_){d.flyoutRect_.setAttribute("width",e.width);d.flyoutRect_.setAttribute("height",e.height);var f=d.getRelativeToSurfaceXY();d.flyoutRect_.setAttribute("y",
+ f.y);d.flyoutRect_.setAttribute("x",this.RTL?f.x-e.width:f.x);(e=d.startHat_?Blockly.BlockSvg.START_HAT_HEIGHT:0)&&d.moveBy(0,e);d.flyoutRect_.setAttribute("y",f.y)}}this.height_=b;this.targetWorkspace_.resize()}};Blockly.VerticalFlyout=function(a){a.getMetrics=this.getMetrics_.bind(this);a.setMetrics=this.setMetrics_.bind(this);Blockly.VerticalFlyout.superClass_.constructor.call(this,a);this.horizontalLayout_=!1;this.checkboxes_={}};goog.inherits(Blockly.VerticalFlyout,Blockly.Flyout);Blockly.VerticalFlyout.prototype.autoClose=!1;Blockly.VerticalFlyout.prototype.DEFAULT_WIDTH=250;Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE=25;Blockly.VerticalFlyout.prototype.CHECKBOX_TOUCH_PADDING=12;
+-Blockly.VerticalFlyout.prototype.CHECKMARK_PATH="M"+Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/4+" "+Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/2+"L"+5*Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/12+" "+2*Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/3+"L"+3*Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/4+" "+Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/3;Blockly.VerticalFlyout.prototype.CHECKBOX_CORNER_RADIUS=5;Blockly.VerticalFlyout.prototype.CHECKBOX_MARGIN=Blockly.Flyout.prototype.MARGIN;
++Blockly.VerticalFlyout.prototype.CHECKMARK_PATH="M"+Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/4+" "+Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/2+"L"+5*Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/12+" "+2*Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/3+"L"+3*Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/4+" "+Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/3;Blockly.VerticalFlyout.prototype.CHECKBOX_CORNER_RADIUS=Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE/2;Blockly.VerticalFlyout.prototype.CHECKBOX_MARGIN=Blockly.Flyout.prototype.MARGIN;
+ Blockly.VerticalFlyout.prototype.CHECKBOX_SPACE_X=Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE+2*Blockly.VerticalFlyout.prototype.CHECKBOX_MARGIN;Blockly.VerticalFlyout.prototype.init=function(a){Blockly.VerticalFlyout.superClass_.init.call(this,a);this.workspace_.scale=a.scale};
+ Blockly.VerticalFlyout.prototype.createDom=function(a){Blockly.VerticalFlyout.superClass_.createDom.call(this,a);this.defs_=Blockly.utils.createSvgElement("defs",{},this.svgGroup_);a=Blockly.utils.createSvgElement("clipPath",{id:"blocklyBlockMenuClipPath"},this.defs_);this.clipRect_=Blockly.utils.createSvgElement("rect",{id:"blocklyBlockMenuClipRect",height:"0",width:"0",y:"0",x:"0"},a);this.workspace_.svgGroup_.setAttribute("clip-path","url(#blocklyBlockMenuClipPath)");return this.svgGroup_};
+ Blockly.VerticalFlyout.prototype.getContentBoundingBox_=function(){var a=this.workspace_.getBlocksBoundingBox(),b=a.x,c=a.y,d=a.x+a.width;a=a.y+a.height;for(var e=0;e<this.buttons_.length;e++){var f=this.buttons_[e],g=f.getPosition();g.x<b&&(b=g.x);g.y<c&&(c=g.y);g.x+f.width>d&&(d=g.x+f.width);g.y+f.height>a&&(a=g.y+f.height)}return{x:b,y:c,width:d-b,height:a-c}};
+@@ -2291,4 +2291,4 @@ Blockly.statusButtonCallback=function(a){window.alert("status button was pressed
+ Blockly.defineBlocksWithJsonArray=function(a){for(var b=0;b<a.length;b++){var c=a[b];if(c){var d=c.type;null==d||""===d?console.warn("Block definition #"+b+" in JSON array is missing a type attribute. Skipping."):Blockly.Blocks[d]={init:Blockly.jsonInitFactory_(c)}}else console.warn("Block definition #"+b+" in JSON array is "+c+". Skipping.")}};
+ Blockly.bindEventWithChecks_=function(a,b,c,d,e,f){var g=!1,h=function(a){var b=!e;a=Blockly.Touch.splitEventByTouches(a);for(var f=0,h;h=a[f];f++)if(!b||Blockly.Touch.shouldHandleEvent(h))Blockly.Touch.setClientFromTouch(h),c?d.call(c,h):d(h),g=!0};a.addEventListener(b,h,!1);var k=[[a,b,h]];if(b in Blockly.Touch.TOUCH_MAP)for(var l=function(a){h(a);var b=!f;g&&b&&a.preventDefault()},m=0,n;n=Blockly.Touch.TOUCH_MAP[b][m];m++)a.addEventListener(n,l,!1),k.push([a,n,l]);return k};
+ Blockly.bindEvent_=function(a,b,c,d){var e=function(a){c?d.call(c,a):d(a)};a.addEventListener(b,e,!1);var f=[[a,b,e]];if(b in Blockly.Touch.TOUCH_MAP)for(var g=function(a){if(1==a.changedTouches.length){var b=a.changedTouches[0];a.clientX=b.clientX;a.clientY=b.clientY}e(a);a.preventDefault()},h=0,k;k=Blockly.Touch.TOUCH_MAP[b][h];h++)a.addEventListener(k,g,!1),f.push([a,k,g]);return f};Blockly.unbindEvent_=function(a){for(;a.length;){var b=a.pop(),c=b[2];b[0].removeEventListener(b[1],c,!1)}return c};
+-Blockly.isNumber=function(a){return!!a.match(/^\s*-?\d+(\.\d+)?\s*$/)};goog.global.console||(goog.global.console={log:function(){},warn:function(){}});goog.global.Blockly||(goog.global.Blockly={});goog.global.Blockly.getMainWorkspace=Blockly.getMainWorkspace;goog.global.Blockly.goog=goog;Blockly.goog=goog;
++Blockly.isNumber=function(a){return!!a.match(/^\s*-?\d+(\.\d+)?\s*$/)};goog.global.console||(goog.global.console={log:function(){},warn:function(){}});goog.global.Blockly||(goog.global.Blockly={});goog.global.Blockly.getMainWorkspace=Blockly.getMainWorkspace;goog.global.Blockly.goog=goog;Object.defineProperty(Blockly.BlockSvg,"TOP_LEFT_CORNER_START",{get:function(){return"m 0,"+Blockly.BlockSvg.CORNER_RADIUS},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"TOP_LEFT_CORNER",{get:function(){return"A "+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS+" 0 0,1 "+Blockly.BlockSvg.CORNER_RADIUS+",0"},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"TOP_RIGHT_CORNER",{get:function(){return"a "+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS+" 0 0,1 "+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"BOTTOM_RIGHT_CORNER",{get:function(){return" a "+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS+" 0 0,1 -"+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"BOTTOM_LEFT_CORNER",{get:function(){return"a "+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS+" 0 0,1 -"+Blockly.BlockSvg.CORNER_RADIUS+",-"+Blockly.BlockSvg.CORNER_RADIUS},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"INNER_TOP_LEFT_CORNER",{get:function(){return" a "+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS+" 0 0,0 -"+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"INNER_BOTTOM_LEFT_CORNER",{get:function(){return"a "+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS+" 0 0,0 "+Blockly.BlockSvg.CORNER_RADIUS+","+Blockly.BlockSvg.CORNER_RADIUS},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"INPUT_SHAPE_SQUARE",{get:function(){return Blockly.BlockSvg.TOP_LEFT_CORNER_START+Blockly.BlockSvg.TOP_LEFT_CORNER+" h "+(12*Blockly.BlockSvg.GRID_UNIT-2*Blockly.BlockSvg.CORNER_RADIUS)+Blockly.BlockSvg.TOP_RIGHT_CORNER+" v "+(8*Blockly.BlockSvg.GRID_UNIT-2*Blockly.BlockSvg.CORNER_RADIUS)+Blockly.BlockSvg.BOTTOM_RIGHT_CORNER+" h "+(-12*Blockly.BlockSvg.GRID_UNIT+2*Blockly.BlockSvg.CORNER_RADIUS)+Blockly.BlockSvg.BOTTOM_LEFT_CORNER+" z"},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"TOP_LEFT_CORNER_DEFINE_HAT",{get:function(){return"a "+Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS+","+Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS+" 0 0,1 "+Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS+",-"+Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS},configurable:!0});Object.defineProperty(Blockly.BlockSvg,"TOP_RIGHT_CORNER_DEFINE_HAT",{get:function(){return"a "+Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS+","+Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS+" 0 0,1 "+Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS+","+Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS},configurable:!0});Blockly.goog=goog;
+diff --git a/node_modules/scratch-blocks/core/block_render_svg_horizontal.js b/node_modules/scratch-blocks/core/block_render_svg_horizontal.js
+index b60baba..1b1183a 100644
+--- a/node_modules/scratch-blocks/core/block_render_svg_horizontal.js
++++ b/node_modules/scratch-blocks/core/block_render_svg_horizontal.js
+@@ -890,3 +890,21 @@ Blockly.BlockSvg.prototype.positionNewBlock = function(newBlock, newConnection,
+     newBlock.moveBy(dx, dy);
+   }
+ };
++
++// Dynamic corner path getters - ensures changes to CORNER_RADIUS take effect
++Object.defineProperty(Blockly.BlockSvg, 'TOP_LEFT_CORNER_START', {
++  get: function() { return 'm ' + Blockly.BlockSvg.CORNER_RADIUS + ',0'; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'TOP_LEFT_CORNER', {
++  get: function() { return 'A ' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS + ' 0 0,0 0,' + Blockly.BlockSvg.CORNER_RADIUS; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'HAT_TOP_LEFT_CORNER_START', {
++  get: function() { return 'm ' + Blockly.BlockSvg.HAT_CORNER_RADIUS + ',0'; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'HAT_TOP_LEFT_CORNER', {
++  get: function() { return 'A ' + Blockly.BlockSvg.HAT_CORNER_RADIUS + ',' + Blockly.BlockSvg.HAT_CORNER_RADIUS + ' 0 0,0 0,' + Blockly.BlockSvg.HAT_CORNER_RADIUS; },
++  configurable: true
++});
+diff --git a/node_modules/scratch-blocks/core/block_render_svg_vertical.js b/node_modules/scratch-blocks/core/block_render_svg_vertical.js
+index 1db10f7..f349f86 100644
+--- a/node_modules/scratch-blocks/core/block_render_svg_vertical.js
++++ b/node_modules/scratch-blocks/core/block_render_svg_vertical.js
+@@ -1732,3 +1732,53 @@ Blockly.BlockSvg.prototype.renderMoveConnections_ = function() {
+     }
+   }
+ };
++
++// Dynamic corner path getters - ensures changes to CORNER_RADIUS take effect
++Object.defineProperty(Blockly.BlockSvg, 'TOP_LEFT_CORNER_START', {
++  get: function() { return 'm 0,' + Blockly.BlockSvg.CORNER_RADIUS; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'TOP_LEFT_CORNER', {
++  get: function() { return 'A ' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS + ' 0 0,1 ' + Blockly.BlockSvg.CORNER_RADIUS + ',0'; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'TOP_RIGHT_CORNER', {
++  get: function() { return 'a ' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS + ' 0 0,1 ' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'BOTTOM_RIGHT_CORNER', {
++  get: function() { return ' a ' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS + ' 0 0,1 -' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'BOTTOM_LEFT_CORNER', {
++  get: function() { return 'a ' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS + ' 0 0,1 -' + Blockly.BlockSvg.CORNER_RADIUS + ',-' + Blockly.BlockSvg.CORNER_RADIUS; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'INNER_TOP_LEFT_CORNER', {
++  get: function() { return ' a ' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS + ' 0 0,0 -' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'INNER_BOTTOM_LEFT_CORNER', {
++  get: function() { return 'a ' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS + ' 0 0,0 ' + Blockly.BlockSvg.CORNER_RADIUS + ',' + Blockly.BlockSvg.CORNER_RADIUS; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'INPUT_SHAPE_SQUARE', {
++  get: function() {
++    return Blockly.BlockSvg.TOP_LEFT_CORNER_START + Blockly.BlockSvg.TOP_LEFT_CORNER +
++      ' h ' + (12 * Blockly.BlockSvg.GRID_UNIT - 2 * Blockly.BlockSvg.CORNER_RADIUS) +
++      Blockly.BlockSvg.TOP_RIGHT_CORNER +
++      ' v ' + (8 * Blockly.BlockSvg.GRID_UNIT - 2 * Blockly.BlockSvg.CORNER_RADIUS) +
++      Blockly.BlockSvg.BOTTOM_RIGHT_CORNER +
++      ' h ' + (-12 * Blockly.BlockSvg.GRID_UNIT + 2 * Blockly.BlockSvg.CORNER_RADIUS) +
++      Blockly.BlockSvg.BOTTOM_LEFT_CORNER + ' z';
++  },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'TOP_LEFT_CORNER_DEFINE_HAT', {
++  get: function() { return 'a ' + Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS + ',' + Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS + ' 0 0,1 ' + Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS + ',-' + Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS; },
++  configurable: true
++});
++Object.defineProperty(Blockly.BlockSvg, 'TOP_RIGHT_CORNER_DEFINE_HAT', {
++  get: function() { return 'a ' + Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS + ',' + Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS + ' 0 0,1 ' + Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS + ',' + Blockly.BlockSvg.DEFINE_HAT_CORNER_RADIUS; },
++  configurable: true
++});
+diff --git a/node_modules/scratch-blocks/core/flyout_vertical.js b/node_modules/scratch-blocks/core/flyout_vertical.js
+index d58d376..1490061 100644
+--- a/node_modules/scratch-blocks/core/flyout_vertical.js
++++ b/node_modules/scratch-blocks/core/flyout_vertical.js
+@@ -113,7 +113,7 @@ Blockly.VerticalFlyout.prototype.CHECKMARK_PATH =
+  * @type {number}
+  * @const
+  */
+-Blockly.VerticalFlyout.prototype.CHECKBOX_CORNER_RADIUS = 5;
++Blockly.VerticalFlyout.prototype.CHECKBOX_CORNER_RADIUS = Blockly.VerticalFlyout.prototype.CHECKBOX_SIZE / 2;
+ 
+ /**
+  * Space above and around the checkbox.

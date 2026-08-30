@@ -12,7 +12,8 @@ import {
   defaultProjectId,
   onFetchedProjectData,
   onLoadedProject,
-  requestNewProject
+  requestNewProject,
+  LoadingState
 } from 'scratch-gui/src/reducers/project-state';
 import {
   setFileHandle,
@@ -23,6 +24,8 @@ import {
   setViewOnly,
   setFullScreen
 } from 'scratch-gui/src/reducers/mode';
+import {getAutoAddExtensions} from 'scratch-gui/src/lib/tw-my-extensions';
+import {manuallyTrustExtension} from 'scratch-gui/src/containers/tw-security-manager.jsx';
 import {WrappedFileHandle} from './filesystem-api.js';
 import {setStrings} from '../prompt/prompt.js';
 import {showEncryptedSaveDialog, showPasswordDialog, setStrings as setEncryptedSaveStrings} from '../encrypted-save-dialog/encrypted-save-dialog.js';
@@ -91,6 +94,10 @@ const handleClickTodoList = () => {
 
 const handleClickProjectAnalysis = () => {
   EditorPreload.openProjectAnalysis();
+};
+
+const handleClickMobilePreview = () => {
+  EditorPreload.openMobilePreview();
 };
 
 const handleClickSourceCode = () => {
@@ -225,6 +232,575 @@ const securityManager = {
 const USERNAME_KEY = 'tw:username';
 const DEFAULT_USERNAME = 'player';
 
+// Schema mapping each Scratch opcode to its parameter layout.
+// args: array of {name, kind} where kind is 'input' or 'field', in visual order.
+// substack: true for C-shaped blocks; substack2: true for control_if_else.
+const OPCODE_SCHEMA = {
+  // Motion
+  motion_movesteps: { args: [{ name: 'STEPS', kind: 'input' }] },
+  motion_turnright: { args: [{ name: 'DEGREES', kind: 'input' }] },
+  motion_turnleft: { args: [{ name: 'DEGREES', kind: 'input' }] },
+  motion_goto: { args: [{ name: 'TO', kind: 'field' }] },
+  motion_gotoxy: { args: [{ name: 'X', kind: 'input' }, { name: 'Y', kind: 'input' }] },
+  motion_glideto: { args: [{ name: 'TO', kind: 'field' }, { name: 'SECS', kind: 'input' }] },
+  motion_glidesecstoxy: { args: [{ name: 'SECS', kind: 'input' }, { name: 'X', kind: 'input' }, { name: 'Y', kind: 'input' }] },
+  motion_pointindirection: { args: [{ name: 'DIRECTION', kind: 'input' }] },
+  motion_pointtowards: { args: [{ name: 'TOWARDS', kind: 'field' }] },
+  motion_changexby: { args: [{ name: 'DX', kind: 'input' }] },
+  motion_setx: { args: [{ name: 'X', kind: 'input' }] },
+  motion_changeyby: { args: [{ name: 'DY', kind: 'input' }] },
+  motion_sety: { args: [{ name: 'Y', kind: 'input' }] },
+  motion_ifonedgebounce: { args: [] },
+  motion_setrotationstyle: { args: [{ name: 'STYLE', kind: 'field' }] },
+  motion_xposition: { args: [] },
+  motion_yposition: { args: [] },
+  motion_direction: { args: [] },
+  // Looks
+  looks_say: { args: [{ name: 'MESSAGE', kind: 'input' }] },
+  looks_sayforsecs: { args: [{ name: 'MESSAGE', kind: 'input' }, { name: 'SECS', kind: 'input' }] },
+  looks_think: { args: [{ name: 'MESSAGE', kind: 'input' }] },
+  looks_thinkforsecs: { args: [{ name: 'MESSAGE', kind: 'input' }, { name: 'SECS', kind: 'input' }] },
+  looks_switchcostumeto: { args: [{ name: 'COSTUME', kind: 'field' }] },
+  looks_nextcostume: { args: [] },
+  looks_switchbackdropto: { args: [{ name: 'BACKDROP', kind: 'field' }] },
+  looks_nextbackdrop: { args: [] },
+  looks_changesizeby: { args: [{ name: 'CHANGE', kind: 'input' }] },
+  looks_setsizeto: { args: [{ name: 'SIZE', kind: 'input' }] },
+  looks_changeeffectby: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'CHANGE', kind: 'input' }] },
+  looks_seteffectto: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
+  looks_cleargraphiceffects: { args: [] },
+  looks_show: { args: [] },
+  looks_hide: { args: [] },
+  looks_gotofrontback: { args: [{ name: 'FRONT_BACK', kind: 'field' }] },
+  looks_goforwardbackwardlayers: { args: [{ name: 'FRONT_BACK', kind: 'field' }, { name: 'NUM', kind: 'input' }] },
+  looks_costumenumbername: { args: [{ name: 'NUMBER_NAME', kind: 'field' }] },
+  looks_backdropnumbername: { args: [{ name: 'NUMBER_NAME', kind: 'field' }] },
+  looks_size: { args: [] },
+  // TurboWarp stretch blocks
+  looks_setstretchto: { args: [{ name: 'STRETCHX', kind: 'input' }, { name: 'STRETCHY', kind: 'input' }] },
+  looks_changestretchby: { args: [{ name: 'STRETCHX', kind: 'input' }, { name: 'STRETCHY', kind: 'input' }] },
+  // Sound
+  sound_play: { args: [{ name: 'SOUND_MENU', kind: 'field' }] },
+  sound_playuntildone: { args: [{ name: 'SOUND_MENU', kind: 'field' }] },
+  sound_stopallsounds: { args: [] },
+  sound_changeeffectby: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
+  sound_seteffectto: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
+  sound_cleareffects: { args: [] },
+  sound_changevolumeby: { args: [{ name: 'VOLUME', kind: 'input' }] },
+  sound_setvolumeto: { args: [{ name: 'VOLUME', kind: 'input' }] },
+  sound_volume: { args: [] },
+  // Control
+  control_wait: { args: [{ name: 'DURATION', kind: 'input' }] },
+  control_wait_until: { args: [{ name: 'CONDITION', kind: 'input' }] },
+  control_repeat: { args: [{ name: 'TIMES', kind: 'input' }], substack: true },
+  control_forever: { args: [], substack: true },
+  control_if: { args: [{ name: 'CONDITION', kind: 'input' }], substack: true },
+  control_if_else: { args: [{ name: 'CONDITION', kind: 'input' }], substack: true, substack2: true },
+  control_repeat_until: { args: [{ name: 'CONDITION', kind: 'input' }], substack: true },
+  control_while: { args: [{ name: 'CONDITION', kind: 'input' }], substack: true },
+  control_for_each: { args: [{ name: 'VARIABLE', kind: 'field' }, { name: 'VALUE', kind: 'input' }], substack: true },
+  control_stop: { args: [{ name: 'STOP_OPTION', kind: 'field' }] },
+  control_start_as_clone: { args: [], substack: false },
+  control_create_clone_of: { args: [{ name: 'CLONE_OPTION', kind: 'field' }] },
+  control_delete_this_clone: { args: [] },
+  control_get_counter: { args: [] },
+  control_incr_counter: { args: [] },
+  control_decr_counter: { args: [] },
+  control_clear_counter: { args: [] },
+  control_all_at_once: { args: [], substack: true },
+  // Sensing
+  sensing_touchingobject: { args: [{ name: 'TOUCHINGOBJECTMENU', kind: 'field' }] },
+  sensing_touchingcolor: { args: [{ name: 'COLOR', kind: 'input' }] },
+  sensing_coloristouchingcolor: { args: [{ name: 'COLOR', kind: 'input' }, { name: 'COLOR2', kind: 'input' }] },
+  sensing_distanceto: { args: [{ name: 'DISTANCETOMENU', kind: 'field' }] },
+  sensing_askandwait: { args: [{ name: 'QUESTION', kind: 'input' }] },
+  sensing_answer: { args: [] },
+  sensing_keypressed: { args: [{ name: 'KEY_OPTION', kind: 'field' }] },
+  sensing_mousedown: { args: [] },
+  sensing_mousex: { args: [] },
+  sensing_mousey: { args: [] },
+  sensing_setdragmode: { args: [{ name: 'DRAG_MODE', kind: 'field' }] },
+  sensing_loudness: { args: [] },
+  sensing_timer: { args: [] },
+  sensing_resettimer: { args: [] },
+  sensing_of: { args: [{ name: 'PROPERTY', kind: 'field' }, { name: 'OBJECT', kind: 'field' }] },
+  sensing_current: { args: [{ name: 'CURRENTMENU', kind: 'field' }] },
+  sensing_dayssince2000: { args: [] },
+  sensing_username: { args: [] },
+  // Operators
+  operator_add: { args: [{ name: 'NUM1', kind: 'input' }, { name: 'NUM2', kind: 'input' }] },
+  operator_subtract: { args: [{ name: 'NUM1', kind: 'input' }, { name: 'NUM2', kind: 'input' }] },
+  operator_multiply: { args: [{ name: 'NUM1', kind: 'input' }, { name: 'NUM2', kind: 'input' }] },
+  operator_divide: { args: [{ name: 'NUM1', kind: 'input' }, { name: 'NUM2', kind: 'input' }] },
+  operator_random: { args: [{ name: 'FROM', kind: 'input' }, { name: 'TO', kind: 'input' }] },
+  operator_gt: { args: [{ name: 'OPERAND1', kind: 'input' }, { name: 'OPERAND2', kind: 'input' }] },
+  operator_lt: { args: [{ name: 'OPERAND1', kind: 'input' }, { name: 'OPERAND2', kind: 'input' }] },
+  operator_equals: { args: [{ name: 'OPERAND1', kind: 'input' }, { name: 'OPERAND2', kind: 'input' }] },
+  operator_and: { args: [{ name: 'OPERAND1', kind: 'input' }, { name: 'OPERAND2', kind: 'input' }] },
+  operator_or: { args: [{ name: 'OPERAND1', kind: 'input' }, { name: 'OPERAND2', kind: 'input' }] },
+  operator_not: { args: [{ name: 'OPERAND', kind: 'input' }] },
+  operator_join: { args: [{ name: 'STRING1', kind: 'input' }, { name: 'STRING2', kind: 'input' }] },
+  operator_letter_of: { args: [{ name: 'LETTER', kind: 'input' }, { name: 'STRING', kind: 'input' }] },
+  operator_length: { args: [{ name: 'STRING', kind: 'input' }] },
+  operator_contains: { args: [{ name: 'STRING1', kind: 'input' }, { name: 'STRING2', kind: 'input' }] },
+  operator_round: { args: [{ name: 'NUM', kind: 'input' }] },
+  operator_mod: { args: [{ name: 'NUM1', kind: 'input' }, { name: 'NUM2', kind: 'input' }] },
+  operator_mathop: { args: [{ name: 'OPERATOR', kind: 'field' }, { name: 'NUM', kind: 'input' }] },
+  // Data
+  data_setvariableto: { args: [{ name: 'VARIABLE', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
+  data_changevariableby: { args: [{ name: 'VARIABLE', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
+  data_showvariable: { args: [{ name: 'VARIABLE', kind: 'field' }] },
+  data_hidevariable: { args: [{ name: 'VARIABLE', kind: 'field' }] },
+  data_addtolist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'ITEM', kind: 'input' }] },
+  data_deleteoflist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'INDEX', kind: 'input' }] },
+  data_deletealloflist: { args: [{ name: 'LIST', kind: 'field' }] },
+  data_insertatlist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'INDEX', kind: 'input' }, { name: 'ITEM', kind: 'input' }] },
+  data_replaceitemoflist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'INDEX', kind: 'input' }, { name: 'ITEM', kind: 'input' }] },
+  data_itemoflist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'INDEX', kind: 'input' }] },
+  data_itemnumoflist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'ITEM', kind: 'input' }] },
+  data_lengthoflist: { args: [{ name: 'LIST', kind: 'field' }] },
+  data_listcontainsitem: { args: [{ name: 'LIST', kind: 'field' }, { name: 'ITEM', kind: 'input' }] },
+  data_showlist: { args: [{ name: 'LIST', kind: 'field' }] },
+  data_hidelist: { args: [{ name: 'LIST', kind: 'field' }] },
+  // Events
+  event_whenflagclicked: { args: [] },
+  event_whenkeypressed: { args: [{ name: 'KEY_OPTION', kind: 'field' }] },
+  event_whenthisspriteclicked: { args: [] },
+  event_whenstageclicked: { args: [] },
+  event_whenbackdropswitchesto: { args: [{ name: 'BACKDROP', kind: 'field' }] },
+  event_whengreaterthan: { args: [{ name: 'WHENGREATERTHANMENU', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
+  event_whenbroadcastreceived: { args: [{ name: 'BROADCAST_OPTION', kind: 'field' }] },
+  event_broadcast: { args: [{ name: 'BROADCAST_INPUT', kind: 'input' }] },
+  event_broadcastandwait: { args: [{ name: 'BROADCAST_INPUT', kind: 'input' }] },
+  // Procedures (custom blocks)
+  procedures_call: { args: [] }, // args handled dynamically
+  // Pen extension (common)
+  pen_penDown: { args: [] },
+  pen_penUp: { args: [] },
+  pen_setPenColorToColor: { args: [{ name: 'COLOR', kind: 'input' }] },
+  pen_changePenColorParamBy: { args: [{ name: 'COLOR_PARAM', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
+  pen_setPenColorParamTo: { args: [{ name: 'COLOR_PARAM', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
+  pen_changePenSizeBy: { args: [{ name: 'SIZE', kind: 'input' }] },
+  pen_setPenSizeTo: { args: [{ name: 'SIZE', kind: 'input' }] },
+  pen_clear: { args: [] }
+};
+
+// Tokenize a string of positional arguments into parsed values.
+// Handles: numbers, double-quoted strings, $variables, @lists, and (opcode args...) nested reporters.
+function tokenizeArgs(argsStr) {
+  const args = [];
+  const s = String(argsStr == null ? '' : argsStr);
+  const n = s.length;
+  let i = 0;
+  const isWhitespace = (c) => c === ' ' || c === '\t' || c === '\r' || c === '\n';
+  while (i < n) {
+    while (i < n && isWhitespace(s[i])) i++;
+    if (i >= n) break;
+    const ch = s[i];
+    if (ch === '"') {
+      i++; // skip opening quote
+      let str = '';
+      while (i < n) {
+        if (s[i] === '\\' && i + 1 < n && (s[i+1] === '"' || s[i+1] === '\\')) {
+          str += s[i+1]; // unescape \" -> " and \\ -> \
+          i += 2;
+          continue;
+        }
+        if (s[i] === '"') break;
+        str += s[i];
+        i++;
+      }
+      if (i >= n) {
+        throw new Error('Unclosed string literal: "' + str + '"');
+      }
+      i++; // skip closing quote
+      args.push(str);
+    } else if (ch === '(') {
+      i++; // skip opening paren
+      let depth = 1;
+      let inner = '';
+      while (i < n && depth > 0) {
+        if (s[i] === '"') {
+          // consume a quoted string verbatim so parens inside it don't affect depth
+          inner += s[i]; i++;
+          while (i < n) {
+            if (s[i] === '\\' && i + 1 < n && (s[i+1] === '"' || s[i+1] === '\\')) {
+              inner += s[i]; inner += s[i+1]; i += 2; continue;
+            }
+            if (s[i] === '"') break;
+            inner += s[i]; i++;
+          }
+          if (i < n) { inner += s[i]; i++; } // closing quote
+        } else if (s[i] === '(') {
+          depth++; inner += s[i]; i++;
+        } else if (s[i] === ')') {
+          depth--;
+          if (depth === 0) { i++; break; }
+          inner += s[i]; i++;
+        } else {
+          inner += s[i]; i++;
+        }
+      }
+      if (depth > 0) {
+        throw new Error('Unbalanced parentheses in: ' + s.substring(Math.max(0, i - 20), i));
+      }
+      // inner = "opcode args..."
+      let subOpcode, subArgsStr;
+      const wsMatch = inner.match(/\s/);
+      if (wsMatch === null) {
+        subOpcode = inner;
+        subArgsStr = '';
+      } else {
+        const wsIdx = wsMatch.index;
+        subOpcode = inner.substring(0, wsIdx);
+        subArgsStr = inner.substring(wsIdx + 1);
+      }
+      args.push({ opcode: subOpcode, args: tokenizeArgs(subArgsStr) });
+    } else if (ch === '$') {
+      i++; // skip $
+      let name = '';
+      while (i < n && !isWhitespace(s[i])) name += s[i], i++;
+      args.push({ variable: name });
+    } else if (ch === '@') {
+      i++; // skip @
+      let name = '';
+      while (i < n && !isWhitespace(s[i])) name += s[i], i++;
+      args.push({ list: name });
+    } else {
+      // number or bareword: read until whitespace
+      let token = '';
+      while (i < n && !isWhitespace(s[i])) token += s[i], i++;
+      if (/^-?(?:\d+|\d+\.\d+|\.\d+)$/.test(token)) {
+        args.push(parseFloat(token));
+      } else {
+        args.push(token);
+      }
+    }
+  }
+  return args;
+}
+
+// Convert a raw token (from tokenizeArgs) into an input value, applying variable/list/nested-reporter rules.
+function argToInputValue(val) {
+  if (val && typeof val === 'object') {
+    if (val.variable) {
+      return { opcode: 'data_variable', fields: { VARIABLE: val.variable } };
+    }
+    if (val.list) {
+      return { opcode: 'data_listcontents', fields: { LIST: val.list } };
+    }
+    if (val.opcode) {
+      return mapArgsToDescriptor(val.opcode, val.args);
+    }
+  }
+  return val; // number or string
+}
+
+// Map an opcode + positional raw args to a block descriptor {opcode, inputs, fields}.
+function mapArgsToDescriptor(opcode, rawArgs) {
+  const schema = OPCODE_SCHEMA[opcode];
+  const inputs = {};
+  const fields = {};
+  const args = Array.isArray(rawArgs) ? rawArgs : [];
+  if (schema) {
+    for (let i = 0; i < args.length; i++) {
+      const argDef = schema.args[i];
+      const val = args[i];
+      if (!argDef) {
+        inputs['ARG' + (i + 1)] = argToInputValue(val);
+        continue;
+      }
+      if (argDef.kind === 'field') {
+        if (val && typeof val === 'object') {
+          if (val.variable && argDef.name === 'VARIABLE') {
+            fields[argDef.name] = val.variable;
+          } else if (val.list && argDef.name === 'LIST') {
+            fields[argDef.name] = val.list;
+          } else if (val.opcode) {
+            inputs[argDef.name] = argToInputValue(val);
+          } else {
+            fields[argDef.name] = String(val);
+          }
+        } else {
+          fields[argDef.name] = String(val);
+        }
+      } else {
+        inputs[argDef.name] = argToInputValue(val);
+      }
+    }
+  } else {
+    for (let i = 0; i < args.length; i++) {
+      inputs['ARG' + (i + 1)] = argToInputValue(args[i]);
+    }
+  }
+  return { opcode, inputs, fields };
+}
+
+// Parse a single DSL line (already trimmed) into {opcode, args} where args is the raw token array.
+function parseDslLine(content) {
+  const wsMatch = content.match(/\s/);
+  if (wsMatch === null) {
+    return { opcode: content, args: [] };
+  }
+  const wsIdx = wsMatch.index;
+  const opcode = content.substring(0, wsIdx);
+  const argsStr = content.substring(wsIdx + 1);
+  return { opcode, args: tokenizeArgs(argsStr) };
+}
+
+// Convert a tree node (with rawArgs and child node arrays) into a block descriptor with substack/substack2.
+function convertNode(node) {
+  const descriptor = mapArgsToDescriptor(node.opcode, node.rawArgs);
+  if (node.substack && node.substack.length > 0) {
+    descriptor.substack = node.substack.map(convertNode);
+  }
+  if (node.substack2 && node.substack2.length > 0) {
+    descriptor.substack2 = node.substack2.map(convertNode);
+  }
+  return descriptor;
+}
+
+// Convert a JSON block object (e.g. {"opcode":"...","inputs":{},"next":{...}}) to DSL text lines.
+// IMPORTANT: the DSL is positional — parseDslLine/mapArgsToDescriptor map tokens onto
+// OPCODE_SCHEMA[opcode].args by index. So arguments must be emitted in schema order,
+// not "all inputs then all fields". Emitting them out of order silently swaps values
+// between slots (e.g. data_setvariableto would take the number as VARIABLE and the
+// variable name as VALUE, creating a bogus variable named after the value).
+// Resolve a VARIABLE / LIST field to a real VM variable descriptor.
+// The VM binds a block's variable field by ID: if the id is missing/unknown, Scratch
+// auto-creates a *local* variable on the sprite named after whatever it finds, which is
+// how a stray variable named after a value ends up on the sprite. So look the name up
+// (local first, then stage) and create the variable when it genuinely does not exist,
+// always returning a concrete id.
+function resolveVariableField(target, key, rawName) {
+  const isList = key === 'LIST';
+  const type = isList ? 'list' : '';
+  const name = String(rawName == null ? '' : rawName);
+  let variable = target.lookupVariableByNameAndType(name, type);
+  if (!variable) {
+    // Prefer creating globals on the stage so every sprite can see them, matching
+    // how users normally declare variables in the editor.
+    const stage = target.runtime && target.runtime.getTargetForStage ? target.runtime.getTargetForStage() : null;
+    const owner = stage || target;
+    const newId = 'aivar_' + Math.random().toString(36).slice(2, 10);
+    if (isList) {
+      owner.createVariable(newId, name, 'list');
+    } else {
+      owner.createVariable(newId, name, '');
+    }
+    variable = owner.lookupVariableByNameAndType(name, type) || { id: newId, name: name };
+  }
+  return { name: key, value: variable.name, id: variable.id, variableType: type };
+}
+
+function convertBlockObjToDsl(obj, indent) {
+  indent = indent || 0;
+  var pad = '  '.repeat(indent);
+  if (!obj || !obj.opcode) return [];
+
+  var rawInputs = obj.inputs || {};
+  var rawFields = obj.fields || {};
+
+  var fieldValue = function(key) {
+    var fv = rawFields[key];
+    if (fv && typeof fv === 'object') fv = fv.value;
+    return fv;
+  };
+  var encodeInput = function(val) {
+    if (typeof val === 'number') return String(val);
+    if (typeof val === 'boolean') return val ? 'true' : 'false';
+    if (typeof val === 'string') return '"' + val.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+    if (val && typeof val === 'object') {
+      if (val.opcode) return '(' + convertBlockObjToDsl(val, 0).join(' ') + ')';
+      // Variable/list reporter shorthand used by some callers
+      if (val.VARIABLE) return '$' + val.VARIABLE;
+      if (val.LIST) return '@' + val.LIST;
+    }
+    return null;
+  };
+  var encodeField = function(key) {
+    var fv = fieldValue(key);
+    if (fv === undefined || fv === null) return null;
+    if (key === 'VARIABLE') return '$' + fv;
+    if (key === 'LIST') return '@' + fv;
+    return '"' + String(fv).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  };
+
+  var parts = [obj.opcode];
+  var schema = OPCODE_SCHEMA[obj.opcode];
+  var usedInputs = {};
+  var usedFields = {};
+
+  if (schema && Array.isArray(schema.args)) {
+    // Walk the schema in order so each token lands in its declared slot.
+    for (var ai = 0; ai < schema.args.length; ai++) {
+      var argDef = schema.args[ai];
+      var token = null;
+      if (argDef.kind === 'field') {
+        if (Object.prototype.hasOwnProperty.call(rawFields, argDef.name)) {
+          token = encodeField(argDef.name);
+          usedFields[argDef.name] = true;
+        } else if (Object.prototype.hasOwnProperty.call(rawInputs, argDef.name)) {
+          // Tolerate models that put a menu value under inputs
+          token = encodeInput(rawInputs[argDef.name]);
+          usedInputs[argDef.name] = true;
+        }
+      } else {
+        if (Object.prototype.hasOwnProperty.call(rawInputs, argDef.name)) {
+          token = encodeInput(rawInputs[argDef.name]);
+          usedInputs[argDef.name] = true;
+        } else if (Object.prototype.hasOwnProperty.call(rawFields, argDef.name)) {
+          token = encodeField(argDef.name);
+          usedFields[argDef.name] = true;
+        }
+      }
+      // A missing middle argument would shift every later token, so emit a
+      // placeholder to keep positions aligned.
+      parts.push(token === null ? (argDef.kind === 'field' ? '""' : '0') : token);
+    }
+  }
+
+  // Anything the schema didn't cover (unknown opcode, extra args) keeps the old
+  // inputs-then-fields order as a best effort.
+  Object.keys(rawInputs).forEach(function(key) {
+    if (key === 'SUBSTACK' || key === 'SUBSTACK2' || usedInputs[key]) return;
+    var token = encodeInput(rawInputs[key]);
+    if (token !== null) parts.push(token);
+  });
+  Object.keys(rawFields).forEach(function(key) {
+    if (usedFields[key]) return;
+    var token = encodeField(key);
+    if (token !== null) parts.push(token);
+  });
+
+  var lines = [pad + parts.join(' ')];
+  // Substacks may arrive either under inputs.SUBSTACK or as obj.substack
+  var subSource = (obj.inputs && obj.inputs.SUBSTACK) || obj.substack;
+  if (subSource) {
+    var subArr = Array.isArray(subSource) ? subSource : [subSource];
+    subArr.forEach(function(b) {
+      convertBlockObjToDsl(b, indent + 1).forEach(function(l) { lines.push(l); });
+    });
+  }
+  var sub2Source = (obj.inputs && obj.inputs.SUBSTACK2) || obj.substack2;
+  if (sub2Source) {
+    lines.push(pad + 'else');
+    var sub2Arr = Array.isArray(sub2Source) ? sub2Source : [sub2Source];
+    sub2Arr.forEach(function(b) {
+      convertBlockObjToDsl(b, indent + 1).forEach(function(l) { lines.push(l); });
+    });
+  }
+  if (obj.next) {
+    convertBlockObjToDsl(obj.next, indent).forEach(function(l) { lines.push(l); });
+  }
+  return lines;
+}
+
+// Parse Scratch block DSL text into {hat: descriptor, blocks: [descriptor, ...]}.
+function parseScratchDSL(scriptText, target) {
+  void target; // reserved for future use; variable/list id resolution happens in buildBlockStructure
+  const warnings = [];
+  const rawLines = String(scriptText == null ? '' : scriptText).split('\n');
+  const parsedLines = [];
+  for (let li = 0; li < rawLines.length; li++) {
+    const line = rawLines[li];
+    // Normalize: convert leading tabs to 2 spaces each for indent calculation
+    const indentMatch = line.match(/^[\t ]*/);
+    const indentRaw = indentMatch ? indentMatch[0] : '';
+    const indentSpaces = indentRaw.replace(/\t/g, '  ').length;
+    const indent = Math.floor(indentSpaces / 2);
+    const trimmed = line.replace(/^[\t ]+/, '').replace(/\s+$/, '');
+    if (trimmed.length === 0 || trimmed.charAt(0) === '#') continue;
+    parsedLines.push({ indent, content: trimmed, lineNo: li + 1 });
+  }
+
+  if (parsedLines.length === 0) {
+    return { hat: { opcode: 'event_whenflagclicked', inputs: {}, fields: {} }, blocks: [], warnings };
+  }
+
+  // Determine hat. First line (indent 0) is the hat if it looks like one.
+  const firstLine = parsedLines[0];
+  let firstParsed;
+  try {
+    firstParsed = parseDslLine(firstLine.content);
+  } catch (e) {
+    throw new Error('line ' + firstLine.lineNo + ': ' + e.message + ' (near: "' + firstLine.content.substring(0, 60) + '")');
+  }
+  let hatDescriptor;
+  let bodyStartIdx;
+  const isFirstHat = firstParsed.opcode.indexOf('event_') === 0 || firstParsed.opcode === 'control_start_as_clone';
+  if (isFirstHat) {
+    if (!OPCODE_SCHEMA[firstParsed.opcode]) {
+      warnings.push('line ' + firstLine.lineNo + ': unknown opcode "' + firstParsed.opcode + '" (not in OPCODE_SCHEMA, block may not work correctly)');
+    }
+    hatDescriptor = mapArgsToDescriptor(firstParsed.opcode, firstParsed.args);
+    bodyStartIdx = 1;
+  } else {
+    hatDescriptor = { opcode: 'event_whenflagclicked', inputs: {}, fields: {} };
+    bodyStartIdx = 0;
+  }
+
+  // Build the body tree using a stack.
+  const rootNodes = [];
+  const stack = []; // entries: {node, indent, inElse}
+  for (let bi = bodyStartIdx; bi < parsedLines.length; bi++) {
+    const { indent, content, lineNo } = parsedLines[bi];
+
+    if (content === 'else') {
+      // Mark the matching C-block entry (same indent) as being in its else branch.
+      for (let sj = stack.length - 1; sj >= 0; sj--) {
+        if (stack[sj].indent === indent) {
+          stack[sj].inElse = true;
+          break;
+        }
+      }
+      continue;
+    }
+
+    let parsed;
+    try {
+      parsed = parseDslLine(content);
+    } catch (e) {
+      throw new Error('line ' + lineNo + ': ' + e.message + ' (near: "' + content.substring(0, 60) + '")');
+    }
+    const schema = OPCODE_SCHEMA[parsed.opcode];
+    if (!schema) {
+      warnings.push('line ' + lineNo + ': unknown opcode "' + parsed.opcode + '" (not in OPCODE_SCHEMA, block may not work correctly)');
+    }
+    const hasSubstack = !!(schema && (schema.substack === true || schema.substack2 === true));
+    const node = {
+      opcode: parsed.opcode,
+      rawArgs: parsed.args,
+      indent,
+      substack: [],
+      substack2: []
+    };
+
+    // Pop until top has indent < current indent.
+    while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
+      stack.pop();
+    }
+
+    if (stack.length === 0) {
+      rootNodes.push(node);
+    } else {
+      const top = stack[stack.length - 1];
+      if (top.inElse) {
+        top.node.substack2.push(node);
+      } else {
+        top.node.substack.push(node);
+      }
+    }
+
+    if (hasSubstack) {
+      stack.push({ node, indent, inElse: false });
+    }
+  }
+
+  const blocks = rootNodes.map(convertNode);
+  return { hat: hatDescriptor, blocks, warnings };
+}
+
 const DesktopHOC = function (WrappedComponent) {
   class DesktopComponent extends React.Component {
     constructor (props) {
@@ -305,19 +881,15 @@ const DesktopHOC = function (WrappedComponent) {
 
       // NeoWarp: Collaboration - Receive project update from host/other participant
       this._collabLoadingProject = false;
+      this._collabPendingProject = null;
       EditorPreload.onCollabProjectUpdate((data) => {
-        if (this._collabLoadingProject) return;
-        this._collabLoadingProject = true;
-        try {
-          const project = typeof data.project === 'string' ? JSON.parse(data.project) : data.project;
-          this.props.vm.loadProject(project).then(() => {
-            this._collabLoadingProject = false;
-          }).catch(() => {
-            this._collabLoadingProject = false;
-          });
-        } catch (e) {
-          this._collabLoadingProject = false;
+        if (this._collabLoadingProject) {
+          // Keep only the latest remote state; it is applied once the
+          // current load and its echo-guard cooldown have settled
+          this._collabPendingProject = data;
+          return;
         }
+        this.applyCollabProjectUpdate(data);
       });
 
       // NeoWarp: Collaboration - Broadcast project changes to others (debounced)
@@ -585,14 +1157,12 @@ const DesktopHOC = function (WrappedComponent) {
       EditorPreload.onAIToolCall(async (data) => {
         const { requestId, toolName, params } = data;
         if (params) {
-          if (!params.spriteName && params.sprite_name) params.spriteName = params.sprite_name;
-          if (!params.backdropName && params.backdrop_name) params.backdropName = params.backdrop_name;
-          if (!params.variableName && params.variable_name) params.variableName = params.variable_name;
-          if (!params.listName && params.list_name) params.listName = params.list_name;
-          if (!params.costumeName && params.costume_name) params.costumeName = params.costume_name;
-          if (!params.hatKey && params.hat_key) params.hatKey = params.hat_key;
-          if (!params.hatMessage && params.hat_message) params.hatMessage = params.hat_message;
-          if (!params.hatBackdrop && params.hat_backdrop) params.hatBackdrop = params.hat_backdrop;
+          // Generic snake_case → camelCase mapping for all params
+          Object.keys(params).forEach(function(key) {
+            if (key.indexOf('_') === -1) return;
+            var camelKey = key.replace(/_([a-z])/g, function(_, c) { return c.toUpperCase(); });
+            if (!params[camelKey]) params[camelKey] = params[key];
+          });
         }
         const vm = this.props.vm;
         let result = { success: false, error: 'Unknown tool' };
@@ -615,6 +1185,120 @@ const DesktopHOC = function (WrappedComponent) {
               const target = vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName);
               if (!target) { result = { success: false, error: 'Sprite not found' }; break; }
               result = { success: true, data: { name: target.getName(), x: target.x, y: target.y, size: target.size, direction: target.direction, visible: target.visible, draggable: target.draggable, rotationStyle: target.rotationStyle, currentCostume: target.currentCostume, costumeCount: target.getCostumes().length } };
+              break;
+            }
+            case 'getSpriteScripts': {
+              const target = vm.runtime.targets.find(t => t.getName() === params.spriteName);
+              if (!target) { result = { success: false, error: 'Sprite "' + params.spriteName + '" not found' }; break; }
+              const scripts = [];
+              const allBlocks = target.blocks._blocks;
+              Object.keys(allBlocks).forEach(function(blockId) {
+                var b = allBlocks[blockId];
+                if (b.topLevel && b.parent === null) {
+                  var dslLines = [];
+                  function emitBlock(blk, ind) {
+                    var pad = '  '.repeat(ind);
+                    var parts = [blk.opcode];
+                    var handledFieldNames = new Set();
+                    if (blk.inputs) {
+                      Object.keys(blk.inputs).forEach(function(key) {
+                        if (key === 'SUBSTACK' || key === 'SUBSTACK2') return;
+                        var inp = blk.inputs[key];
+                        if (!inp || !inp.block) return;
+                        var sub = allBlocks[inp.block];
+                        if (!sub) return;
+                        // Check if this is a shadow block (inp.block === inp.shadow means it's the default shadow, not a plugged reporter)
+                        if (inp.block === inp.shadow || inp.shadow === null) {
+                          // Shadow block - extract field value directly
+                          if (sub.opcode === 'math_number') {
+                            parts.push(String(sub.fields.NUM.value));
+                          } else if (sub.opcode === 'text') {
+                            parts.push('"' + String(sub.fields.TEXT.value).replace(/"/g, '\\"') + '"');
+                          } else if (sub.opcode === 'data_variable') {
+                            parts.push('$' + sub.fields.VARIABLE.value);
+                          } else if (sub.opcode === 'data_listcontents') {
+                            parts.push('@' + sub.fields.LIST.value);
+                          } else {
+                            // Menu shadow block (sensing_keyoptions, motion_goto_menu, etc.)
+                            // Extract the first field value
+                            var menuFields = sub.fields;
+                            if (menuFields) {
+                              var fieldKeys = Object.keys(menuFields);
+                              for (var fi = 0; fi < fieldKeys.length; fi++) {
+                                var mf = menuFields[fieldKeys[fi]];
+                                var mfv = mf && typeof mf === 'object' ? mf.value : mf;
+                                if (mfv != null) {
+                                  parts.push('"' + String(mfv) + '"');
+                                  break;
+                                }
+                              }
+                            }
+                          }
+                          handledFieldNames.add(key);
+                        } else {
+                          // Actual reporter block plugged in (not shadow)
+                          var subParts = [sub.opcode];
+                          if (sub.inputs) {
+                            Object.keys(sub.inputs).forEach(function(iKey) {
+                              if (iKey === 'SUBSTACK' || iKey === 'SUBSTACK2') return;
+                              var iInp = sub.inputs[iKey];
+                              if (iInp && iInp.block) {
+                                var iSub = allBlocks[iInp.block];
+                                if (iSub) {
+                                  if (iSub.opcode === 'math_number') subParts.push(String(iSub.fields.NUM.value));
+                                  else if (iSub.opcode === 'text') subParts.push('"' + String(iSub.fields.TEXT.value).replace(/"/g, '\\"') + '"');
+                                  else if (iSub.opcode === 'data_variable') subParts.push('$' + iSub.fields.VARIABLE.value);
+                                  else if (iSub.opcode === 'data_listcontents') subParts.push('@' + iSub.fields.LIST.value);
+                                  else subParts.push('(' + iSub.opcode + ')');
+                                }
+                              }
+                            });
+                          }
+                          if (sub.fields) {
+                            Object.keys(sub.fields).forEach(function(fKey) {
+                              if (fKey === 'VARIABLE') { subParts.push('$' + sub.fields[fKey].value); return; }
+                              if (fKey === 'LIST') { subParts.push('@' + sub.fields[fKey].value); return; }
+                              var ffv = sub.fields[fKey];
+                              if (ffv && typeof ffv === 'object') ffv = ffv.value;
+                              if (ffv != null) subParts.push('"' + String(ffv) + '"');
+                            });
+                          }
+                          parts.push('(' + subParts.join(' ') + ')');
+                        }
+                      });
+                    }
+                    if (blk.fields) {
+                      Object.keys(blk.fields).forEach(function(key) {
+                        if (handledFieldNames.has(key)) return;
+                        if (key === 'VARIABLE') { parts.push('$' + blk.fields[key].value); return; }
+                        if (key === 'LIST') { parts.push('@' + blk.fields[key].value); return; }
+                        var fv = blk.fields[key];
+                        if (fv && typeof fv === 'object') fv = fv.value;
+                        if (fv != null) parts.push('"' + String(fv) + '"');
+                      });
+                    }
+                    dslLines.push(pad + parts.join(' '));
+                    if (blk.inputs && blk.inputs.SUBSTACK && blk.inputs.SUBSTACK.block) {
+                      var sub = allBlocks[blk.inputs.SUBSTACK.block];
+                      while (sub) {
+                        emitBlock(sub, ind + 1);
+                        sub = sub.next ? allBlocks[sub.next] : null;
+                      }
+                    }
+                    if (blk.inputs && blk.inputs.SUBSTACK2 && blk.inputs.SUBSTACK2.block) {
+                      dslLines.push(pad + 'else');
+                      var sub2 = allBlocks[blk.inputs.SUBSTACK2.block];
+                      while (sub2) {
+                        emitBlock(sub2, ind + 1);
+                        sub2 = sub2.next ? allBlocks[sub2.next] : null;
+                      }
+                    }
+                  }
+                  emitBlock(b, 0);
+                  scripts.push({ blockId: blockId, dsl: dslLines.join('\n') });
+                }
+              });
+              result = { success: true, data: { spriteName: params.spriteName, scriptCount: scripts.length, scripts: scripts } };
               break;
             }
             case 'setVariable': {
@@ -793,36 +1477,381 @@ const DesktopHOC = function (WrappedComponent) {
             case 'getProjectSummary': {
               const targets = vm.runtime.targets;
               const stage = targets.find(t => t.isStage);
+              function getScriptInfo(t) {
+                var blks = t.blocks._blocks;
+                var topBlocks = [];
+                Object.keys(blks).forEach(function(bId) {
+                  var b = blks[bId];
+                  if (b.topLevel && b.parent === null) topBlocks.push(b.opcode);
+                });
+                return { scriptCount: topBlocks.length, scripts: topBlocks };
+              }
               const spriteList = targets.filter(t => !t.isStage).map(t => ({
                 name: t.getName(), x: t.x, y: t.y, size: t.size, direction: t.direction,
                 visible: t.visible, costumeCount: t.getCostumes().length,
                 variables: Object.values(t.variables).filter(v => v.type !== 'list').map(v => ({ name: v.name, value: v.value })),
-                lists: Object.values(t.variables).filter(v => v.type === 'list').map(v => ({ name: v.name, length: v.value.length }))
+                lists: Object.values(t.variables).filter(v => v.type === 'list').map(v => ({ name: v.name, length: v.value.length })),
+                scriptCount: getScriptInfo(t).scriptCount, scripts: getScriptInfo(t).scripts
               }));
+              var stageScriptInfo = stage ? getScriptInfo(stage) : { scriptCount: 0, scripts: [] };
               result = { success: true, data: {
                 spriteCount: spriteList.length, sprites: spriteList,
                 stageVariables: stage ? Object.values(stage.variables).filter(v => v.type !== 'list').map(v => ({ name: v.name, value: v.value })) : [],
-                stageLists: stage ? Object.values(stage.variables).filter(v => v.type === 'list').map(v => ({ name: v.name, length: v.value.length })) : []
+                stageLists: stage ? Object.values(stage.variables).filter(v => v.type === 'list').map(v => ({ name: v.name, length: v.value.length })) : [],
+                stageScriptCount: stageScriptInfo.scriptCount, stageScripts: stageScriptInfo.scripts
               } };
               break;
             }
-            case 'addSprite': {
+            case 'getSpriteLibrary': {
               try {
-                const spriteName = params.spriteName || 'Sprite';
+                const libModule = await import(
+                  /* webpackChunkName: "sprite-library" */
+                  'scratch-gui/src/lib/libraries/tw-async-libraries'
+                );
+                const getLib = libModule.getSpriteLibrary;
+                const library = getLib();
+                const libData = library && library.then ? await library : library;
+                if (!libData || !Array.isArray(libData)) {
+                  result = { success: false, error: 'Sprite library not available' };
+                  break;
+                }
+                const sprites = libData.map(function(s) {
+                  return { name: s.name, tags: s.tags || [] };
+                });
+                result = { success: true, data: { count: sprites.length, sprites: sprites } };
+              } catch (e) {
+                result = { success: false, error: 'Failed to load sprite library: ' + (e.message || String(e)) };
+              }
+              break;
+            }
+            case 'addSprite': {
+              const spriteName = (params.spriteName || params.name || '').trim();
+              if (spriteName) {
+                // Named sprite: load from built-in library
                 const storage = vm.runtime.storage;
-                const svgColors = ['#ffab19','#4c97ff','#cf63cf','#59c059','#ff6680','#ff8c1a','#5cb1d6','#ffbf00','#9966ff','#40bf80'];
-                const colorIdx = Math.abs(hashCode(spriteName)) % svgColors.length;
-                const color = svgColors[colorIdx];
-                const svgContent = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="48" r="38" fill="' + color + '" stroke="#333" stroke-width="2"/><circle cx="38" cy="42" r="4.5" fill="#fff"/><circle cx="62" cy="42" r="4.5" fill="#fff"/><circle cx="39" cy="43" r="2" fill="#111"/><circle cx="63" cy="43" r="2" fill="#111"/><path d="M38 55 Q50 63 62 55" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"/></svg>';
+                const libModule = await import(
+                  /* webpackChunkName: "sprite-library" */
+                  'scratch-gui/src/lib/libraries/tw-async-libraries'
+                );
+                const getLib = libModule.getSpriteLibrary;
+                const library = getLib();
+                const libData = library && library.then ? await library : library;
+                if (!libData || !Array.isArray(libData) || libData.length === 0) {
+                  result = { success: false, error: 'Sprite library not available' };
+                  break;
+                }
+                const searchLower = spriteName.toLowerCase();
+                let match = libData.find(s => s.name.toLowerCase() === searchLower);
+                if (!match) {
+                  match = libData.find(s => s.name.toLowerCase().includes(searchLower) || searchLower.includes(s.name.toLowerCase()));
+                }
+                if (!match) {
+                  const available = libData.slice(0, 30).map(s => s.name).join(', ');
+                  result = { success: false, error: 'Sprite "' + spriteName + '" not found in library. Available: ' + available };
+                  break;
+                }
+                // Data structure: match.costumes[] is the source of truth (no top-level md5/info/json)
+                const firstCostume = (match.costumes && match.costumes[0]) || {};
+                const md5ext = firstCostume.md5ext || (firstCostume.assetId ? firstCostume.assetId + '.' + (firstCostume.dataFormat || 'svg') : '');
+                if (!md5ext) {
+                  result = { success: false, error: 'Sprite "' + spriteName + '" has no costume md5ext in library data' };
+                  break;
+                }
+                const dotIdx = md5ext.lastIndexOf('.');
+                const assetId = dotIdx > 0 ? md5ext.substring(0, dotIdx) : md5ext;
+                const dataFormat = dotIdx > 0 ? md5ext.substring(dotIdx + 1) : 'svg';
+                const assetType = dataFormat === 'svg' ? storage.AssetType.ImageVector : storage.AssetType.ImageBitmap;
+                let asset = null;
+                try {
+                  asset = await storage.load(assetType, assetId);
+                } catch (loadErr) {
+                  // Multi-source fallback: assets.scratch.mit.edu → cdn.assets.scratch.mit.edu
+                  const assetSources = [
+                    'https://assets.scratch.mit.edu/internalapi/asset/' + md5ext + '/get/',
+                    'https://cdn.assets.scratch.mit.edu/internalapi/asset/' + md5ext + '/get/'
+                  ];
+                  for (let srcIdx = 0; srcIdx < assetSources.length; srcIdx++) {
+                    try {
+                      const buffer = await EditorPreload.fetchImage(assetSources[srcIdx]);
+                      const newAssetId = storage.builtinHelper._store(assetType, dataFormat, new Uint8Array(buffer), null);
+                      asset = storage.builtinHelper.get(newAssetId);
+                      break;
+                    } catch (fetchErr) {
+                      // try next source
+                    }
+                  }
+                  if (!asset) {
+                    result = { success: false, error: 'Failed to load sprite asset "' + md5ext + '": all sources failed (assets.scratch.mit.edu and cdn.assets.scratch.mit.edu)' };
+                    break;
+                  }
+                }
+                if (!asset) {
+                  result = { success: false, error: 'Failed to load sprite asset "' + md5ext + '": asset is null' };
+                  break;
+                }
+                const rcX = firstCostume.rotationCenterX != null ? firstCostume.rotationCenterX : 47;
+                const rcY = firstCostume.rotationCenterY != null ? firstCostume.rotationCenterY : 47;
+                const costume = {
+                  assetId: assetId,
+                  name: firstCostume.name || match.name,
+                  md5ext: md5ext,
+                  dataFormat: dataFormat,
+                  rotationCenterX: rcX,
+                  rotationCenterY: rcY,
+                  bitmapResolution: firstCostume.bitmapResolution || (dataFormat === 'svg' ? 1 : 2),
+                  asset: asset
+                };
+                const spriteObj = {
+                  isStage: false,
+                  name: spriteName,
+                  variables: {},
+                  lists: {},
+                  broadcasts: {},
+                  blocks: {},
+                  comments: {},
+                  currentCostume: 0,
+                  costumes: [costume],
+                  sounds: [],
+                  volume: 100,
+                  layerOrder: vm.runtime.targets.length,
+                  visible: true,
+                  x: 0,
+                  y: 0,
+                  size: 100,
+                  direction: 90,
+                  draggable: false,
+                  rotationStyle: 'all around'
+                };
+                // Load additional costumes from match.costumes array (skip index 0, already loaded)
+                try {
+                  if (match.sounds && match.sounds.length > 0) {
+                    spriteObj.sounds = match.sounds;
+                  }
+                  if (match.costumes && match.costumes.length > 1) {
+                    for (let ci = 1; ci < match.costumes.length; ci++) {
+                      const c = match.costumes[ci];
+                      const cMd5ext = c.md5ext || (c.assetId ? c.assetId + '.' + (c.dataFormat || 'svg') : '');
+                      if (!cMd5ext) continue;
+                      const cDotIdx = cMd5ext.lastIndexOf('.');
+                      const cAssetId = cDotIdx > 0 ? cMd5ext.substring(0, cDotIdx) : cMd5ext;
+                      const cDataFormat = cDotIdx > 0 ? cMd5ext.substring(cDotIdx + 1) : 'svg';
+                      const cAssetType = cDataFormat === 'svg' ? storage.AssetType.ImageVector : storage.AssetType.ImageBitmap;
+                      let cAsset = null;
+                      try { cAsset = await storage.load(cAssetType, cAssetId); } catch (e) {}
+                      if (!cAsset) {
+                        const cSources = [
+                          'https://assets.scratch.mit.edu/internalapi/asset/' + cMd5ext + '/get/',
+                          'https://cdn.assets.scratch.mit.edu/internalapi/asset/' + cMd5ext + '/get/'
+                        ];
+                        for (let csIdx = 0; csIdx < cSources.length; csIdx++) {
+                          try {
+                            const cBuf = await EditorPreload.fetchImage(cSources[csIdx]);
+                            const cAid = storage.builtinHelper._store(cAssetType, cDataFormat, new Uint8Array(cBuf), null);
+                            cAsset = storage.builtinHelper.get(cAid);
+                            break;
+                          } catch (e2) {}
+                        }
+                      }
+                      if (cAsset) {
+                        spriteObj.costumes.push({
+                          assetId: cAssetId,
+                          name: c.name || 'costume' + (ci + 1),
+                          md5ext: cMd5ext,
+                          dataFormat: cDataFormat,
+                          rotationCenterX: c.rotationCenterX != null ? c.rotationCenterX : 47,
+                          rotationCenterY: c.rotationCenterY != null ? c.rotationCenterY : 47,
+                          bitmapResolution: c.bitmapResolution || (cDataFormat === 'svg' ? 1 : 2),
+                          asset: cAsset
+                        });
+                      }
+                    }
+                  }
+                } catch (multiCostumeErr) {
+                  // Multi-costume loading failed, continue with single costume
+                }
+                await vm.addSprite(spriteObj);
+                const newTarget = vm.runtime.targets[vm.runtime.targets.length - 1];
+                result = { success: true, data: { name: spriteName, id: newTarget ? newTarget.id : null, source: 'library', matchedName: match.name } };
+              } else {
+                // No spriteName: create blank rectangle sprite
+                try {
+                const blankName = 'Sprite' + (vm.runtime.targets.length);
+                const storage = vm.runtime.storage;
+                const svgContent = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#4c97ff"/></svg>';
                 const data = new TextEncoder().encode(svgContent);
                 const assetId = storage.builtinHelper._store(storage.AssetType.ImageVector, storage.DataFormat.SVG, data, null);
                 const asset = storage.builtinHelper.get(assetId);
-                const costume = { assetId: assetId, name: 'costume1', md5ext: assetId + '.svg', dataFormat: 'svg', rotationCenterX: 47, rotationCenterY: 47, bitmapResolution: 1, asset: asset };
-                const spriteObj = { isStage: false, name: spriteName, variables: {}, lists: {}, broadcasts: {}, blocks: {}, comments: {}, currentCostume: 0, costumes: [costume], sounds: [], volume: 100, layerOrder: vm.runtime.targets.length, visible: true, x: 0, y: 0, size: 100, direction: 90, draggable: false, rotationStyle: 'all around' };
+                const costume = { assetId: assetId, name: 'costume1', md5ext: assetId + '.svg', dataFormat: 'svg', rotationCenterX: 50, rotationCenterY: 50, bitmapResolution: 1, asset: asset };
+                const spriteObj = { isStage: false, name: blankName, variables: {}, lists: {}, broadcasts: {}, blocks: {}, comments: {}, currentCostume: 0, costumes: [costume], sounds: [], volume: 100, layerOrder: vm.runtime.targets.length, visible: true, x: 0, y: 0, size: 100, direction: 90, draggable: false, rotationStyle: 'all around' };
                 await vm.addSprite(spriteObj);
                 const newTarget = vm.runtime.targets[vm.runtime.targets.length - 1];
-                result = { success: true, data: { name: spriteName, id: newTarget ? newTarget.id : null } };
-              } catch (e2) { result = { success: false, error: 'Failed to add sprite: ' + (e2.message || String(e2)) }; }
+                result = { success: true, data: { name: blankName, id: newTarget ? newTarget.id : null, source: 'blank' } };
+                } catch (blankErr) { result = { success: false, error: 'Failed to add blank sprite: ' + (blankErr.message || String(blankErr)) }; }
+              }
+              break;
+            }
+            case 'addSpriteFromLibrary': {
+              try {
+                const spriteName = (params.spriteName || params.name || '').trim();
+                if (!spriteName) { result = { success: false, error: 'No sprite name provided' }; break; }
+                const storage = vm.runtime.storage;
+                const libModule = await import(
+                  /* webpackChunkName: "sprite-library" */
+                  'scratch-gui/src/lib/libraries/tw-async-libraries'
+                );
+                const getLib = libModule.getSpriteLibrary;
+                const library = getLib();
+                const libData = library && library.then ? await library : library;
+                if (!libData || !Array.isArray(libData) || libData.length === 0) {
+                  result = { success: false, error: 'Sprite library not available' };
+                  break;
+                }
+                const searchLower = spriteName.toLowerCase();
+                let match = libData.find(s => s.name.toLowerCase() === searchLower);
+                if (!match) {
+                  match = libData.find(s => s.name.toLowerCase().includes(searchLower) || searchLower.includes(s.name.toLowerCase()));
+                }
+                if (!match) {
+                  const available = libData.slice(0, 30).map(s => s.name).join(', ');
+                  result = { success: false, error: 'Sprite "' + spriteName + '" not found in library. Available: ' + available };
+                  break;
+                }
+                const firstCostume = (match.costumes && match.costumes[0]) || {};
+                const md5ext = firstCostume.md5ext || (firstCostume.assetId ? firstCostume.assetId + '.' + (firstCostume.dataFormat || 'svg') : '');
+                if (!md5ext) {
+                  result = { success: false, error: 'Sprite "' + spriteName + '" has no costume md5ext in library data' };
+                  break;
+                }
+                const dotIdx = md5ext.lastIndexOf('.');
+                const assetId = dotIdx > 0 ? md5ext.substring(0, dotIdx) : md5ext;
+                const dataFormat = dotIdx > 0 ? md5ext.substring(dotIdx + 1) : 'svg';
+                const assetType = dataFormat === 'svg' ? storage.AssetType.ImageVector : storage.AssetType.ImageBitmap;
+                let asset = null;
+                try {
+                  asset = await storage.load(assetType, assetId);
+                } catch (loadErr) {
+                  // Multi-source fallback: assets.scratch.mit.edu → cdn.assets.scratch.mit.edu
+                  const assetSources = [
+                    'https://assets.scratch.mit.edu/internalapi/asset/' + md5ext + '/get/',
+                    'https://cdn.assets.scratch.mit.edu/internalapi/asset/' + md5ext + '/get/'
+                  ];
+                  for (let srcIdx = 0; srcIdx < assetSources.length; srcIdx++) {
+                    try {
+                      const buffer = await EditorPreload.fetchImage(assetSources[srcIdx]);
+                      const newAssetId = storage.builtinHelper._store(assetType, dataFormat, new Uint8Array(buffer), null);
+                      asset = storage.builtinHelper.get(newAssetId);
+                      break;
+                    } catch (fetchErr) {
+                      // try next source
+                    }
+                  }
+                  if (!asset) {
+                    result = { success: false, error: 'Failed to load sprite asset "' + md5ext + '": all sources failed' };
+                    break;
+                  }
+                }
+                if (!asset) {
+                  result = { success: false, error: 'Failed to load sprite asset "' + md5ext + '": asset is null' };
+                  break;
+                }
+                const rcX = firstCostume.rotationCenterX != null ? firstCostume.rotationCenterX : 47;
+                const rcY = firstCostume.rotationCenterY != null ? firstCostume.rotationCenterY : 47;
+                const costume = {
+                  assetId: assetId,
+                  name: firstCostume.name || match.name,
+                  md5ext: md5ext,
+                  dataFormat: dataFormat,
+                  rotationCenterX: rcX,
+                  rotationCenterY: rcY,
+                  bitmapResolution: firstCostume.bitmapResolution || (dataFormat === 'svg' ? 1 : 2),
+                  asset: asset
+                };
+                const spriteObj = {
+                  isStage: false, name: match.name, variables: {}, lists: {}, broadcasts: {}, blocks: {}, comments: {},
+                  currentCostume: 0, costumes: [costume], sounds: match.sounds || [], volume: 100,
+                  layerOrder: vm.runtime.targets.length, visible: true, x: 0, y: 0, size: 100, direction: 90,
+                  draggable: false, rotationStyle: 'all around'
+                };
+                await vm.addSprite(spriteObj);
+                const newTarget = vm.runtime.targets[vm.runtime.targets.length - 1];
+                result = { success: true, data: { name: match.name, id: newTarget ? newTarget.id : null } };
+              } catch (e2) { result = { success: false, error: 'Failed to add sprite from library: ' + (e2.message || String(e2)) }; }
+              break;
+            }
+            case 'addCostumeFromLibrary': {
+              try {
+                const spriteName = params.spriteName || '';
+                const costumeName = (params.costumeName || params.name || '').trim();
+                if (!costumeName) { result = { success: false, error: 'No costume name provided' }; break; }
+                const target = vm.runtime.targets.find(t => t.getName() === spriteName);
+                if (!target) { result = { success: false, error: 'Sprite "' + spriteName + '" not found' }; break; }
+                const storage = vm.runtime.storage;
+                const libModule = await import(
+                  /* webpackChunkName: "costume-library" */
+                  'scratch-gui/src/lib/libraries/tw-async-libraries'
+                );
+                const getLib = libModule.getCostumeLibrary;
+                const library = getLib();
+                const libData = library && library.then ? await library : library;
+                if (!libData || !Array.isArray(libData) || libData.length === 0) {
+                  result = { success: false, error: 'Costume library not available' };
+                  break;
+                }
+                const searchLower = costumeName.toLowerCase();
+                let match = libData.find(c => c.name.toLowerCase() === searchLower);
+                if (!match) {
+                  match = libData.find(c => c.name.toLowerCase().includes(searchLower) || searchLower.includes(c.name.toLowerCase()));
+                }
+                if (!match) {
+                  const available = libData.slice(0, 30).map(c => c.name).join(', ');
+                  result = { success: false, error: 'Costume "' + costumeName + '" not found. Available: ' + available };
+                  break;
+                }
+                const md5ext = match.md5ext;
+                const dotIdx = md5ext.lastIndexOf('.');
+                const assetId = dotIdx > 0 ? md5ext.substring(0, dotIdx) : md5ext;
+                const dataFormat = dotIdx > 0 ? md5ext.substring(dotIdx + 1) : 'svg';
+                const assetType = dataFormat === 'svg' ? storage.AssetType.ImageVector : storage.AssetType.ImageBitmap;
+                let asset = null;
+                try {
+                  asset = await storage.load(assetType, assetId);
+                } catch (loadErr) {
+                  // Multi-source fallback: assets.scratch.mit.edu → cdn.assets.scratch.mit.edu
+                  const assetSources = [
+                    'https://assets.scratch.mit.edu/internalapi/asset/' + md5ext + '/get/',
+                    'https://cdn.assets.scratch.mit.edu/internalapi/asset/' + md5ext + '/get/'
+                  ];
+                  for (let srcIdx = 0; srcIdx < assetSources.length; srcIdx++) {
+                    try {
+                      const buffer = await EditorPreload.fetchImage(assetSources[srcIdx]);
+                      const newAssetId = storage.builtinHelper._store(assetType, dataFormat, new Uint8Array(buffer), null);
+                      asset = storage.builtinHelper.get(newAssetId);
+                      break;
+                    } catch (fetchErr) {
+                      // try next source
+                    }
+                  }
+                  if (!asset) {
+                    result = { success: false, error: 'Failed to load costume asset "' + md5ext + '": all sources failed (assets.scratch.mit.edu and cdn.assets.scratch.mit.edu)' };
+                    break;
+                  }
+                }
+                if (!asset) {
+                  result = { success: false, error: 'Failed to load costume asset "' + md5ext + '": asset is null after load attempts' };
+                  break;
+                }
+                const rcX = match.rotationCenterX != null ? match.rotationCenterX : 47;
+                const rcY = match.rotationCenterY != null ? match.rotationCenterY : 47;
+                const costume = {
+                  assetId: assetId, name: match.name, md5ext: md5ext, dataFormat: dataFormat,
+                  rotationCenterX: rcX, rotationCenterY: rcY,
+                  bitmapResolution: match.bitmapResolution || (dataFormat === 'svg' ? 1 : 2), asset: asset
+                };
+                target.addCostume(costume);
+                target.setCostume(target.getCostumes().length - 1);
+                vm.runtime.emitProjectChanged();
+                result = { success: true, data: { costumeName: match.name, spriteName: spriteName } };
+              } catch (e2) { result = { success: false, error: 'Failed to add costume from library: ' + (e2.message || String(e2)) }; }
               break;
             }
             case 'addBackdrop': {
@@ -848,10 +1877,43 @@ const DesktopHOC = function (WrappedComponent) {
                 const targetName = params.spriteName || params.sprite_name || 'Stage';
                 const target = vm.runtime.targets.find(t => t.getName() === targetName);
                 if (!target) { result = { success: false, error: 'Target "' + targetName + '" not found' }; break; }
-                const hatBlock = params.hat || 'event_whenflagclicked';
-                const scriptBlocks = params.blocks || [];
-                if (!scriptBlocks.length) { result = { success: false, error: 'No blocks provided' }; break; }
+                let scriptText = params.script || '';
+                if (!scriptText) { result = { success: false, error: 'No script provided. You passed: ' + JSON.stringify(params).substring(0, 200) + '. The "script" parameter MUST be a DSL text string like "event_whenflagclicked\\n  motion_movesteps 10", NOT a JSON object.' }; break; }
+                if (typeof scriptText === 'object') {
+                  try {
+                    var converted = convertBlockObjToDsl(scriptText, 0);
+                    scriptText = converted.join('\n');
+                  } catch (convErr) {
+                    result = { success: false, error: 'Failed to convert script object to DSL text: ' + (convErr.message || String(convErr)) + '. Please pass a DSL text string instead. Example: "event_whenflagclicked\\n  motion_movesteps 10"' };
+                    break;
+                  }
+                }
+                if (typeof scriptText !== 'string') { result = { success: false, error: 'Script must be a DSL text string (not ' + typeof scriptText + '). Example: "event_whenflagclicked\\n  motion_movesteps 10"' }; break; }
+                let parsed;
+                try {
+                  parsed = parseScratchDSL(scriptText, target);
+                } catch (parseErr) {
+                  result = { success: false, error: 'DSL parse error: ' + (parseErr.message || String(parseErr)) + '\nScript text (first 500 chars):\n' + scriptText.substring(0, 500) };
+                  break;
+                }
+                var dslWarnings = (parsed.warnings && parsed.warnings.length > 0)
+                  ? parsed.warnings.join('; ')
+                  : '';
+
+                // Menu shadow opcodes: map of block opcode -> { inputName: menuOpcode }
+                // These dropdown menus are required by Scratch for blocks to render correctly.
+                const MENU_SHADOW_OPCODES = {
+                  motion_goto: { TO: 'motion_goto_menu' },
+                  motion_glideto: { TO: 'motion_glideto_menu' },
+                  motion_pointtowards: { TOWARDS: 'motion_pointtowards_menu' },
+                  sensing_touchingobject: { TOUCHINGOBJECTMENU: 'sensing_touchingobjectmenu' },
+                  sensing_distanceto: { DISTANCETOMENU: 'sensing_distancetomenu' },
+                  sensing_keypressed: { KEY_OPTION: 'sensing_keyoptions' },
+                  control_create_clone_of: { CLONE_OPTION: 'control_create_clone_of_menu' }
+                };
+
                 function generateId() { return '_ai_' + Math.random().toString(36).substr(2, 9); }
+
                 function createShadowBlock(parentId, inputName, value) {
                   const sid = generateId();
                   if (typeof value === 'number') {
@@ -864,63 +1926,142 @@ const DesktopHOC = function (WrappedComponent) {
                     return [{ id: sid, opcode: 'text', fields: { TEXT: { name: 'TEXT', value: value ? 'true' : 'false' } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
                   }
                   if (value && typeof value === 'object' && value.VARIABLE) {
-                    const v = target.lookupVariableByNameAndType(value.VARIABLE, '');
-                    if (v) {
-                      return [{ id: sid, opcode: 'data_variable', fields: { VARIABLE: { name: 'VARIABLE', value: v.name, id: v.id, variableType: '' } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                    }
-                    return [null, { name: inputName, block: null, shadow: null }];
+                    const vf = resolveVariableField(target, 'VARIABLE', value.VARIABLE);
+                    return [{ id: sid, opcode: 'data_variable', fields: { VARIABLE: vf }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
                   }
                   if (value && typeof value === 'object' && value.LIST) {
-                    const l = target.lookupVariableByNameAndType(value.LIST, 'list');
-                    if (l) {
-                      return [{ id: sid, opcode: 'data_listcontents', fields: { LIST: { name: 'LIST', value: l.name, id: l.id, variableType: 'list' } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                    }
-                    return [null, { name: inputName, block: null, shadow: null }];
+                    const lf = resolveVariableField(target, 'LIST', value.LIST);
+                    return [{ id: sid, opcode: 'data_listcontents', fields: { LIST: lf }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
                   }
                   return [null, { name: inputName, block: null, shadow: null }];
                 }
-                const allBlocks = [];
-                const hatFields = {};
-                if (hatBlock === 'event_whenkeypressed' && params.hatKey) hatFields.KEY_OPTION = { name: 'KEY_OPTION', value: params.hatKey, id: undefined };
-                if (hatBlock === 'event_whenbroadcastreceived' && params.hatMessage) hatFields.BROADCAST_OPTION = { name: 'BROADCAST_OPTION', value: params.hatMessage, id: undefined };
-                if (hatBlock === 'event_whenbackdropswitchesto' && params.hatBackdrop) hatFields.BACKDROP = { name: 'BACKDROP', value: params.hatBackdrop, id: undefined };
-                const hatId = generateId();
-                allBlocks.push({ id: hatId, opcode: hatBlock, next: null, parent: null, inputs: {}, fields: hatFields, shadow: false, topLevel: true, x: 100 + Math.random() * 200, y: 100 + Math.random() * 200 });
-                let prevId = hatId;
-                scriptBlocks.forEach(block => {
+
+                // Recursively build a block (and its nested reporters/substacks) into allBlocks.
+                // Supports: nested reporter blocks (val.opcode), SUBSTACK/SUBSTACK2 arrays,
+                // scriptObj.substack/substack2, scriptObj.next chaining, and menu shadow fields.
+                function buildBlockStructure(scriptObj, allBlocks) {
+                  if (!scriptObj || !scriptObj.opcode) return null;
                   const blockId = generateId();
                   const inputs = {};
-                  const rawInputs = block.inputs || {};
+                  const rawInputs = scriptObj.inputs || {};
+                  const menuMap = MENU_SHADOW_OPCODES[scriptObj.opcode] || {};
+
                   Object.keys(rawInputs).forEach(key => {
-                    const [shadowBlock, inputRef] = createShadowBlock(blockId, key, rawInputs[key]);
-                    if (shadowBlock) allBlocks.push(shadowBlock);
-                    if (inputRef) inputs[key] = inputRef;
+                    const val = rawInputs[key];
+                    if (val && typeof val === 'object' && val.opcode) {
+                      // Nested reporter block (e.g. operator_add inside motion_movesteps)
+                      const nestedId = buildBlockStructure(val, allBlocks);
+                      if (nestedId) {
+                        inputs[key] = { name: key, block: nestedId };
+                        const nestedDef = allBlocks.find(ab => ab.id === nestedId);
+                        if (nestedDef) nestedDef.parent = blockId;
+                      }
+                    } else if (key === 'SUBSTACK' || key === 'SUBSTACK2') {
+                      if (Array.isArray(val)) {
+                        const subId = buildSubstackChain(val, allBlocks);
+                        if (subId) inputs[key] = { name: key, block: subId };
+                      }
+                    } else {
+                      const [shadowBlock, inputRef] = createShadowBlock(blockId, key, val);
+                      if (shadowBlock) allBlocks.push(shadowBlock);
+                      if (inputRef) inputs[key] = inputRef;
+                    }
                   });
+
                   const fields = {};
-                  if (block.fields) {
-                    Object.keys(block.fields).forEach(key => {
-                      if (key === 'VARIABLE') {
-                        const v = target.lookupVariableByNameAndType(String(block.fields[key]), '');
-                        fields[key] = { name: key, value: String(block.fields[key]), id: v ? v.id : undefined, variableType: '' };
+                  if (scriptObj.fields) {
+                    Object.keys(scriptObj.fields).forEach(key => {
+                      if (menuMap[key]) {
+                        // Create a menu shadow dropdown block for this field
+                        const menuOpcode = menuMap[key];
+                        const menuId = generateId();
+                        allBlocks.push({ id: menuId, opcode: menuOpcode, next: null, parent: blockId, inputs: {}, fields: { [key]: { name: key, value: String(scriptObj.fields[key]), id: undefined } }, shadow: true, topLevel: false, x: 0, y: 0 });
+                        inputs[key] = { name: key, block: menuId, shadow: menuId };
+                      } else if (key === 'VARIABLE') {
+                        fields[key] = resolveVariableField(target, 'VARIABLE', scriptObj.fields[key]);
                       } else if (key === 'LIST') {
-                        const l = target.lookupVariableByNameAndType(String(block.fields[key]), 'list');
-                        fields[key] = { name: key, value: String(block.fields[key]), id: l ? l.id : undefined, variableType: 'list' };
+                        fields[key] = resolveVariableField(target, 'LIST', scriptObj.fields[key]);
                       } else {
-                        fields[key] = { name: key, value: block.fields[key], id: undefined };
+                        fields[key] = { name: key, value: String(scriptObj.fields[key]), id: undefined };
                       }
                     });
                   }
-                  allBlocks.push({ id: blockId, opcode: block.opcode, next: null, parent: null, inputs: inputs, fields: fields, shadow: false, topLevel: false, x: 0, y: 0 });
-                  const prevBlock = allBlocks.find(b => b.id === prevId);
-                  if (prevBlock) prevBlock.next = blockId;
-                  prevId = blockId;
+
+                  const blockDef = { id: blockId, opcode: scriptObj.opcode, next: null, parent: null, inputs: inputs, fields: fields, shadow: false, topLevel: false, x: 0, y: 0 };
+                  allBlocks.push(blockDef);
+
+                  // Substack arrays passed via scriptObj.substack / scriptObj.substack2
+                  if (scriptObj.substack && Array.isArray(scriptObj.substack)) {
+                    const substackId = buildSubstackChain(scriptObj.substack, allBlocks, blockId);
+                    if (substackId) blockDef.inputs.SUBSTACK = { name: 'SUBSTACK', block: substackId, shadow: null };
+                  }
+                  if (scriptObj.substack2 && Array.isArray(scriptObj.substack2)) {
+                    const substack2Id = buildSubstackChain(scriptObj.substack2, allBlocks, blockId);
+                    if (substack2Id) blockDef.inputs.SUBSTACK2 = { name: 'SUBSTACK2', block: substack2Id, shadow: null };
+                  }
+
+                  // Chained next block
+                  if (scriptObj.next) {
+                    const nextId = buildBlockStructure(scriptObj.next, allBlocks);
+                    if (nextId) blockDef.next = nextId;
+                  }
+
+                  return blockId;
+                }
+
+                function buildSubstackChain(substackArray, allBlocks, parentBlockId) {
+                  if (!Array.isArray(substackArray) || substackArray.length === 0) return null;
+                  var firstId = null;
+                  var prevId = null;
+                  for (var si = 0; si < substackArray.length; si++) {
+                    var subId = buildBlockStructure(substackArray[si], allBlocks);
+                    if (!subId) continue;
+                    if (firstId === null) firstId = subId;
+                    var curDef = allBlocks.find(ab => ab.id === subId);
+                    if (curDef) curDef.parent = prevId || parentBlockId;
+                    if (prevId) {
+                      var prevDef = allBlocks.find(ab => ab.id === prevId);
+                      if (prevDef) prevDef.next = subId;
+                    }
+                    prevId = subId;
+                  }
+                  return firstId;
+                }
+
+                const allBlocks = [];
+                const hatId = buildBlockStructure(parsed.hat, allBlocks);
+                if (hatId) {
+                  const hatBlockDef = allBlocks.find(b => b.id === hatId);
+                  if (hatBlockDef) {
+                    hatBlockDef.topLevel = true;
+                    hatBlockDef.x = 100 + Math.random() * 200;
+                    hatBlockDef.y = 100 + Math.random() * 200;
+                  }
+                }
+                let prevId = hatId;
+                parsed.blocks.forEach(block => {
+                  const blockId = buildBlockStructure(block, allBlocks);
+                  if (blockId) {
+                    const prevBlock = allBlocks.find(b => b.id === prevId);
+                    if (prevBlock) prevBlock.next = blockId;
+                    const curBlock = allBlocks.find(b => b.id === blockId);
+                    if (curBlock) curBlock.parent = prevId;
+                    prevId = blockId;
+                  }
                 });
                 allBlocks.forEach(b => { target.blocks.createBlock(b); });
                 vm.runtime.emitProjectChanged();
                 vm.emitWorkspaceUpdate();
                 vm.emitTargetsUpdate();
-                result = { success: true, data: { targetName: targetName, blocksAdded: allBlocks.length } };
-              } catch (e2) { result = { success: false, error: 'Failed to add blocks: ' + (e2.message || String(e2)) }; }
+                result = { success: true, data: { targetName: targetName, blocksAdded: allBlocks.length, warnings: dslWarnings || undefined } };
+              } catch (e2) {
+                result = {
+                  success: false,
+                  error: 'Failed to add blocks: ' + (e2.message || String(e2)) +
+                    '\nBlocks attempted: ' + (typeof allBlocks !== 'undefined' ? allBlocks.length : 0) +
+                    '\nLast opcode: ' + (typeof allBlocks !== 'undefined' && allBlocks.length > 0 ? allBlocks[allBlocks.length - 1].opcode : 'unknown')
+                };
+              }
               break;
             }
             case 'executeOperations': {
@@ -959,24 +2100,18 @@ const DesktopHOC = function (WrappedComponent) {
                     return [{ id: sid, opcode: 'text', fields: { TEXT: { name: 'TEXT', value: value ? 'true' : 'false' } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
                   }
                   if (value && typeof value === 'object' && value.VARIABLE) {
-                    const v = target.lookupVariableByNameAndType(value.VARIABLE, '');
-                    if (v) {
-                      return [{ id: sid, opcode: 'data_variable', fields: { VARIABLE: { name: 'VARIABLE', value: v.name, id: v.id, variableType: '' } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                    }
-                    return [null, { name: inputName, block: null, shadow: null }];
+                    const vf = resolveVariableField(target, 'VARIABLE', value.VARIABLE);
+                    return [{ id: sid, opcode: 'data_variable', fields: { VARIABLE: vf }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
                   }
                   if (value && typeof value === 'object' && value.LIST) {
-                    const l = target.lookupVariableByNameAndType(value.LIST, 'list');
-                    if (l) {
-                      return [{ id: sid, opcode: 'data_listcontents', fields: { LIST: { name: 'LIST', value: l.name, id: l.id, variableType: 'list' } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                    }
-                    return [null, { name: inputName, block: null, shadow: null }];
+                    const lf = resolveVariableField(target, 'LIST', value.LIST);
+                    return [{ id: sid, opcode: 'data_listcontents', fields: { LIST: lf }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
                   }
                   return [null, { name: inputName, block: null, shadow: null }];
                 }
 
                 function buildBlockStructure(scriptObj, target, allBlocks) {
-                  if (!scriptObj) return null;
+                  if (!scriptObj || !scriptObj.opcode) return null;
                   const blockId = generateId();
                   const inputs = {};
                   const rawInputs = scriptObj.inputs || {};
@@ -1030,13 +2165,9 @@ const DesktopHOC = function (WrappedComponent) {
                         allBlocks.push(menuBlock);
                         inputs[key] = { name: key, block: menuId, shadow: menuId };
                       } else if (key === 'VARIABLE') {
-                        // Resolve variable field with proper ID
-                        const v = target.lookupVariableByNameAndType(String(scriptObj.fields[key]), '');
-                        fields[key] = { name: key, value: String(scriptObj.fields[key]), id: v ? v.id : undefined, variableType: '' };
+                        fields[key] = resolveVariableField(target, 'VARIABLE', scriptObj.fields[key]);
                       } else if (key === 'LIST') {
-                        // Resolve list field with proper ID
-                        const l = target.lookupVariableByNameAndType(String(scriptObj.fields[key]), 'list');
-                        fields[key] = { name: key, value: String(scriptObj.fields[key]), id: l ? l.id : undefined, variableType: 'list' };
+                        fields[key] = resolveVariableField(target, 'LIST', scriptObj.fields[key]);
                       } else {
                         fields[key] = { name: key, value: String(scriptObj.fields[key]), id: undefined };
                       }
@@ -1047,12 +2178,12 @@ const DesktopHOC = function (WrappedComponent) {
                   allBlocks.push(blockDef);
 
                   if (scriptObj.substack && Array.isArray(scriptObj.substack)) {
-                    const substackId = buildSubstackChain(scriptObj.substack, target, allBlocks);
-                    if (substackId) blockDef.inputs.SUBSTACK = { name: 'SUBSTACK', block: substackId };
+                    const substackId = buildSubstackChain(scriptObj.substack, target, allBlocks, blockId);
+                    if (substackId) blockDef.inputs.SUBSTACK = { name: 'SUBSTACK', block: substackId, shadow: null };
                   }
                   if (scriptObj.substack2 && Array.isArray(scriptObj.substack2)) {
-                    const substack2Id = buildSubstackChain(scriptObj.substack2, target, allBlocks);
-                    if (substack2Id) blockDef.inputs.SUBSTACK2 = { name: 'SUBSTACK2', block: substack2Id };
+                    const substack2Id = buildSubstackChain(scriptObj.substack2, target, allBlocks, blockId);
+                    if (substack2Id) blockDef.inputs.SUBSTACK2 = { name: 'SUBSTACK2', block: substack2Id, shadow: null };
                   }
 
                   if (scriptObj.next) {
@@ -1063,7 +2194,7 @@ const DesktopHOC = function (WrappedComponent) {
                   return blockId;
                 }
 
-                function buildSubstackChain(substackArray, target, allBlocks) {
+                function buildSubstackChain(substackArray, target, allBlocks, parentBlockId) {
                   if (!Array.isArray(substackArray) || substackArray.length === 0) return null;
                   var firstId = null;
                   var prevId = null;
@@ -1071,6 +2202,8 @@ const DesktopHOC = function (WrappedComponent) {
                     var subId = buildBlockStructure(substackArray[si], target, allBlocks);
                     if (!subId) continue;
                     if (firstId === null) firstId = subId;
+                    var curDef = allBlocks.find(function(ab) { return ab.id === subId; });
+                    if (curDef) curDef.parent = prevId || parentBlockId;
                     if (prevId) {
                       var prevDef = allBlocks.find(function(ab) { return ab.id === prevId; });
                       if (prevDef) prevDef.next = subId;
@@ -1087,20 +2220,68 @@ const DesktopHOC = function (WrappedComponent) {
                       case 'add_script': {
                         const target = getTarget(op.sprite);
                         if (!target) { opResults.push({ index: opIdx, type: 'add_script', success: false, error: 'Sprite not found: ' + op.sprite }); break; }
-                        const script = op.script;
-                        if (!script || !script.opcode) { opResults.push({ index: opIdx, type: 'add_script', success: false, error: 'No script opcode' }); break; }
-                        const allBlocks = [];
-                        const hatId = buildBlockStructure(script, target, allBlocks);
-                        if (allBlocks.length > 0) {
-                          allBlocks[0].topLevel = true;
-                          allBlocks[0].x = 100 + Math.random() * 200;
-                          allBlocks[0].y = 100 + Math.random() * 200;
-                          allBlocks.forEach(function(b) { target.blocks.createBlock(b); });
-                          vm.runtime.emitProjectChanged();
-                          vm.emitWorkspaceUpdate();
-                          vm.emitTargetsUpdate();
+                        let scriptText = op.script;
+                        if (!scriptText) { opResults.push({ index: opIdx, type: 'add_script', success: false, error: 'No script provided. You passed: ' + JSON.stringify(op).substring(0, 200) + '. The "script" field MUST be a DSL text string like "event_whenflagclicked\\n  motion_movesteps 10", NOT a JSON object.' }); break; }
+                        if (typeof scriptText === 'object') {
+                          try {
+                            var eoConverted = convertBlockObjToDsl(scriptText, 0);
+                            scriptText = eoConverted.join('\n');
+                          } catch (eoConvErr) {
+                            opResults.push({ index: opIdx, type: 'add_script', success: false, error: 'Failed to convert script object to DSL: ' + (eoConvErr.message || String(eoConvErr)) });
+                            break;
+                          }
                         }
-                        opResults.push({ index: opIdx, type: 'add_script', success: true, blocksCreated: allBlocks.length });
+                        if (typeof scriptText !== 'string') { opResults.push({ index: opIdx, type: 'add_script', success: false, error: 'Script must be a DSL text string (not ' + typeof scriptText + '). Example: "event_whenflagclicked\\n  motion_movesteps 10"' }); break; }
+                        let parsed;
+                        try {
+                          parsed = parseScratchDSL(scriptText, target);
+                        } catch (parseErr) {
+                          opResults.push({ index: opIdx, type: 'add_script', success: false, error: 'DSL parse error: ' + (parseErr.message || String(parseErr)) + '\nScript text (first 500 chars):\n' + scriptText.substring(0, 500) });
+                          break;
+                        }
+                        var eoWarnings = (parsed.warnings && parsed.warnings.length > 0)
+                          ? parsed.warnings.join('; ')
+                          : '';
+                        const allBlocks = [];
+                        const hatId = buildBlockStructure(parsed.hat, target, allBlocks);
+                        if (hatId) {
+                          const hatDef = allBlocks.find(b => b.id === hatId);
+                          if (hatDef) {
+                            hatDef.topLevel = true;
+                            hatDef.x = 100 + Math.random() * 200;
+                            hatDef.y = 100 + Math.random() * 200;
+                          }
+                        }
+                        let prevId = hatId;
+                        parsed.blocks.forEach(block => {
+                          const blockId = buildBlockStructure(block, target, allBlocks);
+                          if (blockId) {
+                            const prevBlock = allBlocks.find(b => b.id === prevId);
+                            if (prevBlock) prevBlock.next = blockId;
+                            const curBlock = allBlocks.find(b => b.id === blockId);
+                            if (curBlock) curBlock.parent = prevId;
+                            prevId = blockId;
+                          }
+                        });
+                        if (allBlocks.length > 0) {
+                          try {
+                            allBlocks.forEach(function(b) { target.blocks.createBlock(b); });
+                            vm.runtime.emitProjectChanged();
+                            vm.emitWorkspaceUpdate();
+                            vm.emitTargetsUpdate();
+                          } catch (createErr) {
+                            opResults.push({
+                              index: opIdx,
+                              type: 'add_script',
+                              success: false,
+                              error: 'createBlock failed: ' + (createErr.message || String(createErr)) +
+                                '\nBlocks attempted: ' + allBlocks.length +
+                                '\nLast opcode: ' + (allBlocks.length > 0 ? allBlocks[allBlocks.length - 1].opcode : 'unknown')
+                            });
+                            break;
+                          }
+                        }
+                        opResults.push({ index: opIdx, type: 'add_script', success: true, blocksCreated: allBlocks.length, warnings: eoWarnings || undefined });
                         break;
                       }
                       case 'delete_block': {
@@ -1159,7 +2340,51 @@ const DesktopHOC = function (WrappedComponent) {
                             target.blocks.deleteBlock(oldInput.block);
                           }
                         }
-                        if (typeof value === 'number') {
+                        if (typeof value === 'string' && (inputName === 'SUBSTACK' || inputName === 'SUBSTACK2')) {
+                          // DSL text string for SUBSTACK/SUBSTACK2: parse and build chain
+                          deleteOldShadow();
+                          let parsedSub;
+                          try {
+                            parsedSub = parseScratchDSL(value, target);
+                          } catch (parseErr) {
+                            opResults.push({ index: opIdx, type: 'modify_input', success: false, error: 'SUBSTACK DSL parse error: ' + (parseErr.message || String(parseErr)) + '\nText (first 300 chars): ' + value.substring(0, 300) });
+                            break;
+                          }
+                          const subAllBlocks = [];
+                          let subFirstId = null;
+                          let subPrevId = null;
+                          parsedSub.blocks.forEach(function(blk) {
+                            const subId = buildBlockStructure(blk, target, subAllBlocks);
+                            if (subId) {
+                              const subDef = subAllBlocks.find(function(ab) { return ab.id === subId; });
+                              if (subDef) subDef.parent = subPrevId || blockId;
+                              if (!subFirstId) subFirstId = subId;
+                              if (subPrevId) {
+                                const prevDef = subAllBlocks.find(function(ab) { return ab.id === subPrevId; });
+                                if (prevDef) prevDef.next = subId;
+                              }
+                              subPrevId = subId;
+                            }
+                          });
+                          if (subFirstId) {
+                            subAllBlocks.forEach(function(b) { target.blocks.createBlock(b); });
+                            block.inputs[inputName] = { name: inputName, block: subFirstId, shadow: null };
+                          } else {
+                            opResults.push({ index: opIdx, type: 'modify_input', success: false, error: 'SUBSTACK DSL produced no blocks. Text was: ' + value.substring(0, 200) });
+                            break;
+                          }
+                        } else if (value && typeof value === 'object' && value.opcode && (inputName === 'SUBSTACK' || inputName === 'SUBSTACK2')) {
+                          // Object format for SUBSTACK: build chain and set parent
+                          deleteOldShadow();
+                          const subAllBlocks = [];
+                          const reporterId = buildBlockStructure(value, target, subAllBlocks);
+                          if (reporterId) {
+                            const firstDef = subAllBlocks.find(function(ab) { return ab.id === reporterId; });
+                            if (firstDef) firstDef.parent = blockId;
+                            subAllBlocks.forEach(function(b) { target.blocks.createBlock(b); });
+                            block.inputs[inputName] = { name: inputName, block: reporterId, shadow: null };
+                          }
+                        } else if (typeof value === 'number') {
                           deleteOldShadow();
                           const sid = generateId();
                           target.blocks.createBlock({ id: sid, opcode: 'math_number', fields: { NUM: { name: 'NUM', value: value } }, inputs: {}, next: null, parent: blockId, shadow: true, topLevel: false, x: 0, y: 0 });
@@ -1174,7 +2399,7 @@ const DesktopHOC = function (WrappedComponent) {
                           const sid = generateId();
                           target.blocks.createBlock({ id: sid, opcode: 'text', fields: { TEXT: { name: 'TEXT', value: value ? 'true' : 'false' } }, inputs: {}, next: null, parent: blockId, shadow: true, topLevel: false, x: 0, y: 0 });
                           block.inputs[inputName] = { name: inputName, block: sid, shadow: sid };
-                        } else if (value && typeof value === 'object' && value.opcode) {
+                        } else if (value && typeof value === 'object' && value.opcode && inputName !== 'SUBSTACK' && inputName !== 'SUBSTACK2') {
                           deleteOldShadow();
                           const allBlocks = [];
                           const reporterId = buildBlockStructure(value, target, allBlocks);
@@ -1184,20 +2409,10 @@ const DesktopHOC = function (WrappedComponent) {
                           }
                         } else if (value && typeof value === 'object' && value.VARIABLE) {
                           deleteOldShadow();
-                          const v = target.lookupVariableByNameAndType(value.VARIABLE, '');
-                          if (v) {
-                            const sid = generateId();
-                            target.blocks.createBlock({ id: sid, opcode: 'data_variable', fields: { VARIABLE: { name: 'VARIABLE', value: v.name, id: v.id, variableType: '' } }, inputs: {}, next: null, parent: blockId, shadow: true, topLevel: false, x: 0, y: 0 });
-                            block.inputs[inputName] = { name: inputName, block: sid, shadow: sid };
-                          }
-                        } else if (value && typeof value === 'object' && value.LIST) {
-                          deleteOldShadow();
-                          const l = target.lookupVariableByNameAndType(value.LIST, 'list');
-                          if (l) {
-                            const sid = generateId();
-                            target.blocks.createBlock({ id: sid, opcode: 'data_listcontents', fields: { LIST: { name: 'LIST', value: l.name, id: l.id, variableType: 'list' } }, inputs: {}, next: null, parent: blockId, shadow: true, topLevel: false, x: 0, y: 0 });
-                            block.inputs[inputName] = { name: inputName, block: sid, shadow: sid };
-                          }
+                          const vf = resolveVariableField(target, 'VARIABLE', value.VARIABLE);
+                          const vsid = generateId();
+                          target.blocks.createBlock({ id: vsid, opcode: 'data_variable', fields: { VARIABLE: vf }, inputs: {}, next: null, parent: blockId, shadow: true, topLevel: false, x: 0, y: 0 });
+                          block.inputs[inputName] = { name: inputName, block: vsid, shadow: vsid };
                         }
                         vm.runtime.emitProjectChanged();
                         vm.emitWorkspaceUpdate();
@@ -1233,26 +2448,50 @@ const DesktopHOC = function (WrappedComponent) {
                       case 'delete_comment': {
                         const target = getTarget(op.sprite) || vm.runtime.getTargetForStage();
                         if (!target) { opResults.push({ index: opIdx, type: 'delete_comment', success: false, error: 'Target not found: ' + op.sprite }); break; }
-                        if (op.targetId) {
-                          // Delete comment attached to a block
-                          const resolved = resolveBlockId(op.targetId);
-                          if (!resolved) { opResults.push({ index: opIdx, type: 'delete_comment', success: false, error: 'Block tid not found: ' + op.targetId }); break; }
-                          const block = resolved.target.blocks.getBlock(resolved.blockId);
-                          if (block && block.comment) {
-                            const cid = block.comment;
-                            delete target.comments[cid];
-                            delete block.comment;
-                          }
-                        } else if (op.commentId && target.comments[op.commentId]) {
-                          // Delete standalone comment by commentId
-                          const c = target.comments[op.commentId];
+                        // targetId 可能是块 tid，也可能是 add_comment 返回的 commentId
+                        // （独立工作区注释没有宿主块，只能按 commentId 删）。两种都接受，
+                        // 并按 tid -> commentId -> 全 target 扫描的顺序回退。
+                        const wanted = op.commentId || op.targetId;
+                        let deleted = false;
+
+                        const dropComment = (owner, cid) => {
+                          if (!owner || !owner.comments || !owner.comments[cid]) return false;
+                          const c = owner.comments[cid];
                           if (c && c.blockId) {
-                            const b = target.blocks.getBlock(c.blockId);
+                            const b = owner.blocks.getBlock(c.blockId);
                             if (b) delete b.comment;
                           }
-                          delete target.comments[op.commentId];
-                        } else {
-                          opResults.push({ index: opIdx, type: 'delete_comment', success: false, error: 'Comment not found' });
+                          delete owner.comments[cid];
+                          return true;
+                        };
+
+                        // 1) 当作块 tid：删掉该块挂着的注释
+                        if (op.targetId) {
+                          const resolved = resolveBlockId(op.targetId);
+                          if (resolved) {
+                            const block = resolved.target.blocks.getBlock(resolved.blockId);
+                            if (block && block.comment) {
+                              deleted = dropComment(resolved.target, block.comment);
+                            }
+                          }
+                        }
+                        // 2) 当作 commentId：先在指定 target 上找
+                        if (!deleted && wanted) {
+                          deleted = dropComment(target, wanted);
+                        }
+                        // 3) 仍未命中：跨所有 target 扫一遍（sprite 传错时的兜底）
+                        if (!deleted && wanted) {
+                          for (const t of vm.runtime.targets) {
+                            if (dropComment(t, wanted)) { deleted = true; break; }
+                          }
+                        }
+
+                        if (!deleted) {
+                          opResults.push({
+                            index: opIdx, type: 'delete_comment', success: false,
+                            error: 'Comment not found: ' + String(wanted) +
+                              '. Pass a block tid to remove that block\'s comment, or the commentId returned by add_comment for a standalone workspace comment.'
+                          });
                           break;
                         }
                         vm.runtime.emitProjectChanged();
@@ -1419,9 +2658,50 @@ const DesktopHOC = function (WrappedComponent) {
                   '  }\n' +
                   '})(Scratch);';
                 var dataUrl = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(wrappedCode);
-                await vm.extensionManager.loadExtensionURL(dataUrl);
-                result = { success: true, data: { extensionName: extName, safeId: safeExtName, message: 'Extension "' + extName + '" loaded successfully' } };
-              } catch (e) { result = { success: false, error: 'Failed to develop extension: ' + e.message }; }
+
+                // AI 生成的扩展代码需要直接访问 Scratch API（vm/runtime），沙箱化的
+                // worker/iframe 里拿不到，注册回调也不会回传，表现为"两次超时且未注册"。
+                // 这里临时把该 data: URL 判为 unsandboxed，加载结束后恢复原策略。
+                var secMgr = vm.extensionManager.securityManager;
+                var prevGetSandboxMode = secMgr.getSandboxMode;
+                secMgr.getSandboxMode = function(url) {
+                  if (url === dataUrl) return Promise.resolve('unsandboxed');
+                  return prevGetSandboxMode.call(secMgr, url);
+                };
+
+                var loadedIds = [];
+                try {
+                  // loadExtensionURL 在注册回调迟迟不来时会一直挂着，加超时避免
+                  // 阻塞整条工具调用链（主进程侧 30s 后会判定 Tool call timeout）。
+                  await Promise.race([
+                    vm.extensionManager.loadExtensionURL(dataUrl),
+                    new Promise(function(_, rej) {
+                      setTimeout(function() { rej(new Error('Extension registration timed out after 20s')); }, 20000);
+                    })
+                  ]);
+                  try {
+                    loadedIds = Array.from(vm.extensionManager._loadedExtensions.keys());
+                  } catch (idErr) { void idErr; }
+                } finally {
+                  secMgr.getSandboxMode = prevGetSandboxMode;
+                }
+
+                result = {
+                  success: true,
+                  data: {
+                    extensionName: extName,
+                    safeId: safeExtName,
+                    loadedExtensions: loadedIds,
+                    message: 'Extension "' + extName + '" loaded successfully (unsandboxed)'
+                  }
+                };
+              } catch (e) {
+                result = {
+                  success: false,
+                  error: 'Failed to develop extension: ' + (e && e.message ? e.message : String(e)) +
+                    '. Make sure extension_code is a class or object literal (no "const X =" prefix) whose getInfo() returns {id, name, blocks}.'
+                };
+              }
               break;
             }
             case 'installExtension': {
@@ -1489,7 +2769,7 @@ const DesktopHOC = function (WrappedComponent) {
                   break;
                 }
                 vm.setStageSize(width, height);
-                result = { success: true, data: { width: width, height: height } };
+                result = { success: true, data: { width: width, height: height, message: 'Stage size set to ' + width + 'x' + height } };
               } catch (e) { result = { success: false, error: 'Failed to set stage size: ' + e.message }; }
               break;
             }
@@ -1521,25 +2801,8 @@ const DesktopHOC = function (WrappedComponent) {
             }
             case 'getSystemInfo': {
               try {
-                const os = require('os');
-                const cpus = os.cpus();
-                const cpuModel = cpus.length > 0 ? cpus[0].model : 'Unknown';
-                const cpuInfo = {
-                  model: cpuModel,
-                  cores: cpus.length,
-                  speed: cpus.length > 0 ? cpus[0].speed + ' MHz' : 'Unknown',
-                  architecture: os.arch(),
-                  platform: os.platform(),
-                  release: os.release(),
-                  hostname: os.hostname(),
-                  totalMemory: Math.round(os.totalmem() / (1024 * 1024 * 1024) * 100) / 100 + ' GB',
-                  freeMemory: Math.round(os.freemem() / (1024 * 1024 * 1024) * 100) / 100 + ' GB',
-                  uptime: Math.round(os.uptime() / 3600 * 100) / 100 + ' hours',
-                  userInfo: os.userInfo().username,
-                  homedir: os.homedir(),
-                  endianness: os.endianness()
-                };
-                result = { success: true, data: cpuInfo };
+                const info = await EditorPreload.getAISystemInfo();
+                result = info;
               } catch (e) { result = { success: false, error: 'Failed to get system info: ' + e.message }; }
               break;
             }
@@ -1988,6 +3251,20 @@ const DesktopHOC = function (WrappedComponent) {
               } catch (e) { result = { success: false, error: 'Failed to send key: ' + e.message }; }
               break;
             }
+            case 'duplicateSprite': {
+              try {
+                const sourceName = params.sourceName || '';
+                const newName = params.newName || '';
+                if (!sourceName) { result = { success: false, error: 'No source sprite name provided' }; break; }
+                if (!newName) { result = { success: false, error: 'No new sprite name provided' }; break; }
+                const target = vm.runtime.targets.find(t => t.getName() === sourceName);
+                if (!target) { result = { success: false, error: 'Sprite "' + sourceName + '" not found' }; break; }
+                await vm.duplicateSprite(target.id);
+                vm.renameSprite(vm.editingTarget.id, newName);
+                result = { success: true, data: { sourceName: sourceName, newName: newName, message: 'Sprite "' + sourceName + '" duplicated as "' + newName + '"' } };
+              } catch (e) { result = { success: false, error: 'Failed to duplicate sprite: ' + e.message }; }
+              break;
+            }
             default:
               result = { success: false, error: 'Unknown tool: ' + toolName };
           }
@@ -2064,9 +3341,11 @@ const DesktopHOC = function (WrappedComponent) {
           var current = isDark ? 'dark' : 'light';
           if (lastTheme !== null && lastTheme !== current) {
             lastTheme = current;
+            document.documentElement.setAttribute('data-gui-theme', current);
             EditorPreload.notifyThemeChanged(current);
           } else if (lastTheme === null) {
             lastTheme = current;
+            document.documentElement.setAttribute('data-gui-theme', current);
           }
         } catch(e) {}
       };
@@ -2209,6 +3488,31 @@ const DesktopHOC = function (WrappedComponent) {
       if (this.props.isFullScreen !== prevProps.isFullScreen) {
         EditorPreload.setIsFullScreen(this.props.isFullScreen);
       }
+
+      // NeoWarp: 当新建项目加载完成时，自动添加标记了“自动添加到新项目”的扩展
+      if (prevProps.loadingState === LoadingState.LOADING_VM_NEW_DEFAULT &&
+          this.props.loadingState === LoadingState.SHOWING_WITHOUT_ID) {
+        this.loadAutoAddExtensions();
+      }
+    }
+    // NeoWarp: 加载标记了“自动添加到新项目”的我的扩展
+    loadAutoAddExtensions () {
+      const vm = this.props.vm;
+      if (!vm || !vm.extensionManager || !vm.extensionManager.loadExtensionURL) return;
+      const extensions = getAutoAddExtensions();
+      if (!extensions.length) return;
+      // 顺序加载，避免并发冲突；单个失败不影响其它
+      extensions.reduce((promise, ext) => promise.then(() => {
+        const url = ext.extensionURL;
+        if (!url) return Promise.resolve();
+        // 若扩展需要脱离沙盒运行，先信任它
+        if (ext.unsandboxed) {
+          manuallyTrustExtension(url);
+        }
+        return vm.extensionManager.loadExtensionURL(url).catch(e => {
+          console.error('Auto-add extension failed:', ext.name, e);
+        });
+      }), Promise.resolve());
     }
     componentWillUnmount () {
       stopFrameStreaming();
@@ -2302,6 +3606,35 @@ const DesktopHOC = function (WrappedComponent) {
         observer.observe(flyoutEl, { attributes: true, childList: true, subtree: true });
       }
     }
+    // NeoWarp: Apply a project state received from a collaborator.
+    // The cooldown after loadProject swallows PROJECT_CHANGED events that
+    // fire after deserialization, so remote updates don't echo back out.
+    applyCollabProjectUpdate (data) {
+      this._collabLoadingProject = true;
+      // The incoming remote state supersedes any broadcast still pending
+      if (this._collabSyncTimer) {
+        clearTimeout(this._collabSyncTimer);
+        this._collabSyncTimer = null;
+      }
+      try {
+        const project = typeof data.project === 'string' ? JSON.parse(data.project) : data.project;
+        this.props.vm.loadProject(project).then(() => {
+          this._collabLoadCooldown = setTimeout(() => {
+            this._collabLoadingProject = false;
+            const pending = this._collabPendingProject;
+            if (pending) {
+              this._collabPendingProject = null;
+              this.applyCollabProjectUpdate(pending);
+            }
+          }, 1200);
+        }).catch(() => {
+          this._collabLoadingProject = false;
+        });
+      } catch (e) {
+        this._collabLoadingProject = false;
+      }
+    }
+
     wrapVMWithPermissions () {
       const vm = this.props.vm;
       if (!vm) return;
@@ -2607,6 +3940,7 @@ const DesktopHOC = function (WrappedComponent) {
           onClickAI={handleClickAI}
           onClickTodoList={handleClickTodoList}
           onClickProjectAnalysis={handleClickProjectAnalysis}
+          onClickMobilePreview={handleClickMobilePreview}
           onClickDetachStage={isStageDetached ? handleReattachStage : () => handleDetachStage(this.props.vm)}
           onClickCollaborationHost={handleClickCollaborationHost}
           onClickCollaborationJoin={handleClickCollaborationJoin}

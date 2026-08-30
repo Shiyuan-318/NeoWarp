@@ -1,0 +1,3456 @@
+diff --git a/node_modules/scratch-paint/src/components/arrow-mode/arrow-mode.jsx b/node_modules/scratch-paint/src/components/arrow-mode/arrow-mode.jsx
+new file mode 100644
+index 0000000..1ca267e
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/arrow-mode/arrow-mode.jsx
+@@ -0,0 +1,21 @@
++import React from 'react';
++import PropTypes from 'prop-types';
++import ToolSelectComponent from '../tool-select-base/tool-select-base.jsx';
++import messages from '../../lib/messages.js';
++import arrowIcon from './arrow.svg';
++
++const ArrowModeComponent = props => (
++    <ToolSelectComponent
++        imgDescriptor={messages.arrow}
++        imgSrc={arrowIcon}
++        isSelected={props.isSelected}
++        onMouseDown={props.onMouseDown}
++    />
++);
++
++ArrowModeComponent.propTypes = {
++    isSelected: PropTypes.bool.isRequired,
++    onMouseDown: PropTypes.func.isRequired
++};
++
++export default ArrowModeComponent;
+diff --git a/node_modules/scratch-paint/src/components/arrow-mode/arrow.svg b/node_modules/scratch-paint/src/components/arrow-mode/arrow.svg
+new file mode 100644
+index 0000000..e11c209
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/arrow-mode/arrow.svg
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="UTF-8" standalone="no"?>
++<svg width="20px" height="20px" viewBox="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
++    <title>arrow</title>
++    <desc>Created with Sketch.</desc>
++    <defs></defs>
++    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
++        <g id="arrow" stroke="#575E75" stroke-width="1.5">
++            <polygon id="arrow-icon" points="3,8 11,8 11,5 17,10 11,15 11,12 3,12"></polygon>
++        </g>
++    </g>
++</svg>
+diff --git a/node_modules/scratch-paint/src/components/corner-settings-indicator.jsx b/node_modules/scratch-paint/src/components/corner-settings-indicator.jsx
+new file mode 100644
+index 0000000..42627a6
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/corner-settings-indicator.jsx
+@@ -0,0 +1,57 @@
++import React from 'react';
++import PropTypes from 'prop-types';
++
++import Input from './forms/input.jsx';
++import InputGroup from './input-group/input-group.jsx';
++import Label from './forms/label.jsx';
++import LiveInputHOC from './forms/live-input-hoc.jsx';
++
++import {MAX_CORNER_RADIUS, MAX_CORNER_CURVATURE} from '../reducers/rounded-rect';
++
++const LiveInput = LiveInputHOC(Input);
++
++const CornerSettingsIndicatorComponent = props => (
++    <React.Fragment>
++        <InputGroup disabled={props.disabled}>
++            <Label text={props.radiusLabel}>
++                <LiveInput
++                    range
++                    small
++                    disabled={props.disabled}
++                    max={MAX_CORNER_RADIUS}
++                    min="0"
++                    type="number"
++                    value={props.cornerRadius ? props.cornerRadius : 0}
++                    onSubmit={props.onChangeCornerRadius}
++                />
++            </Label>
++        </InputGroup>
++        <InputGroup disabled={props.disabled}>
++            <Label text={props.curvatureLabel}>
++                <LiveInput
++                    range
++                    small
++                    disabled={props.disabled}
++                    max={MAX_CORNER_CURVATURE}
++                    min="0"
++                    type="number"
++                    value={props.cornerCurvature !== null && props.cornerCurvature !== undefined ?
++                        props.cornerCurvature : MAX_CORNER_CURVATURE}
++                    onSubmit={props.onChangeCornerCurvature}
++                />
++            </Label>
++        </InputGroup>
++    </React.Fragment>
++);
++
++CornerSettingsIndicatorComponent.propTypes = {
++    cornerCurvature: PropTypes.number,
++    cornerRadius: PropTypes.number,
++    curvatureLabel: PropTypes.string.isRequired,
++    disabled: PropTypes.bool.isRequired,
++    onChangeCornerCurvature: PropTypes.func.isRequired,
++    onChangeCornerRadius: PropTypes.func.isRequired,
++    radiusLabel: PropTypes.string.isRequired
++};
++
++export default CornerSettingsIndicatorComponent;
+diff --git a/node_modules/scratch-paint/src/components/double-arrow-mode/double-arrow-mode.jsx b/node_modules/scratch-paint/src/components/double-arrow-mode/double-arrow-mode.jsx
+new file mode 100644
+index 0000000..1b905be
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/double-arrow-mode/double-arrow-mode.jsx
+@@ -0,0 +1,21 @@
++import React from 'react';
++import PropTypes from 'prop-types';
++import ToolSelectComponent from '../tool-select-base/tool-select-base.jsx';
++import messages from '../../lib/messages.js';
++import doubleArrowIcon from './double-arrow.svg';
++
++const DoubleArrowModeComponent = props => (
++    <ToolSelectComponent
++        imgDescriptor={messages.doubleArrow}
++        imgSrc={doubleArrowIcon}
++        isSelected={props.isSelected}
++        onMouseDown={props.onMouseDown}
++    />
++);
++
++DoubleArrowModeComponent.propTypes = {
++    isSelected: PropTypes.bool.isRequired,
++    onMouseDown: PropTypes.func.isRequired
++};
++
++export default DoubleArrowModeComponent;
+diff --git a/node_modules/scratch-paint/src/components/double-arrow-mode/double-arrow.svg b/node_modules/scratch-paint/src/components/double-arrow-mode/double-arrow.svg
+new file mode 100644
+index 0000000..274074b
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/double-arrow-mode/double-arrow.svg
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="UTF-8" standalone="no"?>
++<svg width="20px" height="20px" viewBox="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
++    <title>double-arrow</title>
++    <desc>Created with Sketch.</desc>
++    <defs></defs>
++    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
++        <g id="double-arrow" stroke="#575E75" stroke-width="1.5">
++            <polygon id="double-arrow-icon" points="1,10 5,6 5,8 15,8 15,6 19,10 15,14 15,12 5,12 5,14"></polygon>
++        </g>
++    </g>
++</svg>
+diff --git a/node_modules/scratch-paint/src/components/heart-mode/heart-mode.jsx b/node_modules/scratch-paint/src/components/heart-mode/heart-mode.jsx
+new file mode 100644
+index 0000000..660fbdd
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/heart-mode/heart-mode.jsx
+@@ -0,0 +1,21 @@
++import React from 'react';
++import PropTypes from 'prop-types';
++import ToolSelectComponent from '../tool-select-base/tool-select-base.jsx';
++import messages from '../../lib/messages.js';
++import heartIcon from './heart.svg';
++
++const HeartModeComponent = props => (
++    <ToolSelectComponent
++        imgDescriptor={messages.heart}
++        imgSrc={heartIcon}
++        isSelected={props.isSelected}
++        onMouseDown={props.onMouseDown}
++    />
++);
++
++HeartModeComponent.propTypes = {
++    isSelected: PropTypes.bool.isRequired,
++    onMouseDown: PropTypes.func.isRequired
++};
++
++export default HeartModeComponent;
+diff --git a/node_modules/scratch-paint/src/components/heart-mode/heart.svg b/node_modules/scratch-paint/src/components/heart-mode/heart.svg
+new file mode 100644
+index 0000000..442b248
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/heart-mode/heart.svg
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="UTF-8" standalone="no"?>
++<svg width="20px" height="20px" viewBox="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
++    <title>heart</title>
++    <desc>Created with Sketch.</desc>
++    <defs></defs>
++    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
++        <g id="heart" stroke="#575E75" stroke-width="1.5">
++            <path d="M10,16 C10,16 4,12 4,8 C4,6 6,4 8,5 C9,5.5 10,6.5 10,7.5 C10,6.5 11,5.5 12,5 C14,4 16,6 16,8 C16,12 10,16 10,16 Z" id="heart-icon"></path>
++        </g>
++    </g>
++</svg>
+diff --git a/node_modules/scratch-paint/src/components/paint-editor/paint-editor.jsx b/node_modules/scratch-paint/src/components/paint-editor/paint-editor.jsx
+index 7cc8308..946cc62 100644
+--- a/node_modules/scratch-paint/src/components/paint-editor/paint-editor.jsx
++++ b/node_modules/scratch-paint/src/components/paint-editor/paint-editor.jsx
+@@ -28,10 +28,17 @@ import FixedToolsContainer from '../../containers/fixed-tools.jsx';
+ import ModeToolsContainer from '../../containers/mode-tools.jsx';
+ import OvalMode from '../../containers/oval-mode.jsx';
+ import RectMode from '../../containers/rect-mode.jsx';
++import RoundedRectMode from '../../containers/rounded-rect-mode.jsx';
++import TriangleMode from '../../containers/triangle-mode.jsx';
++import ArrowMode from '../../containers/arrow-mode.jsx';
++import TrapezoidMode from '../../containers/trapezoid-mode.jsx';
++import HeartMode from '../../containers/heart-mode.jsx';
++import DoubleArrowMode from '../../containers/double-arrow-mode.jsx';
+ import ReshapeMode from '../../containers/reshape-mode.jsx';
+ import SelectMode from '../../containers/select-mode.jsx';
+ import StrokeColorIndicatorComponent from '../../containers/stroke-color-indicator.jsx';
+ import StrokeWidthIndicatorComponent from '../../containers/stroke-width-indicator.jsx';
++import CornerSettingsIndicator from '../../containers/corner-settings-indicator.jsx';
+ import TextMode from '../../containers/text-mode.jsx';
+ 
+ import Formats, {isBitmap, isVector} from '../../lib/format';
+@@ -100,6 +107,8 @@ const PaintEditorComponent = props => (
+                             <StrokeWidthIndicatorComponent
+                                 onUpdateImage={props.onUpdateImage}
+                             />
++                            {/* corner radius and curvature */}
++                            <CornerSettingsIndicator onUpdateImage={props.onUpdateImage} />
+                         </InputGroup>
+                         <InputGroup className={styles.modModeTools}>
+                             <ModeToolsContainer
+@@ -166,6 +175,24 @@ const PaintEditorComponent = props => (
+                     <RectMode
+                         onUpdateImage={props.onUpdateImage}
+                     />
++                    <RoundedRectMode
++                        onUpdateImage={props.onUpdateImage}
++                    />
++                    <TriangleMode
++                        onUpdateImage={props.onUpdateImage}
++                    />
++                    <ArrowMode
++                        onUpdateImage={props.onUpdateImage}
++                    />
++                    <TrapezoidMode
++                        onUpdateImage={props.onUpdateImage}
++                    />
++                    <HeartMode
++                        onUpdateImage={props.onUpdateImage}
++                    />
++                    <DoubleArrowMode
++                        onUpdateImage={props.onUpdateImage}
++                    />
+                 </div>
+             ) : null}
+ 
+@@ -337,6 +364,7 @@ PaintEditorComponent.propTypes = {
+     imageId: PropTypes.string,
+     intl: intlShape,
+     isEyeDropping: PropTypes.bool,
++    mode: PropTypes.string,
+     name: PropTypes.string,
+     onChangeTheme: PropTypes.func.isRequired,
+     onManageFonts: PropTypes.func,
+diff --git a/node_modules/scratch-paint/src/components/rounded-rect-mode/rounded-rect-mode.jsx b/node_modules/scratch-paint/src/components/rounded-rect-mode/rounded-rect-mode.jsx
+index 6dd0567..be513c8 100644
+--- a/node_modules/scratch-paint/src/components/rounded-rect-mode/rounded-rect-mode.jsx
++++ b/node_modules/scratch-paint/src/components/rounded-rect-mode/rounded-rect-mode.jsx
+@@ -1,8 +1,7 @@
+ import React from 'react';
+ import PropTypes from 'prop-types';
+-import messages from '../../lib/messages.js';
+ import ToolSelectComponent from '../tool-select-base/tool-select-base.jsx';
+-
++import messages from '../../lib/messages.js';
+ import roundedRectIcon from './rounded-rectangle.svg';
+ 
+ const RoundedRectModeComponent = props => (
+@@ -11,6 +10,7 @@ const RoundedRectModeComponent = props => (
+         imgSrc={roundedRectIcon}
+         isSelected={props.isSelected}
+         onMouseDown={props.onMouseDown}
++        keybinding="U"
+     />
+ );
+ 
+diff --git a/node_modules/scratch-paint/src/components/rounded-rect-mode/rounded-rectangle.svg b/node_modules/scratch-paint/src/components/rounded-rect-mode/rounded-rectangle.svg
+index d591543..e35f7e4 100644
+--- a/node_modules/scratch-paint/src/components/rounded-rect-mode/rounded-rectangle.svg
++++ b/node_modules/scratch-paint/src/components/rounded-rect-mode/rounded-rectangle.svg
+@@ -1,12 +1,11 @@
+ <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+ <svg width="20px" height="20px" viewBox="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+-    <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
+     <title>rounded-rectangle</title>
+     <desc>Created with Sketch.</desc>
+     <defs></defs>
+-    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
++    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
+         <g id="rounded-rectangle" stroke="#575E75" stroke-width="1.5">
+-            <rect id="rounded-rectangle-icon" x="5" y="5" width="10" height="10" rx="2"></rect>
++            <rect id="rounded-rectangle-icon" x="5" y="5" width="10" height="10" rx="3" ry="3"></rect>
+         </g>
+     </g>
+-</svg>
+\ No newline at end of file
++</svg>
+diff --git a/node_modules/scratch-paint/src/components/trapezoid-mode/trapezoid-mode.jsx b/node_modules/scratch-paint/src/components/trapezoid-mode/trapezoid-mode.jsx
+new file mode 100644
+index 0000000..7c096bb
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/trapezoid-mode/trapezoid-mode.jsx
+@@ -0,0 +1,21 @@
++import React from 'react';
++import PropTypes from 'prop-types';
++import ToolSelectComponent from '../tool-select-base/tool-select-base.jsx';
++import messages from '../../lib/messages.js';
++import trapezoidIcon from './trapezoid.svg';
++
++const TrapezoidModeComponent = props => (
++    <ToolSelectComponent
++        imgDescriptor={messages.trapezoid}
++        imgSrc={trapezoidIcon}
++        isSelected={props.isSelected}
++        onMouseDown={props.onMouseDown}
++    />
++);
++
++TrapezoidModeComponent.propTypes = {
++    isSelected: PropTypes.bool.isRequired,
++    onMouseDown: PropTypes.func.isRequired
++};
++
++export default TrapezoidModeComponent;
+diff --git a/node_modules/scratch-paint/src/components/trapezoid-mode/trapezoid.svg b/node_modules/scratch-paint/src/components/trapezoid-mode/trapezoid.svg
+new file mode 100644
+index 0000000..47c2b37
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/trapezoid-mode/trapezoid.svg
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="UTF-8" standalone="no"?>
++<svg width="20px" height="20px" viewBox="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
++    <title>trapezoid</title>
++    <desc>Created with Sketch.</desc>
++    <defs></defs>
++    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
++        <g id="trapezoid" stroke="#575E75" stroke-width="1.5">
++            <polygon id="trapezoid-icon" points="3,15 17,15 13,5 7,5"></polygon>
++        </g>
++    </g>
++</svg>
+diff --git a/node_modules/scratch-paint/src/components/triangle-mode/triangle-mode.jsx b/node_modules/scratch-paint/src/components/triangle-mode/triangle-mode.jsx
+new file mode 100644
+index 0000000..b9ca02d
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/triangle-mode/triangle-mode.jsx
+@@ -0,0 +1,21 @@
++import React from 'react';
++import PropTypes from 'prop-types';
++import ToolSelectComponent from '../tool-select-base/tool-select-base.jsx';
++import messages from '../../lib/messages.js';
++import triangleIcon from './triangle.svg';
++
++const TriangleModeComponent = props => (
++    <ToolSelectComponent
++        imgDescriptor={messages.triangle}
++        imgSrc={triangleIcon}
++        isSelected={props.isSelected}
++        onMouseDown={props.onMouseDown}
++    />
++);
++
++TriangleModeComponent.propTypes = {
++    isSelected: PropTypes.bool.isRequired,
++    onMouseDown: PropTypes.func.isRequired
++};
++
++export default TriangleModeComponent;
+diff --git a/node_modules/scratch-paint/src/components/triangle-mode/triangle.svg b/node_modules/scratch-paint/src/components/triangle-mode/triangle.svg
+new file mode 100644
+index 0000000..646f944
+--- /dev/null
++++ b/node_modules/scratch-paint/src/components/triangle-mode/triangle.svg
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="UTF-8" standalone="no"?>
++<svg width="20px" height="20px" viewBox="0 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
++    <title>triangle</title>
++    <desc>Created with Sketch.</desc>
++    <defs></defs>
++    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
++        <g id="triangle" stroke="#575E75" stroke-width="1.5">
++            <polygon id="triangle-icon" points="10,4 17,16 3,16"></polygon>
++        </g>
++    </g>
++</svg>
+diff --git a/node_modules/scratch-paint/src/containers/arrow-mode.jsx b/node_modules/scratch-paint/src/containers/arrow-mode.jsx
+new file mode 100644
+index 0000000..abee196
+--- /dev/null
++++ b/node_modules/scratch-paint/src/containers/arrow-mode.jsx
+@@ -0,0 +1,181 @@
++import paper from '@turbowarp/paper';
++import PropTypes from 'prop-types';
++import React from 'react';
++import {connect} from 'react-redux';
++import bindAll from 'lodash.bindall';
++import Modes from '../lib/modes';
++import {MIXED} from '../helper/style-path';
++import ColorStyleProptype from '../lib/color-style-proptype';
++import GradientTypes from '../lib/gradient-types';
++
++import {changeFillColor, clearFillGradient, DEFAULT_COLOR} from '../reducers/fill-style';
++import {changeStrokeColor, clearStrokeGradient} from '../reducers/stroke-style';
++import {changeMode} from '../reducers/modes';
++import {clearSelectedItems, setSelectedItems} from '../reducers/selected-items';
++import {setCursor} from '../reducers/cursor';
++
++import {clearSelection, getSelectedLeafItems} from '../helper/selection';
++import ArrowTool from '../helper/tools/arrow-tool';
++import ArrowModeComponent from '../components/arrow-mode/arrow-mode.jsx';
++
++class ArrowMode extends React.Component {
++    constructor (props) {
++        super(props);
++        bindAll(this, [
++            'activateTool',
++            'deactivateTool',
++            'validateColorState'
++        ]);
++    }
++    componentDidMount () {
++        if (this.props.isArrowModeActive) {
++            this.activateTool(this.props);
++        }
++    }
++    componentWillReceiveProps (nextProps) {
++        if (this.tool && nextProps.colorState !== this.props.colorState) {
++            this.tool.setColorState(nextProps.colorState);
++        }
++        if (this.tool && nextProps.selectedItems !== this.props.selectedItems) {
++            this.tool.onSelectionChanged(nextProps.selectedItems);
++        }
++
++        if (nextProps.isArrowModeActive && !this.props.isArrowModeActive) {
++            this.activateTool();
++        } else if (!nextProps.isArrowModeActive && this.props.isArrowModeActive) {
++            this.deactivateTool();
++        }
++    }
++    shouldComponentUpdate (nextProps) {
++        return nextProps.isArrowModeActive !== this.props.isArrowModeActive;
++    }
++    componentWillUnmount () {
++        if (this.tool) {
++            this.deactivateTool();
++        }
++    }
++    activateTool () {
++        clearSelection(this.props.clearSelectedItems);
++        this.validateColorState();
++
++        this.tool = new ArrowTool(
++            this.props.setSelectedItems,
++            this.props.clearSelectedItems,
++            this.props.setCursor,
++            this.props.onUpdateImage
++        );
++        this.tool.setColorState(this.props.colorState);
++        this.tool.activate();
++    }
++    validateColorState () {
++        const {strokeWidth} = this.props.colorState;
++        const fillColor1 = this.props.colorState.fillColor.primary;
++        let fillColor2 = this.props.colorState.fillColor.secondary;
++        let fillGradient = this.props.colorState.fillColor.gradientType;
++        const strokeColor1 = this.props.colorState.strokeColor.primary;
++        let strokeColor2 = this.props.colorState.strokeColor.secondary;
++        let strokeGradient = this.props.colorState.strokeColor.gradientType;
++
++        if (fillColor2 === MIXED) {
++            this.props.clearFillGradient();
++            fillColor2 = null;
++            fillGradient = GradientTypes.SOLID;
++        }
++        if (strokeColor2 === MIXED) {
++            this.props.clearStrokeGradient();
++            strokeColor2 = null;
++            strokeGradient = GradientTypes.SOLID;
++        }
++
++        const fillColorMissing = fillColor1 === MIXED ||
++            (fillGradient === GradientTypes.SOLID && fillColor1 === null) ||
++            (fillGradient !== GradientTypes.SOLID && fillColor1 === null && fillColor2 === null);
++        const strokeColorMissing = strokeColor1 === MIXED ||
++            strokeWidth === null ||
++            strokeWidth === 0 ||
++            (strokeGradient === GradientTypes.SOLID && strokeColor1 === null) ||
++            (strokeGradient !== GradientTypes.SOLID && strokeColor1 === null && strokeColor2 === null);
++
++        if (fillColorMissing && strokeColorMissing) {
++            this.props.onChangeFillColor(DEFAULT_COLOR);
++            this.props.clearFillGradient();
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        } else if (fillColorMissing && !strokeColorMissing) {
++            this.props.onChangeFillColor(null);
++            this.props.clearFillGradient();
++        } else if (!fillColorMissing && strokeColorMissing) {
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        }
++    }
++    deactivateTool () {
++        this.tool.deactivateTool();
++        this.tool.remove();
++        this.tool = null;
++    }
++    render () {
++        return (
++            <ArrowModeComponent
++                isSelected={this.props.isArrowModeActive}
++                onMouseDown={this.props.handleMouseDown}
++            />
++        );
++    }
++}
++
++ArrowMode.propTypes = {
++    clearFillGradient: PropTypes.func.isRequired,
++    clearStrokeGradient: PropTypes.func.isRequired,
++    clearSelectedItems: PropTypes.func.isRequired,
++    colorState: PropTypes.shape({
++        fillColor: ColorStyleProptype,
++        strokeColor: ColorStyleProptype,
++        strokeWidth: PropTypes.number
++    }).isRequired,
++    handleMouseDown: PropTypes.func.isRequired,
++    isArrowModeActive: PropTypes.bool.isRequired,
++    onChangeFillColor: PropTypes.func.isRequired,
++    onChangeStrokeColor: PropTypes.func.isRequired,
++    onUpdateImage: PropTypes.func.isRequired,
++    selectedItems: PropTypes.arrayOf(PropTypes.instanceOf(paper.Item)),
++    setCursor: PropTypes.func.isRequired,
++    setSelectedItems: PropTypes.func.isRequired
++};
++
++const mapStateToProps = state => ({
++    colorState: state.scratchPaint.color,
++    isArrowModeActive: state.scratchPaint.mode === Modes.ARROW,
++    selectedItems: state.scratchPaint.selectedItems
++});
++const mapDispatchToProps = dispatch => ({
++    clearSelectedItems: () => {
++        dispatch(clearSelectedItems());
++    },
++    clearFillGradient: () => {
++        dispatch(clearFillGradient());
++    },
++    clearStrokeGradient: () => {
++        dispatch(clearStrokeGradient());
++    },
++    setSelectedItems: () => {
++        dispatch(setSelectedItems(getSelectedLeafItems(), false /* bitmapMode */));
++    },
++    setCursor: cursorString => {
++        dispatch(setCursor(cursorString));
++    },
++    handleMouseDown: () => {
++        dispatch(changeMode(Modes.ARROW));
++    },
++    onChangeFillColor: fillColor => {
++        dispatch(changeFillColor(fillColor));
++    },
++    onChangeStrokeColor: strokeColor => {
++        dispatch(changeStrokeColor(strokeColor));
++    }
++});
++
++export default connect(
++    mapStateToProps,
++    mapDispatchToProps
++)(ArrowMode);
+diff --git a/node_modules/scratch-paint/src/containers/corner-settings-indicator.jsx b/node_modules/scratch-paint/src/containers/corner-settings-indicator.jsx
+new file mode 100644
+index 0000000..30dd1b6
+--- /dev/null
++++ b/node_modules/scratch-paint/src/containers/corner-settings-indicator.jsx
+@@ -0,0 +1,154 @@
++import PropTypes from 'prop-types';
++import React from 'react';
++import {connect} from 'react-redux';
++import {defineMessages, injectIntl, intlShape} from 'react-intl';
++import bindAll from 'lodash.bindall';
++
++import {changeCornerRadius, changeCornerCurvature} from '../reducers/rounded-rect';
++import {setSelectedItems} from '../reducers/selected-items';
++import CornerSettingsIndicatorComponent from '../components/corner-settings-indicator.jsx';
++import Modes from '../lib/modes';
++import {getSelectedLeafItems} from '../helper/selection';
++import {
++    isRoundedRectPath,
++    getRoundedRectParams,
++    rebuildRoundedRectPath
++} from '../helper/tools/rounded-rect-tool';
++
++const messages = defineMessages({
++    radius: {
++        defaultMessage: '半径',
++        description: 'Label for the corner radius input',
++        id: 'paint.cornerSettings.radius'
++    },
++    curvature: {
++        defaultMessage: '曲率',
++        description: 'Label for the corner curvature input',
++        id: 'paint.cornerSettings.curvature'
++    }
++});
++
++/**
++ * Find the first selected rounded-rect item from an array of paper items.
++ * @param {Array<paper.Item>} selectedItems
++ * @returns {paper.Item|null}
++ */
++const findSelectedRoundedRect = selectedItems => {
++    if (!selectedItems) return null;
++    for (const item of selectedItems) {
++        if (isRoundedRectPath(item)) return item;
++    }
++    return null;
++};
++
++class CornerSettingsIndicator extends React.Component {
++    constructor (props) {
++        super(props);
++        bindAll(this, [
++            'handleChangeCornerRadius',
++            'handleChangeCornerCurvature'
++        ]);
++    }
++    handleChangeCornerRadius (radius) {
++        if (this.props.mode === Modes.ROUNDED_RECT) {
++            // Drawing mode: update the default for the next shape
++            this.props.onChangeCornerRadius(radius);
++            return;
++        }
++        // Selection mode: rebuild the selected rounded rectangle
++        const selectedRect = findSelectedRoundedRect(getSelectedLeafItems());
++        if (selectedRect) {
++            const oldCurvature = getRoundedRectParams(selectedRect).cornerCurvature;
++            rebuildRoundedRectPath(selectedRect, radius, oldCurvature);
++            this.props.setSelectedItems();
++            this.props.onUpdateImage();
++        }
++    }
++    handleChangeCornerCurvature (curvature) {
++        if (this.props.mode === Modes.ROUNDED_RECT) {
++            // Drawing mode: update the default for the next shape
++            this.props.onChangeCornerCurvature(curvature);
++            return;
++        }
++        // Selection mode: rebuild the selected rounded rectangle
++        const selectedRect = findSelectedRoundedRect(getSelectedLeafItems());
++        if (selectedRect) {
++            const oldRadius = getRoundedRectParams(selectedRect).cornerRadius;
++            rebuildRoundedRectPath(selectedRect, oldRadius, curvature);
++            this.props.setSelectedItems();
++            this.props.onUpdateImage();
++        }
++    }
++    render () {
++        if (!this.props.visible) return null;
++        return (
++            <CornerSettingsIndicatorComponent
++                cornerRadius={this.props.cornerRadius}
++                cornerCurvature={this.props.cornerCurvature}
++                curvatureLabel={this.props.intl.formatMessage(messages.curvature)}
++                disabled={this.props.disabled}
++                onChangeCornerRadius={this.handleChangeCornerRadius}
++                onChangeCornerCurvature={this.handleChangeCornerCurvature}
++                radiusLabel={this.props.intl.formatMessage(messages.radius)}
++            />
++        );
++    }
++}
++
++CornerSettingsIndicator.propTypes = {
++    cornerCurvature: PropTypes.number,
++    cornerRadius: PropTypes.number,
++    disabled: PropTypes.bool.isRequired,
++    intl: intlShape.isRequired,
++    mode: PropTypes.string,
++    onChangeCornerCurvature: PropTypes.func.isRequired,
++    onChangeCornerRadius: PropTypes.func.isRequired,
++    onUpdateImage: PropTypes.func.isRequired,
++    setSelectedItems: PropTypes.func.isRequired,
++    visible: PropTypes.bool.isRequired
++};
++
++const mapStateToProps = state => {
++    const isDrawingMode = state.scratchPaint.mode === Modes.ROUNDED_RECT;
++    // Only consider selection-based editing when not in drawing mode
++    const selectedRoundedRect = isDrawingMode ? null :
++        findSelectedRoundedRect(state.scratchPaint.selectedItems);
++    const visible = isDrawingMode || !!selectedRoundedRect;
++
++    let cornerRadius;
++    let cornerCurvature;
++    if (selectedRoundedRect) {
++        const params = getRoundedRectParams(selectedRoundedRect);
++        cornerRadius = params.cornerRadius;
++        cornerCurvature = params.cornerCurvature;
++    } else {
++        cornerRadius = state.scratchPaint.roundedRect.cornerRadius;
++        cornerCurvature = state.scratchPaint.roundedRect.cornerCurvature;
++    }
++
++    return {
++        cornerRadius,
++        cornerCurvature,
++        disabled: !visible,
++        mode: state.scratchPaint.mode,
++        selectedRoundedRect,
++        visible
++    };
++};
++
++const mapDispatchToProps = dispatch => ({
++    onChangeCornerRadius: cornerRadius => {
++        dispatch(changeCornerRadius(cornerRadius));
++    },
++    onChangeCornerCurvature: cornerCurvature => {
++        dispatch(changeCornerCurvature(cornerCurvature));
++    },
++    setSelectedItems: () => {
++        dispatch(setSelectedItems(getSelectedLeafItems(), false /* bitmapMode */));
++    }
++});
++
++export default connect(
++    mapStateToProps,
++    mapDispatchToProps
++)(injectIntl(CornerSettingsIndicator));
+diff --git a/node_modules/scratch-paint/src/containers/double-arrow-mode.jsx b/node_modules/scratch-paint/src/containers/double-arrow-mode.jsx
+new file mode 100644
+index 0000000..20af107
+--- /dev/null
++++ b/node_modules/scratch-paint/src/containers/double-arrow-mode.jsx
+@@ -0,0 +1,181 @@
++import paper from '@turbowarp/paper';
++import PropTypes from 'prop-types';
++import React from 'react';
++import {connect} from 'react-redux';
++import bindAll from 'lodash.bindall';
++import Modes from '../lib/modes';
++import {MIXED} from '../helper/style-path';
++import ColorStyleProptype from '../lib/color-style-proptype';
++import GradientTypes from '../lib/gradient-types';
++
++import {changeFillColor, clearFillGradient, DEFAULT_COLOR} from '../reducers/fill-style';
++import {changeStrokeColor, clearStrokeGradient} from '../reducers/stroke-style';
++import {changeMode} from '../reducers/modes';
++import {clearSelectedItems, setSelectedItems} from '../reducers/selected-items';
++import {setCursor} from '../reducers/cursor';
++
++import {clearSelection, getSelectedLeafItems} from '../helper/selection';
++import DoubleArrowTool from '../helper/tools/double-arrow-tool';
++import DoubleArrowModeComponent from '../components/double-arrow-mode/double-arrow-mode.jsx';
++
++class DoubleArrowMode extends React.Component {
++    constructor (props) {
++        super(props);
++        bindAll(this, [
++            'activateTool',
++            'deactivateTool',
++            'validateColorState'
++        ]);
++    }
++    componentDidMount () {
++        if (this.props.isDoubleArrowModeActive) {
++            this.activateTool(this.props);
++        }
++    }
++    componentWillReceiveProps (nextProps) {
++        if (this.tool && nextProps.colorState !== this.props.colorState) {
++            this.tool.setColorState(nextProps.colorState);
++        }
++        if (this.tool && nextProps.selectedItems !== this.props.selectedItems) {
++            this.tool.onSelectionChanged(nextProps.selectedItems);
++        }
++
++        if (nextProps.isDoubleArrowModeActive && !this.props.isDoubleArrowModeActive) {
++            this.activateTool();
++        } else if (!nextProps.isDoubleArrowModeActive && this.props.isDoubleArrowModeActive) {
++            this.deactivateTool();
++        }
++    }
++    shouldComponentUpdate (nextProps) {
++        return nextProps.isDoubleArrowModeActive !== this.props.isDoubleArrowModeActive;
++    }
++    componentWillUnmount () {
++        if (this.tool) {
++            this.deactivateTool();
++        }
++    }
++    activateTool () {
++        clearSelection(this.props.clearSelectedItems);
++        this.validateColorState();
++
++        this.tool = new DoubleArrowTool(
++            this.props.setSelectedItems,
++            this.props.clearSelectedItems,
++            this.props.setCursor,
++            this.props.onUpdateImage
++        );
++        this.tool.setColorState(this.props.colorState);
++        this.tool.activate();
++    }
++    validateColorState () {
++        const {strokeWidth} = this.props.colorState;
++        const fillColor1 = this.props.colorState.fillColor.primary;
++        let fillColor2 = this.props.colorState.fillColor.secondary;
++        let fillGradient = this.props.colorState.fillColor.gradientType;
++        const strokeColor1 = this.props.colorState.strokeColor.primary;
++        let strokeColor2 = this.props.colorState.strokeColor.secondary;
++        let strokeGradient = this.props.colorState.strokeColor.gradientType;
++
++        if (fillColor2 === MIXED) {
++            this.props.clearFillGradient();
++            fillColor2 = null;
++            fillGradient = GradientTypes.SOLID;
++        }
++        if (strokeColor2 === MIXED) {
++            this.props.clearStrokeGradient();
++            strokeColor2 = null;
++            strokeGradient = GradientTypes.SOLID;
++        }
++
++        const fillColorMissing = fillColor1 === MIXED ||
++            (fillGradient === GradientTypes.SOLID && fillColor1 === null) ||
++            (fillGradient !== GradientTypes.SOLID && fillColor1 === null && fillColor2 === null);
++        const strokeColorMissing = strokeColor1 === MIXED ||
++            strokeWidth === null ||
++            strokeWidth === 0 ||
++            (strokeGradient === GradientTypes.SOLID && strokeColor1 === null) ||
++            (strokeGradient !== GradientTypes.SOLID && strokeColor1 === null && strokeColor2 === null);
++
++        if (fillColorMissing && strokeColorMissing) {
++            this.props.onChangeFillColor(DEFAULT_COLOR);
++            this.props.clearFillGradient();
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        } else if (fillColorMissing && !strokeColorMissing) {
++            this.props.onChangeFillColor(null);
++            this.props.clearFillGradient();
++        } else if (!fillColorMissing && strokeColorMissing) {
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        }
++    }
++    deactivateTool () {
++        this.tool.deactivateTool();
++        this.tool.remove();
++        this.tool = null;
++    }
++    render () {
++        return (
++            <DoubleArrowModeComponent
++                isSelected={this.props.isDoubleArrowModeActive}
++                onMouseDown={this.props.handleMouseDown}
++            />
++        );
++    }
++}
++
++DoubleArrowMode.propTypes = {
++    clearFillGradient: PropTypes.func.isRequired,
++    clearStrokeGradient: PropTypes.func.isRequired,
++    clearSelectedItems: PropTypes.func.isRequired,
++    colorState: PropTypes.shape({
++        fillColor: ColorStyleProptype,
++        strokeColor: ColorStyleProptype,
++        strokeWidth: PropTypes.number
++    }).isRequired,
++    handleMouseDown: PropTypes.func.isRequired,
++    isDoubleArrowModeActive: PropTypes.bool.isRequired,
++    onChangeFillColor: PropTypes.func.isRequired,
++    onChangeStrokeColor: PropTypes.func.isRequired,
++    onUpdateImage: PropTypes.func.isRequired,
++    selectedItems: PropTypes.arrayOf(PropTypes.instanceOf(paper.Item)),
++    setCursor: PropTypes.func.isRequired,
++    setSelectedItems: PropTypes.func.isRequired
++};
++
++const mapStateToProps = state => ({
++    colorState: state.scratchPaint.color,
++    isDoubleArrowModeActive: state.scratchPaint.mode === Modes.DOUBLE_ARROW,
++    selectedItems: state.scratchPaint.selectedItems
++});
++const mapDispatchToProps = dispatch => ({
++    clearSelectedItems: () => {
++        dispatch(clearSelectedItems());
++    },
++    clearFillGradient: () => {
++        dispatch(clearFillGradient());
++    },
++    clearStrokeGradient: () => {
++        dispatch(clearStrokeGradient());
++    },
++    setSelectedItems: () => {
++        dispatch(setSelectedItems(getSelectedLeafItems(), false /* bitmapMode */));
++    },
++    setCursor: cursorString => {
++        dispatch(setCursor(cursorString));
++    },
++    handleMouseDown: () => {
++        dispatch(changeMode(Modes.DOUBLE_ARROW));
++    },
++    onChangeFillColor: fillColor => {
++        dispatch(changeFillColor(fillColor));
++    },
++    onChangeStrokeColor: strokeColor => {
++        dispatch(changeStrokeColor(strokeColor));
++    }
++});
++
++export default connect(
++    mapStateToProps,
++    mapDispatchToProps
++)(DoubleArrowMode);
+diff --git a/node_modules/scratch-paint/src/containers/heart-mode.jsx b/node_modules/scratch-paint/src/containers/heart-mode.jsx
+new file mode 100644
+index 0000000..a5d7c21
+--- /dev/null
++++ b/node_modules/scratch-paint/src/containers/heart-mode.jsx
+@@ -0,0 +1,181 @@
++import paper from '@turbowarp/paper';
++import PropTypes from 'prop-types';
++import React from 'react';
++import {connect} from 'react-redux';
++import bindAll from 'lodash.bindall';
++import Modes from '../lib/modes';
++import {MIXED} from '../helper/style-path';
++import ColorStyleProptype from '../lib/color-style-proptype';
++import GradientTypes from '../lib/gradient-types';
++
++import {changeFillColor, clearFillGradient, DEFAULT_COLOR} from '../reducers/fill-style';
++import {changeStrokeColor, clearStrokeGradient} from '../reducers/stroke-style';
++import {changeMode} from '../reducers/modes';
++import {clearSelectedItems, setSelectedItems} from '../reducers/selected-items';
++import {setCursor} from '../reducers/cursor';
++
++import {clearSelection, getSelectedLeafItems} from '../helper/selection';
++import HeartTool from '../helper/tools/heart-tool';
++import HeartModeComponent from '../components/heart-mode/heart-mode.jsx';
++
++class HeartMode extends React.Component {
++    constructor (props) {
++        super(props);
++        bindAll(this, [
++            'activateTool',
++            'deactivateTool',
++            'validateColorState'
++        ]);
++    }
++    componentDidMount () {
++        if (this.props.isHeartModeActive) {
++            this.activateTool(this.props);
++        }
++    }
++    componentWillReceiveProps (nextProps) {
++        if (this.tool && nextProps.colorState !== this.props.colorState) {
++            this.tool.setColorState(nextProps.colorState);
++        }
++        if (this.tool && nextProps.selectedItems !== this.props.selectedItems) {
++            this.tool.onSelectionChanged(nextProps.selectedItems);
++        }
++
++        if (nextProps.isHeartModeActive && !this.props.isHeartModeActive) {
++            this.activateTool();
++        } else if (!nextProps.isHeartModeActive && this.props.isHeartModeActive) {
++            this.deactivateTool();
++        }
++    }
++    shouldComponentUpdate (nextProps) {
++        return nextProps.isHeartModeActive !== this.props.isHeartModeActive;
++    }
++    componentWillUnmount () {
++        if (this.tool) {
++            this.deactivateTool();
++        }
++    }
++    activateTool () {
++        clearSelection(this.props.clearSelectedItems);
++        this.validateColorState();
++
++        this.tool = new HeartTool(
++            this.props.setSelectedItems,
++            this.props.clearSelectedItems,
++            this.props.setCursor,
++            this.props.onUpdateImage
++        );
++        this.tool.setColorState(this.props.colorState);
++        this.tool.activate();
++    }
++    validateColorState () {
++        const {strokeWidth} = this.props.colorState;
++        const fillColor1 = this.props.colorState.fillColor.primary;
++        let fillColor2 = this.props.colorState.fillColor.secondary;
++        let fillGradient = this.props.colorState.fillColor.gradientType;
++        const strokeColor1 = this.props.colorState.strokeColor.primary;
++        let strokeColor2 = this.props.colorState.strokeColor.secondary;
++        let strokeGradient = this.props.colorState.strokeColor.gradientType;
++
++        if (fillColor2 === MIXED) {
++            this.props.clearFillGradient();
++            fillColor2 = null;
++            fillGradient = GradientTypes.SOLID;
++        }
++        if (strokeColor2 === MIXED) {
++            this.props.clearStrokeGradient();
++            strokeColor2 = null;
++            strokeGradient = GradientTypes.SOLID;
++        }
++
++        const fillColorMissing = fillColor1 === MIXED ||
++            (fillGradient === GradientTypes.SOLID && fillColor1 === null) ||
++            (fillGradient !== GradientTypes.SOLID && fillColor1 === null && fillColor2 === null);
++        const strokeColorMissing = strokeColor1 === MIXED ||
++            strokeWidth === null ||
++            strokeWidth === 0 ||
++            (strokeGradient === GradientTypes.SOLID && strokeColor1 === null) ||
++            (strokeGradient !== GradientTypes.SOLID && strokeColor1 === null && strokeColor2 === null);
++
++        if (fillColorMissing && strokeColorMissing) {
++            this.props.onChangeFillColor(DEFAULT_COLOR);
++            this.props.clearFillGradient();
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        } else if (fillColorMissing && !strokeColorMissing) {
++            this.props.onChangeFillColor(null);
++            this.props.clearFillGradient();
++        } else if (!fillColorMissing && strokeColorMissing) {
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        }
++    }
++    deactivateTool () {
++        this.tool.deactivateTool();
++        this.tool.remove();
++        this.tool = null;
++    }
++    render () {
++        return (
++            <HeartModeComponent
++                isSelected={this.props.isHeartModeActive}
++                onMouseDown={this.props.handleMouseDown}
++            />
++        );
++    }
++}
++
++HeartMode.propTypes = {
++    clearFillGradient: PropTypes.func.isRequired,
++    clearStrokeGradient: PropTypes.func.isRequired,
++    clearSelectedItems: PropTypes.func.isRequired,
++    colorState: PropTypes.shape({
++        fillColor: ColorStyleProptype,
++        strokeColor: ColorStyleProptype,
++        strokeWidth: PropTypes.number
++    }).isRequired,
++    handleMouseDown: PropTypes.func.isRequired,
++    isHeartModeActive: PropTypes.bool.isRequired,
++    onChangeFillColor: PropTypes.func.isRequired,
++    onChangeStrokeColor: PropTypes.func.isRequired,
++    onUpdateImage: PropTypes.func.isRequired,
++    selectedItems: PropTypes.arrayOf(PropTypes.instanceOf(paper.Item)),
++    setCursor: PropTypes.func.isRequired,
++    setSelectedItems: PropTypes.func.isRequired
++};
++
++const mapStateToProps = state => ({
++    colorState: state.scratchPaint.color,
++    isHeartModeActive: state.scratchPaint.mode === Modes.HEART,
++    selectedItems: state.scratchPaint.selectedItems
++});
++const mapDispatchToProps = dispatch => ({
++    clearSelectedItems: () => {
++        dispatch(clearSelectedItems());
++    },
++    clearFillGradient: () => {
++        dispatch(clearFillGradient());
++    },
++    clearStrokeGradient: () => {
++        dispatch(clearStrokeGradient());
++    },
++    setSelectedItems: () => {
++        dispatch(setSelectedItems(getSelectedLeafItems(), false /* bitmapMode */));
++    },
++    setCursor: cursorString => {
++        dispatch(setCursor(cursorString));
++    },
++    handleMouseDown: () => {
++        dispatch(changeMode(Modes.HEART));
++    },
++    onChangeFillColor: fillColor => {
++        dispatch(changeFillColor(fillColor));
++    },
++    onChangeStrokeColor: strokeColor => {
++        dispatch(changeStrokeColor(strokeColor));
++    }
++});
++
++export default connect(
++    mapStateToProps,
++    mapDispatchToProps
++)(HeartMode);
+diff --git a/node_modules/scratch-paint/src/containers/paint-editor.jsx b/node_modules/scratch-paint/src/containers/paint-editor.jsx
+index 03d976a..6eb215b 100644
+--- a/node_modules/scratch-paint/src/containers/paint-editor.jsx
++++ b/node_modules/scratch-paint/src/containers/paint-editor.jsx
+@@ -337,6 +337,7 @@ class PaintEditor extends React.Component {
+                 imageFormat={this.props.imageFormat}
+                 imageId={this.props.imageId}
+                 isEyeDropping={this.props.isEyeDropping}
++                mode={this.props.mode}
+                 name={this.props.name}
+                 rotationCenterX={this.props.rotationCenterX}
+                 rotationCenterY={this.props.rotationCenterY}
+diff --git a/node_modules/scratch-paint/src/containers/paper-canvas.jsx b/node_modules/scratch-paint/src/containers/paper-canvas.jsx
+index b6ffbb5..17eaea0 100644
+--- a/node_modules/scratch-paint/src/containers/paper-canvas.jsx
++++ b/node_modules/scratch-paint/src/containers/paper-canvas.jsx
+@@ -13,7 +13,8 @@ import {clearRaster, convertBackgroundGuideLayer, getRaster, setupLayers, update
+ import {clearSelectedItems} from '../reducers/selected-items';
+ import {
+     ART_BOARD_WIDTH, ART_BOARD_HEIGHT, CENTER, MAX_WORKSPACE_BOUNDS,
+-    clampViewBounds, resetZoom, setWorkspaceBounds, zoomToFit, resizeCrosshair
++    clampViewBounds, resetZoom, setWorkspaceBounds, zoomToFit, resizeCrosshair,
++    getEffectiveMaxWorkspaceBounds
+ } from '../helper/view';
+ import {ensureClockwise, scaleWithStrokes} from '../helper/math';
+ import {clearHoveredItem} from '../reducers/hover';
+@@ -278,8 +279,9 @@ class PaperCanvas extends React.Component {
+         mask.locked = true;
+         mask.matrix = new paper.Matrix(); // Identity
+         // Set the artwork to get clipped at the max costume size
+-        mask.size.height = MAX_WORKSPACE_BOUNDS.height;
+-        mask.size.width = MAX_WORKSPACE_BOUNDS.width;
++        const effectiveBounds = getEffectiveMaxWorkspaceBounds();
++        mask.size.height = effectiveBounds.height;
++        mask.size.width = effectiveBounds.width;
+         mask.setPosition(CENTER);
+         paper.project.activeLayer.addChild(mask);
+         mask.clipMask = true;
+diff --git a/node_modules/scratch-paint/src/containers/rounded-rect-mode.jsx b/node_modules/scratch-paint/src/containers/rounded-rect-mode.jsx
+index d729dcb..7eb3423 100644
+--- a/node_modules/scratch-paint/src/containers/rounded-rect-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/rounded-rect-mode.jsx
+@@ -1,14 +1,20 @@
++import paper from '@turbowarp/paper';
+ import PropTypes from 'prop-types';
+ import React from 'react';
+ import {connect} from 'react-redux';
+ import bindAll from 'lodash.bindall';
+ import Modes from '../lib/modes';
++import {MIXED} from '../helper/style-path';
++import ColorStyleProptype from '../lib/color-style-proptype';
++import GradientTypes from '../lib/gradient-types';
+ 
++import {changeFillColor, clearFillGradient, DEFAULT_COLOR} from '../reducers/fill-style';
++import {changeStrokeColor, clearStrokeGradient} from '../reducers/stroke-style';
+ import {changeMode} from '../reducers/modes';
+-import {clearHoveredItem, setHoveredItem} from '../reducers/hover';
+ import {clearSelectedItems, setSelectedItems} from '../reducers/selected-items';
++import {setCursor} from '../reducers/cursor';
+ 
+-import {getSelectedLeafItems} from '../helper/selection';
++import {clearSelection, getSelectedLeafItems} from '../helper/selection';
+ import RoundedRectTool from '../helper/tools/rounded-rect-tool';
+ import RoundedRectModeComponent from '../components/rounded-rect-mode/rounded-rect-mode.jsx';
+ 
+@@ -17,7 +23,8 @@ class RoundedRectMode extends React.Component {
+         super(props);
+         bindAll(this, [
+             'activateTool',
+-            'deactivateTool'
++            'deactivateTool',
++            'validateColorState'
+         ]);
+     }
+     componentDidMount () {
+@@ -26,8 +33,17 @@ class RoundedRectMode extends React.Component {
+         }
+     }
+     componentWillReceiveProps (nextProps) {
+-        if (this.tool && nextProps.hoveredItemId !== this.props.hoveredItemId) {
+-            this.tool.setPrevHoveredItemId(nextProps.hoveredItemId);
++        if (this.tool && nextProps.colorState !== this.props.colorState) {
++            this.tool.setColorState(nextProps.colorState);
++        }
++        if (this.tool && nextProps.selectedItems !== this.props.selectedItems) {
++            this.tool.onSelectionChanged(nextProps.selectedItems);
++        }
++        if (this.tool && nextProps.cornerRadius !== this.props.cornerRadius) {
++            this.tool.setCornerRadius(nextProps.cornerRadius);
++        }
++        if (this.tool && nextProps.cornerCurvature !== this.props.cornerCurvature) {
++            this.tool.setCornerCurvature(nextProps.cornerCurvature);
+         }
+ 
+         if (nextProps.isRoundedRectModeActive && !this.props.isRoundedRectModeActive) {
+@@ -45,15 +61,65 @@ class RoundedRectMode extends React.Component {
+         }
+     }
+     activateTool () {
++        clearSelection(this.props.clearSelectedItems);
++        this.validateColorState();
++
+         this.tool = new RoundedRectTool(
+-            this.props.setHoveredItem,
+-            this.props.clearHoveredItem,
+             this.props.setSelectedItems,
+             this.props.clearSelectedItems,
++            this.props.setCursor,
+             this.props.onUpdateImage
+         );
++        this.tool.setColorState(this.props.colorState);
++        this.tool.setCornerRadius(this.props.cornerRadius);
++        this.tool.setCornerCurvature(this.props.cornerCurvature);
+         this.tool.activate();
+     }
++    validateColorState () { // TODO move to shared class
++        // Make sure that at least one of fill/stroke is set, and that MIXED is not one of the colors.
++        // If fill and stroke color are both missing, set fill to default and stroke to transparent.
++        // If exactly one of fill or stroke color is set, set the other one to transparent.
++        const {strokeWidth} = this.props.colorState;
++        const fillColor1 = this.props.colorState.fillColor.primary;
++        let fillColor2 = this.props.colorState.fillColor.secondary;
++        let fillGradient = this.props.colorState.fillColor.gradientType;
++        const strokeColor1 = this.props.colorState.strokeColor.primary;
++        let strokeColor2 = this.props.colorState.strokeColor.secondary;
++        let strokeGradient = this.props.colorState.strokeColor.gradientType;
++
++        if (fillColor2 === MIXED) {
++            this.props.clearFillGradient();
++            fillColor2 = null;
++            fillGradient = GradientTypes.SOLID;
++        }
++        if (strokeColor2 === MIXED) {
++            this.props.clearStrokeGradient();
++            strokeColor2 = null;
++            strokeGradient = GradientTypes.SOLID;
++        }
++
++        const fillColorMissing = fillColor1 === MIXED ||
++            (fillGradient === GradientTypes.SOLID && fillColor1 === null) ||
++            (fillGradient !== GradientTypes.SOLID && fillColor1 === null && fillColor2 === null);
++        const strokeColorMissing = strokeColor1 === MIXED ||
++            strokeWidth === null ||
++            strokeWidth === 0 ||
++            (strokeGradient === GradientTypes.SOLID && strokeColor1 === null) ||
++            (strokeGradient !== GradientTypes.SOLID && strokeColor1 === null && strokeColor2 === null);
++
++        if (fillColorMissing && strokeColorMissing) {
++            this.props.onChangeFillColor(DEFAULT_COLOR);
++            this.props.clearFillGradient();
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        } else if (fillColorMissing && !strokeColorMissing) {
++            this.props.onChangeFillColor(null);
++            this.props.clearFillGradient();
++        } else if (!fillColorMissing && strokeColorMissing) {
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        }
++    }
+     deactivateTool () {
+         this.tool.deactivateTool();
+         this.tool.remove();
+@@ -70,37 +136,57 @@ class RoundedRectMode extends React.Component {
+ }
+ 
+ RoundedRectMode.propTypes = {
+-    clearHoveredItem: PropTypes.func.isRequired,
++    clearFillGradient: PropTypes.func.isRequired,
++    clearStrokeGradient: PropTypes.func.isRequired,
+     clearSelectedItems: PropTypes.func.isRequired,
++    colorState: PropTypes.shape({
++        fillColor: ColorStyleProptype,
++        strokeColor: ColorStyleProptype,
++        strokeWidth: PropTypes.number
++    }).isRequired,
++    cornerCurvature: PropTypes.number,
++    cornerRadius: PropTypes.number,
+     handleMouseDown: PropTypes.func.isRequired,
+-    hoveredItemId: PropTypes.number,
+     isRoundedRectModeActive: PropTypes.bool.isRequired,
++    onChangeFillColor: PropTypes.func.isRequired,
++    onChangeStrokeColor: PropTypes.func.isRequired,
+     onUpdateImage: PropTypes.func.isRequired,
+-    setHoveredItem: PropTypes.func.isRequired,
++    selectedItems: PropTypes.arrayOf(PropTypes.instanceOf(paper.Item)),
++    setCursor: PropTypes.func.isRequired,
+     setSelectedItems: PropTypes.func.isRequired
+ };
+ 
+ const mapStateToProps = state => ({
++    colorState: state.scratchPaint.color,
++    cornerRadius: state.scratchPaint.roundedRect.cornerRadius,
++    cornerCurvature: state.scratchPaint.roundedRect.cornerCurvature,
+     isRoundedRectModeActive: state.scratchPaint.mode === Modes.ROUNDED_RECT,
+-    hoveredItemId: state.scratchPaint.hoveredItemId
++    selectedItems: state.scratchPaint.selectedItems
+ });
+ const mapDispatchToProps = dispatch => ({
+-    setHoveredItem: hoveredItemId => {
+-        dispatch(setHoveredItem(hoveredItemId));
+-    },
+-    clearHoveredItem: () => {
+-        dispatch(clearHoveredItem());
+-    },
+     clearSelectedItems: () => {
+         dispatch(clearSelectedItems());
+     },
++    clearFillGradient: () => {
++        dispatch(clearFillGradient());
++    },
++    clearStrokeGradient: () => {
++        dispatch(clearStrokeGradient());
++    },
+     setSelectedItems: () => {
+         dispatch(setSelectedItems(getSelectedLeafItems(), false /* bitmapMode */));
+     },
++    setCursor: cursorString => {
++        dispatch(setCursor(cursorString));
++    },
+     handleMouseDown: () => {
+         dispatch(changeMode(Modes.ROUNDED_RECT));
+     },
+-    deactivateTool () {
++    onChangeFillColor: fillColor => {
++        dispatch(changeFillColor(fillColor));
++    },
++    onChangeStrokeColor: strokeColor => {
++        dispatch(changeStrokeColor(strokeColor));
+     }
+ });
+ 
+diff --git a/node_modules/scratch-paint/src/containers/trapezoid-mode.jsx b/node_modules/scratch-paint/src/containers/trapezoid-mode.jsx
+new file mode 100644
+index 0000000..1528d7f
+--- /dev/null
++++ b/node_modules/scratch-paint/src/containers/trapezoid-mode.jsx
+@@ -0,0 +1,181 @@
++import paper from '@turbowarp/paper';
++import PropTypes from 'prop-types';
++import React from 'react';
++import {connect} from 'react-redux';
++import bindAll from 'lodash.bindall';
++import Modes from '../lib/modes';
++import {MIXED} from '../helper/style-path';
++import ColorStyleProptype from '../lib/color-style-proptype';
++import GradientTypes from '../lib/gradient-types';
++
++import {changeFillColor, clearFillGradient, DEFAULT_COLOR} from '../reducers/fill-style';
++import {changeStrokeColor, clearStrokeGradient} from '../reducers/stroke-style';
++import {changeMode} from '../reducers/modes';
++import {clearSelectedItems, setSelectedItems} from '../reducers/selected-items';
++import {setCursor} from '../reducers/cursor';
++
++import {clearSelection, getSelectedLeafItems} from '../helper/selection';
++import TrapezoidTool from '../helper/tools/trapezoid-tool';
++import TrapezoidModeComponent from '../components/trapezoid-mode/trapezoid-mode.jsx';
++
++class TrapezoidMode extends React.Component {
++    constructor (props) {
++        super(props);
++        bindAll(this, [
++            'activateTool',
++            'deactivateTool',
++            'validateColorState'
++        ]);
++    }
++    componentDidMount () {
++        if (this.props.isTrapezoidModeActive) {
++            this.activateTool(this.props);
++        }
++    }
++    componentWillReceiveProps (nextProps) {
++        if (this.tool && nextProps.colorState !== this.props.colorState) {
++            this.tool.setColorState(nextProps.colorState);
++        }
++        if (this.tool && nextProps.selectedItems !== this.props.selectedItems) {
++            this.tool.onSelectionChanged(nextProps.selectedItems);
++        }
++
++        if (nextProps.isTrapezoidModeActive && !this.props.isTrapezoidModeActive) {
++            this.activateTool();
++        } else if (!nextProps.isTrapezoidModeActive && this.props.isTrapezoidModeActive) {
++            this.deactivateTool();
++        }
++    }
++    shouldComponentUpdate (nextProps) {
++        return nextProps.isTrapezoidModeActive !== this.props.isTrapezoidModeActive;
++    }
++    componentWillUnmount () {
++        if (this.tool) {
++            this.deactivateTool();
++        }
++    }
++    activateTool () {
++        clearSelection(this.props.clearSelectedItems);
++        this.validateColorState();
++
++        this.tool = new TrapezoidTool(
++            this.props.setSelectedItems,
++            this.props.clearSelectedItems,
++            this.props.setCursor,
++            this.props.onUpdateImage
++        );
++        this.tool.setColorState(this.props.colorState);
++        this.tool.activate();
++    }
++    validateColorState () {
++        const {strokeWidth} = this.props.colorState;
++        const fillColor1 = this.props.colorState.fillColor.primary;
++        let fillColor2 = this.props.colorState.fillColor.secondary;
++        let fillGradient = this.props.colorState.fillColor.gradientType;
++        const strokeColor1 = this.props.colorState.strokeColor.primary;
++        let strokeColor2 = this.props.colorState.strokeColor.secondary;
++        let strokeGradient = this.props.colorState.strokeColor.gradientType;
++
++        if (fillColor2 === MIXED) {
++            this.props.clearFillGradient();
++            fillColor2 = null;
++            fillGradient = GradientTypes.SOLID;
++        }
++        if (strokeColor2 === MIXED) {
++            this.props.clearStrokeGradient();
++            strokeColor2 = null;
++            strokeGradient = GradientTypes.SOLID;
++        }
++
++        const fillColorMissing = fillColor1 === MIXED ||
++            (fillGradient === GradientTypes.SOLID && fillColor1 === null) ||
++            (fillGradient !== GradientTypes.SOLID && fillColor1 === null && fillColor2 === null);
++        const strokeColorMissing = strokeColor1 === MIXED ||
++            strokeWidth === null ||
++            strokeWidth === 0 ||
++            (strokeGradient === GradientTypes.SOLID && strokeColor1 === null) ||
++            (strokeGradient !== GradientTypes.SOLID && strokeColor1 === null && strokeColor2 === null);
++
++        if (fillColorMissing && strokeColorMissing) {
++            this.props.onChangeFillColor(DEFAULT_COLOR);
++            this.props.clearFillGradient();
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        } else if (fillColorMissing && !strokeColorMissing) {
++            this.props.onChangeFillColor(null);
++            this.props.clearFillGradient();
++        } else if (!fillColorMissing && strokeColorMissing) {
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        }
++    }
++    deactivateTool () {
++        this.tool.deactivateTool();
++        this.tool.remove();
++        this.tool = null;
++    }
++    render () {
++        return (
++            <TrapezoidModeComponent
++                isSelected={this.props.isTrapezoidModeActive}
++                onMouseDown={this.props.handleMouseDown}
++            />
++        );
++    }
++}
++
++TrapezoidMode.propTypes = {
++    clearFillGradient: PropTypes.func.isRequired,
++    clearStrokeGradient: PropTypes.func.isRequired,
++    clearSelectedItems: PropTypes.func.isRequired,
++    colorState: PropTypes.shape({
++        fillColor: ColorStyleProptype,
++        strokeColor: ColorStyleProptype,
++        strokeWidth: PropTypes.number
++    }).isRequired,
++    handleMouseDown: PropTypes.func.isRequired,
++    isTrapezoidModeActive: PropTypes.bool.isRequired,
++    onChangeFillColor: PropTypes.func.isRequired,
++    onChangeStrokeColor: PropTypes.func.isRequired,
++    onUpdateImage: PropTypes.func.isRequired,
++    selectedItems: PropTypes.arrayOf(PropTypes.instanceOf(paper.Item)),
++    setCursor: PropTypes.func.isRequired,
++    setSelectedItems: PropTypes.func.isRequired
++};
++
++const mapStateToProps = state => ({
++    colorState: state.scratchPaint.color,
++    isTrapezoidModeActive: state.scratchPaint.mode === Modes.TRAPEZOID,
++    selectedItems: state.scratchPaint.selectedItems
++});
++const mapDispatchToProps = dispatch => ({
++    clearSelectedItems: () => {
++        dispatch(clearSelectedItems());
++    },
++    clearFillGradient: () => {
++        dispatch(clearFillGradient());
++    },
++    clearStrokeGradient: () => {
++        dispatch(clearStrokeGradient());
++    },
++    setSelectedItems: () => {
++        dispatch(setSelectedItems(getSelectedLeafItems(), false /* bitmapMode */));
++    },
++    setCursor: cursorString => {
++        dispatch(setCursor(cursorString));
++    },
++    handleMouseDown: () => {
++        dispatch(changeMode(Modes.TRAPEZOID));
++    },
++    onChangeFillColor: fillColor => {
++        dispatch(changeFillColor(fillColor));
++    },
++    onChangeStrokeColor: strokeColor => {
++        dispatch(changeStrokeColor(strokeColor));
++    }
++});
++
++export default connect(
++    mapStateToProps,
++    mapDispatchToProps
++)(TrapezoidMode);
+diff --git a/node_modules/scratch-paint/src/containers/triangle-mode.jsx b/node_modules/scratch-paint/src/containers/triangle-mode.jsx
+new file mode 100644
+index 0000000..3c5d78a
+--- /dev/null
++++ b/node_modules/scratch-paint/src/containers/triangle-mode.jsx
+@@ -0,0 +1,181 @@
++import paper from '@turbowarp/paper';
++import PropTypes from 'prop-types';
++import React from 'react';
++import {connect} from 'react-redux';
++import bindAll from 'lodash.bindall';
++import Modes from '../lib/modes';
++import {MIXED} from '../helper/style-path';
++import ColorStyleProptype from '../lib/color-style-proptype';
++import GradientTypes from '../lib/gradient-types';
++
++import {changeFillColor, clearFillGradient, DEFAULT_COLOR} from '../reducers/fill-style';
++import {changeStrokeColor, clearStrokeGradient} from '../reducers/stroke-style';
++import {changeMode} from '../reducers/modes';
++import {clearSelectedItems, setSelectedItems} from '../reducers/selected-items';
++import {setCursor} from '../reducers/cursor';
++
++import {clearSelection, getSelectedLeafItems} from '../helper/selection';
++import TriangleTool from '../helper/tools/triangle-tool';
++import TriangleModeComponent from '../components/triangle-mode/triangle-mode.jsx';
++
++class TriangleMode extends React.Component {
++    constructor (props) {
++        super(props);
++        bindAll(this, [
++            'activateTool',
++            'deactivateTool',
++            'validateColorState'
++        ]);
++    }
++    componentDidMount () {
++        if (this.props.isTriangleModeActive) {
++            this.activateTool(this.props);
++        }
++    }
++    componentWillReceiveProps (nextProps) {
++        if (this.tool && nextProps.colorState !== this.props.colorState) {
++            this.tool.setColorState(nextProps.colorState);
++        }
++        if (this.tool && nextProps.selectedItems !== this.props.selectedItems) {
++            this.tool.onSelectionChanged(nextProps.selectedItems);
++        }
++
++        if (nextProps.isTriangleModeActive && !this.props.isTriangleModeActive) {
++            this.activateTool();
++        } else if (!nextProps.isTriangleModeActive && this.props.isTriangleModeActive) {
++            this.deactivateTool();
++        }
++    }
++    shouldComponentUpdate (nextProps) {
++        return nextProps.isTriangleModeActive !== this.props.isTriangleModeActive;
++    }
++    componentWillUnmount () {
++        if (this.tool) {
++            this.deactivateTool();
++        }
++    }
++    activateTool () {
++        clearSelection(this.props.clearSelectedItems);
++        this.validateColorState();
++
++        this.tool = new TriangleTool(
++            this.props.setSelectedItems,
++            this.props.clearSelectedItems,
++            this.props.setCursor,
++            this.props.onUpdateImage
++        );
++        this.tool.setColorState(this.props.colorState);
++        this.tool.activate();
++    }
++    validateColorState () {
++        const {strokeWidth} = this.props.colorState;
++        const fillColor1 = this.props.colorState.fillColor.primary;
++        let fillColor2 = this.props.colorState.fillColor.secondary;
++        let fillGradient = this.props.colorState.fillColor.gradientType;
++        const strokeColor1 = this.props.colorState.strokeColor.primary;
++        let strokeColor2 = this.props.colorState.strokeColor.secondary;
++        let strokeGradient = this.props.colorState.strokeColor.gradientType;
++
++        if (fillColor2 === MIXED) {
++            this.props.clearFillGradient();
++            fillColor2 = null;
++            fillGradient = GradientTypes.SOLID;
++        }
++        if (strokeColor2 === MIXED) {
++            this.props.clearStrokeGradient();
++            strokeColor2 = null;
++            strokeGradient = GradientTypes.SOLID;
++        }
++
++        const fillColorMissing = fillColor1 === MIXED ||
++            (fillGradient === GradientTypes.SOLID && fillColor1 === null) ||
++            (fillGradient !== GradientTypes.SOLID && fillColor1 === null && fillColor2 === null);
++        const strokeColorMissing = strokeColor1 === MIXED ||
++            strokeWidth === null ||
++            strokeWidth === 0 ||
++            (strokeGradient === GradientTypes.SOLID && strokeColor1 === null) ||
++            (strokeGradient !== GradientTypes.SOLID && strokeColor1 === null && strokeColor2 === null);
++
++        if (fillColorMissing && strokeColorMissing) {
++            this.props.onChangeFillColor(DEFAULT_COLOR);
++            this.props.clearFillGradient();
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        } else if (fillColorMissing && !strokeColorMissing) {
++            this.props.onChangeFillColor(null);
++            this.props.clearFillGradient();
++        } else if (!fillColorMissing && strokeColorMissing) {
++            this.props.onChangeStrokeColor(null);
++            this.props.clearStrokeGradient();
++        }
++    }
++    deactivateTool () {
++        this.tool.deactivateTool();
++        this.tool.remove();
++        this.tool = null;
++    }
++    render () {
++        return (
++            <TriangleModeComponent
++                isSelected={this.props.isTriangleModeActive}
++                onMouseDown={this.props.handleMouseDown}
++            />
++        );
++    }
++}
++
++TriangleMode.propTypes = {
++    clearFillGradient: PropTypes.func.isRequired,
++    clearStrokeGradient: PropTypes.func.isRequired,
++    clearSelectedItems: PropTypes.func.isRequired,
++    colorState: PropTypes.shape({
++        fillColor: ColorStyleProptype,
++        strokeColor: ColorStyleProptype,
++        strokeWidth: PropTypes.number
++    }).isRequired,
++    handleMouseDown: PropTypes.func.isRequired,
++    isTriangleModeActive: PropTypes.bool.isRequired,
++    onChangeFillColor: PropTypes.func.isRequired,
++    onChangeStrokeColor: PropTypes.func.isRequired,
++    onUpdateImage: PropTypes.func.isRequired,
++    selectedItems: PropTypes.arrayOf(PropTypes.instanceOf(paper.Item)),
++    setCursor: PropTypes.func.isRequired,
++    setSelectedItems: PropTypes.func.isRequired
++};
++
++const mapStateToProps = state => ({
++    colorState: state.scratchPaint.color,
++    isTriangleModeActive: state.scratchPaint.mode === Modes.TRIANGLE,
++    selectedItems: state.scratchPaint.selectedItems
++});
++const mapDispatchToProps = dispatch => ({
++    clearSelectedItems: () => {
++        dispatch(clearSelectedItems());
++    },
++    clearFillGradient: () => {
++        dispatch(clearFillGradient());
++    },
++    clearStrokeGradient: () => {
++        dispatch(clearStrokeGradient());
++    },
++    setSelectedItems: () => {
++        dispatch(setSelectedItems(getSelectedLeafItems(), false /* bitmapMode */));
++    },
++    setCursor: cursorString => {
++        dispatch(setCursor(cursorString));
++    },
++    handleMouseDown: () => {
++        dispatch(changeMode(Modes.TRIANGLE));
++    },
++    onChangeFillColor: fillColor => {
++        dispatch(changeFillColor(fillColor));
++    },
++    onChangeStrokeColor: strokeColor => {
++        dispatch(changeStrokeColor(strokeColor));
++    }
++});
++
++export default connect(
++    mapStateToProps,
++    mapDispatchToProps
++)(TriangleMode);
+diff --git a/node_modules/scratch-paint/src/helper/guides.js b/node_modules/scratch-paint/src/helper/guides.js
+index 0d3fba6..4341cb8 100644
+--- a/node_modules/scratch-paint/src/helper/guides.js
++++ b/node_modules/scratch-paint/src/helper/guides.js
+@@ -4,6 +4,8 @@ import {getAllRootItems} from './selection';
+ 
+ const GUIDE_BLUE = '#009dec';
+ const GUIDE_GREY = '#aaaaaa';
++// PPT-style magenta for smart alignment guides
++const GUIDE_ALIGN = '#ff00ff';
+ 
+ const setDefaultGuideStyle = function (item) {
+     item.strokeWidth = 1 / paper.view.zoom;
+@@ -91,7 +93,7 @@ const _removePaperItemsByTags = function (tags) {
+ };
+ 
+ const removeBoundsPath = function () {
+-    _removePaperItemsByDataTags(['isSelectionBound', 'isRotHandle', 'isScaleHandle']);
++    _removePaperItemsByDataTags(['isSelectionBound', 'isRotHandle', 'isScaleHandle', 'isAngleTooltip']);
+ };
+ 
+ const removeBoundsHandles = function () {
+@@ -106,6 +108,65 @@ const removeHitPoint = function () {
+     _removePaperItemsByDataTags(['isHitPoint']);
+ };
+ 
++// --- Smart alignment guides (PPT-style) ---
++
++/**
++ * Draws smart alignment guides (vertical and/or horizontal) at the given points.
++ * Each point produces a vertical line and/or a horizontal line spanning the current viewport,
++ * similar to PowerPoint's smart guides when shapes are aligned.
++ *
++ * @param {Array<{x: number, y: number, vertical: boolean, horizontal: boolean}>} guides
++ *   List of guide descriptors. `vertical` and `horizontal` default to true.
++ */
++const drawAlignmentGuides = function (guides) {
++    removeAlignmentGuides();
++    if (!guides || guides.length === 0) return;
++
++    const viewBounds = paper.view.bounds;
++    const guideLayer = getGuideLayer();
++    const zoom = 1 / paper.view.zoom;
++
++    for (const g of guides) {
++        const drawVertical = g.vertical !== false;
++        const drawHorizontal = g.horizontal !== false;
++
++        if (drawVertical) {
++            const vLine = new paper.Path.Line(
++                new paper.Point(g.x, viewBounds.top),
++                new paper.Point(g.x, viewBounds.bottom)
++            );
++            vLine.strokeWidth = zoom;
++            vLine.strokeColor = GUIDE_ALIGN;
++            vLine.opacity = 0.9;
++            vLine.blendMode = 'normal';
++            vLine.guide = true;
++            vLine.parent = guideLayer;
++            vLine.data.isAlignGuide = true;
++            vLine.data.isHelperItem = true;
++            vLine.bringToFront();
++        }
++        if (drawHorizontal) {
++            const hLine = new paper.Path.Line(
++                new paper.Point(viewBounds.left, g.y),
++                new paper.Point(viewBounds.right, g.y)
++            );
++            hLine.strokeWidth = zoom;
++            hLine.strokeColor = GUIDE_ALIGN;
++            hLine.opacity = 0.9;
++            hLine.blendMode = 'normal';
++            hLine.guide = true;
++            hLine.parent = guideLayer;
++            hLine.data.isAlignGuide = true;
++            hLine.data.isHelperItem = true;
++            hLine.bringToFront();
++        }
++    }
++};
++
++const removeAlignmentGuides = function () {
++    _removePaperItemsByDataTags(['isAlignGuide']);
++};
++
+ const drawHitPoint = function (point) {
+     removeHitPoint();
+     if (point) {
+@@ -129,5 +190,7 @@ export {
+     drawHitPoint,
+     removeHitPoint,
+     getGuideColor,
+-    setDefaultGuideStyle
++    setDefaultGuideStyle,
++    drawAlignmentGuides,
++    removeAlignmentGuides
+ };
+diff --git a/node_modules/scratch-paint/src/helper/selection-tools/move-tool.js b/node_modules/scratch-paint/src/helper/selection-tools/move-tool.js
+index 27f9bf6..0c69a4f 100644
+--- a/node_modules/scratch-paint/src/helper/selection-tools/move-tool.js
++++ b/node_modules/scratch-paint/src/helper/selection-tools/move-tool.js
+@@ -2,12 +2,13 @@ import paper from '@turbowarp/paper';
+ import Modes, {BitmapModes} from '../../lib/modes';
+ import {isGroup} from '../group';
+ import {isCompoundPathItem, getRootItem} from '../item';
+-import {checkPointsClose, snapDeltaToAngle} from '../math';
++import {snapDeltaToAngle} from '../math';
+ import {getActionBounds, CENTER} from '../view';
+ import {
+     clearSelection, cloneSelection, getSelectedLeafItems, getSelectedRootItems, setItemSelection
+ } from '../selection';
+ import {getDragCrosshairLayer, CROSSHAIR_FULL_OPACITY} from '../layer';
++import {drawAlignmentGuides, removeAlignmentGuides} from '../guides';
+ 
+ /** Snap to align selection center to rotation center within this distance */
+ const SNAPPING_THRESHOLD = 4;
+@@ -130,22 +131,41 @@ class MoveTool {
+         point.y = Math.max(actionBounds.top, Math.min(point.y, actionBounds.bottom));
+ 
+         const dragVector = point.subtract(event.downPoint);
+-        let snapVector;
++        let snapCorrection;
++        let snappedX = false;
++        let snappedY = false;
+ 
+         // Snapping to align center. Not in reshape mode, because reshape doesn't show center crosshair
+         if (!event.modifiers.shift && this.mode !== Modes.RESHAPE) {
+-            if (checkPointsClose(
+-                this.selectionCenter.add(dragVector),
+-                CENTER,
+-                SNAPPING_THRESHOLD / paper.view.zoom /* threshold */)) {
+-
+-                snapVector = CENTER.subtract(this.selectionCenter);
++            // PPT-style: snap to the vertical and/or horizontal centerline independently
++            const threshold = SNAPPING_THRESHOLD / paper.view.zoom;
++            const newCenter = this.selectionCenter.add(dragVector);
++            if (Math.abs(newCenter.x - CENTER.x) < threshold) {
++                snappedX = true;
++            }
++            if (Math.abs(newCenter.y - CENTER.y) < threshold) {
++                snappedY = true;
++            }
++            if (snappedX || snappedY) {
++                snapCorrection = new paper.Point(
++                    snappedX ? CENTER.x - newCenter.x : 0,
++                    snappedY ? CENTER.y - newCenter.y : 0
++                );
+             }
+         }
+         if (this.selectedItems.length === 0) {
+             return;
+         }
+ 
++        // Show smart alignment guides (PPT-style) when the selection snaps to a centerline.
++        if (snappedX || snappedY) {
++            drawAlignmentGuides([
++                {x: CENTER.x, y: CENTER.y, vertical: snappedX, horizontal: snappedY}
++            ]);
++        } else {
++            removeAlignmentGuides();
++        }
++
+         let bounds;
+         for (const item of this.selectedItems) {
+             // add the position of the item before the drag started
+@@ -154,8 +174,8 @@ class MoveTool {
+                 item.data.origPos = item.position;
+             }
+ 
+-            if (snapVector) {
+-                item.position = item.data.origPos.add(snapVector);
++            if (snapCorrection) {
++                item.position = item.data.origPos.add(dragVector).add(snapCorrection);
+             } else if (event.modifiers.shift) {
+                 item.position = item.data.origPos.add(snapDeltaToAngle(dragVector, Math.PI / 4));
+             } else {
+@@ -220,6 +240,8 @@ class MoveTool {
+ 
+         // Hide the crosshair we showed earlier.
+         getDragCrosshairLayer().visible = false;
++        // Remove any smart alignment guides shown during the drag.
++        removeAlignmentGuides();
+     }
+ }
+ 
+diff --git a/node_modules/scratch-paint/src/helper/selection-tools/rotate-tool.js b/node_modules/scratch-paint/src/helper/selection-tools/rotate-tool.js
+index 38fb6fa..0831e52 100644
+--- a/node_modules/scratch-paint/src/helper/selection-tools/rotate-tool.js
++++ b/node_modules/scratch-paint/src/helper/selection-tools/rotate-tool.js
+@@ -1,4 +1,5 @@
+ import paper from '@turbowarp/paper';
++import {getGuideLayer} from '../layer';
+ 
+ /**
+  * Tool to handle rotation when dragging the rotation handle in the bounding box tool.
+@@ -12,6 +13,63 @@ class RotateTool {
+         this.rotGroupPivot = null;
+         this.prevRot = 90;
+         this.onUpdateImage = onUpdateImage;
++        this.angleTooltip = null;
++    }
++
++    _removeAngleTooltip () {
++        if (this.angleTooltip) {
++            this.angleTooltip.remove();
++            this.angleTooltip = null;
++        }
++    }
++
++    _updateAngleTooltip (event, angle) {
++        const zoom = paper.view.zoom;
++        const fontSize = 11 / zoom;
++        const padding = 4 / zoom;
++        const offsetX = 16 / zoom;
++        const offsetY = -16 / zoom;
++
++        const displayAngle = Math.round(angle);
++        const text = `${displayAngle}°`;
++
++        if (!this.angleTooltip) {
++            const guideLayer = getGuideLayer();
++            this.angleTooltip = new paper.Group();
++            this.angleTooltip.data.isAngleTooltip = true;
++            this.angleTooltip.data.isHelperItem = true;
++            this.angleTooltip.guide = true;
++            this.angleTooltip.locked = true;
++            this.angleTooltip.parent = guideLayer;
++        }
++
++        // Remove old children
++        this.angleTooltip.removeChildren();
++
++        const pointText = new paper.PointText({
++            point: new paper.Point(0, 0),
++            content: text,
++            fillColor: '#ffffff',
++            fontSize: fontSize,
++            fontFamily: 'sans-serif',
++            justification: 'center'
++        });
++        pointText.data.isHelperItem = true;
++
++        const textBounds = pointText.bounds;
++        const bgRect = new paper.Path.Rectangle({
++            point: textBounds.topLeft.subtract(new paper.Point(padding, padding)),
++            size: textBounds.size.add(new paper.Point(padding * 2, padding * 2)),
++            radius: 3 / zoom,
++            fillColor: new paper.Color(0, 0, 0, 0.7)
++        });
++        bgRect.data.isHelperItem = true;
++
++        this.angleTooltip.addChild(bgRect);
++        this.angleTooltip.addChild(pointText);
++
++        this.angleTooltip.position = event.point.add(new paper.Point(offsetX, offsetY));
++        this.angleTooltip.bringToFront();
+     }
+ 
+     /**
+@@ -41,11 +99,15 @@ class RotateTool {
+             item.rotate(rotAngle - this.prevRot, this.rotGroupPivot);
+         }
+ 
++        this._updateAngleTooltip(event, rotAngle);
++
+         this.prevRot = rotAngle;
+     }
+     onMouseUp (event) {
+         if (event.event.button > 0) return; // only first mouse button
+ 
++        this._removeAngleTooltip();
++
+         this.rotItems.length = 0;
+         this.rotGroupPivot = null;
+         this.prevRot = 90;
+diff --git a/node_modules/scratch-paint/src/helper/tools/arrow-tool.js b/node_modules/scratch-paint/src/helper/tools/arrow-tool.js
+new file mode 100644
+index 0000000..6ee5579
+--- /dev/null
++++ b/node_modules/scratch-paint/src/helper/tools/arrow-tool.js
+@@ -0,0 +1,156 @@
++import paper from '@turbowarp/paper';
++import Modes from '../../lib/modes';
++import {styleShape} from '../style-path';
++import {clearSelection} from '../selection';
++import {getSquareDimensions} from '../math';
++import BoundingBoxTool from '../selection-tools/bounding-box-tool';
++import NudgeTool from '../selection-tools/nudge-tool';
++
++/**
++ * Tool for drawing arrows.
++ */
++class ArrowTool extends paper.Tool {
++    static get TOLERANCE () {
++        return 2;
++    }
++    constructor (setSelectedItems, clearSelectedItems, setCursor, onUpdateImage) {
++        super();
++        this.setSelectedItems = setSelectedItems;
++        this.clearSelectedItems = clearSelectedItems;
++        this.onUpdateImage = onUpdateImage;
++        this.boundingBoxTool = new BoundingBoxTool(
++            Modes.ARROW,
++            setSelectedItems,
++            clearSelectedItems,
++            setCursor,
++            onUpdateImage
++        );
++        const nudgeTool = new NudgeTool(Modes.ARROW, this.boundingBoxTool, onUpdateImage);
++
++        this.onMouseDown = this.handleMouseDown;
++        this.onMouseMove = this.handleMouseMove;
++        this.onMouseDrag = this.handleMouseDrag;
++        this.onMouseUp = this.handleMouseUp;
++        this.onKeyUp = nudgeTool.onKeyUp;
++        this.onKeyDown = nudgeTool.onKeyDown;
++
++        this.arrow = null;
++        this.colorState = null;
++        this.isBoundingBoxMode = null;
++        this.active = false;
++    }
++    getHitOptions () {
++        return {
++            segments: true,
++            stroke: true,
++            curves: true,
++            fill: true,
++            guide: false,
++            match: hitResult =>
++                (hitResult.item.data && (hitResult.item.data.isScaleHandle || hitResult.item.data.isRotHandle)) ||
++                hitResult.item.selected,
++            tolerance: ArrowTool.TOLERANCE / paper.view.zoom
++        };
++    }
++    onSelectionChanged (selectedItems) {
++        this.boundingBoxTool.onSelectionChanged(selectedItems);
++    }
++    setColorState (colorState) {
++        this.colorState = colorState;
++    }
++    handleMouseDown (event) {
++        if (event.event.button > 0) return;
++        this.active = true;
++
++        if (this.boundingBoxTool.onMouseDown(
++            event, false, false, false, this.getHitOptions())) {
++            this.isBoundingBoxMode = true;
++        } else {
++            this.isBoundingBoxMode = false;
++            clearSelection(this.clearSelectedItems);
++        }
++    }
++    handleMouseDrag (event) {
++        if (event.event.button > 0 || !this.active) return;
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseDrag(event);
++            return;
++        }
++
++        if (this.arrow) {
++            this.arrow.remove();
++        }
++
++        const rect = new paper.Rectangle(event.downPoint, event.point);
++        const squareDimensions = getSquareDimensions(event.downPoint, event.point);
++        if (event.modifiers.shift) {
++            rect.size = squareDimensions.size.abs();
++        }
++
++        const x1 = rect.left;
++        const x2 = rect.right;
++        const y1 = rect.top;
++        const y2 = rect.bottom;
++        const w = rect.width;
++        const h = rect.height;
++
++        // Arrow shape: shaft occupies left 60%, head occupies right 40%
++        // Shaft height is 40% of total height, head spans full height
++        const shaftRight = x1 + 0.6 * w;
++        const shaftTop = y1 + 0.3 * h;
++        const shaftBottom = y1 + 0.7 * h;
++        const midY = y1 + 0.5 * h;
++
++        this.arrow = new paper.Path();
++        this.arrow.add(new paper.Point(x1, shaftTop));
++        this.arrow.add(new paper.Point(shaftRight, shaftTop));
++        this.arrow.add(new paper.Point(shaftRight, y1));
++        this.arrow.add(new paper.Point(x2, midY));
++        this.arrow.add(new paper.Point(shaftRight, y2));
++        this.arrow.add(new paper.Point(shaftRight, shaftBottom));
++        this.arrow.add(new paper.Point(x1, shaftBottom));
++        this.arrow.closed = true;
++
++        if (event.modifiers.alt) {
++            this.arrow.position = event.downPoint;
++        } else if (event.modifiers.shift) {
++            this.arrow.position = squareDimensions.position;
++        } else {
++            const dimensions = event.point.subtract(event.downPoint);
++            this.arrow.position = event.downPoint.add(dimensions.multiply(0.5));
++        }
++
++        styleShape(this.arrow, this.colorState);
++    }
++    handleMouseUp (event) {
++        if (event.event.button > 0 || !this.active) return;
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseUp(event);
++            this.isBoundingBoxMode = null;
++            return;
++        }
++
++        if (this.arrow) {
++            if (Math.abs(this.arrow.area) < ArrowTool.TOLERANCE / paper.view.zoom) {
++                this.arrow.remove();
++                this.arrow = null;
++            } else {
++                this.arrow.selected = true;
++                this.setSelectedItems();
++                this.onUpdateImage();
++                this.arrow = null;
++            }
++        }
++        this.active = false;
++    }
++    handleMouseMove (event) {
++        this.boundingBoxTool.onMouseMove(event, this.getHitOptions());
++    }
++    deactivateTool () {
++        this.boundingBoxTool.deactivateTool();
++    }
++}
++
++export default ArrowTool;
+diff --git a/node_modules/scratch-paint/src/helper/tools/double-arrow-tool.js b/node_modules/scratch-paint/src/helper/tools/double-arrow-tool.js
+new file mode 100644
+index 0000000..96658d0
+--- /dev/null
++++ b/node_modules/scratch-paint/src/helper/tools/double-arrow-tool.js
+@@ -0,0 +1,169 @@
++import paper from '@turbowarp/paper';
++import Modes from '../../lib/modes';
++import {styleShape} from '../style-path';
++import {clearSelection} from '../selection';
++import {getSquareDimensions} from '../math';
++import BoundingBoxTool from '../selection-tools/bounding-box-tool';
++import NudgeTool from '../selection-tools/nudge-tool';
++
++/**
++ * Tool for drawing double arrows (bidirectional arrows).
++ */
++class DoubleArrowTool extends paper.Tool {
++    static get TOLERANCE () {
++        return 2;
++    }
++    constructor (setSelectedItems, clearSelectedItems, setCursor, onUpdateImage) {
++        super();
++        this.setSelectedItems = setSelectedItems;
++        this.clearSelectedItems = clearSelectedItems;
++        this.onUpdateImage = onUpdateImage;
++        this.boundingBoxTool = new BoundingBoxTool(
++            Modes.DOUBLE_ARROW,
++            setSelectedItems,
++            clearSelectedItems,
++            setCursor,
++            onUpdateImage
++        );
++        const nudgeTool = new NudgeTool(Modes.DOUBLE_ARROW, this.boundingBoxTool, onUpdateImage);
++
++        this.onMouseDown = this.handleMouseDown;
++        this.onMouseMove = this.handleMouseMove;
++        this.onMouseDrag = this.handleMouseDrag;
++        this.onMouseUp = this.handleMouseUp;
++        this.onKeyUp = nudgeTool.onKeyUp;
++        this.onKeyDown = nudgeTool.onKeyDown;
++
++        this.arrow = null;
++        this.colorState = null;
++        this.isBoundingBoxMode = null;
++        this.active = false;
++    }
++    getHitOptions () {
++        return {
++            segments: true,
++            stroke: true,
++            curves: true,
++            fill: true,
++            guide: false,
++            match: hitResult =>
++                (hitResult.item.data && (hitResult.item.data.isScaleHandle || hitResult.item.data.isRotHandle)) ||
++                hitResult.item.selected,
++            tolerance: DoubleArrowTool.TOLERANCE / paper.view.zoom
++        };
++    }
++    onSelectionChanged (selectedItems) {
++        this.boundingBoxTool.onSelectionChanged(selectedItems);
++    }
++    setColorState (colorState) {
++        this.colorState = colorState;
++    }
++    handleMouseDown (event) {
++        if (event.event.button > 0) return;
++        this.active = true;
++
++        if (this.boundingBoxTool.onMouseDown(
++            event, false, false, false, this.getHitOptions())) {
++            this.isBoundingBoxMode = true;
++        } else {
++            this.isBoundingBoxMode = false;
++            clearSelection(this.clearSelectedItems);
++        }
++    }
++    handleMouseDrag (event) {
++        if (event.event.button > 0 || !this.active) return;
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseDrag(event);
++            return;
++        }
++
++        if (this.arrow) {
++            this.arrow.remove();
++        }
++
++        const rect = new paper.Rectangle(event.downPoint, event.point);
++        const squareDimensions = getSquareDimensions(event.downPoint, event.point);
++        if (event.modifiers.shift) {
++            rect.size = squareDimensions.size.abs();
++        }
++
++        const x1 = rect.left;
++        const x2 = rect.right;
++        const y1 = rect.top;
++        const y2 = rect.bottom;
++        const w = rect.width;
++        const h = rect.height;
++
++        // Double arrow: arrowheads on both ends, shaft in the middle
++        // Each arrowhead takes 30% of width, shaft height is 40% of total height
++        const headW = 0.3 * w;
++        const shaftTop = y1 + 0.3 * h;
++        const shaftBottom = y1 + 0.7 * h;
++        const midY = y1 + 0.5 * h;
++
++        this.arrow = new paper.Path();
++        // Left tip
++        this.arrow.add(new paper.Point(x1, midY));
++        // Left arrowhead top
++        this.arrow.add(new paper.Point(x1 + headW, y1));
++        // Shaft top-left
++        this.arrow.add(new paper.Point(x1 + headW, shaftTop));
++        // Shaft top-right
++        this.arrow.add(new paper.Point(x2 - headW, shaftTop));
++        // Right arrowhead top
++        this.arrow.add(new paper.Point(x2 - headW, y1));
++        // Right tip
++        this.arrow.add(new paper.Point(x2, midY));
++        // Right arrowhead bottom
++        this.arrow.add(new paper.Point(x2 - headW, y2));
++        // Shaft bottom-right
++        this.arrow.add(new paper.Point(x2 - headW, shaftBottom));
++        // Shaft bottom-left
++        this.arrow.add(new paper.Point(x1 + headW, shaftBottom));
++        // Left arrowhead bottom
++        this.arrow.add(new paper.Point(x1 + headW, y2));
++        this.arrow.closed = true;
++
++        if (event.modifiers.alt) {
++            this.arrow.position = event.downPoint;
++        } else if (event.modifiers.shift) {
++            this.arrow.position = squareDimensions.position;
++        } else {
++            const dimensions = event.point.subtract(event.downPoint);
++            this.arrow.position = event.downPoint.add(dimensions.multiply(0.5));
++        }
++
++        styleShape(this.arrow, this.colorState);
++    }
++    handleMouseUp (event) {
++        if (event.event.button > 0 || !this.active) return;
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseUp(event);
++            this.isBoundingBoxMode = null;
++            return;
++        }
++
++        if (this.arrow) {
++            if (Math.abs(this.arrow.area) < DoubleArrowTool.TOLERANCE / paper.view.zoom) {
++                this.arrow.remove();
++                this.arrow = null;
++            } else {
++                this.arrow.selected = true;
++                this.setSelectedItems();
++                this.onUpdateImage();
++                this.arrow = null;
++            }
++        }
++        this.active = false;
++    }
++    handleMouseMove (event) {
++        this.boundingBoxTool.onMouseMove(event, this.getHitOptions());
++    }
++    deactivateTool () {
++        this.boundingBoxTool.deactivateTool();
++    }
++}
++
++export default DoubleArrowTool;
+diff --git a/node_modules/scratch-paint/src/helper/tools/heart-tool.js b/node_modules/scratch-paint/src/helper/tools/heart-tool.js
+new file mode 100644
+index 0000000..819c5fc
+--- /dev/null
++++ b/node_modules/scratch-paint/src/helper/tools/heart-tool.js
+@@ -0,0 +1,178 @@
++import paper from '@turbowarp/paper';
++import Modes from '../../lib/modes';
++import {styleShape} from '../style-path';
++import {clearSelection} from '../selection';
++import {getSquareDimensions} from '../math';
++import BoundingBoxTool from '../selection-tools/bounding-box-tool';
++import NudgeTool from '../selection-tools/nudge-tool';
++
++/**
++ * Tool for drawing hearts.
++ */
++class HeartTool extends paper.Tool {
++    static get TOLERANCE () {
++        return 2;
++    }
++    /**
++     * Outline of a heart normalized to the unit square, y pointing down, listed clockwise
++     * starting at the top notch. Sampled from the classic parametric heart curve
++     * x = 16sin³t, y = 13cos t - 5cos 2t - 2cos 3t - cos 4t, with the handles set from the
++     * curve's own tangents so each pair of nodes reproduces its arc to within 0.7% of the
++     * shape's size. Nodes are placed on the notch, both lobe apexes, both widest points and
++     * the tip, so the outline touches every edge of the box the user drags. The notch keeps
++     * a small handle instead of the curve's true cusp, which would render as a hairline
++     * crack at small sizes.
++     */
++    static get UNIT_SEGMENTS () {
++        return [
++            {point: [0.5, 0.2394], handleIn: [-0.02, 0], handleOut: [0.02, 0]},
++            {point: [0.5422, 0.1206], handleIn: [-0.0392, 0.0624], handleOut: [0.0392, -0.0624]},
++            {point: [0.7449, 0], handleIn: [-0.0868, 0], handleOut: [0.0633, 0]},
++            {point: [0.9228, 0.0802], handleIn: [-0.0482, -0.0508], handleOut: [0.0482, 0.0508]},
++            {point: [1, 0.2739], handleIn: [0, -0.0726], handleOut: [0, 0.172]},
++            {point: [0.6768, 0.7444], handleIn: [0.1388, -0.1353], handleOut: [-0.1388, 0.1353]},
++            {point: [0.5, 1], handleIn: [0, 0], handleOut: [0, 0]},
++            {point: [0.3232, 0.7444], handleIn: [0.1388, 0.1353], handleOut: [-0.1388, -0.1353]},
++            {point: [0, 0.2739], handleIn: [0, 0.172], handleOut: [0, -0.0726]},
++            {point: [0.0772, 0.0802], handleIn: [-0.0482, 0.0508], handleOut: [0.0482, -0.0508]},
++            {point: [0.2551, 0], handleIn: [-0.0633, 0], handleOut: [0.0868, 0]},
++            {point: [0.4578, 0.1206], handleIn: [-0.0392, -0.0624], handleOut: [0.0392, 0.0624]}
++        ];
++    }
++    /**
++     * @param {paper.Rectangle} rect Bounding box to fit the heart into
++     * @return {paper.Path} A closed heart shaped path
++     */
++    static createHeartPath (rect) {
++        const w = rect.width;
++        const h = rect.height;
++        const path = new paper.Path();
++        for (const segment of HeartTool.UNIT_SEGMENTS) {
++            path.add(new paper.Segment(
++                new paper.Point(rect.left + (segment.point[0] * w), rect.top + (segment.point[1] * h)),
++                new paper.Point(segment.handleIn[0] * w, segment.handleIn[1] * h),
++                new paper.Point(segment.handleOut[0] * w, segment.handleOut[1] * h)
++            ));
++        }
++        path.closed = true;
++        return path;
++    }
++    constructor (setSelectedItems, clearSelectedItems, setCursor, onUpdateImage) {
++        super();
++        this.setSelectedItems = setSelectedItems;
++        this.clearSelectedItems = clearSelectedItems;
++        this.onUpdateImage = onUpdateImage;
++        this.boundingBoxTool = new BoundingBoxTool(
++            Modes.HEART,
++            setSelectedItems,
++            clearSelectedItems,
++            setCursor,
++            onUpdateImage
++        );
++        const nudgeTool = new NudgeTool(Modes.HEART, this.boundingBoxTool, onUpdateImage);
++
++        this.onMouseDown = this.handleMouseDown;
++        this.onMouseMove = this.handleMouseMove;
++        this.onMouseDrag = this.handleMouseDrag;
++        this.onMouseUp = this.handleMouseUp;
++        this.onKeyUp = nudgeTool.onKeyUp;
++        this.onKeyDown = nudgeTool.onKeyDown;
++
++        this.heart = null;
++        this.colorState = null;
++        this.isBoundingBoxMode = null;
++        this.active = false;
++    }
++    getHitOptions () {
++        return {
++            segments: true,
++            stroke: true,
++            curves: true,
++            fill: true,
++            guide: false,
++            match: hitResult =>
++                (hitResult.item.data && (hitResult.item.data.isScaleHandle || hitResult.item.data.isRotHandle)) ||
++                hitResult.item.selected,
++            tolerance: HeartTool.TOLERANCE / paper.view.zoom
++        };
++    }
++    onSelectionChanged (selectedItems) {
++        this.boundingBoxTool.onSelectionChanged(selectedItems);
++    }
++    setColorState (colorState) {
++        this.colorState = colorState;
++    }
++    handleMouseDown (event) {
++        if (event.event.button > 0) return;
++        this.active = true;
++
++        if (this.boundingBoxTool.onMouseDown(
++            event, false, false, false, this.getHitOptions())) {
++            this.isBoundingBoxMode = true;
++        } else {
++            this.isBoundingBoxMode = false;
++            clearSelection(this.clearSelectedItems);
++        }
++    }
++    handleMouseDrag (event) {
++        if (event.event.button > 0 || !this.active) return;
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseDrag(event);
++            return;
++        }
++
++        if (this.heart) {
++            this.heart.remove();
++        }
++
++        const rect = new paper.Rectangle(event.downPoint, event.point);
++        const squareDimensions = getSquareDimensions(event.downPoint, event.point);
++        if (event.modifiers.shift) {
++            rect.size = squareDimensions.size.abs();
++        }
++
++        this.heart = HeartTool.createHeartPath(rect);
++
++        if (event.modifiers.alt) {
++            this.heart.position = event.downPoint;
++        } else if (event.modifiers.shift) {
++            this.heart.position = squareDimensions.position;
++        } else {
++            const dimensions = event.point.subtract(event.downPoint);
++            this.heart.position = event.downPoint.add(dimensions.multiply(0.5));
++        }
++
++        styleShape(this.heart, this.colorState);
++    }
++    handleMouseUp (event) {
++        if (event.event.button > 0 || !this.active) return;
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseUp(event);
++            this.isBoundingBoxMode = null;
++            return;
++        }
++
++        if (this.heart) {
++            if (Math.abs(this.heart.area) < HeartTool.TOLERANCE / paper.view.zoom) {
++                this.heart.remove();
++                this.heart = null;
++            } else {
++                this.heart.selected = true;
++                this.setSelectedItems();
++                this.onUpdateImage();
++                this.heart = null;
++            }
++        }
++        this.active = false;
++    }
++    handleMouseMove (event) {
++        this.boundingBoxTool.onMouseMove(event, this.getHitOptions());
++    }
++    deactivateTool () {
++        this.boundingBoxTool.deactivateTool();
++    }
++}
++
++export default HeartTool;
+diff --git a/node_modules/scratch-paint/src/helper/tools/rounded-rect-tool.js b/node_modules/scratch-paint/src/helper/tools/rounded-rect-tool.js
+index 25ada6b..3a5e3ca 100644
+--- a/node_modules/scratch-paint/src/helper/tools/rounded-rect-tool.js
++++ b/node_modules/scratch-paint/src/helper/tools/rounded-rect-tool.js
+@@ -1,54 +1,404 @@
+ import paper from '@turbowarp/paper';
+-import log from '../../log/log';
++import Modes from '../../lib/modes';
++import {styleShape} from '../style-path';
++import {clearSelection} from '../selection';
++import {getSquareDimensions} from '../math';
++import BoundingBoxTool from '../selection-tools/bounding-box-tool';
++import NudgeTool from '../selection-tools/nudge-tool';
++
++// Standard kappa value for approximating a circular arc with cubic bezier curves
++const CIRCLE_KAPPA = 0.5522847498;
++
++/**
++ * Create a rounded rectangle path with configurable corner radius and curvature.
++ * @param {paper.Rectangle} rect The bounding rectangle
++ * @param {number} radius The corner radius
++ * @param {number} curvature The corner curvature (0-100, where 100 = standard circular arc)
++ * @returns {paper.Path} The rounded rectangle path
++ */
++function createRoundedRectPath (rect, radius, curvature) {
++    const r = Math.min(radius, rect.width / 2, rect.height / 2);
++    const kappa = (curvature / 100) * CIRCLE_KAPPA;
++
++    if (r === 0 || curvature === 0) {
++        // No rounding, return a simple rectangle
++        return new paper.Path.Rectangle(rect);
++    }
++
++    const path = new paper.Path();
++    const x1 = rect.left;
++    const y1 = rect.top;
++    const x2 = rect.right;
++    const y2 = rect.bottom;
++
++    // Start at top-left corner, going clockwise
++    // Left side, below top-left corner
++    path.add(new paper.Segment(
++        new paper.Point(x1, y1 + r),
++        null,
++        new paper.Point(0, -r * kappa)
++    ));
++    // Top side, right of top-left corner
++    path.add(new paper.Segment(
++        new paper.Point(x1 + r, y1),
++        new paper.Point(-r * kappa, 0),
++        null
++    ));
++    // Top side, left of top-right corner
++    path.add(new paper.Segment(
++        new paper.Point(x2 - r, y1),
++        null,
++        new paper.Point(r * kappa, 0)
++    ));
++    // Right side, below top-right corner
++    path.add(new paper.Segment(
++        new paper.Point(x2, y1 + r),
++        new paper.Point(0, -r * kappa),
++        null
++    ));
++    // Right side, above bottom-right corner
++    path.add(new paper.Segment(
++        new paper.Point(x2, y2 - r),
++        null,
++        new paper.Point(0, r * kappa)
++    ));
++    // Bottom side, right of bottom-right corner
++    path.add(new paper.Segment(
++        new paper.Point(x2 - r, y2),
++        new paper.Point(r * kappa, 0),
++        null
++    ));
++    // Bottom side, left of bottom-left corner
++    path.add(new paper.Segment(
++        new paper.Point(x1 + r, y2),
++        null,
++        new paper.Point(-r * kappa, 0)
++    ));
++    // Left side, above bottom-left corner
++    path.add(new paper.Segment(
++        new paper.Point(x1, y2 - r),
++        new paper.Point(0, r * kappa),
++        null
++    ));
++
++    path.closed = true;
++    return path;
++}
++
++/**
++ * Check if a path is a rounded rectangle (either tagged or matching the geometric pattern).
++ * @param {paper.Path} path The path to check
++ * @returns {boolean} True if the path is a rounded rectangle
++ */
++function isRoundedRectPath (path) {
++    if (!path || !path.segments) return false;
++    // Tagged during creation or previous rebuild
++    if (path.data && path.data.isRoundedRect) return true;
++    // Geometric heuristic for paths loaded from SVG: 8 segments, closed,
++    // each segment has exactly one non-zero handle (alternating handleIn/handleOut)
++    if (path.segments.length !== 8 || !path.closed) return false;
++    for (let i = 0; i < 8; i++) {
++        const seg = path.segments[i];
++        const hasIn = seg.handleIn && seg.handleIn.length > 0.001;
++        const hasOut = seg.handleOut && seg.handleOut.length > 0.001;
++        if (hasIn === hasOut) return false; // Both zero or both non-zero
++    }
++    return true;
++}
++
++/**
++ * Extract corner radius and curvature from a rounded rectangle path.
++ * For tagged paths, reads from data. For untagged paths, computes from geometry.
++ * @param {paper.Path} path The rounded rectangle path
++ * @returns {{cornerRadius: number, cornerCurvature: number}}
++ */
++function getRoundedRectParams (path) {
++    if (path.data && path.data.isRoundedRect) {
++        return {
++            cornerRadius: path.data.cornerRadius,
++            cornerCurvature: path.data.cornerCurvature
++        };
++    }
++    // Extract from geometry: seg[0] at (x1, y1+r), seg[1] at (x1+r, y1)
++    // distance = r*sqrt(2), handleLen = r*kappa, kappa = (curvature/100)*CIRCLE_KAPPA
++    const segs = path.segments;
++    if (segs.length !== 8) {
++        return {cornerRadius: 20, cornerCurvature: 100};
++    }
++    const d = segs[1].point.subtract(segs[0].point).length;
++    const r = d / Math.sqrt(2);
++    const handleLen = segs[0].handleOut ? segs[0].handleOut.length : 0;
++    const kappa = r > 0.001 ? handleLen / r : 0;
++    const curvature = kappa > 0 ? Math.round((kappa / CIRCLE_KAPPA) * 100) : 0;
++    return {
++        cornerRadius: Math.round(r),
++        cornerCurvature: Math.max(0, Math.min(100, curvature))
++    };
++}
++
++/**
++ * Get the local (un-rotated) bounding rect and rotation angle of a rounded rectangle path.
++ * @param {paper.Path} path The rounded rectangle path
++ * @returns {{rect: paper.Rectangle, rotation: number}}
++ */
++function getRoundedRectInfo (path) {
++    const segs = path.segments;
++    // Determine the top edge based on segment count
++    let topStart, topEnd;
++    if (segs.length === 8) {
++        topStart = segs[1].point;
++        topEnd = segs[2].point;
++    } else if (segs.length === 4) {
++        topStart = segs[0].point;
++        topEnd = segs[1].point;
++    } else {
++        return {rect: path.bounds, rotation: 0};
++    }
++
++    const topVec = topEnd.subtract(topStart);
++    const rotation = topVec.angle;
++    // Check if the top edge is effectively horizontal (angle ≈ 0 or 180)
++    const isHorizontal = Math.abs(rotation) < 0.5 ||
++        Math.abs(Math.abs(rotation) - 180) < 0.5;
++
++    let rect;
++    if (isHorizontal) {
++        rect = path.bounds;
++    } else {
++        // Rotated: un-rotate all segment points around center to find local bounds
++        const center = path.bounds.center;
++        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
++        for (const seg of segs) {
++            const p = seg.point.rotate(-rotation, center);
++            if (p.x < minX) minX = p.x;
++            if (p.x > maxX) maxX = p.x;
++            if (p.y < minY) minY = p.y;
++            if (p.y > maxY) maxY = p.y;
++        }
++        rect = new paper.Rectangle(minX, minY, maxX - minX, maxY - minY);
++    }
++
++    return {rect, rotation: isHorizontal ? 0 : rotation};
++}
+ 
+ /**
+- * Tool for drawing rounded rectangles
++ * Rebuild a rounded rectangle path with new corner radius and curvature.
++ * Preserves the bounding box, rotation, style, and position of the original path.
++ * @param {paper.Path} oldPath The original rounded rectangle path
++ * @param {number} newRadius The new corner radius
++ * @param {number} newCurvature The new corner curvature (0-100)
++ * @returns {paper.Path} The new rounded rectangle path (already inserted and selected)
++ */
++function rebuildRoundedRectPath (oldPath, newRadius, newCurvature) {
++    const {rect, rotation} = getRoundedRectInfo(oldPath);
++
++    const r = Math.min(newRadius, rect.width / 2, rect.height / 2);
++    let newPath;
++    if (r === 0 || newCurvature === 0) {
++        newPath = new paper.Path.Rectangle(rect);
++    } else {
++        newPath = createRoundedRectPath(rect, newRadius, newCurvature);
++    }
++
++    // Re-apply rotation around the rect center
++    if (rotation !== 0) {
++        newPath.rotate(rotation, rect.center);
++    }
++
++    // Copy style and visual attributes
++    newPath.style = oldPath.style;
++    newPath.opacity = oldPath.opacity;
++    newPath.blendMode = oldPath.blendMode;
++    newPath.fillRule = oldPath.fillRule;
++    if (oldPath.name) newPath.name = oldPath.name;
++
++    // Set data with updated corner parameters
++    newPath.data = {
++        ...(oldPath.data || {}),
++        isRoundedRect: true,
++        cornerRadius: newRadius,
++        cornerCurvature: newCurvature
++    };
++
++    // Replace old path at the same position in the parent
++    const parent = oldPath.parent;
++    const index = oldPath.index;
++    const wasSelected = oldPath.selected;
++    parent.insertChild(index, newPath);
++    oldPath.remove();
++
++    if (wasSelected) {
++        newPath.selected = true;
++    }
++
++    return newPath;
++}
++
++/**
++ * Tool for drawing rounded rectangles.
+  */
+ class RoundedRectTool extends paper.Tool {
++    static get TOLERANCE () {
++        return 2;
++    }
++    static get DEFAULT_CORNER_RADIUS () {
++        return 20;
++    }
++    static get DEFAULT_CORNER_CURVATURE () {
++        return 100;
++    }
+     /**
+-     * @param {function} setHoveredItem Callback to set the hovered item
+-     * @param {function} clearHoveredItem Callback to clear the hovered item
+      * @param {function} setSelectedItems Callback to set the set of selected items in the Redux state
+      * @param {function} clearSelectedItems Callback to clear the set of selected items in the Redux state
++     * @param {function} setCursor Callback to set the visible mouse cursor
+      * @param {!function} onUpdateImage A callback to call when the image visibly changes
+      */
+-    constructor (setHoveredItem, clearHoveredItem, setSelectedItems, clearSelectedItems, onUpdateImage) {
++    constructor (setSelectedItems, clearSelectedItems, setCursor, onUpdateImage) {
+         super();
+-        this.setHoveredItem = setHoveredItem;
+-        this.clearHoveredItem = clearHoveredItem;
+         this.setSelectedItems = setSelectedItems;
+         this.clearSelectedItems = clearSelectedItems;
+         this.onUpdateImage = onUpdateImage;
+-        this.prevHoveredItemId = null;
+-        
++        this.boundingBoxTool = new BoundingBoxTool(
++            Modes.ROUNDED_RECT,
++            setSelectedItems,
++            clearSelectedItems,
++            setCursor,
++            onUpdateImage
++        );
++        const nudgeTool = new NudgeTool(Modes.ROUNDED_RECT, this.boundingBoxTool, onUpdateImage);
++
+         // We have to set these functions instead of just declaring them because
+         // paper.js tools hook up the listeners in the setter functions.
+         this.onMouseDown = this.handleMouseDown;
+         this.onMouseMove = this.handleMouseMove;
+         this.onMouseDrag = this.handleMouseDrag;
+         this.onMouseUp = this.handleMouseUp;
++        this.onKeyUp = nudgeTool.onKeyUp;
++        this.onKeyDown = nudgeTool.onKeyDown;
++
++        this.rect = null;
++        this.colorState = null;
++        this.isBoundingBoxMode = null;
++        this.active = false;
++        this.cornerRadius = RoundedRectTool.DEFAULT_CORNER_RADIUS;
++        this.cornerCurvature = RoundedRectTool.DEFAULT_CORNER_CURVATURE;
++    }
++    getHitOptions () {
++        return {
++            segments: true,
++            stroke: true,
++            curves: true,
++            fill: true,
++            guide: false,
++            match: hitResult =>
++                (hitResult.item.data && (hitResult.item.data.isScaleHandle || hitResult.item.data.isRotHandle)) ||
++                hitResult.item.selected, // Allow hits on bounding box and selected only
++            tolerance: RoundedRectTool.TOLERANCE / paper.view.zoom
++        };
+     }
+     /**
+-     * To be called when the hovered item changes. When the select tool hovers over a
+-     * new item, it compares against this to see if a hover item change event needs to
+-     * be fired.
+-     * @param {paper.Item} prevHoveredItemId ID of the highlight item that indicates the mouse is
+-     *     over a given item currently
++     * Should be called if the selection changes to update the bounds of the bounding box.
++     * @param {Array<paper.Item>} selectedItems Array of selected items.
+      */
+-    setPrevHoveredItemId (prevHoveredItemId) {
+-        this.prevHoveredItemId = prevHoveredItemId;
++    onSelectionChanged (selectedItems) {
++        this.boundingBoxTool.onSelectionChanged(selectedItems);
++    }
++    setColorState (colorState) {
++        this.colorState = colorState;
+     }
+-    handleMouseDown () {
+-        log.warn('Rounded Rectangle tool not yet implemented');
++    setCornerRadius (radius) {
++        this.cornerRadius = radius;
+     }
+-    handleMouseMove () {
++    setCornerCurvature (curvature) {
++        this.cornerCurvature = curvature;
+     }
+-    handleMouseDrag () {
++    handleMouseDown (event) {
++        if (event.event.button > 0) return; // only first mouse button
++        this.active = true;
++
++        if (this.boundingBoxTool.onMouseDown(
++            event, false /* clone */, false /* multiselect */, false /* doubleClicked */, this.getHitOptions())) {
++            this.isBoundingBoxMode = true;
++        } else {
++            this.isBoundingBoxMode = false;
++            clearSelection(this.clearSelectedItems);
++        }
++    }
++    handleMouseDrag (event) {
++        if (event.event.button > 0 || !this.active) return; // only first mouse button
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseDrag(event);
++            return;
++        }
++
++        if (this.rect) {
++            this.rect.remove();
++        }
++
++        const rect = new paper.Rectangle(event.downPoint, event.point);
++        const squareDimensions = getSquareDimensions(event.downPoint, event.point);
++        if (event.modifiers.shift) {
++            rect.size = squareDimensions.size.abs();
++        }
++
++        // Create rounded rectangle with configurable corner radius and curvature
++        this.rect = createRoundedRectPath(rect, this.cornerRadius, this.cornerCurvature);
++        
++        if (event.modifiers.alt) {
++            this.rect.position = event.downPoint;
++        } else if (event.modifiers.shift) {
++            this.rect.position = squareDimensions.position;
++        } else {
++            const dimensions = event.point.subtract(event.downPoint);
++            this.rect.position = event.downPoint.add(dimensions.multiply(0.5));
++        }
++
++        styleShape(this.rect, this.colorState);
++    }
++    handleMouseUp (event) {
++        if (event.event.button > 0 || !this.active) return; // only first mouse button
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseUp(event);
++            this.isBoundingBoxMode = null;
++            return;
++        }
++
++        if (this.rect) {
++            if (this.rect.area < RoundedRectTool.TOLERANCE / paper.view.zoom) {
++                // Tiny rectangle created unintentionally?
++                this.rect.remove();
++                this.rect = null;
++            } else {
++                // Tag the path as a rounded rectangle for later corner adjustment
++                this.rect.data = {
++                    ...(this.rect.data || {}),
++                    isRoundedRect: true,
++                    cornerRadius: this.cornerRadius,
++                    cornerCurvature: this.cornerCurvature
++                };
++                this.rect.selected = true;
++                this.setSelectedItems();
++                this.onUpdateImage();
++                this.rect = null;
++            }
++        }
++        this.active = false;
+     }
+-    handleMouseUp () {
++    handleMouseMove (event) {
++        this.boundingBoxTool.onMouseMove(event, this.getHitOptions());
+     }
+     deactivateTool () {
++        this.boundingBoxTool.deactivateTool();
+     }
+ }
+ 
++export {
++    createRoundedRectPath,
++    isRoundedRectPath,
++    getRoundedRectParams,
++    getRoundedRectInfo,
++    rebuildRoundedRectPath
++};
+ export default RoundedRectTool;
+diff --git a/node_modules/scratch-paint/src/helper/tools/trapezoid-tool.js b/node_modules/scratch-paint/src/helper/tools/trapezoid-tool.js
+new file mode 100644
+index 0000000..dbeb683
+--- /dev/null
++++ b/node_modules/scratch-paint/src/helper/tools/trapezoid-tool.js
+@@ -0,0 +1,148 @@
++import paper from '@turbowarp/paper';
++import Modes from '../../lib/modes';
++import {styleShape} from '../style-path';
++import {clearSelection} from '../selection';
++import {getSquareDimensions} from '../math';
++import BoundingBoxTool from '../selection-tools/bounding-box-tool';
++import NudgeTool from '../selection-tools/nudge-tool';
++
++/**
++ * Tool for drawing trapezoids.
++ */
++class TrapezoidTool extends paper.Tool {
++    static get TOLERANCE () {
++        return 2;
++    }
++    constructor (setSelectedItems, clearSelectedItems, setCursor, onUpdateImage) {
++        super();
++        this.setSelectedItems = setSelectedItems;
++        this.clearSelectedItems = clearSelectedItems;
++        this.onUpdateImage = onUpdateImage;
++        this.boundingBoxTool = new BoundingBoxTool(
++            Modes.TRAPEZOID,
++            setSelectedItems,
++            clearSelectedItems,
++            setCursor,
++            onUpdateImage
++        );
++        const nudgeTool = new NudgeTool(Modes.TRAPEZOID, this.boundingBoxTool, onUpdateImage);
++
++        this.onMouseDown = this.handleMouseDown;
++        this.onMouseMove = this.handleMouseMove;
++        this.onMouseDrag = this.handleMouseDrag;
++        this.onMouseUp = this.handleMouseUp;
++        this.onKeyUp = nudgeTool.onKeyUp;
++        this.onKeyDown = nudgeTool.onKeyDown;
++
++        this.trapezoid = null;
++        this.colorState = null;
++        this.isBoundingBoxMode = null;
++        this.active = false;
++    }
++    getHitOptions () {
++        return {
++            segments: true,
++            stroke: true,
++            curves: true,
++            fill: true,
++            guide: false,
++            match: hitResult =>
++                (hitResult.item.data && (hitResult.item.data.isScaleHandle || hitResult.item.data.isRotHandle)) ||
++                hitResult.item.selected,
++            tolerance: TrapezoidTool.TOLERANCE / paper.view.zoom
++        };
++    }
++    onSelectionChanged (selectedItems) {
++        this.boundingBoxTool.onSelectionChanged(selectedItems);
++    }
++    setColorState (colorState) {
++        this.colorState = colorState;
++    }
++    handleMouseDown (event) {
++        if (event.event.button > 0) return;
++        this.active = true;
++
++        if (this.boundingBoxTool.onMouseDown(
++            event, false, false, false, this.getHitOptions())) {
++            this.isBoundingBoxMode = true;
++        } else {
++            this.isBoundingBoxMode = false;
++            clearSelection(this.clearSelectedItems);
++        }
++    }
++    handleMouseDrag (event) {
++        if (event.event.button > 0 || !this.active) return;
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseDrag(event);
++            return;
++        }
++
++        if (this.trapezoid) {
++            this.trapezoid.remove();
++        }
++
++        const rect = new paper.Rectangle(event.downPoint, event.point);
++        const squareDimensions = getSquareDimensions(event.downPoint, event.point);
++        if (event.modifiers.shift) {
++            rect.size = squareDimensions.size.abs();
++        }
++
++        const x1 = rect.left;
++        const x2 = rect.right;
++        const y1 = rect.top;
++        const y2 = rect.bottom;
++        const w = rect.width;
++
++        // Isosceles trapezoid: top edge is 50% of bottom edge, centered
++        const inset = 0.25 * w;
++
++        this.trapezoid = new paper.Path();
++        this.trapezoid.add(new paper.Point(x1, y2));
++        this.trapezoid.add(new paper.Point(x1 + inset, y1));
++        this.trapezoid.add(new paper.Point(x2 - inset, y1));
++        this.trapezoid.add(new paper.Point(x2, y2));
++        this.trapezoid.closed = true;
++
++        if (event.modifiers.alt) {
++            this.trapezoid.position = event.downPoint;
++        } else if (event.modifiers.shift) {
++            this.trapezoid.position = squareDimensions.position;
++        } else {
++            const dimensions = event.point.subtract(event.downPoint);
++            this.trapezoid.position = event.downPoint.add(dimensions.multiply(0.5));
++        }
++
++        styleShape(this.trapezoid, this.colorState);
++    }
++    handleMouseUp (event) {
++        if (event.event.button > 0 || !this.active) return;
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseUp(event);
++            this.isBoundingBoxMode = null;
++            return;
++        }
++
++        if (this.trapezoid) {
++            if (Math.abs(this.trapezoid.area) < TrapezoidTool.TOLERANCE / paper.view.zoom) {
++                this.trapezoid.remove();
++                this.trapezoid = null;
++            } else {
++                this.trapezoid.selected = true;
++                this.setSelectedItems();
++                this.onUpdateImage();
++                this.trapezoid = null;
++            }
++        }
++        this.active = false;
++    }
++    handleMouseMove (event) {
++        this.boundingBoxTool.onMouseMove(event, this.getHitOptions());
++    }
++    deactivateTool () {
++        this.boundingBoxTool.deactivateTool();
++    }
++}
++
++export default TrapezoidTool;
+diff --git a/node_modules/scratch-paint/src/helper/tools/triangle-tool.js b/node_modules/scratch-paint/src/helper/tools/triangle-tool.js
+new file mode 100644
+index 0000000..382a30e
+--- /dev/null
++++ b/node_modules/scratch-paint/src/helper/tools/triangle-tool.js
+@@ -0,0 +1,152 @@
++import paper from '@turbowarp/paper';
++import Modes from '../../lib/modes';
++import {styleShape} from '../style-path';
++import {clearSelection} from '../selection';
++import {getSquareDimensions} from '../math';
++import BoundingBoxTool from '../selection-tools/bounding-box-tool';
++import NudgeTool from '../selection-tools/nudge-tool';
++
++/**
++ * Tool for drawing triangles.
++ */
++class TriangleTool extends paper.Tool {
++    static get TOLERANCE () {
++        return 2;
++    }
++    /**
++     * @param {function} setSelectedItems Callback to set the set of selected items in the Redux state
++     * @param {function} clearSelectedItems Callback to clear the set of selected items in the Redux state
++     * @param {function} setCursor Callback to set the visible mouse cursor
++     * @param {!function} onUpdateImage A callback to call when the image visibly changes
++     */
++    constructor (setSelectedItems, clearSelectedItems, setCursor, onUpdateImage) {
++        super();
++        this.setSelectedItems = setSelectedItems;
++        this.clearSelectedItems = clearSelectedItems;
++        this.onUpdateImage = onUpdateImage;
++        this.boundingBoxTool = new BoundingBoxTool(
++            Modes.TRIANGLE,
++            setSelectedItems,
++            clearSelectedItems,
++            setCursor,
++            onUpdateImage
++        );
++        const nudgeTool = new NudgeTool(Modes.TRIANGLE, this.boundingBoxTool, onUpdateImage);
++
++        // We have to set these functions instead of just declaring them because
++        // paper.js tools hook up the listeners in the setter functions.
++        this.onMouseDown = this.handleMouseDown;
++        this.onMouseMove = this.handleMouseMove;
++        this.onMouseDrag = this.handleMouseDrag;
++        this.onMouseUp = this.handleMouseUp;
++        this.onKeyUp = nudgeTool.onKeyUp;
++        this.onKeyDown = nudgeTool.onKeyDown;
++
++        this.triangle = null;
++        this.colorState = null;
++        this.isBoundingBoxMode = null;
++        this.active = false;
++    }
++    getHitOptions () {
++        return {
++            segments: true,
++            stroke: true,
++            curves: true,
++            fill: true,
++            guide: false,
++            match: hitResult =>
++                (hitResult.item.data && (hitResult.item.data.isScaleHandle || hitResult.item.data.isRotHandle)) ||
++                hitResult.item.selected, // Allow hits on bounding box and selected only
++            tolerance: TriangleTool.TOLERANCE / paper.view.zoom
++        };
++    }
++    /**
++     * Should be called if the selection changes to update the bounds of the bounding box.
++     * @param {Array<paper.Item>} selectedItems Array of selected items.
++     */
++    onSelectionChanged (selectedItems) {
++        this.boundingBoxTool.onSelectionChanged(selectedItems);
++    }
++    setColorState (colorState) {
++        this.colorState = colorState;
++    }
++    handleMouseDown (event) {
++        if (event.event.button > 0) return; // only first mouse button
++        this.active = true;
++
++        if (this.boundingBoxTool.onMouseDown(
++            event, false /* clone */, false /* multiselect */, false /* doubleClicked */, this.getHitOptions())) {
++            this.isBoundingBoxMode = true;
++        } else {
++            this.isBoundingBoxMode = false;
++            clearSelection(this.clearSelectedItems);
++        }
++    }
++    handleMouseDrag (event) {
++        if (event.event.button > 0 || !this.active) return; // only first mouse button
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseDrag(event);
++            return;
++        }
++
++        if (this.triangle) {
++            this.triangle.remove();
++        }
++
++        const rect = new paper.Rectangle(event.downPoint, event.point);
++        const squareDimensions = getSquareDimensions(event.downPoint, event.point);
++        if (event.modifiers.shift) {
++            rect.size = squareDimensions.size.abs();
++        }
++
++        // Create triangle path: bottom-left, bottom-right, top-center of bounding rect
++        this.triangle = new paper.Path();
++        this.triangle.add(new paper.Point(rect.left, rect.bottom));
++        this.triangle.add(new paper.Point(rect.right, rect.bottom));
++        this.triangle.add(new paper.Point(rect.center.x, rect.top));
++        this.triangle.closed = true;
++
++        if (event.modifiers.alt) {
++            this.triangle.position = event.downPoint;
++        } else if (event.modifiers.shift) {
++            this.triangle.position = squareDimensions.position;
++        } else {
++            const dimensions = event.point.subtract(event.downPoint);
++            this.triangle.position = event.downPoint.add(dimensions.multiply(0.5));
++        }
++
++        styleShape(this.triangle, this.colorState);
++    }
++    handleMouseUp (event) {
++        if (event.event.button > 0 || !this.active) return; // only first mouse button
++
++        if (this.isBoundingBoxMode) {
++            this.boundingBoxTool.onMouseUp(event);
++            this.isBoundingBoxMode = null;
++            return;
++        }
++
++        if (this.triangle) {
++            if (Math.abs(this.triangle.area) < TriangleTool.TOLERANCE / paper.view.zoom) {
++                // Tiny triangle created unintentionally?
++                this.triangle.remove();
++                this.triangle = null;
++            } else {
++                this.triangle.selected = true;
++                this.setSelectedItems();
++                this.onUpdateImage();
++                this.triangle = null;
++            }
++        }
++        this.active = false;
++    }
++    handleMouseMove (event) {
++        this.boundingBoxTool.onMouseMove(event, this.getHitOptions());
++    }
++    deactivateTool () {
++        this.boundingBoxTool.deactivateTool();
++    }
++}
++
++export default TriangleTool;
+diff --git a/node_modules/scratch-paint/src/helper/view.js b/node_modules/scratch-paint/src/helper/view.js
+index 25a2e9e..145ed4e 100644
+--- a/node_modules/scratch-paint/src/helper/view.js
++++ b/node_modules/scratch-paint/src/helper/view.js
+@@ -38,6 +38,22 @@ const resizeView = (width, height) => {
+ };
+ resizeView(480, 360);
+ 
++// NeoWarp: When unlimited costume drawing is enabled, use a much larger workspace
++const UNLIMITED_SCALE = 100; // 100x the normal art board size
++const isUnlimitedCostumeDrawing = () =>
++    typeof window !== 'undefined' && window.__neowarpUnlimitedCostumeDrawing === true;
++
++const getEffectiveMaxWorkspaceBounds = () => {
++    if (isUnlimitedCostumeDrawing()) {
++        return new paper.Rectangle(
++            -ART_BOARD_WIDTH * UNLIMITED_SCALE,
++            -ART_BOARD_HEIGHT * UNLIMITED_SCALE,
++            ART_BOARD_WIDTH * UNLIMITED_SCALE * 2,
++            ART_BOARD_HEIGHT * UNLIMITED_SCALE * 2);
++    }
++    return MAX_WORKSPACE_BOUNDS;
++};
++
+ let _workspaceBounds = ART_BOARD_BOUNDS;
+ 
+ const getWorkspaceBounds = () => _workspaceBounds;
+@@ -65,7 +81,7 @@ const setWorkspaceBounds = clipEmpty => {
+         bounds = bounds.unite(item.bounds.expand(BUFFER));
+     }
+     // Limit to max workspace bounds
+-    bounds = bounds.intersect(MAX_WORKSPACE_BOUNDS.expand(BUFFER));
++    bounds = bounds.intersect(getEffectiveMaxWorkspaceBounds().expand(BUFFER));
+     let top = bounds.top;
+     let left = bounds.left;
+     let bottom = bounds.bottom;
+@@ -173,9 +189,9 @@ const pan = (dx, dy) => {
+  */
+ const getActionBounds = isBitmap => {
+     if (isBitmap) {
+-        return ART_BOARD_BOUNDS;
++        return isUnlimitedCostumeDrawing() ? getEffectiveMaxWorkspaceBounds() : ART_BOARD_BOUNDS;
+     }
+-    return paper.view.bounds.unite(ART_BOARD_BOUNDS).intersect(MAX_WORKSPACE_BOUNDS);
++    return paper.view.bounds.unite(ART_BOARD_BOUNDS).intersect(getEffectiveMaxWorkspaceBounds());
+ };
+ 
+ const zoomToFit = isBitmap => {
+@@ -232,5 +248,6 @@ export {
+     resizeCrosshair,
+     zoomOnSelection,
+     zoomOnFixedPoint,
+-    zoomToFit
++    zoomToFit,
++    getEffectiveMaxWorkspaceBounds
+ };
+diff --git a/node_modules/scratch-paint/src/lib/messages.js b/node_modules/scratch-paint/src/lib/messages.js
+index c4ac199..cf192a0 100644
+--- a/node_modules/scratch-paint/src/lib/messages.js
++++ b/node_modules/scratch-paint/src/lib/messages.js
+@@ -41,6 +41,31 @@ const messages = defineMessages({
+         description: 'Label for the rounded rectangle tool',
+         id: 'paint.roundedRectMode.roundedRect'
+     },
++    triangle: {
++        defaultMessage: 'Triangle',
++        description: 'Label for the triangle tool',
++        id: 'paint.triangleMode.triangle'
++    },
++    arrow: {
++        defaultMessage: 'Arrow',
++        description: 'Label for the arrow tool',
++        id: 'paint.arrowMode.arrow'
++    },
++    trapezoid: {
++        defaultMessage: 'Trapezoid',
++        description: 'Label for the trapezoid tool',
++        id: 'paint.trapezoidMode.trapezoid'
++    },
++    heart: {
++        defaultMessage: 'Heart',
++        description: 'Label for the heart tool',
++        id: 'paint.heartMode.heart'
++    },
++    doubleArrow: {
++        defaultMessage: 'Double Arrow',
++        description: 'Label for the double arrow tool',
++        id: 'paint.doubleArrowMode.doubleArrow'
++    },
+     select: {
+         defaultMessage: 'Select',
+         description: 'Label for the select tool, which allows selecting, moving, and resizing shapes',
+diff --git a/node_modules/scratch-paint/src/lib/modes.js b/node_modules/scratch-paint/src/lib/modes.js
+index 610e6bd..6505333 100644
+--- a/node_modules/scratch-paint/src/lib/modes.js
++++ b/node_modules/scratch-paint/src/lib/modes.js
+@@ -10,6 +10,11 @@ const vectorModesObj = {
+     OVAL: null,
+     RECT: null,
+     ROUNDED_RECT: null,
++    TRIANGLE: null,
++    ARROW: null,
++    TRAPEZOID: null,
++    HEART: null,
++    DOUBLE_ARROW: null,
+     TEXT: null
+ };
+ const bitmapModesObj = {
+diff --git a/node_modules/scratch-paint/src/reducers/rounded-rect.js b/node_modules/scratch-paint/src/reducers/rounded-rect.js
+new file mode 100644
+index 0000000..cb93ffd
+--- /dev/null
++++ b/node_modules/scratch-paint/src/reducers/rounded-rect.js
+@@ -0,0 +1,67 @@
++import log from '../log/log';
++
++const CHANGE_CORNER_RADIUS = 'scratch-paint/rounded-rect/CHANGE_CORNER_RADIUS';
++const CHANGE_CORNER_CURVATURE = 'scratch-paint/rounded-rect/CHANGE_CORNER_CURVATURE';
++
++const MAX_CORNER_RADIUS = 200;
++const MAX_CORNER_CURVATURE = 100;
++const DEFAULT_CORNER_RADIUS = 20;
++const DEFAULT_CORNER_CURVATURE = 100;
++
++const initialState = {
++    cornerRadius: DEFAULT_CORNER_RADIUS,
++    cornerCurvature: DEFAULT_CORNER_CURVATURE
++};
++
++const reducer = function (state, action) {
++    if (typeof state === 'undefined') state = initialState;
++    switch (action.type) {
++    case CHANGE_CORNER_RADIUS:
++        if (isNaN(action.cornerRadius)) {
++            log.warn(`Invalid corner radius: ${action.cornerRadius}`);
++            return state;
++        }
++        return {
++            ...state,
++            cornerRadius: Math.min(MAX_CORNER_RADIUS, Math.max(0, action.cornerRadius))
++        };
++    case CHANGE_CORNER_CURVATURE:
++        if (isNaN(action.cornerCurvature)) {
++            log.warn(`Invalid corner curvature: ${action.cornerCurvature}`);
++            return state;
++        }
++        return {
++            ...state,
++            cornerCurvature: Math.min(MAX_CORNER_CURVATURE, Math.max(0, action.cornerCurvature))
++        };
++    default:
++        return state;
++    }
++};
++
++// Action creators
++const changeCornerRadius = function (cornerRadius) {
++    return {
++        type: CHANGE_CORNER_RADIUS,
++        cornerRadius: cornerRadius
++    };
++};
++
++const changeCornerCurvature = function (cornerCurvature) {
++    return {
++        type: CHANGE_CORNER_CURVATURE,
++        cornerCurvature: cornerCurvature
++    };
++};
++
++export {
++    reducer as default,
++    changeCornerRadius,
++    changeCornerCurvature,
++    CHANGE_CORNER_RADIUS,
++    CHANGE_CORNER_CURVATURE,
++    MAX_CORNER_RADIUS,
++    MAX_CORNER_CURVATURE,
++    DEFAULT_CORNER_RADIUS,
++    DEFAULT_CORNER_CURVATURE
++};
+diff --git a/node_modules/scratch-paint/src/reducers/scratch-paint-reducer.js b/node_modules/scratch-paint/src/reducers/scratch-paint-reducer.js
+index 3dc9be3..81aa41b 100644
+--- a/node_modules/scratch-paint/src/reducers/scratch-paint-reducer.js
++++ b/node_modules/scratch-paint/src/reducers/scratch-paint-reducer.js
+@@ -18,6 +18,7 @@ import modalsReducer from './modals';
+ import selectedItemReducer from './selected-items';
+ import textEditTargetReducer from './text-edit-target';
+ import themeReducer from './theme';
++import roundedRectReducer from './rounded-rect';
+ import viewBoundsReducer from './view-bounds';
+ import undoReducer from './undo';
+ import zoomLevelsReducer from './zoom-levels';
+@@ -39,6 +40,7 @@ export default combineReducers({
+     hoveredItemId: hoverReducer,
+     layout: layoutReducer,
+     modals: modalsReducer,
++    roundedRect: roundedRectReducer,
+     selectedItems: selectedItemReducer,
+     textEditTarget: textEditTargetReducer,
+     theme: themeReducer,

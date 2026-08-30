@@ -4,6 +4,7 @@ const {translate, getLocale} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const settings = require('../settings');
 const privilegedFetch = require('../fetch');
+const phoneSync = require('../phone-sync');
 const https = require('https');
 const http = require('http');
 
@@ -403,6 +404,19 @@ class AIAssistantWindow extends AbstractWindow {
 
     this.ipc.handle('ai-get-locale', () => {
       return getLocale() || 'en';
+    });
+
+    // 手机编程：局域网同步服务（扫码后手机获得与桌面一致的 AI 聊天界面）
+    this.ipc.handle('ai-get-phone-link', () => {
+      phoneSync.register(this, ipcMain);
+      return phoneSync.getLinkInfo();
+    });
+    this.ipc.handle('ai-phone-get-state', () => phoneSync.getSnapshot());
+    ipcMain.on('ai-phone-broadcast', (event, payload) => {
+      // 只接受 AI 窗口自身的广播
+      if (event.sender === this.window.webContents) {
+        phoneSync.broadcast(payload);
+      }
     });
 
     this.ipc.handle('ai-close-window', () => {

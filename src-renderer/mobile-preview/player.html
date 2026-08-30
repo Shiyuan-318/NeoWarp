@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#111111">
+<title>手机预览 - NeoWarp</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #111111;
+    color: #ffffff;
+    font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    overscroll-behavior: none;
+  }
+  #app {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    background: #1c1c1e;
+    border-bottom: 1px solid #2c2c2e;
+  }
+  #title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #f5f5f7;
+  }
+  button {
+    flex: 0 0 auto;
+    border: none;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #ffffff;
+    background: #3a3a3c;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button:active { opacity: 0.7; }
+  button:disabled { opacity: 0.4; }
+  #green-flag { background: #4cbf56; }
+  #stop-all { background: #ec5959; }
+  #stage-wrap {
+    flex: 1 1 auto;
+    position: relative;
+    min-height: 0;
+    background: #111111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #stage {
+    width: 100%;
+    height: 100%;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 24px;
+    text-align: center;
+    background: #111111;
+    z-index: 5;
+  }
+  #overlay.hidden { display: none; }
+  .spinner {
+    width: 38px;
+    height: 38px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #4c97ff;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #overlay-text {
+    font-size: 15px;
+    color: #d1d1d6;
+    line-height: 1.6;
+    max-width: 22em;
+    word-break: break-word;
+  }
+  #overlay-detail {
+    font-size: 12px;
+    color: #8e8e93;
+    line-height: 1.6;
+    max-width: 26em;
+    word-break: break-all;
+  }
+  #hint {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    font-size: 12px;
+    color: #8e8e93;
+    text-align: center;
+    background: #1c1c1e;
+    border-top: 1px solid #2c2c2e;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="bar">
+    <div id="title">手机预览</div>
+    <button id="green-flag" type="button" disabled>▶ 运行</button>
+    <button id="stop-all" type="button" disabled>■ 停止</button>
+    <button id="fullscreen" type="button">⛶ 全屏</button>
+  </div>
+  <div id="stage-wrap">
+    <div id="stage"></div>
+    <div id="overlay">
+      <div class="spinner" id="spinner"></div>
+      <div id="overlay-text">正在加载项目…</div>
+      <div id="overlay-detail"></div>
+      <button id="retry" type="button" style="display:none">重新加载</button>
+    </div>
+  </div>
+  <div id="hint">此预览独立运行，操作不会同步到电脑上的舞台</div>
+</div>
+<script src="./scaffolding.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var titleEl = document.getElementById('title');
+  var greenFlagButton = document.getElementById('green-flag');
+  var stopAllButton = document.getElementById('stop-all');
+  var fullscreenButton = document.getElementById('fullscreen');
+  var stageEl = document.getElementById('stage');
+  var stageWrapEl = document.getElementById('stage-wrap');
+  var overlayEl = document.getElementById('overlay');
+  var spinnerEl = document.getElementById('spinner');
+  var overlayTextEl = document.getElementById('overlay-text');
+  var overlayDetailEl = document.getElementById('overlay-detail');
+  var retryButton = document.getElementById('retry');
+
+  var scaffolding = null;
+
+  var showLoading = function (text) {
+    overlayEl.classList.remove('hidden');
+    spinnerEl.style.display = '';
+    retryButton.style.display = 'none';
+    overlayTextEl.textContent = text;
+    overlayDetailEl.textContent = '';
+  };
+
+  var showError = function (text, detail) {
+    overlayEl.classList.remove('hidden');
+    spinnerEl.style.display = 'none';
+    retryButton.style.display = '';
+    overlayTextEl.textContent = text;
+    overlayDetailEl.textContent = detail || '';
+  };
+
+  var hideOverlay = function () {
+    overlayEl.classList.add('hidden');
+  };
+
+  var setControlsEnabled = function (enabled) {
+    greenFlagButton.disabled = !enabled;
+    stopAllButton.disabled = !enabled;
+  };
+
+  var loadInfo = function () {
+    return fetch('./api/info', {cache: 'no-store'})
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .catch(function () {
+        return null;
+      });
+  };
+
+  var createScaffolding = function () {
+    var sc = new Scaffolding.Scaffolding();
+    sc.width = 480;
+    sc.height = 360;
+    sc.resizeMode = 'preserve-ratio';
+    sc.editableLists = false;
+    // 手机上没有蓝牙/串口外设，跳过连接尝试可以少一层权限弹窗
+    sc.shouldConnectPeripherals = false;
+    sc.setup();
+    sc.appendTo(stageEl);
+    // 云变量只留在这台设备上，避免不同预览端互相影响
+    sc.addCloudProvider(new Scaffolding.CloudVariables.LocalStorageProvider());
+    sc.setUsername('player' + Math.floor(Math.random() * 10000));
+    return sc;
+  };
+
+  var loadProject = function () {
+    showLoading('正在下载项目…');
+    setControlsEnabled(false);
+
+    return fetch('./project.sb3', {cache: 'no-store'})
+      .then(function (res) {
+        if (!res.ok) {
+          throw new Error('HTTP ' + res.status);
+        }
+        return res.arrayBuffer();
+      })
+      .then(function (buffer) {
+        showLoading('正在载入项目…');
+        if (!scaffolding) {
+          scaffolding = createScaffolding();
+        }
+        return scaffolding.loadProject(buffer);
+      })
+      .then(function () {
+        scaffolding.relayout();
+        hideOverlay();
+        setControlsEnabled(true);
+        scaffolding.start();
+      })
+      .catch(function (error) {
+        showError('加载失败，请确认电脑上的手机预览窗口仍然开着，然后重试。', String(error && error.message ? error.message : error));
+      });
+  };
+
+  greenFlagButton.addEventListener('click', function () {
+    if (scaffolding) scaffolding.greenFlag();
+  });
+
+  stopAllButton.addEventListener('click', function () {
+    if (scaffolding) scaffolding.stopAll();
+  });
+
+  fullscreenButton.addEventListener('click', function () {
+    var doc = document;
+    var el = document.documentElement;
+    if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+      (doc.exitFullscreen || doc.webkitExitFullscreen).call(doc);
+    } else if (el.requestFullscreen) {
+      el.requestFullscreen();
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    } else {
+      // iOS Safari 没有全屏 API，只能提示用户
+      overlayDetailEl.textContent = '当前浏览器不支持全屏，请把设备横过来观看。';
+    }
+  });
+
+  retryButton.addEventListener('click', function () {
+    loadProject();
+  });
+
+  var relayout = function () {
+    if (scaffolding) scaffolding.relayout();
+  };
+  window.addEventListener('resize', relayout);
+  window.addEventListener('orientationchange', function () {
+    setTimeout(relayout, 300);
+  });
+  if (window.ResizeObserver) {
+    new ResizeObserver(relayout).observe(stageWrapEl);
+  }
+
+  // 双指缩放/双击缩放会让点击坐标错位，直接屏蔽
+  document.addEventListener('gesturestart', function (e) {
+    e.preventDefault();
+  });
+  stageWrapEl.addEventListener('touchmove', function (e) {
+    if (e.touches.length > 1) e.preventDefault();
+  }, {passive: false});
+
+  if (typeof Scaffolding === 'undefined') {
+    showError('运行时加载失败，请刷新页面重试。');
+    return;
+  }
+
+  loadInfo().then(function (info) {
+    if (info && info.title) {
+      titleEl.textContent = info.title;
+      document.title = info.title + ' - 手机预览';
+    }
+    loadProject();
+  });
+})();
+</script>
+</body>
+</html>

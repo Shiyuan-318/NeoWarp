@@ -1,5 +1,89 @@
 const AbstractWindow = require('./abstract');
 const CollaborationServer = require('../collaboration-server');
+const os = require('os');
+const http = require('http');
+
+// Scan the local /24 subnet for collaboration hosts on the given port.
+function discoverSessions (port) {
+  return new Promise((resolve) => {
+    const interfaces = os.networkInterfaces();
+    const localIPs = [];
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name]) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          localIPs.push(iface.address);
+        }
+      }
+    }
+
+    const candidates = new Set();
+    for (const ip of localIPs) {
+      const parts = ip.split('.');
+      if (parts.length === 4) {
+        const prefix = `${parts[0]}.${parts[1]}.${parts[2]}`;
+        for (let i = 1; i < 255; i++) {
+          candidates.add(`${prefix}.${i}`);
+        }
+      }
+    }
+    // Exclude own IPs
+    for (const ip of localIPs) candidates.delete(ip);
+
+    const results = [];
+    const list = Array.from(candidates);
+    if (list.length === 0) { resolve(results); return; }
+
+    let remaining = list.length;
+    const finishOne = () => {
+      remaining--;
+      if (remaining === 0) resolve(results);
+    };
+
+    for (const ip of list) {
+      let settled = false;
+      const req = http.get({
+        hostname: ip,
+        port: port,
+        path: '/discover',
+        timeout: 400
+      }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          if (settled) return;
+          settled = true;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed && parsed.ok) {
+              results.push({
+                ip: ip,
+                port: port,
+                roomName: parsed.roomName,
+                hostName: parsed.hostName,
+                hostAvatar: parsed.hostAvatar,
+                onlineCount: parsed.onlineCount
+              });
+            }
+          } catch (e) {
+            // not a collaboration server
+          }
+          finishOne();
+        });
+      });
+      req.on('timeout', () => {
+        if (settled) return;
+        settled = true;
+        try { req.destroy(); } catch (e) {}
+        finishOne();
+      });
+      req.on('error', () => {
+        if (settled) return;
+        settled = true;
+        finishOne();
+      });
+    }
+  });
+}
 
 class CollaborationWindow extends AbstractWindow {
   constructor (editorWindow, mode) {
@@ -10,7 +94,12 @@ class CollaborationWindow extends AbstractWindow {
     this.server = null;
     this.ws = null;
     this.joinUsername = null;
+    this.joinPermissions = null;
+    this.hostNickname = '主机';
+    this.hostAvatar = '🏠';
     this.forceClose = false;
+    this.pingInterval = null;
+    this.lastPongTime = 0;
 
     this.window.on('page-title-updated', event => {
       event.preventDefault();
@@ -36,12 +125,41 @@ class CollaborationWindow extends AbstractWindow {
       return this.mode;
     });
 
-    this.ipc.handle('collab-start-host', async (event, { password, port, permissions }) => {
-      this.server = new CollaborationServer({ password, port, permissions });
+    this.ipc.handle('collab-get-local-ip', () => {
+      const interfaces = os.networkInterfaces();
+      for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+          if (iface.family === 'IPv4' && !iface.internal) {
+            return iface.address;
+          }
+        }
+      }
+      return '127.0.0.1';
+    });
 
-      this.server.onClientJoin = (username) => {
+    this.ipc.handle('collab-discover-sessions', async (event, { port }) => {
+      try {
+        const results = await discoverSessions(port || 8080);
+        return { success: true, sessions: results };
+      } catch (e) {
+        return { success: false, sessions: [], error: e.message };
+      }
+    });
+
+    this.ipc.handle('collab-start-host', async (event, { password, port, permissions, nickname, avatar }) => {
+      this.hostNickname = (nickname && String(nickname).trim()) || '主机';
+      this.hostAvatar = (avatar && String(avatar)) || '🏠';
+      this.server = new CollaborationServer({
+        password,
+        port,
+        permissions,
+        hostName: this.hostNickname,
+        hostAvatar: this.hostAvatar
+      });
+
+      this.server.onClientJoin = (username, avatar) => {
         const onlineCount = this.server.getOnlineCount() + 1; // +1 for host
-        this.sendToCollabWindow('collab-client-join', { username, onlineCount });
+        this.sendToCollabWindow('collab-client-join', { username, avatar, onlineCount });
         this.sendToEditor('collaboration-state-changed', {
           isCollaborating: true,
           role: 'host',
@@ -65,9 +183,25 @@ class CollaborationWindow extends AbstractWindow {
         this.sendToCollabWindow('collab-chat-message', message);
       };
 
+      // When a new client joins, request current project JSON from editor
+      this.server.onProjectRequest = (username) => {
+        // Request project JSON from editor renderer
+        this.sendToEditor('collab-request-project-json', { targetUsername: username });
+      };
+
+      // When a participant sends a project update, forward to editor
+      this.server.onProjectUpdate = (data) => {
+        this.sendToEditor('collab-project-update', data);
+      };
+
       const result = await this.server.start();
       if (result.success) {
-        this.sendToCollabWindow('collab-host-started', { success: true, onlineCount: 1 });
+        this.sendToCollabWindow('collab-host-started', {
+          success: true,
+          onlineCount: 1,
+          nickname: this.hostNickname,
+          avatar: this.hostAvatar
+        });
         this.sendToEditor('collaboration-state-changed', {
           isCollaborating: true,
           role: 'host',
@@ -98,12 +232,15 @@ class CollaborationWindow extends AbstractWindow {
       return { success: true };
     });
 
-    this.ipc.handle('collab-join-connect', async (event, { ip, port, password }) => {
+    this.ipc.handle('collab-join-connect', async (event, { ip, port, password, nickname, avatar }) => {
       const WebSocket = globalThis.WebSocket;
       if (!WebSocket) {
         this.sendToCollabWindow('collab-join-connected', { success: false, error: 'WebSocket 不可用' });
         return { success: false, error: 'WebSocket 不可用' };
       }
+
+      this.joinNickname = (nickname && String(nickname).trim()) || '';
+      this.joinAvatar = (avatar && String(avatar)) || '👤';
 
       return new Promise((resolve) => {
         let ws;
@@ -127,7 +264,12 @@ class CollaborationWindow extends AbstractWindow {
         }, 10000);
 
         ws.addEventListener('open', () => {
-          ws.send(JSON.stringify({ type: 'auth', password }));
+          ws.send(JSON.stringify({
+            type: 'auth',
+            password,
+            nickname: this.joinNickname,
+            avatar: this.joinAvatar
+          }));
         });
 
         ws.addEventListener('message', (event) => {
@@ -146,16 +288,35 @@ class CollaborationWindow extends AbstractWindow {
               if (message.success) {
                 this.ws = ws;
                 this.joinUsername = message.username;
+                this.joinAvatar = message.avatar || this.joinAvatar;
+                this.joinPermissions = message.permissions || null;
                 this.sendToCollabWindow('collab-join-connected', {
                   success: true,
                   permissions: message.permissions,
-                  username: message.username
+                  username: message.username,
+                  avatar: this.joinAvatar,
+                  onlineCount: message.onlineCount
                 });
                 this.sendToEditor('collaboration-state-changed', {
                   isCollaborating: true,
                   role: 'participant',
-                  onlineCount: 1,
+                  onlineCount: message.onlineCount,
                   permissions: message.permissions
+                });
+                this.startJoinHeartbeat();
+                // Detect the host going away after the connection was
+                // established (crash, network loss, host app killed)
+                ws.addEventListener('close', () => {
+                  if (this.ws === ws) {
+                    this.stopJoinHeartbeat();
+                    this.ws = null;
+                    this.sendToCollabWindow('collab-collaboration-ended', { reason: 'connection-lost' });
+                    this.sendToEditor('collaboration-state-changed', {
+                      isCollaborating: false,
+                      role: null,
+                      onlineCount: 0
+                    });
+                  }
                 });
                 resolve({ success: true });
               } else {
@@ -174,7 +335,41 @@ class CollaborationWindow extends AbstractWindow {
             return;
           }
 
+          if (message.type === 'project-update') {
+            // Forward project data to editor renderer to load into VM
+            this.sendToEditor('collab-project-update', { project: message.project, from: message.from });
+            return;
+          }
+
+          if (message.type === 'pong') {
+            this.lastPongTime = Date.now();
+            return;
+          }
+
+          if (message.type === 'member-joined') {
+            this.sendToCollabWindow('collab-member-joined', message);
+            this.sendToEditor('collaboration-state-changed', {
+              isCollaborating: true,
+              role: 'participant',
+              onlineCount: message.onlineCount,
+              permissions: this.joinPermissions
+            });
+            return;
+          }
+
+          if (message.type === 'member-left') {
+            this.sendToCollabWindow('collab-member-left', message);
+            this.sendToEditor('collaboration-state-changed', {
+              isCollaborating: true,
+              role: 'participant',
+              onlineCount: message.onlineCount,
+              permissions: this.joinPermissions
+            });
+            return;
+          }
+
           if (message.type === 'collaboration-ended') {
+            this.stopJoinHeartbeat();
             this.sendToCollabWindow('collab-collaboration-ended', { reason: message.reason });
             this.sendToEditor('collaboration-state-changed', {
               isCollaborating: false,
@@ -207,6 +402,7 @@ class CollaborationWindow extends AbstractWindow {
     });
 
     this.ipc.handle('collab-leave', async () => {
+      this.stopJoinHeartbeat();
       if (this.ws) {
         try { this.ws.close(); } catch (e) {}
         this.ws = null;
@@ -228,7 +424,8 @@ class CollaborationWindow extends AbstractWindow {
         const timestamp = Date.now();
         const chatData = {
           type: 'chat',
-          from: '主机',
+          from: this.hostNickname,
+          avatar: this.hostAvatar,
           text: String(text || ''),
           timestamp: timestamp
         };
@@ -245,6 +442,9 @@ class CollaborationWindow extends AbstractWindow {
       }
     });
 
+    // Host: editor sends project JSON to broadcast to a specific client or all.
+    // Registered on the EDITOR window's frame IPC (see EditorWindow) because
+    // per-frame IPC only receives messages sent from that same frame.
     this.ipc.handle('collab-close-window', () => {
       if (this.window && !this.window.isDestroyed()) {
         this.window.close();
@@ -256,7 +456,56 @@ class CollaborationWindow extends AbstractWindow {
     this.show();
   }
 
+  // Called by EditorWindow when the editor renderer exports project JSON
+  handleProjectJSONFromEditor (project, targetUsername) {
+    if (this.mode === 'host' && this.server) {
+      this.server.broadcastProject(project, targetUsername);
+    }
+  }
+
+  // Called by EditorWindow when a participant's editor broadcasts its project
+  handleProjectUpdateFromEditor (project) {
+    if (this.mode === 'join' && this.ws) {
+      try {
+        this.ws.send(JSON.stringify({ type: 'project-update', project }));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  // Application-level liveness probing for the join connection: sends a ping
+  // the server echoes back, so a silently lost network is noticed within ~70s.
+  startJoinHeartbeat () {
+    this.stopJoinHeartbeat();
+    this.lastPongTime = Date.now();
+    this.pingInterval = setInterval(() => {
+      if (!this.ws) {
+        this.stopJoinHeartbeat();
+        return;
+      }
+      if (Date.now() - this.lastPongTime > 70000) {
+        // Server stopped answering: force the close path so the UI resets
+        try { this.ws.close(); } catch (e) {}
+        return;
+      }
+      try {
+        this.ws.send(JSON.stringify({ type: 'ping' }));
+      } catch (e) {
+        // ignore
+      }
+    }, 25000);
+  }
+
+  stopJoinHeartbeat () {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+  }
+
   cleanup () {
+    this.stopJoinHeartbeat();
     if (this.server) {
       this.sendToEditor('collaboration-state-changed', {
         isCollaborating: false,
@@ -293,7 +542,7 @@ class CollaborationWindow extends AbstractWindow {
   getDimensions () {
     return {
       width: 460,
-      height: 640
+      height: 720
     };
   }
 
