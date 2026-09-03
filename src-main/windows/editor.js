@@ -935,6 +935,10 @@ class EditorWindow extends ProjectRunningWindow {
       mpWindows.forEach(w => {
         if (!w.window.isDestroyed()) w.window.webContents.send('mobile-preview-theme-changed', data);
       });
+      const collabWindows = AbstractWindow.getWindowsByClass(CollaborationWindow);
+      collabWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('collab-theme-changed', data);
+      });
     });
 
     this.ipc.handle('get-advanced-customizations', async () => {

@@ -235,154 +235,151 @@ const DEFAULT_USERNAME = 'player';
 // Schema mapping each Scratch opcode to its parameter layout.
 // args: array of {name, kind} where kind is 'input' or 'field', in visual order.
 // substack: true for C-shaped blocks; substack2: true for control_if_else.
+// 每个 opcode 的参数布局，直接对齐 scratch-blocks 的 args0 定义（顺序、名称、字段/输入类型）。
+// DSL 是位置式的：parseDslLine 产出的 token 按下标落到这里声明的槽位上，所以顺序错一位
+// 就会把值写进相邻参数（例如 data_addtolist 真实顺序是 ITEM,LIST，写成 LIST,ITEM 会把
+// 数字当成列表名）。这张表由 scripts/gen-opcode-schema.js 从 scratch-blocks 生成，勿手改顺序。
+//   kind: input  普通输入槽，shadow 指明 Scratch 给它的默认影子块类型
+//   kind: field  下拉/变量字段，值直接写进 block.fields
+//   kind: menu   看着像下拉、实际是带菜单影子块的输入槽（可插入 reporter）
+//   bool: true   布尔（六边形）输入，没有影子块
 const OPCODE_SCHEMA = {
-  // Motion
-  motion_movesteps: { args: [{ name: 'STEPS', kind: 'input' }] },
-  motion_turnright: { args: [{ name: 'DEGREES', kind: 'input' }] },
-  motion_turnleft: { args: [{ name: 'DEGREES', kind: 'input' }] },
-  motion_goto: { args: [{ name: 'TO', kind: 'field' }] },
-  motion_gotoxy: { args: [{ name: 'X', kind: 'input' }, { name: 'Y', kind: 'input' }] },
-  motion_glideto: { args: [{ name: 'TO', kind: 'field' }, { name: 'SECS', kind: 'input' }] },
-  motion_glidesecstoxy: { args: [{ name: 'SECS', kind: 'input' }, { name: 'X', kind: 'input' }, { name: 'Y', kind: 'input' }] },
-  motion_pointindirection: { args: [{ name: 'DIRECTION', kind: 'input' }] },
-  motion_pointtowards: { args: [{ name: 'TOWARDS', kind: 'field' }] },
-  motion_changexby: { args: [{ name: 'DX', kind: 'input' }] },
-  motion_setx: { args: [{ name: 'X', kind: 'input' }] },
-  motion_changeyby: { args: [{ name: 'DY', kind: 'input' }] },
-  motion_sety: { args: [{ name: 'Y', kind: 'input' }] },
+  control_all_at_once: { args: [], substack: true },
+  control_clear_counter: { args: [] },
+  control_create_clone_of: { args: [{ name: 'CLONE_OPTION', kind: 'menu', shadow: 'control_create_clone_of_menu', menuField: 'CLONE_OPTION' }] },
+  control_delete_this_clone: { args: [] },
+  control_for_each: { args: [{ name: 'VARIABLE', kind: 'field' }, { name: 'VALUE', kind: 'input', shadow: 'math_whole_number' }], substack: true },
+  control_forever: { args: [], substack: true },
+  control_get_counter: { args: [] },
+  control_if: { args: [{ name: 'CONDITION', kind: 'input', bool: true }], substack: true },
+  control_if_else: { args: [{ name: 'CONDITION', kind: 'input', bool: true }], substack: true, substack2: true },
+  control_incr_counter: { args: [] },
+  control_repeat: { args: [{ name: 'TIMES', kind: 'input', shadow: 'math_whole_number' }], substack: true },
+  control_repeat_until: { args: [{ name: 'CONDITION', kind: 'input', bool: true }], substack: true },
+  control_start_as_clone: { args: [] },
+  control_stop: { args: [{ name: 'STOP_OPTION', kind: 'field' }] },
+  control_wait: { args: [{ name: 'DURATION', kind: 'input', shadow: 'math_positive_number' }] },
+  control_wait_until: { args: [{ name: 'CONDITION', kind: 'input', bool: true }] },
+  control_while: { args: [{ name: 'CONDITION', kind: 'input', bool: true }], substack: true },
+  data_addtolist: { args: [{ name: 'ITEM', kind: 'input', shadow: 'text' }, { name: 'LIST', kind: 'field' }] },
+  data_changevariableby: { args: [{ name: 'VARIABLE', kind: 'field' }, { name: 'VALUE', kind: 'input', shadow: 'math_number' }] },
+  data_deletealloflist: { args: [{ name: 'LIST', kind: 'field' }] },
+  data_deleteoflist: { args: [{ name: 'INDEX', kind: 'input', shadow: 'math_integer' }, { name: 'LIST', kind: 'field' }] },
+  data_hidelist: { args: [{ name: 'LIST', kind: 'field' }] },
+  data_hidevariable: { args: [{ name: 'VARIABLE', kind: 'field' }] },
+  data_insertatlist: { args: [{ name: 'ITEM', kind: 'input', shadow: 'text' }, { name: 'INDEX', kind: 'input', shadow: 'math_integer' }, { name: 'LIST', kind: 'field' }] },
+  data_itemnumoflist: { args: [{ name: 'ITEM', kind: 'input', shadow: 'text' }, { name: 'LIST', kind: 'field' }] },
+  data_itemoflist: { args: [{ name: 'INDEX', kind: 'input', shadow: 'math_integer' }, { name: 'LIST', kind: 'field' }] },
+  data_lengthoflist: { args: [{ name: 'LIST', kind: 'field' }] },
+  data_listcontainsitem: { args: [{ name: 'LIST', kind: 'field' }, { name: 'ITEM', kind: 'input', shadow: 'text' }] },
+  data_replaceitemoflist: { args: [{ name: 'INDEX', kind: 'input', shadow: 'math_integer' }, { name: 'LIST', kind: 'field' }, { name: 'ITEM', kind: 'input', shadow: 'text' }] },
+  data_setvariableto: { args: [{ name: 'VARIABLE', kind: 'field' }, { name: 'VALUE', kind: 'input', shadow: 'text' }] },
+  data_showlist: { args: [{ name: 'LIST', kind: 'field' }] },
+  data_showvariable: { args: [{ name: 'VARIABLE', kind: 'field' }] },
+  event_broadcast: { args: [{ name: 'BROADCAST_INPUT', kind: 'menu', shadow: 'event_broadcast_menu', menuField: 'BROADCAST_OPTION' }] },
+  event_broadcastandwait: { args: [{ name: 'BROADCAST_INPUT', kind: 'menu', shadow: 'event_broadcast_menu', menuField: 'BROADCAST_OPTION' }] },
+  event_whenbackdropswitchesto: { args: [{ name: 'BACKDROP', kind: 'field' }] },
+  event_whenbroadcastreceived: { args: [{ name: 'BROADCAST_OPTION', kind: 'field' }] },
+  event_whenflagclicked: { args: [] },
+  event_whengreaterthan: { args: [{ name: 'WHENGREATERTHANMENU', kind: 'field' }, { name: 'VALUE', kind: 'input', shadow: 'math_number' }] },
+  event_whenkeypressed: { args: [{ name: 'KEY_OPTION', kind: 'field' }] },
+  event_whenstageclicked: { args: [] },
+  event_whenthisspriteclicked: { args: [] },
+  looks_backdropnumbername: { args: [{ name: 'NUMBER_NAME', kind: 'field' }] },
+  looks_changeeffectby: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'CHANGE', kind: 'input', shadow: 'math_number' }] },
+  looks_changesizeby: { args: [{ name: 'CHANGE', kind: 'input', shadow: 'math_number' }] },
+  looks_changestretchby: { args: [{ name: 'CHANGE', kind: 'input', shadow: 'math_number' }] },
+  looks_cleargraphiceffects: { args: [] },
+  looks_costumenumbername: { args: [{ name: 'NUMBER_NAME', kind: 'field' }] },
+  looks_goforwardbackwardlayers: { args: [{ name: 'FORWARD_BACKWARD', kind: 'field' }, { name: 'NUM', kind: 'input', shadow: 'math_integer' }] },
+  looks_gotofrontback: { args: [{ name: 'FRONT_BACK', kind: 'field' }] },
+  looks_hide: { args: [] },
+  looks_nextbackdrop: { args: [] },
+  looks_nextcostume: { args: [] },
+  looks_say: { args: [{ name: 'MESSAGE', kind: 'input', shadow: 'text' }] },
+  looks_sayforsecs: { args: [{ name: 'MESSAGE', kind: 'input', shadow: 'text' }, { name: 'SECS', kind: 'input', shadow: 'math_number' }] },
+  looks_seteffectto: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'VALUE', kind: 'input', shadow: 'math_number' }] },
+  looks_setsizeto: { args: [{ name: 'SIZE', kind: 'input', shadow: 'math_number' }] },
+  looks_setstretchto: { args: [{ name: 'STRETCH', kind: 'input', shadow: 'math_number' }] },
+  looks_show: { args: [] },
+  looks_size: { args: [] },
+  looks_switchbackdropto: { args: [{ name: 'BACKDROP', kind: 'menu', shadow: 'looks_backdrops', menuField: 'BACKDROP' }] },
+  looks_switchbackdroptoandwait: { args: [{ name: 'BACKDROP', kind: 'menu', shadow: 'looks_backdrops', menuField: 'BACKDROP' }] },
+  looks_switchcostumeto: { args: [{ name: 'COSTUME', kind: 'menu', shadow: 'looks_costume', menuField: 'COSTUME' }] },
+  looks_think: { args: [{ name: 'MESSAGE', kind: 'input', shadow: 'text' }] },
+  looks_thinkforsecs: { args: [{ name: 'MESSAGE', kind: 'input', shadow: 'text' }, { name: 'SECS', kind: 'input', shadow: 'math_number' }] },
+  motion_changexby: { args: [{ name: 'DX', kind: 'input', shadow: 'math_number' }] },
+  motion_changeyby: { args: [{ name: 'DY', kind: 'input', shadow: 'math_number' }] },
+  motion_direction: { args: [] },
+  motion_glidesecstoxy: { args: [{ name: 'SECS', kind: 'input', shadow: 'math_number' }, { name: 'X', kind: 'input', shadow: 'math_number' }, { name: 'Y', kind: 'input', shadow: 'math_number' }] },
+  motion_glideto: { args: [{ name: 'SECS', kind: 'input', shadow: 'math_number' }, { name: 'TO', kind: 'menu', shadow: 'motion_glideto_menu', menuField: 'TO' }] },
+  motion_goto: { args: [{ name: 'TO', kind: 'menu', shadow: 'motion_goto_menu', menuField: 'TO' }] },
+  motion_gotoxy: { args: [{ name: 'X', kind: 'input', shadow: 'math_number' }, { name: 'Y', kind: 'input', shadow: 'math_number' }] },
   motion_ifonedgebounce: { args: [] },
+  motion_movesteps: { args: [{ name: 'STEPS', kind: 'input', shadow: 'math_number' }] },
+  motion_pointindirection: { args: [{ name: 'DIRECTION', kind: 'input', shadow: 'math_angle' }] },
+  motion_pointtowards: { args: [{ name: 'TOWARDS', kind: 'menu', shadow: 'motion_pointtowards_menu', menuField: 'TOWARDS' }] },
   motion_setrotationstyle: { args: [{ name: 'STYLE', kind: 'field' }] },
+  motion_setx: { args: [{ name: 'X', kind: 'input', shadow: 'math_number' }] },
+  motion_sety: { args: [{ name: 'Y', kind: 'input', shadow: 'math_number' }] },
+  motion_turnleft: { args: [{ name: 'DEGREES', kind: 'input', shadow: 'math_number' }] },
+  motion_turnright: { args: [{ name: 'DEGREES', kind: 'input', shadow: 'math_number' }] },
   motion_xposition: { args: [] },
   motion_yposition: { args: [] },
-  motion_direction: { args: [] },
-  // Looks
-  looks_say: { args: [{ name: 'MESSAGE', kind: 'input' }] },
-  looks_sayforsecs: { args: [{ name: 'MESSAGE', kind: 'input' }, { name: 'SECS', kind: 'input' }] },
-  looks_think: { args: [{ name: 'MESSAGE', kind: 'input' }] },
-  looks_thinkforsecs: { args: [{ name: 'MESSAGE', kind: 'input' }, { name: 'SECS', kind: 'input' }] },
-  looks_switchcostumeto: { args: [{ name: 'COSTUME', kind: 'field' }] },
-  looks_nextcostume: { args: [] },
-  looks_switchbackdropto: { args: [{ name: 'BACKDROP', kind: 'field' }] },
-  looks_nextbackdrop: { args: [] },
-  looks_changesizeby: { args: [{ name: 'CHANGE', kind: 'input' }] },
-  looks_setsizeto: { args: [{ name: 'SIZE', kind: 'input' }] },
-  looks_changeeffectby: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'CHANGE', kind: 'input' }] },
-  looks_seteffectto: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
-  looks_cleargraphiceffects: { args: [] },
-  looks_show: { args: [] },
-  looks_hide: { args: [] },
-  looks_gotofrontback: { args: [{ name: 'FRONT_BACK', kind: 'field' }] },
-  looks_goforwardbackwardlayers: { args: [{ name: 'FRONT_BACK', kind: 'field' }, { name: 'NUM', kind: 'input' }] },
-  looks_costumenumbername: { args: [{ name: 'NUMBER_NAME', kind: 'field' }] },
-  looks_backdropnumbername: { args: [{ name: 'NUMBER_NAME', kind: 'field' }] },
-  looks_size: { args: [] },
-  // TurboWarp stretch blocks
-  looks_setstretchto: { args: [{ name: 'STRETCHX', kind: 'input' }, { name: 'STRETCHY', kind: 'input' }] },
-  looks_changestretchby: { args: [{ name: 'STRETCHX', kind: 'input' }, { name: 'STRETCHY', kind: 'input' }] },
-  // Sound
-  sound_play: { args: [{ name: 'SOUND_MENU', kind: 'field' }] },
-  sound_playuntildone: { args: [{ name: 'SOUND_MENU', kind: 'field' }] },
-  sound_stopallsounds: { args: [] },
-  sound_changeeffectby: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
-  sound_seteffectto: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
-  sound_cleareffects: { args: [] },
-  sound_changevolumeby: { args: [{ name: 'VOLUME', kind: 'input' }] },
-  sound_setvolumeto: { args: [{ name: 'VOLUME', kind: 'input' }] },
-  sound_volume: { args: [] },
-  // Control
-  control_wait: { args: [{ name: 'DURATION', kind: 'input' }] },
-  control_wait_until: { args: [{ name: 'CONDITION', kind: 'input' }] },
-  control_repeat: { args: [{ name: 'TIMES', kind: 'input' }], substack: true },
-  control_forever: { args: [], substack: true },
-  control_if: { args: [{ name: 'CONDITION', kind: 'input' }], substack: true },
-  control_if_else: { args: [{ name: 'CONDITION', kind: 'input' }], substack: true, substack2: true },
-  control_repeat_until: { args: [{ name: 'CONDITION', kind: 'input' }], substack: true },
-  control_while: { args: [{ name: 'CONDITION', kind: 'input' }], substack: true },
-  control_for_each: { args: [{ name: 'VARIABLE', kind: 'field' }, { name: 'VALUE', kind: 'input' }], substack: true },
-  control_stop: { args: [{ name: 'STOP_OPTION', kind: 'field' }] },
-  control_start_as_clone: { args: [], substack: false },
-  control_create_clone_of: { args: [{ name: 'CLONE_OPTION', kind: 'field' }] },
-  control_delete_this_clone: { args: [] },
-  control_get_counter: { args: [] },
-  control_incr_counter: { args: [] },
-  control_decr_counter: { args: [] },
-  control_clear_counter: { args: [] },
-  control_all_at_once: { args: [], substack: true },
-  // Sensing
-  sensing_touchingobject: { args: [{ name: 'TOUCHINGOBJECTMENU', kind: 'field' }] },
-  sensing_touchingcolor: { args: [{ name: 'COLOR', kind: 'input' }] },
-  sensing_coloristouchingcolor: { args: [{ name: 'COLOR', kind: 'input' }, { name: 'COLOR2', kind: 'input' }] },
-  sensing_distanceto: { args: [{ name: 'DISTANCETOMENU', kind: 'field' }] },
-  sensing_askandwait: { args: [{ name: 'QUESTION', kind: 'input' }] },
+  operator_add: { args: [{ name: 'NUM1', kind: 'input', shadow: 'math_number' }, { name: 'NUM2', kind: 'input', shadow: 'math_number' }] },
+  operator_and: { args: [{ name: 'OPERAND1', kind: 'input', bool: true }, { name: 'OPERAND2', kind: 'input', bool: true }] },
+  operator_contains: { args: [{ name: 'STRING1', kind: 'input', shadow: 'text' }, { name: 'STRING2', kind: 'input', shadow: 'text' }] },
+  operator_divide: { args: [{ name: 'NUM1', kind: 'input', shadow: 'math_number' }, { name: 'NUM2', kind: 'input', shadow: 'math_number' }] },
+  operator_equals: { args: [{ name: 'OPERAND1', kind: 'input', shadow: 'text' }, { name: 'OPERAND2', kind: 'input', shadow: 'text' }] },
+  operator_gt: { args: [{ name: 'OPERAND1', kind: 'input', shadow: 'text' }, { name: 'OPERAND2', kind: 'input', shadow: 'text' }] },
+  operator_join: { args: [{ name: 'STRING1', kind: 'input', shadow: 'text' }, { name: 'STRING2', kind: 'input', shadow: 'text' }] },
+  operator_length: { args: [{ name: 'STRING', kind: 'input', shadow: 'text' }] },
+  operator_letter_of: { args: [{ name: 'LETTER', kind: 'input', shadow: 'math_whole_number' }, { name: 'STRING', kind: 'input', shadow: 'text' }] },
+  operator_lt: { args: [{ name: 'OPERAND1', kind: 'input', shadow: 'text' }, { name: 'OPERAND2', kind: 'input', shadow: 'text' }] },
+  operator_mathop: { args: [{ name: 'OPERATOR', kind: 'field' }, { name: 'NUM', kind: 'input', shadow: 'math_number' }] },
+  operator_mod: { args: [{ name: 'NUM1', kind: 'input', shadow: 'math_number' }, { name: 'NUM2', kind: 'input', shadow: 'math_number' }] },
+  operator_multiply: { args: [{ name: 'NUM1', kind: 'input', shadow: 'math_number' }, { name: 'NUM2', kind: 'input', shadow: 'math_number' }] },
+  operator_not: { args: [{ name: 'OPERAND', kind: 'input', bool: true }] },
+  operator_or: { args: [{ name: 'OPERAND1', kind: 'input', bool: true }, { name: 'OPERAND2', kind: 'input', bool: true }] },
+  operator_random: { args: [{ name: 'FROM', kind: 'input', shadow: 'math_number' }, { name: 'TO', kind: 'input', shadow: 'math_number' }] },
+  operator_round: { args: [{ name: 'NUM', kind: 'input', shadow: 'math_number' }] },
+  operator_subtract: { args: [{ name: 'NUM1', kind: 'input', shadow: 'math_number' }, { name: 'NUM2', kind: 'input', shadow: 'math_number' }] },
+  pen_changePenColorParamBy: { args: [{ name: 'COLOR_PARAM', kind: 'menu', shadow: 'pen_menu_colorParam', menuField: 'colorParam' }, { name: 'VALUE', kind: 'input', shadow: 'math_number' }] },
+  pen_changePenSizeBy: { args: [{ name: 'SIZE', kind: 'input', shadow: 'math_number' }] },
+  pen_clear: { args: [] },
+  pen_penDown: { args: [] },
+  pen_penUp: { args: [] },
+  pen_setPenColorParamTo: { args: [{ name: 'COLOR_PARAM', kind: 'menu', shadow: 'pen_menu_colorParam', menuField: 'colorParam' }, { name: 'VALUE', kind: 'input', shadow: 'math_number' }] },
+  pen_setPenColorToColor: { args: [{ name: 'COLOR', kind: 'input', shadow: 'colour_picker' }] },
+  pen_setPenSizeTo: { args: [{ name: 'SIZE', kind: 'input', shadow: 'math_number' }] },
+  pen_stamp: { args: [] },
   sensing_answer: { args: [] },
-  sensing_keypressed: { args: [{ name: 'KEY_OPTION', kind: 'field' }] },
+  sensing_askandwait: { args: [{ name: 'QUESTION', kind: 'input', shadow: 'text' }] },
+  sensing_coloristouchingcolor: { args: [{ name: 'COLOR', kind: 'input', shadow: 'colour_picker' }, { name: 'COLOR2', kind: 'input', shadow: 'colour_picker' }] },
+  sensing_current: { args: [{ name: 'CURRENTMENU', kind: 'field' }] },
+  sensing_dayssince2000: { args: [] },
+  sensing_distanceto: { args: [{ name: 'DISTANCETOMENU', kind: 'menu', shadow: 'sensing_distancetomenu', menuField: 'DISTANCETOMENU' }] },
+  sensing_keypressed: { args: [{ name: 'KEY_OPTION', kind: 'menu', shadow: 'sensing_keyoptions', menuField: 'KEY_OPTION' }] },
+  sensing_loudness: { args: [] },
   sensing_mousedown: { args: [] },
   sensing_mousex: { args: [] },
   sensing_mousey: { args: [] },
-  sensing_setdragmode: { args: [{ name: 'DRAG_MODE', kind: 'field' }] },
-  sensing_loudness: { args: [] },
-  sensing_timer: { args: [] },
+  sensing_of: { args: [{ name: 'PROPERTY', kind: 'field' }, { name: 'OBJECT', kind: 'menu', shadow: 'sensing_of_object_menu', menuField: 'OBJECT' }] },
   sensing_resettimer: { args: [] },
-  sensing_of: { args: [{ name: 'PROPERTY', kind: 'field' }, { name: 'OBJECT', kind: 'field' }] },
-  sensing_current: { args: [{ name: 'CURRENTMENU', kind: 'field' }] },
-  sensing_dayssince2000: { args: [] },
+  sensing_setdragmode: { args: [{ name: 'DRAG_MODE', kind: 'field' }] },
+  sensing_timer: { args: [] },
+  sensing_touchingcolor: { args: [{ name: 'COLOR', kind: 'input', shadow: 'colour_picker' }] },
+  sensing_touchingobject: { args: [{ name: 'TOUCHINGOBJECTMENU', kind: 'menu', shadow: 'sensing_touchingobjectmenu', menuField: 'TOUCHINGOBJECTMENU' }] },
   sensing_username: { args: [] },
-  // Operators
-  operator_add: { args: [{ name: 'NUM1', kind: 'input' }, { name: 'NUM2', kind: 'input' }] },
-  operator_subtract: { args: [{ name: 'NUM1', kind: 'input' }, { name: 'NUM2', kind: 'input' }] },
-  operator_multiply: { args: [{ name: 'NUM1', kind: 'input' }, { name: 'NUM2', kind: 'input' }] },
-  operator_divide: { args: [{ name: 'NUM1', kind: 'input' }, { name: 'NUM2', kind: 'input' }] },
-  operator_random: { args: [{ name: 'FROM', kind: 'input' }, { name: 'TO', kind: 'input' }] },
-  operator_gt: { args: [{ name: 'OPERAND1', kind: 'input' }, { name: 'OPERAND2', kind: 'input' }] },
-  operator_lt: { args: [{ name: 'OPERAND1', kind: 'input' }, { name: 'OPERAND2', kind: 'input' }] },
-  operator_equals: { args: [{ name: 'OPERAND1', kind: 'input' }, { name: 'OPERAND2', kind: 'input' }] },
-  operator_and: { args: [{ name: 'OPERAND1', kind: 'input' }, { name: 'OPERAND2', kind: 'input' }] },
-  operator_or: { args: [{ name: 'OPERAND1', kind: 'input' }, { name: 'OPERAND2', kind: 'input' }] },
-  operator_not: { args: [{ name: 'OPERAND', kind: 'input' }] },
-  operator_join: { args: [{ name: 'STRING1', kind: 'input' }, { name: 'STRING2', kind: 'input' }] },
-  operator_letter_of: { args: [{ name: 'LETTER', kind: 'input' }, { name: 'STRING', kind: 'input' }] },
-  operator_length: { args: [{ name: 'STRING', kind: 'input' }] },
-  operator_contains: { args: [{ name: 'STRING1', kind: 'input' }, { name: 'STRING2', kind: 'input' }] },
-  operator_round: { args: [{ name: 'NUM', kind: 'input' }] },
-  operator_mod: { args: [{ name: 'NUM1', kind: 'input' }, { name: 'NUM2', kind: 'input' }] },
-  operator_mathop: { args: [{ name: 'OPERATOR', kind: 'field' }, { name: 'NUM', kind: 'input' }] },
-  // Data
-  data_setvariableto: { args: [{ name: 'VARIABLE', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
-  data_changevariableby: { args: [{ name: 'VARIABLE', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
-  data_showvariable: { args: [{ name: 'VARIABLE', kind: 'field' }] },
-  data_hidevariable: { args: [{ name: 'VARIABLE', kind: 'field' }] },
-  data_addtolist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'ITEM', kind: 'input' }] },
-  data_deleteoflist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'INDEX', kind: 'input' }] },
-  data_deletealloflist: { args: [{ name: 'LIST', kind: 'field' }] },
-  data_insertatlist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'INDEX', kind: 'input' }, { name: 'ITEM', kind: 'input' }] },
-  data_replaceitemoflist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'INDEX', kind: 'input' }, { name: 'ITEM', kind: 'input' }] },
-  data_itemoflist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'INDEX', kind: 'input' }] },
-  data_itemnumoflist: { args: [{ name: 'LIST', kind: 'field' }, { name: 'ITEM', kind: 'input' }] },
-  data_lengthoflist: { args: [{ name: 'LIST', kind: 'field' }] },
-  data_listcontainsitem: { args: [{ name: 'LIST', kind: 'field' }, { name: 'ITEM', kind: 'input' }] },
-  data_showlist: { args: [{ name: 'LIST', kind: 'field' }] },
-  data_hidelist: { args: [{ name: 'LIST', kind: 'field' }] },
-  // Events
-  event_whenflagclicked: { args: [] },
-  event_whenkeypressed: { args: [{ name: 'KEY_OPTION', kind: 'field' }] },
-  event_whenthisspriteclicked: { args: [] },
-  event_whenstageclicked: { args: [] },
-  event_whenbackdropswitchesto: { args: [{ name: 'BACKDROP', kind: 'field' }] },
-  event_whengreaterthan: { args: [{ name: 'WHENGREATERTHANMENU', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
-  event_whenbroadcastreceived: { args: [{ name: 'BROADCAST_OPTION', kind: 'field' }] },
-  event_broadcast: { args: [{ name: 'BROADCAST_INPUT', kind: 'input' }] },
-  event_broadcastandwait: { args: [{ name: 'BROADCAST_INPUT', kind: 'input' }] },
-  // Procedures (custom blocks)
-  procedures_call: { args: [] }, // args handled dynamically
-  // Pen extension (common)
-  pen_penDown: { args: [] },
-  pen_penUp: { args: [] },
-  pen_setPenColorToColor: { args: [{ name: 'COLOR', kind: 'input' }] },
-  pen_changePenColorParamBy: { args: [{ name: 'COLOR_PARAM', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
-  pen_setPenColorParamTo: { args: [{ name: 'COLOR_PARAM', kind: 'field' }, { name: 'VALUE', kind: 'input' }] },
-  pen_changePenSizeBy: { args: [{ name: 'SIZE', kind: 'input' }] },
-  pen_setPenSizeTo: { args: [{ name: 'SIZE', kind: 'input' }] },
-  pen_clear: { args: [] }
+  sound_changeeffectby: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'VALUE', kind: 'input', shadow: 'math_number' }] },
+  sound_changevolumeby: { args: [{ name: 'VOLUME', kind: 'input', shadow: 'math_number' }] },
+  sound_cleareffects: { args: [] },
+  sound_play: { args: [{ name: 'SOUND_MENU', kind: 'menu', shadow: 'sound_sounds_menu', menuField: 'SOUND_MENU' }] },
+  sound_playuntildone: { args: [{ name: 'SOUND_MENU', kind: 'menu', shadow: 'sound_sounds_menu', menuField: 'SOUND_MENU' }] },
+  sound_seteffectto: { args: [{ name: 'EFFECT', kind: 'field' }, { name: 'VALUE', kind: 'input', shadow: 'math_number' }] },
+  sound_setvolumeto: { args: [{ name: 'VOLUME', kind: 'input', shadow: 'math_number' }] },
+  sound_stopallsounds: { args: [] },
+  sound_volume: { args: [] },
 };
 
 // Tokenize a string of positional arguments into parsed values.
@@ -593,6 +590,659 @@ function resolveVariableField(target, key, rawName) {
   return { name: key, value: variable.name, id: variable.id, variableType: type };
 }
 
+// Resolve a broadcast message name to a real broadcast variable descriptor.
+// Broadcast blocks bind by id just like variables; an id-less BROADCAST_OPTION renders
+// blank and never fires, so create the message when it is genuinely new.
+function resolveBroadcastField(target, rawName) {
+  const name = String(rawName == null ? '' : rawName) || 'message1';
+  const stage = target.runtime && target.runtime.getTargetForStage
+    ? target.runtime.getTargetForStage()
+    : null;
+  const owner = stage || target;
+  let msg = owner.lookupBroadcastByInputValue ? owner.lookupBroadcastByInputValue(name) : null;
+  if (!msg) {
+    const newId = 'aibcast_' + Math.random().toString(36).slice(2, 10);
+    owner.createVariable(newId, name, 'broadcast_msg');
+    msg = (owner.lookupBroadcastByInputValue && owner.lookupBroadcastByInputValue(name)) ||
+      { id: newId, name: name };
+  }
+  return { name: 'BROADCAST_OPTION', value: msg.name, id: msg.id, variableType: 'broadcast_msg' };
+}
+
+// Which field carries the literal value inside each primitive shadow block.
+const SHADOW_VALUE_FIELD = {
+  math_number: 'NUM',
+  math_integer: 'NUM',
+  math_whole_number: 'NUM',
+  math_positive_number: 'NUM',
+  math_angle: 'NUM',
+  text: 'TEXT',
+  colour_picker: 'COLOUR',
+  note: 'NOTE',
+  matrix: 'MATRIX'
+};
+
+function schemaArgFor(opcode, inputName) {
+  const schema = OPCODE_SCHEMA[opcode];
+  if (!schema || !Array.isArray(schema.args)) return null;
+  for (let i = 0; i < schema.args.length; i++) {
+    if (schema.args[i].name === inputName) return schema.args[i];
+  }
+  return null;
+}
+
+// Scratch's colour_picker field stores '#rrggbb'. Models often pass the decimal form
+// used by the sb3 format (16711680), which would otherwise render as literal text.
+function toHexColor(value) {
+  if (typeof value === 'number' && isFinite(value)) {
+    const n = Math.max(0, Math.min(0xffffff, Math.round(value)));
+    return '#' + ('000000' + n.toString(16)).slice(-6);
+  }
+  const str = String(value == null ? '' : value).trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(str)) return str.toLowerCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(str)) {
+    return '#' + str[1] + str[1] + str[2] + str[2] + str[3] + str[3];
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(str)) return '#' + str.toLowerCase();
+  const asNum = Number(str);
+  if (str !== '' && !isNaN(asNum)) return toHexColor(asNum);
+  return '#0000ff';
+}
+
+function newAiBlockId() {
+  return '_ai_' + Math.random().toString(36).substr(2, 9);
+}
+
+/**
+ * Create the shadow block occupying one input slot, choosing its type from OPCODE_SCHEMA
+ * rather than from the JavaScript type of the value.
+ *
+ * The distinction is not cosmetic: `motion_pointindirection` needs a math_angle dial,
+ * `sensing_touchingcolor` a colour_picker, `control_repeat` a whole-number field,
+ * `sound_play` a sound dropdown, and `event_broadcast` a broadcast menu bound to a real
+ * message id. Filling every slot with math_number/text yields blocks that look wrong and,
+ * for menus and broadcasts, do not work at all.
+ *
+ * @returns {[object|null, object]} [shadow block to create (or null), input reference]
+ */
+function createInputShadow(target, parentId, opcode, inputName, value) {
+  const argDef = schemaArgFor(opcode, inputName);
+
+  const mkShadow = (shadowOpcode, fields) => {
+    const sid = newAiBlockId();
+    return [
+      {
+        id: sid, opcode: shadowOpcode, fields: fields, inputs: {},
+        next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0
+      },
+      { name: inputName, block: sid, shadow: sid }
+    ];
+  };
+
+  // Variable / list reporters requested explicitly as {VARIABLE: n} / {LIST: n}
+  if (value && typeof value === 'object' && value.VARIABLE !== undefined) {
+    return mkShadow('data_variable', { VARIABLE: resolveVariableField(target, 'VARIABLE', value.VARIABLE) });
+  }
+  if (value && typeof value === 'object' && value.LIST !== undefined) {
+    return mkShadow('data_listcontents', { LIST: resolveVariableField(target, 'LIST', value.LIST) });
+  }
+
+  // Boolean (hexagonal) slots hold no shadow in Scratch; an empty condition is legal and
+  // reads as false. A text shadow there breaks the block's shape.
+  if (argDef && argDef.bool) {
+    return [null, { name: inputName, block: null, shadow: null }];
+  }
+
+  // Menu-backed input: dropdown appearance, real input slot underneath.
+  if (argDef && argDef.kind === 'menu') {
+    if (argDef.shadow === 'event_broadcast_menu') {
+      return mkShadow('event_broadcast_menu', { BROADCAST_OPTION: resolveBroadcastField(target, value) });
+    }
+    const menuField = argDef.menuField || inputName;
+    return mkShadow(argDef.shadow, {
+      [menuField]: { name: menuField, value: String(value == null ? '' : value), id: undefined }
+    });
+  }
+
+  const shadowType = (argDef && argDef.shadow) || null;
+  if (shadowType === 'colour_picker') {
+    return mkShadow('colour_picker', { COLOUR: { name: 'COLOUR', value: toHexColor(value), id: undefined } });
+  }
+  if (shadowType && SHADOW_VALUE_FIELD[shadowType] && shadowType !== 'text') {
+    const fieldName = SHADOW_VALUE_FIELD[shadowType];
+    const num = typeof value === 'number' ? value : Number(String(value == null ? '' : value).trim());
+    // A numeric slot given non-numeric text means the model put a string where Scratch
+    // expects a number; keep it visible in a text shadow instead of silently zeroing it.
+    if (isFinite(num) && String(value).trim() !== '') {
+      return mkShadow(shadowType, { [fieldName]: { name: fieldName, value: num, id: undefined } });
+    }
+    return mkShadow('text', { TEXT: { name: 'TEXT', value: String(value == null ? '' : value), id: undefined } });
+  }
+
+  if (typeof value === 'number') {
+    return mkShadow('math_number', { NUM: { name: 'NUM', value: value, id: undefined } });
+  }
+  if (typeof value === 'boolean') {
+    return mkShadow('text', { TEXT: { name: 'TEXT', value: value ? 'true' : 'false', id: undefined } });
+  }
+  if (value === null || value === undefined) {
+    return [null, { name: inputName, block: null, shadow: null }];
+  }
+  return mkShadow('text', { TEXT: { name: 'TEXT', value: String(value), id: undefined } });
+}
+
+/**
+ * Turn a block descriptor tree into flat VM block records appended to `allBlocks`.
+ * Handles nested reporters, SUBSTACK/SUBSTACK2 (array or single descriptor), `next`
+ * chaining, menu/variable/broadcast fields, and parent wiring.
+ * @returns {string|null} id of the created block
+ */
+function buildBlockStructure(scriptObj, target, allBlocks) {
+  if (!scriptObj || !scriptObj.opcode) return null;
+  const blockId = newAiBlockId();
+  const inputs = {};
+  const rawInputs = scriptObj.inputs || {};
+
+  Object.keys(rawInputs).forEach(key => {
+    if (key === 'SUBSTACK' || key === 'SUBSTACK2') return; // handled after the block exists
+    const val = rawInputs[key];
+    if (val && typeof val === 'object' && val.opcode) {
+      const nestedId = buildBlockStructure(val, target, allBlocks);
+      if (nestedId) {
+        inputs[key] = { name: key, block: nestedId, shadow: null };
+        const nestedDef = allBlocks.find(ab => ab.id === nestedId);
+        if (nestedDef) nestedDef.parent = blockId;
+      }
+      return;
+    }
+    const [shadowBlock, inputRef] = createInputShadow(target, blockId, scriptObj.opcode, key, val);
+    if (shadowBlock) allBlocks.push(shadowBlock);
+    if (inputRef && inputRef.block) inputs[key] = inputRef;
+  });
+
+  const fields = {};
+  if (scriptObj.fields) {
+    Object.keys(scriptObj.fields).forEach(key => {
+      const argDef = schemaArgFor(scriptObj.opcode, key);
+      const raw = scriptObj.fields[key];
+      // A model may place a menu value under `fields` even though Scratch models it as an
+      // input slot; route it through the shadow path so the block still renders correctly.
+      if (argDef && argDef.kind === 'menu') {
+        const [shadowBlock, inputRef] = createInputShadow(target, blockId, scriptObj.opcode, key, raw);
+        if (shadowBlock) allBlocks.push(shadowBlock);
+        if (inputRef && inputRef.block) inputs[key] = inputRef;
+        return;
+      }
+      if (key === 'VARIABLE') { fields[key] = resolveVariableField(target, 'VARIABLE', raw); return; }
+      if (key === 'LIST') { fields[key] = resolveVariableField(target, 'LIST', raw); return; }
+      if (key === 'BROADCAST_OPTION') { fields[key] = resolveBroadcastField(target, raw); return; }
+      fields[key] = { name: key, value: String(raw), id: undefined };
+    });
+  }
+
+  const blockDef = {
+    id: blockId, opcode: scriptObj.opcode, next: null, parent: null,
+    inputs: inputs, fields: fields, shadow: false, topLevel: false, x: 0, y: 0
+  };
+  allBlocks.push(blockDef);
+
+  const subSource = scriptObj.substack || rawInputs.SUBSTACK;
+  if (subSource) {
+    const arr = Array.isArray(subSource) ? subSource : [subSource];
+    const substackId = buildSubstackChain(arr, target, allBlocks, blockId);
+    if (substackId) blockDef.inputs.SUBSTACK = { name: 'SUBSTACK', block: substackId, shadow: null };
+  }
+  const sub2Source = scriptObj.substack2 || rawInputs.SUBSTACK2;
+  if (sub2Source) {
+    const arr2 = Array.isArray(sub2Source) ? sub2Source : [sub2Source];
+    const substack2Id = buildSubstackChain(arr2, target, allBlocks, blockId);
+    if (substack2Id) blockDef.inputs.SUBSTACK2 = { name: 'SUBSTACK2', block: substack2Id, shadow: null };
+  }
+
+  if (scriptObj.next) {
+    const nextId = buildBlockStructure(scriptObj.next, target, allBlocks);
+    if (nextId) {
+      blockDef.next = nextId;
+      const nextDef = allBlocks.find(ab => ab.id === nextId);
+      if (nextDef) nextDef.parent = blockId;
+    }
+  }
+
+  return blockId;
+}
+
+/** Build a vertical chain of blocks; returns the first block's id. */
+function buildSubstackChain(substackArray, target, allBlocks, parentBlockId) {
+  if (!Array.isArray(substackArray) || substackArray.length === 0) return null;
+  let firstId = null;
+  let prevId = null;
+  for (let si = 0; si < substackArray.length; si++) {
+    const subId = buildBlockStructure(substackArray[si], target, allBlocks);
+    if (!subId) continue;
+    if (firstId === null) firstId = subId;
+    const curDef = allBlocks.find(ab => ab.id === subId);
+    if (curDef) curDef.parent = prevId || parentBlockId;
+    if (prevId) {
+      const prevDef = allBlocks.find(ab => ab.id === prevId);
+      if (prevDef) prevDef.next = subId;
+    }
+    prevId = subId;
+  }
+  return firstId;
+}
+
+/**
+ * Build a complete top-level script (hat + body chain) from a parsed DSL result.
+ * @returns {{blocks: Array, hatId: ?string, lastId: ?string}}
+ */
+/**
+ * Splice a freshly built chain of blocks into an existing script.
+ *
+ * Scratch stores a stack as a singly linked list (`next`) plus a `parent` pointer, and
+ * C-blocks hold their body under `inputs.SUBSTACK`. Inserting therefore means rewiring
+ * exactly three links — predecessor→new, new tail→successor, successor→new tail — and
+ * getting any of them wrong detaches the rest of the script into a floating stack.
+ * Centralizing that here keeps every insert position consistent.
+ *
+ * @param {object} target the sprite/stage whose blocks are being edited
+ * @param {Array} newBlocks flat block records to create (already linked among themselves)
+ * @param {string} firstId id of the first block of the new chain
+ * @param {string} lastId id of the last block of the new chain
+ * @param {object} anchor {position, blockId} describing where to splice
+ * @returns {{ok: boolean, error: ?string}}
+ */
+function spliceBlocksIntoScript(target, newBlocks, firstId, lastId, anchor) {
+  const blocks = target.blocks;
+  const position = anchor.position;
+  const anchorBlock = anchor.blockId ? blocks.getBlock(anchor.blockId) : null;
+
+  if (position !== 'body_start' && position !== 'body_end' && !anchorBlock) {
+    return { ok: false, error: 'Anchor block not found' };
+  }
+
+  const create = () => newBlocks.forEach(b => blocks.createBlock(b));
+  const firstDef = newBlocks.find(b => b.id === firstId);
+  const lastDef = newBlocks.find(b => b.id === lastId);
+  if (!firstDef || !lastDef) return { ok: false, error: 'New blocks were not built' };
+  // Spliced blocks always live inside a script, never as their own stack.
+  firstDef.topLevel = false;
+  firstDef.x = 0;
+  firstDef.y = 0;
+
+  if (position === 'after') {
+    const successorId = anchorBlock.next;
+    create();
+    blocks.getBlock(anchor.blockId).next = firstId;
+    blocks.getBlock(firstId).parent = anchor.blockId;
+    if (successorId) {
+      blocks.getBlock(lastId).next = successorId;
+      const successor = blocks.getBlock(successorId);
+      if (successor) successor.parent = lastId;
+    }
+    return { ok: true };
+  }
+
+  if (position === 'before') {
+    const parentId = anchorBlock.parent;
+    const wasTopLevel = anchorBlock.topLevel;
+    // Which link points at the anchor: a previous block's `next`, or a C-block's SUBSTACK?
+    let parentBlock = parentId ? blocks.getBlock(parentId) : null;
+    let branchInput = null;
+    if (parentBlock) {
+      if (parentBlock.next === anchor.blockId) {
+        branchInput = null;
+      } else if (parentBlock.inputs) {
+        ['SUBSTACK', 'SUBSTACK2'].forEach(key => {
+          if (parentBlock.inputs[key] && parentBlock.inputs[key].block === anchor.blockId) branchInput = key;
+        });
+      }
+    }
+    // Inserting before a hat block is meaningless — nothing can precede it.
+    if (!parentBlock && !wasTopLevel) {
+      return { ok: false, error: 'Anchor block has no parent and is not top level; cannot insert before it' };
+    }
+    if (anchorBlock.opcode.indexOf('event_when') === 0 || anchorBlock.opcode === 'control_start_as_clone') {
+      return { ok: false, error: 'Cannot insert before a hat block (' + anchorBlock.opcode +
+        '). Use position "after" to put blocks under the hat.' };
+    }
+    create();
+    const anchorNow = blocks.getBlock(anchor.blockId);
+    blocks.getBlock(lastId).next = anchor.blockId;
+    anchorNow.parent = lastId;
+    if (parentBlock) {
+      const parentNow = blocks.getBlock(parentId);
+      if (branchInput) {
+        parentNow.inputs[branchInput] = { name: branchInput, block: firstId, shadow: null };
+      } else {
+        parentNow.next = firstId;
+      }
+      blocks.getBlock(firstId).parent = parentId;
+    } else {
+      // The anchor was the top of its own stack; the new chain takes that role.
+      const firstNow = blocks.getBlock(firstId);
+      firstNow.topLevel = true;
+      firstNow.x = anchorBlock.x || 0;
+      firstNow.y = anchorBlock.y || 0;
+      firstNow.parent = null;
+      anchorNow.topLevel = false;
+      blocks._addScript(firstId);
+      blocks._deleteScript(anchor.blockId);
+    }
+    return { ok: true };
+  }
+
+  if (position === 'body_start' || position === 'body_end') {
+    const cBlock = blocks.getBlock(anchor.blockId);
+    if (!cBlock) return { ok: false, error: 'C-block not found' };
+    const schema = OPCODE_SCHEMA[cBlock.opcode];
+    const branch = anchor.branch === 'else' ? 'SUBSTACK2' : 'SUBSTACK';
+    if (!schema || (branch === 'SUBSTACK' && !schema.substack) || (branch === 'SUBSTACK2' && !schema.substack2)) {
+      return { ok: false, error: cBlock.opcode + ' has no ' + (branch === 'SUBSTACK2' ? 'else branch' : 'body slot') +
+        ', so it cannot receive blocks inside it. Use position "after" instead.' };
+    }
+    const existingFirstId = cBlock.inputs[branch] && cBlock.inputs[branch].block;
+    create();
+    if (!existingFirstId) {
+      blocks.getBlock(anchor.blockId).inputs[branch] = { name: branch, block: firstId, shadow: null };
+      blocks.getBlock(firstId).parent = anchor.blockId;
+      return { ok: true };
+    }
+    if (position === 'body_start') {
+      blocks.getBlock(anchor.blockId).inputs[branch] = { name: branch, block: firstId, shadow: null };
+      blocks.getBlock(firstId).parent = anchor.blockId;
+      blocks.getBlock(lastId).next = existingFirstId;
+      const oldFirst = blocks.getBlock(existingFirstId);
+      if (oldFirst) oldFirst.parent = lastId;
+    } else {
+      let tailId = existingFirstId;
+      let guard = 0;
+      while (blocks.getBlock(tailId) && blocks.getBlock(tailId).next && guard++ < 10000) {
+        tailId = blocks.getBlock(tailId).next;
+      }
+      blocks.getBlock(tailId).next = firstId;
+      blocks.getBlock(firstId).parent = tailId;
+    }
+    return { ok: true };
+  }
+
+  return { ok: false, error: 'Unknown position "' + position + '"' };
+}
+
+function buildScriptBlocks(parsed, target, options) {
+  const opts = options || {};
+  const allBlocks = [];
+  const hatId = parsed.hat ? buildBlockStructure(parsed.hat, target, allBlocks) : null;
+  if (hatId && opts.topLevel !== false) {
+    const hatDef = allBlocks.find(b => b.id === hatId);
+    if (hatDef) {
+      hatDef.topLevel = true;
+      hatDef.x = typeof opts.x === 'number' ? opts.x : 100 + Math.random() * 200;
+      hatDef.y = typeof opts.y === 'number' ? opts.y : 100 + Math.random() * 200;
+    }
+  }
+  let prevId = hatId;
+  (parsed.blocks || []).forEach(block => {
+    const blockId = buildBlockStructure(block, target, allBlocks);
+    if (!blockId) return;
+    if (prevId) {
+      const prevDef = allBlocks.find(b => b.id === prevId);
+      if (prevDef) prevDef.next = blockId;
+      const curDef = allBlocks.find(b => b.id === blockId);
+      if (curDef) curDef.parent = prevId;
+    } else if (opts.topLevel !== false) {
+      // Body-only script (no hat): the first block becomes the top-level one
+      const curDef = allBlocks.find(b => b.id === blockId);
+      if (curDef) {
+        curDef.topLevel = true;
+        curDef.x = typeof opts.x === 'number' ? opts.x : 100 + Math.random() * 200;
+        curDef.y = typeof opts.y === 'number' ? opts.y : 100 + Math.random() * 200;
+      }
+    }
+    prevId = blockId;
+  });
+  return { blocks: allBlocks, hatId: hatId, lastId: prevId };
+}
+
+/**
+ * Validate a parsed DSL tree before touching the workspace.
+ *
+ * The point is to fail with a message the model can act on, and to fail *before* any
+ * block is created — a half-applied script leaves the user's project in a state they
+ * have to clean up by hand. Checks: unknown opcodes, hat blocks nested in a body,
+ * C-blocks used without a body, argument counts, and non-numeric values in numeric slots.
+ *
+ * @returns {{errors: string[], warnings: string[]}}
+ */
+function validateParsedScript(parsed, target) {
+  const errors = (parsed.errors || []).slice();
+  const warnings = [];
+  const spriteName = target && target.getName ? target.getName() : '';
+
+  const costumeNames = target && target.getCostumes
+    ? target.getCostumes().map(c => c.name)
+    : [];
+  const soundNames = target && target.getSounds
+    ? target.getSounds().map(s => s.name)
+    : [];
+  const spriteNames = target && target.runtime
+    ? target.runtime.targets.filter(t => !t.isStage && t.isOriginal).map(t => t.getName())
+    : [];
+
+  const isHat = opcode => opcode.indexOf('event_when') === 0 || opcode === 'control_start_as_clone';
+
+  function checkDescriptor(desc, path, depth) {
+    if (!desc || !desc.opcode) return;
+    const opcode = desc.opcode;
+    const schema = OPCODE_SCHEMA[opcode];
+    const where = path + ' (' + opcode + ')';
+
+    if (!schema) {
+      errors.push(where + ': unknown opcode. It is not in the supported block dictionary — ' +
+        'check spelling, or use develop_extension if the block comes from an extension.');
+      return;
+    }
+    if (depth > 0 && isHat(opcode)) {
+      errors.push(where + ': hat blocks can only be the first line of a script, never nested ' +
+        'inside a body or a C-block. Split this into a separate add_script operation.');
+    }
+    if ((schema.substack || schema.substack2) &&
+        (!desc.substack || desc.substack.length === 0) &&
+        (!desc.substack2 || desc.substack2.length === 0)) {
+      warnings.push(where + ': C-block has an empty body. Indent the blocks that belong inside it by two spaces.');
+    }
+    if (!schema.substack && desc.substack && desc.substack.length > 0) {
+      errors.push(where + ': this block has no body slot, but ' + desc.substack.length +
+        ' block(s) were indented under it. Remove the indentation.');
+    }
+    if (!schema.substack2 && desc.substack2 && desc.substack2.length > 0) {
+      errors.push(where + ': this block has no else branch, so "else" is not valid here.');
+    }
+
+    // Extra positional tokens land in ARG1/ARG2… which Scratch cannot render.
+    Object.keys(desc.inputs || {}).forEach(key => {
+      if (/^ARG\d+$/.test(key)) {
+        errors.push(where + ': too many arguments. This block takes ' + schema.args.length +
+          ' (' + (schema.args.map(a => a.name).join(', ') || 'none') + ').');
+      }
+    });
+
+    schema.args.forEach(argDef => {
+      const provided = Object.prototype.hasOwnProperty.call(desc.inputs || {}, argDef.name) ||
+        Object.prototype.hasOwnProperty.call(desc.fields || {}, argDef.name);
+      if (!provided && !argDef.bool) {
+        warnings.push(where + ': argument ' + argDef.name + ' is missing; Scratch will use its default.');
+        return;
+      }
+      const raw = (desc.inputs || {})[argDef.name];
+      if (raw === undefined || raw === null) return;
+      if (typeof raw === 'object' && raw.opcode) {
+        checkDescriptor(raw, where + ' → ' + argDef.name, depth + 1);
+        return;
+      }
+      if (typeof raw === 'object') return; // {VARIABLE}/{LIST} shorthand
+      const shadow = argDef.shadow;
+      if (shadow && SHADOW_VALUE_FIELD[shadow] && shadow !== 'text' && shadow !== 'colour_picker') {
+        const num = Number(String(raw).trim());
+        if (String(raw).trim() === '' || isNaN(num)) {
+          warnings.push(where + ': ' + argDef.name + ' expects a number but got "' + raw +
+            '". It will be kept as text, which Scratch reads as 0 in arithmetic.');
+        }
+      }
+    });
+
+    // Dropdown values that reference project assets: a typo produces a block that
+    // silently does nothing, so surface it while the model can still fix it.
+    const menuChecks = [
+      { opcodes: ['looks_switchcostumeto'], arg: 'COSTUME', pool: costumeNames, label: 'costume' },
+      { opcodes: ['sound_play', 'sound_playuntildone'], arg: 'SOUND_MENU', pool: soundNames, label: 'sound' }
+    ];
+    menuChecks.forEach(check => {
+      if (check.opcodes.indexOf(opcode) < 0 || check.pool.length === 0) return;
+      const val = (desc.inputs || {})[check.arg] !== undefined
+        ? (desc.inputs || {})[check.arg]
+        : (desc.fields || {})[check.arg];
+      if (val === undefined || val === null || typeof val === 'object') return;
+      if (check.pool.indexOf(String(val)) < 0) {
+        warnings.push(where + ': ' + check.label + ' "' + val + '" does not exist on ' +
+          (spriteName || 'this sprite') + '. Available: ' + check.pool.join(', '));
+      }
+    });
+    if (opcode === 'control_create_clone_of' || opcode === 'sensing_touchingobject' ||
+        opcode === 'motion_goto' || opcode === 'motion_glideto' || opcode === 'motion_pointtowards') {
+      const argName = schema.args.filter(a => a.kind === 'menu').map(a => a.name)[0];
+      const val = argName ? (desc.inputs || {})[argName] : undefined;
+      if (typeof val === 'string' && val.charAt(0) !== '_' && spriteNames.length &&
+          spriteNames.indexOf(val) < 0) {
+        warnings.push(where + ': "' + val + '" is neither a special value (_myself_, _mouse_, ' +
+          '_edge_, _random_) nor an existing sprite. Available sprites: ' + spriteNames.join(', '));
+      }
+    }
+
+    (desc.substack || []).forEach((s, i) => checkDescriptor(s, where + ' body[' + (i + 1) + ']', depth + 1));
+    (desc.substack2 || []).forEach((s, i) => checkDescriptor(s, where + ' else[' + (i + 1) + ']', depth + 1));
+  }
+
+  if (parsed.hat) checkDescriptor(parsed.hat, 'hat', 0);
+  (parsed.blocks || []).forEach((b, i) => checkDescriptor(b, 'line ' + (i + 1), 0));
+  return { errors: errors, warnings: warnings };
+}
+
+/** One place to phrase "nothing was changed" rejections so every caller reads alike. */
+function formatValidationError(errors, scriptText) {
+  const head = 'Script rejected before applying — the project was NOT modified. Fix these and retry:';
+  const body = errors.map(e => '  - ' + e).join('\n');
+  const tail = scriptText ? '\nScript text:\n' + String(scriptText).substring(0, 600) : '';
+  return head + '\n' + body + tail;
+}
+
+/**
+ * Serialize one live VM block back into a DSL line, walking OPCODE_SCHEMA in order.
+ *
+ * Emitting "all inputs then all fields" (the previous approach) breaks the round trip:
+ * `data_addtolist` stores ITEM as an input and LIST as a field, so that order produced
+ * `data_addtolist 100 @scores`, which parses back as list="100", item="scores". Walking
+ * the schema keeps every token in the slot the parser will read it from.
+ *
+ * @param {object} blk block record from target.blocks._blocks
+ * @param {object} blocks the whole _blocks map, for following input references
+ * @param {number} depth recursion guard for nested reporters
+ * @returns {string} one DSL line without indentation
+ */
+function serializeBlockToDsl(blk, blocks, depth) {
+  depth = depth || 0;
+  if (!blk || !blk.opcode) return '';
+  const quote = v => '"' + String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+
+  // Value of whatever sits in one input slot, as a DSL token.
+  const tokenForInput = (inputName) => {
+    const inp = blk.inputs && blk.inputs[inputName];
+    if (!inp || !inp.block) return null;
+    const sub = blocks[inp.block];
+    if (!sub) return null;
+    const isShadow = inp.block === inp.shadow;
+    if (isShadow) {
+      const valueField = SHADOW_VALUE_FIELD[sub.opcode];
+      if (valueField && sub.fields && sub.fields[valueField]) {
+        const raw = sub.fields[valueField].value;
+        if (sub.opcode === 'text' || sub.opcode === 'colour_picker') return quote(raw);
+        return String(raw);
+      }
+      if (sub.opcode === 'data_variable') return '$' + sub.fields.VARIABLE.value;
+      if (sub.opcode === 'data_listcontents') return '@' + sub.fields.LIST.value;
+      // Menu shadow (sound_sounds_menu, motion_goto_menu, event_broadcast_menu, …)
+      const menuKeys = sub.fields ? Object.keys(sub.fields) : [];
+      for (let i = 0; i < menuKeys.length; i++) {
+        const mf = sub.fields[menuKeys[i]];
+        const mfv = mf && typeof mf === 'object' ? mf.value : mf;
+        if (mfv !== null && mfv !== undefined) return quote(mfv);
+      }
+      return null;
+    }
+    // A real reporter is plugged in
+    if (sub.opcode === 'data_variable' && sub.fields && sub.fields.VARIABLE) {
+      return '$' + sub.fields.VARIABLE.value;
+    }
+    if (sub.opcode === 'data_listcontents' && sub.fields && sub.fields.LIST) {
+      return '@' + sub.fields.LIST.value;
+    }
+    if (depth > 6) return '(' + sub.opcode + ')'; // pathological nesting guard
+    return '(' + serializeBlockToDsl(sub, blocks, depth + 1) + ')';
+  };
+
+  const tokenForField = (fieldName) => {
+    const f = blk.fields && blk.fields[fieldName];
+    if (!f) return null;
+    const value = typeof f === 'object' ? f.value : f;
+    if (value === null || value === undefined) return null;
+    if (fieldName === 'VARIABLE') return '$' + value;
+    if (fieldName === 'LIST') return '@' + value;
+    return quote(value);
+  };
+
+  const parts = [blk.opcode];
+  const schema = OPCODE_SCHEMA[blk.opcode];
+  const usedInputs = {};
+  const usedFields = {};
+
+  if (schema && Array.isArray(schema.args)) {
+    for (let i = 0; i < schema.args.length; i++) {
+      const argDef = schema.args[i];
+      let token = null;
+      if (argDef.kind === 'field') {
+        token = tokenForField(argDef.name);
+        if (token !== null) usedFields[argDef.name] = true;
+      } else {
+        token = tokenForInput(argDef.name);
+        if (token !== null) {
+          usedInputs[argDef.name] = true;
+        } else {
+          token = tokenForField(argDef.name);
+          if (token !== null) usedFields[argDef.name] = true;
+        }
+      }
+      // A boolean slot is legitimately empty; anything else needs a placeholder or
+      // every later token would shift one slot left when parsed back.
+      if (token === null) {
+        if (argDef.bool) continue;
+        token = argDef.kind === 'field' || argDef.shadow === 'text' ? '""' : '0';
+      }
+      parts.push(token);
+    }
+  } else {
+    // Unknown opcode (extension block): best effort, inputs then fields.
+    Object.keys(blk.inputs || {}).forEach(function(key) {
+      if (key === 'SUBSTACK' || key === 'SUBSTACK2') return;
+      const token = tokenForInput(key);
+      if (token !== null) parts.push(token);
+    });
+    Object.keys(blk.fields || {}).forEach(function(key) {
+      const token = tokenForField(key);
+      if (token !== null) parts.push(token);
+    });
+  }
+  return parts.join(' ');
+}
+
 function convertBlockObjToDsl(obj, indent) {
   indent = indent || 0;
   var pad = '  '.repeat(indent);
@@ -700,6 +1350,7 @@ function convertBlockObjToDsl(obj, indent) {
 function parseScratchDSL(scriptText, target) {
   void target; // reserved for future use; variable/list id resolution happens in buildBlockStructure
   const warnings = [];
+  const errors = [];
   const rawLines = String(scriptText == null ? '' : scriptText).split('\n');
   const parsedLines = [];
   for (let li = 0; li < rawLines.length; li++) {
@@ -715,7 +1366,7 @@ function parseScratchDSL(scriptText, target) {
   }
 
   if (parsedLines.length === 0) {
-    return { hat: { opcode: 'event_whenflagclicked', inputs: {}, fields: {} }, blocks: [], warnings };
+    return { hat: { opcode: 'event_whenflagclicked', inputs: {}, fields: {} }, blocks: [], warnings, errors };
   }
 
   // Determine hat. First line (indent 0) is the hat if it looks like one.
@@ -743,6 +1394,9 @@ function parseScratchDSL(scriptText, target) {
   // Build the body tree using a stack.
   const rootNodes = [];
   const stack = []; // entries: {node, indent, inElse}
+  let prevNode = null;
+  let prevIndent = 0;
+  let prevHadSubstack = false;
   for (let bi = bodyStartIdx; bi < parsedLines.length; bi++) {
     const { indent, content, lineNo } = parsedLines[bi];
 
@@ -776,6 +1430,17 @@ function parseScratchDSL(scriptText, target) {
       substack2: []
     };
 
+    // Indenting under a block with no body slot would otherwise be silently dropped:
+    // the line just becomes a sibling and the model never learns its nesting was lost.
+    if (prevNode && indent > prevIndent && !prevHadSubstack) {
+      errors.push('line ' + lineNo + ': "' + parsed.opcode + '" is indented under "' +
+        prevNode.opcode + '", which has no body slot. Only C-blocks (repeat, forever, if, ...) ' +
+        'can contain blocks. Remove the indentation.');
+    }
+    prevNode = node;
+    prevIndent = indent;
+    prevHadSubstack = hasSubstack;
+
     // Pop until top has indent < current indent.
     while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
       stack.pop();
@@ -798,8 +1463,164 @@ function parseScratchDSL(scriptText, target) {
   }
 
   const blocks = rootNodes.map(convertNode);
-  return { hat: hatDescriptor, blocks, warnings };
+  return { hat: hatDescriptor, blocks, warnings, errors };
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   角色 / 变量 / 列表工具的共用辅助
+   这些工具原来各自内联解析目标与变量，导致三类问题：
+     1. 变量查找用 Object.values(target.variables).find(byName)，不会像 Scratch
+        那样回退到舞台，于是"给了 sprite_name 就改不到全局变量"；
+     2. 查找不带类型，set_variable 传一个列表名会把数组覆盖成字符串；
+     3. 报错只有 "Variable not found"，模型不知道有哪些名字可用、也不知道拼错了。
+   统一到这里之后，作用域、类型、报错措辞在所有工具里保持一致。
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** 把数字形态的字符串转成数字，与 Scratch 自身的宽松类型一致。 */
+function coerceScratchValue(value) {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (trimmed === '') return value;
+  const num = Number(trimmed);
+  return isNaN(num) ? value : num;
+}
+
+const STAGE_ALIASES = ['stage', '_stage_', '舞台', 'background', 'backdrop'];
+
+/**
+ * 解析变量/列表所属的目标。
+ * 不传 sprite_name（或写成 Stage）表示全局，落在舞台上。
+ * @returns {{target: ?object, error: ?string}}
+ */
+function resolveDataTarget(vm, params) {
+  const raw = params.spriteName || params.sprite_name || params.targetName;
+  const stage = vm.runtime.getTargetForStage();
+  if (params.targetId) {
+    const byId = vm.runtime.getTargetById(params.targetId);
+    if (byId) return { target: byId, error: null };
+  }
+  if (!raw || STAGE_ALIASES.indexOf(String(raw).trim().toLowerCase()) >= 0) {
+    return { target: stage, error: null };
+  }
+  const name = String(raw);
+  const found = vm.runtime.targets.find(t => !t.isStage && t.getName() === name);
+  if (found) return { target: found, error: null };
+  const available = vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).map(t => t.getName());
+  return {
+    target: null,
+    error: 'Sprite "' + name + '" not found. Available sprites: ' +
+      (available.length ? available.join(', ') : '(none)') +
+      '. Omit sprite_name to use the Stage (global scope).'
+  };
+}
+
+/** 名字打错时给出最接近的候选，比单纯罗列全部更有用。 */
+function closestName(name, candidates) {
+  const lower = String(name).toLowerCase();
+  let best = null;
+  let bestScore = 0;
+  candidates.forEach(candidate => {
+    const c = candidate.toLowerCase();
+    let score = 0;
+    if (c === lower) score = 100;
+    else if (c.indexOf(lower) >= 0 || lower.indexOf(c) >= 0) score = 60 + Math.min(20, c.length);
+    else {
+      // 共同前缀长度，够简单也够用
+      let i = 0;
+      while (i < c.length && i < lower.length && c[i] === lower[i]) i++;
+      score = i * 4;
+    }
+    if (score > bestScore) { bestScore = score; best = candidate; }
+  });
+  return bestScore >= 8 ? best : null;
+}
+
+/**
+ * 在作用域内查找变量或列表：先找目标自己的，再回退到舞台，与 Scratch 一致。
+ * @param {string} type '' 表示普通变量，'list' 表示列表
+ * @returns {{variable: ?object, owner: ?object, scope: string, error: ?string}}
+ */
+function findDataVariable(vm, target, name, type) {
+  const label = type === 'list' ? 'List' : 'Variable';
+  if (!name) return { variable: null, owner: null, scope: '', error: 'No ' + label.toLowerCase() + ' name provided' };
+  const stage = vm.runtime.getTargetForStage();
+
+  const local = Object.values(target.variables).find(v => v.name === name && v.type === type);
+  if (local) {
+    return { variable: local, owner: target, scope: target.isStage ? 'global' : 'local', error: null };
+  }
+  if (!target.isStage && stage) {
+    const global = Object.values(stage.variables).find(v => v.name === name && v.type === type);
+    if (global) return { variable: global, owner: stage, scope: 'global', error: null };
+  }
+
+  // 同名但类型不对：这是最容易踩的坑，单独说清楚，别报 "not found"
+  const wrongType = Object.values(target.variables).find(v => v.name === name) ||
+    (!target.isStage && stage ? Object.values(stage.variables).find(v => v.name === name) : null);
+  if (wrongType) {
+    const actual = wrongType.type === 'list' ? 'a list' : 'a variable';
+    const wanted = type === 'list' ? 'a list' : 'a variable';
+    return {
+      variable: null, owner: null, scope: '',
+      error: '"' + name + '" is ' + actual + ', not ' + wanted +
+        '. Use the ' + (wrongType.type === 'list' ? 'list' : 'variable') + ' tools for it.'
+    };
+  }
+
+  const inScope = target.getAllVariableNamesInScopeByType(type);
+  const suggestion = closestName(name, inScope);
+  return {
+    variable: null, owner: null, scope: '',
+    error: label + ' "' + name + '" not found on ' +
+      (target.isStage ? 'the Stage' : target.getName() + ' or the Stage') + '.' +
+      (suggestion ? ' Did you mean "' + suggestion + '"?' : '') +
+      ' In scope: ' + (inScope.length ? inScope.join(', ') : '(none)') + '.'
+  };
+}
+
+/** 列表内容摘要：给模型看结果，避免它为了确认再读一次。 */
+function listPreview(items, limit) {
+  const max = limit || 20;
+  const arr = Array.isArray(items) ? items : [];
+  const shown = arr.slice(0, max);
+  return {
+    length: arr.length,
+    items: shown,
+    truncated: arr.length > shown.length ? arr.length - shown.length : 0
+  };
+}
+
+/** 把 1 基下标（含 'first'/'last'/'all' 别名）解析成 0 基数组下标。 */
+function resolveListIndex(raw, length, opts) {
+  const allowAppend = !!(opts && opts.allowAppend);
+  const upper = allowAppend ? length + 1 : length;
+  if (raw === undefined || raw === null || raw === '') {
+    return allowAppend ? { index: length, error: null } : { index: -1, error: 'No index provided' };
+  }
+  const token = String(raw).trim().toLowerCase();
+  if (token === 'last') return { index: allowAppend ? length : length - 1, error: null };
+  if (token === 'first') return { index: 0, error: null };
+  const parsed = parseInt(raw, 10);
+  if (isNaN(parsed)) {
+    return { index: -1, error: 'Index must be a number (1 = first), or "first"/"last". Got: ' + raw };
+  }
+  if (parsed < 1 || parsed > upper) {
+    return {
+      index: -1,
+      error: 'Index ' + parsed + ' is out of range. The list has ' + length + ' item(s), so valid values are 1' +
+        (upper >= 1 ? '–' + upper : '') + (allowAppend ? ' (' + upper + ' appends to the end)' : '') + '.'
+    };
+  }
+  return { index: parsed - 1, error: null };
+}
+
+/* ── AI 更改快照 ──
+   撤销功能的存储层。快照是完整的 sb3 压缩包（含资产），只存活在编辑器渲染进程的
+   内存里：不落盘是因为它只服务于"这次对话内的撤销"，用户重开编辑器后本就该失效；
+   不经 IPC 传给 AI 窗口是因为体积可达几十 MB。 */
+const aiSnapshots = new Map();
+const aiSnapshotOrder = [];
+const AI_SNAPSHOT_LIMIT = 4;
 
 const DesktopHOC = function (WrappedComponent) {
   class DesktopComponent extends React.Component {
@@ -1169,16 +1990,75 @@ const DesktopHOC = function (WrappedComponent) {
         try {
           switch (toolName) {
             case 'setSpriteProperty': {
-              const target = vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName);
-              if (!target) { result = { success: false, error: 'Sprite not found' }; break; }
-              if (params.x !== undefined) target.setXY(params.x, target.y);
-              if (params.y !== undefined) target.setXY(target.x, params.y);
-              if (params.size !== undefined) target.setSize(params.size);
-              if (params.direction !== undefined) target.setDirection(params.direction);
-              if (params.visible !== undefined) target.setVisible(params.visible);
-              if (params.draggable !== undefined) target.draggable = params.draggable;
-              if (params.rotationStyle !== undefined) target.rotationStyle = params.rotationStyle;
-              result = { success: true, data: { x: target.x, y: target.y, size: target.size, direction: target.direction, visible: target.visible, draggable: target.draggable, rotationStyle: target.rotationStyle } };
+              const propName = String(params.spriteName || params.sprite_name || '').trim();
+              const propTarget = (params.targetId && vm.runtime.getTargetById(params.targetId)) ||
+                vm.runtime.targets.find(t => !t.isStage && t.getName() === propName);
+              if (!propTarget) {
+                const names = vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).map(t => t.getName());
+                const hint = closestName(propName, names);
+                result = { success: false, error: 'Sprite "' + propName + '" not found.' +
+                  (hint ? ' Did you mean "' + hint + '"?' : '') +
+                  ' Available: ' + (names.length ? names.join(', ') : '(none)') };
+                break;
+              }
+              const propBefore = {
+                x: Math.round(propTarget.x), y: Math.round(propTarget.y), size: propTarget.size,
+                direction: propTarget.direction, visible: propTarget.visible
+              };
+              const propWarnings = [];
+              const asNumber = (raw, label, min, max) => {
+                const num = Number(raw);
+                if (isNaN(num)) { propWarnings.push(label + ' "' + raw + '" is not a number and was ignored.'); return null; }
+                // Scratch 自己会夹紧，但静默夹紧会让模型以为设成功了，说明一下
+                if (num < min || num > max) {
+                  propWarnings.push(label + ' ' + num + ' is outside ' + min + '–' + max + ' and was clamped by Scratch.');
+                }
+                return num;
+              };
+              if (params.x !== undefined) {
+                const nx = asNumber(params.x, 'x', -240, 240);
+                if (nx !== null) propTarget.setXY(nx, propTarget.y);
+              }
+              if (params.y !== undefined) {
+                const ny = asNumber(params.y, 'y', -180, 180);
+                if (ny !== null) propTarget.setXY(propTarget.x, ny);
+              }
+              if (params.size !== undefined) {
+                const ns = asNumber(params.size, 'size', 5, 535);
+                if (ns !== null) propTarget.setSize(ns);
+              }
+              if (params.direction !== undefined) {
+                const nd = Number(params.direction);
+                if (isNaN(nd)) propWarnings.push('direction "' + params.direction + '" is not a number and was ignored.');
+                else propTarget.setDirection(nd);
+              }
+              if (params.visible !== undefined) {
+                propTarget.setVisible(params.visible === true || params.visible === 'true');
+              }
+              if (params.draggable !== undefined) {
+                propTarget.setDraggable(params.draggable === true || params.draggable === 'true');
+              }
+              if (params.rotationStyle !== undefined) {
+                const STYLES = ['all around', 'left-right', "don't rotate"];
+                const style = String(params.rotationStyle);
+                if (STYLES.indexOf(style) < 0) {
+                  propWarnings.push('rotationStyle must be one of: ' + STYLES.join(' / ') + '. Got "' + style + '", ignored.');
+                } else {
+                  propTarget.setRotationStyle(style);
+                }
+              }
+              vm.runtime.emitProjectChanged();
+              vm.emitTargetsUpdate();
+              result = { success: true, data: {
+                name: propTarget.getName(),
+                before: propBefore,
+                after: {
+                  x: Math.round(propTarget.x), y: Math.round(propTarget.y), size: propTarget.size,
+                  direction: propTarget.direction, visible: propTarget.visible,
+                  draggable: propTarget.draggable, rotationStyle: propTarget.rotationStyle
+                },
+                warnings: propWarnings.length ? propWarnings : undefined
+              } };
               break;
             }
             case 'getSpriteProperty': {
@@ -1188,290 +2068,391 @@ const DesktopHOC = function (WrappedComponent) {
               break;
             }
             case 'getSpriteScripts': {
-              const target = vm.runtime.targets.find(t => t.getName() === params.spriteName);
-              if (!target) { result = { success: false, error: 'Sprite "' + params.spriteName + '" not found' }; break; }
+              // The AI tool sends sprite_name; older internal callers send spriteName.
+              const scriptsTargetName = params.spriteName || params.sprite_name || 'Stage';
+              const target = vm.runtime.targets.find(t => t.getName() === scriptsTargetName);
+              if (!target) {
+                const available = vm.runtime.targets.filter(t => t.isOriginal).map(t => t.getName()).join(', ');
+                result = { success: false, error: 'Sprite "' + scriptsTargetName + '" not found. Available: ' + available };
+                break;
+              }
               const scripts = [];
               const allBlocks = target.blocks._blocks;
               Object.keys(allBlocks).forEach(function(blockId) {
                 var b = allBlocks[blockId];
-                if (b.topLevel && b.parent === null) {
-                  var dslLines = [];
-                  function emitBlock(blk, ind) {
-                    var pad = '  '.repeat(ind);
-                    var parts = [blk.opcode];
-                    var handledFieldNames = new Set();
-                    if (blk.inputs) {
-                      Object.keys(blk.inputs).forEach(function(key) {
-                        if (key === 'SUBSTACK' || key === 'SUBSTACK2') return;
-                        var inp = blk.inputs[key];
-                        if (!inp || !inp.block) return;
-                        var sub = allBlocks[inp.block];
-                        if (!sub) return;
-                        // Check if this is a shadow block (inp.block === inp.shadow means it's the default shadow, not a plugged reporter)
-                        if (inp.block === inp.shadow || inp.shadow === null) {
-                          // Shadow block - extract field value directly
-                          if (sub.opcode === 'math_number') {
-                            parts.push(String(sub.fields.NUM.value));
-                          } else if (sub.opcode === 'text') {
-                            parts.push('"' + String(sub.fields.TEXT.value).replace(/"/g, '\\"') + '"');
-                          } else if (sub.opcode === 'data_variable') {
-                            parts.push('$' + sub.fields.VARIABLE.value);
-                          } else if (sub.opcode === 'data_listcontents') {
-                            parts.push('@' + sub.fields.LIST.value);
-                          } else {
-                            // Menu shadow block (sensing_keyoptions, motion_goto_menu, etc.)
-                            // Extract the first field value
-                            var menuFields = sub.fields;
-                            if (menuFields) {
-                              var fieldKeys = Object.keys(menuFields);
-                              for (var fi = 0; fi < fieldKeys.length; fi++) {
-                                var mf = menuFields[fieldKeys[fi]];
-                                var mfv = mf && typeof mf === 'object' ? mf.value : mf;
-                                if (mfv != null) {
-                                  parts.push('"' + String(mfv) + '"');
-                                  break;
-                                }
-                              }
-                            }
-                          }
-                          handledFieldNames.add(key);
-                        } else {
-                          // Actual reporter block plugged in (not shadow)
-                          var subParts = [sub.opcode];
-                          if (sub.inputs) {
-                            Object.keys(sub.inputs).forEach(function(iKey) {
-                              if (iKey === 'SUBSTACK' || iKey === 'SUBSTACK2') return;
-                              var iInp = sub.inputs[iKey];
-                              if (iInp && iInp.block) {
-                                var iSub = allBlocks[iInp.block];
-                                if (iSub) {
-                                  if (iSub.opcode === 'math_number') subParts.push(String(iSub.fields.NUM.value));
-                                  else if (iSub.opcode === 'text') subParts.push('"' + String(iSub.fields.TEXT.value).replace(/"/g, '\\"') + '"');
-                                  else if (iSub.opcode === 'data_variable') subParts.push('$' + iSub.fields.VARIABLE.value);
-                                  else if (iSub.opcode === 'data_listcontents') subParts.push('@' + iSub.fields.LIST.value);
-                                  else subParts.push('(' + iSub.opcode + ')');
-                                }
-                              }
-                            });
-                          }
-                          if (sub.fields) {
-                            Object.keys(sub.fields).forEach(function(fKey) {
-                              if (fKey === 'VARIABLE') { subParts.push('$' + sub.fields[fKey].value); return; }
-                              if (fKey === 'LIST') { subParts.push('@' + sub.fields[fKey].value); return; }
-                              var ffv = sub.fields[fKey];
-                              if (ffv && typeof ffv === 'object') ffv = ffv.value;
-                              if (ffv != null) subParts.push('"' + String(ffv) + '"');
-                            });
-                          }
-                          parts.push('(' + subParts.join(' ') + ')');
-                        }
-                      });
-                    }
-                    if (blk.fields) {
-                      Object.keys(blk.fields).forEach(function(key) {
-                        if (handledFieldNames.has(key)) return;
-                        if (key === 'VARIABLE') { parts.push('$' + blk.fields[key].value); return; }
-                        if (key === 'LIST') { parts.push('@' + blk.fields[key].value); return; }
-                        var fv = blk.fields[key];
-                        if (fv && typeof fv === 'object') fv = fv.value;
-                        if (fv != null) parts.push('"' + String(fv) + '"');
-                      });
-                    }
-                    dslLines.push(pad + parts.join(' '));
-                    if (blk.inputs && blk.inputs.SUBSTACK && blk.inputs.SUBSTACK.block) {
-                      var sub = allBlocks[blk.inputs.SUBSTACK.block];
-                      while (sub) {
-                        emitBlock(sub, ind + 1);
-                        sub = sub.next ? allBlocks[sub.next] : null;
-                      }
-                    }
-                    if (blk.inputs && blk.inputs.SUBSTACK2 && blk.inputs.SUBSTACK2.block) {
-                      dslLines.push(pad + 'else');
-                      var sub2 = allBlocks[blk.inputs.SUBSTACK2.block];
-                      while (sub2) {
-                        emitBlock(sub2, ind + 1);
-                        sub2 = sub2.next ? allBlocks[sub2.next] : null;
-                      }
+                if (!b.topLevel || b.parent !== null) return;
+                var dslLines = [];
+                function emitBlock(blk, ind) {
+                  dslLines.push('  '.repeat(ind) + serializeBlockToDsl(blk, allBlocks, 0));
+                  if (blk.inputs && blk.inputs.SUBSTACK && blk.inputs.SUBSTACK.block) {
+                    var sub = allBlocks[blk.inputs.SUBSTACK.block];
+                    while (sub) {
+                      emitBlock(sub, ind + 1);
+                      sub = sub.next ? allBlocks[sub.next] : null;
                     }
                   }
-                  emitBlock(b, 0);
-                  scripts.push({ blockId: blockId, dsl: dslLines.join('\n') });
+                  if (blk.inputs && blk.inputs.SUBSTACK2 && blk.inputs.SUBSTACK2.block) {
+                    dslLines.push('  '.repeat(ind) + 'else');
+                    var sub2 = allBlocks[blk.inputs.SUBSTACK2.block];
+                    while (sub2) {
+                      emitBlock(sub2, ind + 1);
+                      sub2 = sub2.next ? allBlocks[sub2.next] : null;
+                    }
+                  }
+                  if (blk.next && ind === 0) {
+                    emitBlock(allBlocks[blk.next], 0);
+                  }
                 }
+                emitBlock(b, 0);
+                scripts.push({ blockId: blockId, dsl: dslLines.join('\n') });
               });
-              result = { success: true, data: { spriteName: params.spriteName, scriptCount: scripts.length, scripts: scripts } };
+              result = { success: true, data: { spriteName: scriptsTargetName, scriptCount: scripts.length, scripts: scripts } };
               break;
             }
             case 'setVariable': {
-              const target = params.spriteName ? (vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName)) : vm.runtime.getTargetForStage();
-              if (!target) { result = { success: false, error: 'Target not found' }; break; }
-              const variable = Object.values(target.variables).find(v => v.name === params.variableName);
-              if (variable) {
-                // Convert value type: numeric strings become numbers, matching Scratch behavior
-                let val = params.value;
-                if (typeof val === 'string') {
-                  const numVal = Number(val);
-                  if (val.trim() !== '' && !isNaN(numVal)) val = numVal;
-                }
-                variable.value = val;
-                vm.runtime.emitProjectChanged();
-                vm.emitWorkspaceUpdate();
-                result = { success: true, data: { name: variable.name, value: variable.value } };
+              const varTargetInfo = resolveDataTarget(vm, params);
+              if (!varTargetInfo.target) { result = { success: false, error: varTargetInfo.error }; break; }
+              const varName = params.variableName || params.variable_name;
+              const found = findDataVariable(vm, varTargetInfo.target, varName, '');
+              if (!found.variable) { result = { success: false, error: found.error }; break; }
+              if (params.value === undefined) {
+                result = { success: false, error: 'No value provided. Pass value (number or text).' };
+                break;
               }
-              else { result = { success: false, error: 'Variable not found' }; }
+              const previous = found.variable.value;
+              // 走 VM 的 setVariableValue：云变量需要同步，直接改字段会漏掉
+              const applied = vm.setVariableValue(found.owner.id, found.variable.id, coerceScratchValue(params.value));
+              if (!applied) { result = { success: false, error: 'Failed to set variable "' + varName + '"' }; break; }
+              vm.runtime.emitProjectChanged();
+              vm.emitWorkspaceUpdate();
+              result = { success: true, data: {
+                name: found.variable.name, value: found.variable.value, previousValue: previous,
+                scope: found.scope, owner: found.owner.getName()
+              } };
               break;
             }
             case 'createVariable': {
-              const target = params.spriteName ? (vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName)) : vm.runtime.getTargetForStage();
-              if (!target) { result = { success: false, error: 'Target not found' }; break; }
-              const existing = Object.values(target.variables).find(v => v.name === params.variableName && v.type !== 'list');
-              if (existing) { result = { success: true, data: { name: params.variableName, value: existing.value, existed: true } }; break; }
-              const varId = '_ai_var_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-              target.createVariable(varId, params.variableName, '', false);
-              if (params.initial_value !== undefined && target.variables[varId]) {
-                // Convert initial value type: numeric strings become numbers
-                let initVal = params.initial_value;
-                if (typeof initVal === 'string') {
-                  const numVal = Number(initVal);
-                  if (initVal.trim() !== '' && !isNaN(numVal)) initVal = numVal;
-                }
-                target.variables[varId].value = initVal;
+              const newVarTargetInfo = resolveDataTarget(vm, params);
+              if (!newVarTargetInfo.target) { result = { success: false, error: newVarTargetInfo.error }; break; }
+              const newVarTarget = newVarTargetInfo.target;
+              const newVarName = String(params.variableName || params.variable_name || '').trim();
+              if (!newVarName) { result = { success: false, error: 'No variable name provided' }; break; }
+              // 同名列表已存在：Scratch 允许，但模型几乎总是搞错了工具，先拦下来
+              const clashingList = newVarTarget.lookupVariableByNameAndType(newVarName, 'list');
+              if (clashingList) {
+                result = { success: false, error: 'A list named "' + newVarName + '" already exists in this scope. Pick a different name, or use create_list if you meant a list.' };
+                break;
+              }
+              const alreadyThere = findDataVariable(vm, newVarTarget, newVarName, '');
+              if (alreadyThere.variable) {
+                // 已存在就返回它，并把作用域说清楚（避免"我建了但代码里读不到"）
+                result = { success: true, data: {
+                  name: alreadyThere.variable.name, value: alreadyThere.variable.value,
+                  existed: true, scope: alreadyThere.scope, owner: alreadyThere.owner.getName()
+                } };
+                break;
+              }
+              const newVarId = '_ai_var_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+              newVarTarget.createVariable(newVarId, newVarName, '', false);
+              const createdVar = newVarTarget.variables[newVarId];
+              if (createdVar) {
+                const initial = params.initialValue !== undefined ? params.initialValue : params.initial_value;
+                createdVar.value = initial !== undefined ? coerceScratchValue(initial) : 0;
               }
               vm.runtime.emitProjectChanged();
               vm.emitWorkspaceUpdate();
-              result = { success: true, data: { name: params.variableName, value: target.variables[varId] ? target.variables[varId].value : '0', existed: false } };
+              result = { success: true, data: {
+                name: newVarName, value: createdVar ? createdVar.value : 0, existed: false,
+                scope: newVarTarget.isStage ? 'global' : 'local', owner: newVarTarget.getName()
+              } };
+              break;
+            }
+            case 'deleteVariable': {
+              const delVarTargetInfo = resolveDataTarget(vm, params);
+              if (!delVarTargetInfo.target) { result = { success: false, error: delVarTargetInfo.error }; break; }
+              const delVarName = params.variableName || params.variable_name || params.listName || params.list_name;
+              const delType = params.isList || params.is_list ? 'list' : '';
+              const toDelete = findDataVariable(vm, delVarTargetInfo.target, delVarName, delType);
+              if (!toDelete.variable) { result = { success: false, error: toDelete.error }; break; }
+              // 仍被积木引用时删掉会留下空槽的积木，先告诉模型而不是默默破坏工程
+              const referencing = [];
+              vm.runtime.targets.forEach(t => {
+                Object.keys(t.blocks._blocks).forEach(bid => {
+                  const b = t.blocks._blocks[bid];
+                  const f = b.fields && (b.fields.VARIABLE || b.fields.LIST);
+                  if (f && f.id === toDelete.variable.id && referencing.indexOf(t.getName()) < 0) {
+                    referencing.push(t.getName());
+                  }
+                });
+              });
+              if (referencing.length && !(params.force === true || params.force === 'true')) {
+                result = { success: false, error: 'Still used by blocks in: ' + referencing.join(', ') +
+                  '. Remove those blocks first, or pass force: true to delete anyway (the blocks will be left with an empty slot).' };
+                break;
+              }
+              toDelete.owner.deleteVariable(toDelete.variable.id);
+              vm.runtime.emitProjectChanged();
+              vm.emitWorkspaceUpdate();
+              result = { success: true, data: {
+                name: delVarName, type: delType === 'list' ? 'list' : 'variable',
+                owner: toDelete.owner.getName(), wasReferencedBy: referencing
+              } };
+              break;
+            }
+            case 'renameVariable': {
+              const renVarTargetInfo = resolveDataTarget(vm, params);
+              if (!renVarTargetInfo.target) { result = { success: false, error: renVarTargetInfo.error }; break; }
+              const oldVarName = params.variableName || params.variable_name || params.listName || params.list_name;
+              const newVarLabel = String(params.newName || params.new_name || '').trim();
+              const renType = params.isList || params.is_list ? 'list' : '';
+              if (!newVarLabel) { result = { success: false, error: 'No new name provided' }; break; }
+              const toRename = findDataVariable(vm, renVarTargetInfo.target, oldVarName, renType);
+              if (!toRename.variable) { result = { success: false, error: toRename.error }; break; }
+              const taken = toRename.owner.lookupVariableByNameAndType(newVarLabel, renType);
+              if (taken) { result = { success: false, error: 'A ' + (renType === 'list' ? 'list' : 'variable') + ' named "' + newVarLabel + '" already exists in that scope.' }; break; }
+              // renameVariable 会顺带更新引用它的积木字段
+              toRename.owner.renameVariable(toRename.variable.id, newVarLabel);
+              vm.runtime.emitProjectChanged();
+              vm.emitWorkspaceUpdate();
+              result = { success: true, data: { oldName: oldVarName, newName: newVarLabel, owner: toRename.owner.getName() } };
               break;
             }
             case 'createList': {
-              const target = params.spriteName ? (vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName)) : vm.runtime.getTargetForStage();
-              if (!target) { result = { success: false, error: 'Target not found' }; break; }
-              const existing = Object.values(target.variables).find(v => v.name === params.listName && v.type === 'list');
-              if (existing) { result = { success: true, data: { name: params.listName, length: Array.isArray(existing.value) ? existing.value.length : 0, existed: true } }; break; }
-              const listId = '_ai_list_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-              target.createVariable(listId, params.listName, 'list', false);
-              // Ensure list value is initialized as an empty array
-              if (target.variables[listId]) {
-                if (!Array.isArray(target.variables[listId].value)) {
-                  target.variables[listId].value = [];
-                }
-                // Set initial items if provided
-                if (Array.isArray(params.items)) {
-                  target.variables[listId].value = params.items.map(function(item) {
-                    if (typeof item === 'string') {
-                      var numVal = Number(item);
-                      if (item.trim() !== '' && !isNaN(numVal)) return numVal;
-                    }
-                    return item;
-                  });
-                }
+              const newListTargetInfo = resolveDataTarget(vm, params);
+              if (!newListTargetInfo.target) { result = { success: false, error: newListTargetInfo.error }; break; }
+              const newListTarget = newListTargetInfo.target;
+              const newListName = String(params.listName || params.list_name || '').trim();
+              if (!newListName) { result = { success: false, error: 'No list name provided' }; break; }
+              const clashingVar = newListTarget.lookupVariableByNameAndType(newListName, '');
+              if (clashingVar) {
+                result = { success: false, error: 'A variable named "' + newListName + '" already exists in this scope. Pick a different name, or use create_variable if you meant a variable.' };
+                break;
+              }
+              const listExists = findDataVariable(vm, newListTarget, newListName, 'list');
+              if (listExists.variable) {
+                const existingItems = Array.isArray(listExists.variable.value) ? listExists.variable.value : [];
+                result = { success: true, data: Object.assign({
+                  name: listExists.variable.name, existed: true,
+                  scope: listExists.scope, owner: listExists.owner.getName()
+                }, listPreview(existingItems)) };
+                break;
+              }
+              const newListId = '_ai_list_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+              newListTarget.createVariable(newListId, newListName, 'list', false);
+              const createdList = newListTarget.variables[newListId];
+              if (createdList) {
+                const seedItems = params.items !== undefined ? params.items : params.initialItems;
+                createdList.value = Array.isArray(seedItems) ? seedItems.map(coerceScratchValue) : [];
               }
               vm.runtime.emitProjectChanged();
               vm.emitWorkspaceUpdate();
-              result = { success: true, data: { name: params.listName, length: target.variables[listId] ? target.variables[listId].value.length : 0, existed: false } };
+              result = { success: true, data: Object.assign({
+                name: newListName, existed: false,
+                scope: newListTarget.isStage ? 'global' : 'local', owner: newListTarget.getName()
+              }, listPreview(createdList ? createdList.value : [])) };
               break;
             }
             case 'getVariable': {
-              const target = params.spriteName ? (vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName)) : vm.runtime.getTargetForStage();
-              if (!target) { result = { success: false, error: 'Target not found' }; break; }
-              const variable = Object.values(target.variables).find(v => v.name === params.variableName);
-              if (variable) { result = { success: true, data: { name: variable.name, value: variable.value, isCloud: variable.isCloud } }; }
-              else { result = { success: false, error: 'Variable not found' }; }
+              const getVarTargetInfo = resolveDataTarget(vm, params);
+              if (!getVarTargetInfo.target) { result = { success: false, error: getVarTargetInfo.error }; break; }
+              const getVarName = params.variableName || params.variable_name;
+              const gotVar = findDataVariable(vm, getVarTargetInfo.target, getVarName, '');
+              if (!gotVar.variable) { result = { success: false, error: gotVar.error }; break; }
+              result = { success: true, data: {
+                name: gotVar.variable.name, value: gotVar.variable.value,
+                scope: gotVar.scope, owner: gotVar.owner.getName(), isCloud: !!gotVar.variable.isCloud
+              } };
               break;
             }
             case 'addToList': {
-              const target = params.spriteName ? (vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName)) : vm.runtime.getTargetForStage();
-              if (!target) { result = { success: false, error: 'Target not found' }; break; }
-              if (params.item === undefined || params.item === null) { result = { success: false, error: 'No item provided' }; break; }
-              let list = target.lookupVariableByNameAndType(params.listName, 'list');
-              if (!list) {
-                const listId = '_ai_list_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-                target.createVariable(listId, params.listName, 'list', false);
-                list = target.variables[listId];
-                vm.emitWorkspaceUpdate();
+              const addListTargetInfo = resolveDataTarget(vm, params);
+              if (!addListTargetInfo.target) { result = { success: false, error: addListTargetInfo.error }; break; }
+              const addListTarget = addListTargetInfo.target;
+              const addListName = String(params.listName || params.list_name || '').trim();
+              if (!addListName) { result = { success: false, error: 'No list name provided' }; break; }
+              // 支持一次追加多项：模型常需要填一整批数据
+              const rawItems = params.items !== undefined ? params.items : params.item;
+              if (rawItems === undefined || rawItems === null) {
+                result = { success: false, error: 'No item provided. Pass item (one value) or items (an array).' };
+                break;
               }
-              // Convert item type: numeric strings become numbers, matching Scratch behavior
-              let itemVal = params.item;
-              if (typeof itemVal === 'string') {
-                const numVal = Number(itemVal);
-                if (itemVal.trim() !== '' && !isNaN(numVal)) itemVal = numVal;
+              const toAppend = (Array.isArray(rawItems) ? rawItems : [rawItems]).map(coerceScratchValue);
+              let addList = null;
+              let addCreated = false;
+              const addFound = findDataVariable(vm, addListTarget, addListName, 'list');
+              if (addFound.variable) {
+                addList = addFound.variable;
+              } else {
+                // 同名变量存在时不要静默建列表，那会造出两个同名东西
+                if (addListTarget.lookupVariableByNameAndType(addListName, '')) {
+                  result = { success: false, error: 'A variable named "' + addListName + '" already exists in this scope, so a list cannot share that name.' };
+                  break;
+                }
+                const autoId = '_ai_list_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+                addListTarget.createVariable(autoId, addListName, 'list', false);
+                addList = addListTarget.variables[autoId];
+                addCreated = true;
               }
-              if (list && Array.isArray(list.value)) {
-                list.value.push(itemVal);
-              } else if (list) {
-                list.value = [itemVal];
-              }
+              if (!Array.isArray(addList.value)) addList.value = [];
+              toAppend.forEach(function(v) { addList.value.push(v); });
               vm.runtime.emitProjectChanged();
               vm.emitWorkspaceUpdate();
-              result = { success: true, data: { listName: params.listName, length: list ? list.value.length : 0 } };
+              result = { success: true, data: Object.assign({
+                listName: addListName, added: toAppend.length, createdList: addCreated,
+                owner: (addFound.owner || addListTarget).getName()
+              }, listPreview(addList.value)) };
               break;
             }
             case 'deleteFromList': {
-              const target = params.spriteName ? (vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName)) : vm.runtime.getTargetForStage();
-              if (!target) { result = { success: false, error: 'Target not found' }; break; }
-              const list = target.lookupVariableByNameAndType(params.listName, 'list');
-              if (list && Array.isArray(list.value)) {
-                if (params.index === 'all' || params.index === 'last') {
-                  if (params.index === 'all') list.value = [];
-                  else list.value.pop();
-                } else {
-                  const idx = parseInt(params.index);
-                  if (!isNaN(idx) && idx >= 1 && idx <= list.value.length) {
-                    list.value.splice(idx - 1, 1);
-                  } else {
-                    result = { success: false, error: 'Index out of range: ' + params.index };
-                    break;
-                  }
+              const delItemTargetInfo = resolveDataTarget(vm, params);
+              if (!delItemTargetInfo.target) { result = { success: false, error: delItemTargetInfo.error }; break; }
+              const delItemName = params.listName || params.list_name;
+              const delItemFound = findDataVariable(vm, delItemTargetInfo.target, delItemName, 'list');
+              if (!delItemFound.variable) { result = { success: false, error: delItemFound.error }; break; }
+              const delItemList = delItemFound.variable;
+              if (!Array.isArray(delItemList.value)) delItemList.value = [];
+              const delToken = String(params.index === undefined ? '' : params.index).trim().toLowerCase();
+              let removed = null;
+              if (delToken === 'all') {
+                removed = delItemList.value.length;
+                delItemList.value = [];
+              } else {
+                if (delItemList.value.length === 0) {
+                  result = { success: false, error: 'List "' + delItemName + '" is already empty.' };
+                  break;
                 }
-                vm.runtime.emitProjectChanged();
-                vm.emitWorkspaceUpdate();
-                result = { success: true, data: { length: list.value.length } };
+                const delIdx = resolveListIndex(params.index, delItemList.value.length, {});
+                if (delIdx.error) { result = { success: false, error: delIdx.error }; break; }
+                removed = delItemList.value.splice(delIdx.index, 1)[0];
               }
-              else { result = { success: false, error: 'List "' + params.listName + '" not found' }; }
+              vm.runtime.emitProjectChanged();
+              vm.emitWorkspaceUpdate();
+              result = { success: true, data: Object.assign({
+                listName: delItemName,
+                removed: delToken === 'all' ? undefined : removed,
+                removedCount: delToken === 'all' ? removed : 1,
+                owner: delItemFound.owner.getName()
+              }, listPreview(delItemList.value)) };
               break;
             }
             case 'getList': {
-              const target = params.spriteName ? (vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName)) : vm.runtime.getTargetForStage();
-              if (!target) { result = { success: false, error: 'Target not found' }; break; }
-              const list = target.lookupVariableByNameAndType(params.listName, 'list');
-              if (list) { result = { success: true, data: { name: list.name, value: list.value, length: list.value.length } }; }
-              else { result = { success: false, error: 'List "' + params.listName + '" not found' }; }
+              const getListTargetInfo = resolveDataTarget(vm, params);
+              if (!getListTargetInfo.target) { result = { success: false, error: getListTargetInfo.error }; break; }
+              const getListName = params.listName || params.list_name;
+              const gotList = findDataVariable(vm, getListTargetInfo.target, getListName, 'list');
+              if (!gotList.variable) { result = { success: false, error: gotList.error }; break; }
+              const allItems = Array.isArray(gotList.variable.value) ? gotList.variable.value : [];
+              // 默认给完整内容；超长时按 limit 截断并说明还剩多少
+              const limit = params.limit !== undefined ? Math.max(1, parseInt(params.limit, 10) || 100) : 200;
+              result = { success: true, data: Object.assign({
+                name: gotList.variable.name, scope: gotList.scope, owner: gotList.owner.getName()
+              }, listPreview(allItems, limit)) };
               break;
             }
             case 'deleteSprite': {
-              const target = vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName);
-              if (!target) { result = { success: false, error: 'Sprite not found' }; break; }
-              vm.deleteSprite(target.id);
-              result = { success: true };
+              const delSpriteName = String(params.spriteName || params.sprite_name || '').trim();
+              const delSprite = (params.targetId && vm.runtime.getTargetById(params.targetId)) ||
+                vm.runtime.targets.find(t => !t.isStage && t.getName() === delSpriteName);
+              if (!delSprite) {
+                const names = vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).map(t => t.getName());
+                const hint = closestName(delSpriteName, names);
+                result = { success: false, error: 'Sprite "' + delSpriteName + '" not found.' +
+                  (hint ? ' Did you mean "' + hint + '"?' : '') +
+                  ' Available: ' + (names.length ? names.join(', ') : '(none)') };
+                break;
+              }
+              if (delSprite.isStage) { result = { success: false, error: 'The Stage cannot be deleted.' }; break; }
+              // 删角色会一并丢掉它的脚本/造型/局部变量，先把这些数出来放进返回值，
+              // 让模型（和用户）看到代价，而不是只回一个 success。
+              const lostScripts = Object.keys(delSprite.blocks._blocks)
+                .filter(id => delSprite.blocks._blocks[id].topLevel).length;
+              const lostVars = Object.values(delSprite.variables).filter(v => v.type !== 'list').map(v => v.name);
+              const lostLists = Object.values(delSprite.variables).filter(v => v.type === 'list').map(v => v.name);
+              const removedName = delSprite.getName();
+              vm.deleteSprite(delSprite.id);
+              vm.runtime.emitProjectChanged();
+              vm.emitTargetsUpdate();
+              result = { success: true, data: {
+                name: removedName, deletedScripts: lostScripts,
+                deletedVariables: lostVars, deletedLists: lostLists,
+                remainingSprites: vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).map(t => t.getName())
+              } };
+              break;
+            }
+            case 'renameSprite': {
+              const renOldName = String(params.spriteName || params.sprite_name || params.sourceName || params.source_name || '').trim();
+              const renNewName = String(params.newName || params.new_name || '').trim();
+              if (!renNewName) { result = { success: false, error: 'No new name provided' }; break; }
+              const renSprite = vm.runtime.targets.find(t => !t.isStage && t.getName() === renOldName);
+              if (!renSprite) {
+                const names = vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).map(t => t.getName());
+                result = { success: false, error: 'Sprite "' + renOldName + '" not found. Available: ' +
+                  (names.length ? names.join(', ') : '(none)') };
+                break;
+              }
+              const nameTaken = vm.runtime.targets.some(t => !t.isStage && t.id !== renSprite.id && t.getName() === renNewName);
+              if (nameTaken) { result = { success: false, error: 'A sprite named "' + renNewName + '" already exists.' }; break; }
+              vm.renameSprite(renSprite.id, renNewName);
+              // renameSprite 遇到保留字或重名会静默改成别的名字，回报实际结果
+              const actualName = renSprite.getName();
+              vm.runtime.emitProjectChanged();
+              vm.emitTargetsUpdate();
+              result = { success: true, data: {
+                oldName: renOldName, newName: actualName,
+                renamedAsRequested: actualName === renNewName
+              } };
               break;
             }
             case 'getAllSprites': {
-              const sprites = vm.runtime.targets.filter(t => !t.isStage).map(t => ({
-                id: t.id, name: t.getName(), x: t.x, y: t.y, size: t.size, direction: t.direction,
-                visible: t.visible, draggable: t.draggable, rotationStyle: t.rotationStyle,
-                currentCostume: t.currentCostume, costumeCount: t.getCostumes().length,
-                soundCount: t.getSounds().length, variableNames: Object.values(t.variables).filter(v => v.type !== 'list').map(v => v.name),
-                listNames: Object.values(t.variables).filter(v => v.type === 'list').map(v => v.name)
+              const spriteInfos = vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).map(t => ({
+                name: t.getName(), x: Math.round(t.x), y: Math.round(t.y), size: t.size,
+                direction: t.direction, visible: t.visible, draggable: t.draggable,
+                rotationStyle: t.rotationStyle,
+                currentCostume: t.currentCostume + 1,
+                costumes: t.getCostumes().map(c => c.name),
+                sounds: t.getSounds().map(s => s.name),
+                scriptCount: Object.keys(t.blocks._blocks).filter(id => t.blocks._blocks[id].topLevel).length,
+                variables: Object.values(t.variables).filter(v => v.type !== 'list').map(v => v.name),
+                lists: Object.values(t.variables).filter(v => v.type === 'list').map(v => v.name)
               }));
-              result = { success: true, data: sprites };
+              const stageTarget = vm.runtime.getTargetForStage();
+              result = { success: true, data: {
+                spriteCount: spriteInfos.length,
+                sprites: spriteInfos,
+                stage: stageTarget ? {
+                  backdrops: stageTarget.getCostumes().map(c => c.name),
+                  currentBackdrop: stageTarget.currentCostume + 1,
+                  globalVariables: Object.values(stageTarget.variables).filter(v => v.type !== 'list').map(v => v.name),
+                  globalLists: Object.values(stageTarget.variables).filter(v => v.type === 'list').map(v => v.name)
+                } : null
+              } };
               break;
             }
             case 'getAllVariables': {
-              const allVars = [];
-              vm.runtime.targets.forEach(t => {
-                Object.values(t.variables).forEach(v => {
-                  allVars.push({ targetName: t.getName(), name: v.name, value: v.value, isCloud: v.isCloud });
+              const varRows = [];
+              vm.runtime.targets.filter(t => t.isStage || t.isOriginal).forEach(t => {
+                Object.values(t.variables).filter(v => v.type !== 'list').forEach(v => {
+                  varRows.push({
+                    name: v.name, value: v.value,
+                    owner: t.getName(), scope: t.isStage ? 'global' : 'local',
+                    isCloud: !!v.isCloud
+                  });
                 });
               });
-              result = { success: true, data: allVars };
+              result = { success: true, data: { count: varRows.length, variables: varRows } };
               break;
             }
             case 'getAllLists': {
-              const allLists = [];
-              vm.runtime.targets.forEach(t => {
+              const listRows = [];
+              vm.runtime.targets.filter(t => t.isStage || t.isOriginal).forEach(t => {
                 Object.values(t.variables).filter(v => v.type === 'list').forEach(l => {
-                  allLists.push({ targetName: t.getName(), name: l.name, value: l.value, length: l.value.length });
+                  const items = Array.isArray(l.value) ? l.value : [];
+                  listRows.push(Object.assign({
+                    name: l.name, owner: t.getName(), scope: t.isStage ? 'global' : 'local'
+                  }, listPreview(items, 10)));
                 });
               });
-              result = { success: true, data: allLists };
+              result = { success: true, data: { count: listRows.length, lists: listRows } };
               break;
             }
             case 'getProjectSummary': {
@@ -1525,7 +2506,7 @@ const DesktopHOC = function (WrappedComponent) {
               break;
             }
             case 'addSprite': {
-              const spriteName = (params.spriteName || params.name || '').trim();
+              const spriteName = String(params.spriteName || params.sprite_name || params.name || '').trim();
               if (spriteName) {
                 // Named sprite: load from built-in library
                 const storage = vm.runtime.storage;
@@ -1671,7 +2652,16 @@ const DesktopHOC = function (WrappedComponent) {
                 }
                 await vm.addSprite(spriteObj);
                 const newTarget = vm.runtime.targets[vm.runtime.targets.length - 1];
-                result = { success: true, data: { name: spriteName, id: newTarget ? newTarget.id : null, source: 'library', matchedName: match.name } };
+                // Scratch 遇到重名会自动加序号，库里的匹配名也可能与请求名不同；
+                // 回报实际落地的名字，否则模型下一步会按错名字去找这个角色。
+                const addedName = newTarget ? newTarget.getName() : spriteName;
+                result = { success: true, data: {
+                  name: addedName, requestedName: spriteName, matchedName: match.name,
+                  renamedByScratch: addedName !== spriteName,
+                  id: newTarget ? newTarget.id : null, source: 'library',
+                  costumes: newTarget ? newTarget.getCostumes().map(c => c.name) : [],
+                  sounds: newTarget ? newTarget.getSounds().map(sd => sd.name) : []
+                } };
               } else {
                 // No spriteName: create blank rectangle sprite
                 try {
@@ -1896,164 +2886,21 @@ const DesktopHOC = function (WrappedComponent) {
                   result = { success: false, error: 'DSL parse error: ' + (parseErr.message || String(parseErr)) + '\nScript text (first 500 chars):\n' + scriptText.substring(0, 500) };
                   break;
                 }
-                var dslWarnings = (parsed.warnings && parsed.warnings.length > 0)
-                  ? parsed.warnings.join('; ')
-                  : '';
-
-                // Menu shadow opcodes: map of block opcode -> { inputName: menuOpcode }
-                // These dropdown menus are required by Scratch for blocks to render correctly.
-                const MENU_SHADOW_OPCODES = {
-                  motion_goto: { TO: 'motion_goto_menu' },
-                  motion_glideto: { TO: 'motion_glideto_menu' },
-                  motion_pointtowards: { TOWARDS: 'motion_pointtowards_menu' },
-                  sensing_touchingobject: { TOUCHINGOBJECTMENU: 'sensing_touchingobjectmenu' },
-                  sensing_distanceto: { DISTANCETOMENU: 'sensing_distancetomenu' },
-                  sensing_keypressed: { KEY_OPTION: 'sensing_keyoptions' },
-                  control_create_clone_of: { CLONE_OPTION: 'control_create_clone_of_menu' }
-                };
-
-                function generateId() { return '_ai_' + Math.random().toString(36).substr(2, 9); }
-
-                function createShadowBlock(parentId, inputName, value) {
-                  const sid = generateId();
-                  if (typeof value === 'number') {
-                    return [{ id: sid, opcode: 'math_number', fields: { NUM: { name: 'NUM', value: value } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                  }
-                  if (typeof value === 'string') {
-                    return [{ id: sid, opcode: 'text', fields: { TEXT: { name: 'TEXT', value: value } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                  }
-                  if (typeof value === 'boolean') {
-                    return [{ id: sid, opcode: 'text', fields: { TEXT: { name: 'TEXT', value: value ? 'true' : 'false' } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                  }
-                  if (value && typeof value === 'object' && value.VARIABLE) {
-                    const vf = resolveVariableField(target, 'VARIABLE', value.VARIABLE);
-                    return [{ id: sid, opcode: 'data_variable', fields: { VARIABLE: vf }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                  }
-                  if (value && typeof value === 'object' && value.LIST) {
-                    const lf = resolveVariableField(target, 'LIST', value.LIST);
-                    return [{ id: sid, opcode: 'data_listcontents', fields: { LIST: lf }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                  }
-                  return [null, { name: inputName, block: null, shadow: null }];
+                var validation = validateParsedScript(parsed, target);
+                if (validation.errors.length > 0) {
+                  // Refuse before creating anything: a half-built script is worse than none.
+                  result = { success: false, error: formatValidationError(validation.errors, scriptText) };
+                  break;
                 }
+                var allWarnings = (parsed.warnings || []).concat(validation.warnings);
 
-                // Recursively build a block (and its nested reporters/substacks) into allBlocks.
-                // Supports: nested reporter blocks (val.opcode), SUBSTACK/SUBSTACK2 arrays,
-                // scriptObj.substack/substack2, scriptObj.next chaining, and menu shadow fields.
-                function buildBlockStructure(scriptObj, allBlocks) {
-                  if (!scriptObj || !scriptObj.opcode) return null;
-                  const blockId = generateId();
-                  const inputs = {};
-                  const rawInputs = scriptObj.inputs || {};
-                  const menuMap = MENU_SHADOW_OPCODES[scriptObj.opcode] || {};
-
-                  Object.keys(rawInputs).forEach(key => {
-                    const val = rawInputs[key];
-                    if (val && typeof val === 'object' && val.opcode) {
-                      // Nested reporter block (e.g. operator_add inside motion_movesteps)
-                      const nestedId = buildBlockStructure(val, allBlocks);
-                      if (nestedId) {
-                        inputs[key] = { name: key, block: nestedId };
-                        const nestedDef = allBlocks.find(ab => ab.id === nestedId);
-                        if (nestedDef) nestedDef.parent = blockId;
-                      }
-                    } else if (key === 'SUBSTACK' || key === 'SUBSTACK2') {
-                      if (Array.isArray(val)) {
-                        const subId = buildSubstackChain(val, allBlocks);
-                        if (subId) inputs[key] = { name: key, block: subId };
-                      }
-                    } else {
-                      const [shadowBlock, inputRef] = createShadowBlock(blockId, key, val);
-                      if (shadowBlock) allBlocks.push(shadowBlock);
-                      if (inputRef) inputs[key] = inputRef;
-                    }
-                  });
-
-                  const fields = {};
-                  if (scriptObj.fields) {
-                    Object.keys(scriptObj.fields).forEach(key => {
-                      if (menuMap[key]) {
-                        // Create a menu shadow dropdown block for this field
-                        const menuOpcode = menuMap[key];
-                        const menuId = generateId();
-                        allBlocks.push({ id: menuId, opcode: menuOpcode, next: null, parent: blockId, inputs: {}, fields: { [key]: { name: key, value: String(scriptObj.fields[key]), id: undefined } }, shadow: true, topLevel: false, x: 0, y: 0 });
-                        inputs[key] = { name: key, block: menuId, shadow: menuId };
-                      } else if (key === 'VARIABLE') {
-                        fields[key] = resolveVariableField(target, 'VARIABLE', scriptObj.fields[key]);
-                      } else if (key === 'LIST') {
-                        fields[key] = resolveVariableField(target, 'LIST', scriptObj.fields[key]);
-                      } else {
-                        fields[key] = { name: key, value: String(scriptObj.fields[key]), id: undefined };
-                      }
-                    });
-                  }
-
-                  const blockDef = { id: blockId, opcode: scriptObj.opcode, next: null, parent: null, inputs: inputs, fields: fields, shadow: false, topLevel: false, x: 0, y: 0 };
-                  allBlocks.push(blockDef);
-
-                  // Substack arrays passed via scriptObj.substack / scriptObj.substack2
-                  if (scriptObj.substack && Array.isArray(scriptObj.substack)) {
-                    const substackId = buildSubstackChain(scriptObj.substack, allBlocks, blockId);
-                    if (substackId) blockDef.inputs.SUBSTACK = { name: 'SUBSTACK', block: substackId, shadow: null };
-                  }
-                  if (scriptObj.substack2 && Array.isArray(scriptObj.substack2)) {
-                    const substack2Id = buildSubstackChain(scriptObj.substack2, allBlocks, blockId);
-                    if (substack2Id) blockDef.inputs.SUBSTACK2 = { name: 'SUBSTACK2', block: substack2Id, shadow: null };
-                  }
-
-                  // Chained next block
-                  if (scriptObj.next) {
-                    const nextId = buildBlockStructure(scriptObj.next, allBlocks);
-                    if (nextId) blockDef.next = nextId;
-                  }
-
-                  return blockId;
-                }
-
-                function buildSubstackChain(substackArray, allBlocks, parentBlockId) {
-                  if (!Array.isArray(substackArray) || substackArray.length === 0) return null;
-                  var firstId = null;
-                  var prevId = null;
-                  for (var si = 0; si < substackArray.length; si++) {
-                    var subId = buildBlockStructure(substackArray[si], allBlocks);
-                    if (!subId) continue;
-                    if (firstId === null) firstId = subId;
-                    var curDef = allBlocks.find(ab => ab.id === subId);
-                    if (curDef) curDef.parent = prevId || parentBlockId;
-                    if (prevId) {
-                      var prevDef = allBlocks.find(ab => ab.id === prevId);
-                      if (prevDef) prevDef.next = subId;
-                    }
-                    prevId = subId;
-                  }
-                  return firstId;
-                }
-
-                const allBlocks = [];
-                const hatId = buildBlockStructure(parsed.hat, allBlocks);
-                if (hatId) {
-                  const hatBlockDef = allBlocks.find(b => b.id === hatId);
-                  if (hatBlockDef) {
-                    hatBlockDef.topLevel = true;
-                    hatBlockDef.x = 100 + Math.random() * 200;
-                    hatBlockDef.y = 100 + Math.random() * 200;
-                  }
-                }
-                let prevId = hatId;
-                parsed.blocks.forEach(block => {
-                  const blockId = buildBlockStructure(block, allBlocks);
-                  if (blockId) {
-                    const prevBlock = allBlocks.find(b => b.id === prevId);
-                    if (prevBlock) prevBlock.next = blockId;
-                    const curBlock = allBlocks.find(b => b.id === blockId);
-                    if (curBlock) curBlock.parent = prevId;
-                    prevId = blockId;
-                  }
-                });
-                allBlocks.forEach(b => { target.blocks.createBlock(b); });
+                var built = buildScriptBlocks(parsed, target);
+                var allBlocks = built.blocks;
+                allBlocks.forEach(function(b) { target.blocks.createBlock(b); });
                 vm.runtime.emitProjectChanged();
                 vm.emitWorkspaceUpdate();
                 vm.emitTargetsUpdate();
-                result = { success: true, data: { targetName: targetName, blocksAdded: allBlocks.length, warnings: dslWarnings || undefined } };
+                result = { success: true, data: { targetName: targetName, blocksAdded: allBlocks.length, warnings: allWarnings.length ? allWarnings : undefined } };
               } catch (e2) {
                 result = {
                   success: false,
@@ -2073,8 +2920,6 @@ const DesktopHOC = function (WrappedComponent) {
 
                 const opResults = [];
 
-                function generateId() { return '_ai_' + Math.random().toString(36).substr(2, 9); }
-
                 function resolveBlockId(tid) {
                   const entry = contextMapping[tid];
                   if (!entry) return null;
@@ -2088,130 +2933,6 @@ const DesktopHOC = function (WrappedComponent) {
                   return vm.runtime.targets.find(t => t.getName() === spriteName) || null;
                 }
 
-                function createShadowBlock(parentId, inputName, value, target) {
-                  const sid = generateId();
-                  if (typeof value === 'number') {
-                    return [{ id: sid, opcode: 'math_number', fields: { NUM: { name: 'NUM', value: value } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                  }
-                  if (typeof value === 'string') {
-                    return [{ id: sid, opcode: 'text', fields: { TEXT: { name: 'TEXT', value: value } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                  }
-                  if (typeof value === 'boolean') {
-                    return [{ id: sid, opcode: 'text', fields: { TEXT: { name: 'TEXT', value: value ? 'true' : 'false' } }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                  }
-                  if (value && typeof value === 'object' && value.VARIABLE) {
-                    const vf = resolveVariableField(target, 'VARIABLE', value.VARIABLE);
-                    return [{ id: sid, opcode: 'data_variable', fields: { VARIABLE: vf }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                  }
-                  if (value && typeof value === 'object' && value.LIST) {
-                    const lf = resolveVariableField(target, 'LIST', value.LIST);
-                    return [{ id: sid, opcode: 'data_listcontents', fields: { LIST: lf }, inputs: {}, next: null, parent: parentId, shadow: true, topLevel: false, x: 0, y: 0 }, { name: inputName, block: sid, shadow: sid }];
-                  }
-                  return [null, { name: inputName, block: null, shadow: null }];
-                }
-
-                function buildBlockStructure(scriptObj, target, allBlocks) {
-                  if (!scriptObj || !scriptObj.opcode) return null;
-                  const blockId = generateId();
-                  const inputs = {};
-                  const rawInputs = scriptObj.inputs || {};
-
-                  const MENU_SHADOW_OPCODES = {
-                    motion_goto: { TO: 'motion_goto_menu' },
-                    motion_glideto: { TO: 'motion_glideto_menu' },
-                    motion_pointtowards: { TOWARDS: 'motion_pointtowards_menu' },
-                    sensing_touchingobject: { TOUCHINGOBJECTMENU: 'sensing_touchingobjectmenu' },
-                    sensing_distanceto: { DISTANCETOMENU: 'sensing_distancetomenu' },
-                    sensing_keypressed: { KEY_OPTION: 'sensing_keyoptions' },
-                    control_create_clone_of: { CLONE_OPTION: 'control_create_clone_of_menu' }
-                  };
-
-                  const menuMap = MENU_SHADOW_OPCODES[scriptObj.opcode] || {};
-
-                  Object.keys(rawInputs).forEach(key => {
-                    const val = rawInputs[key];
-                    if (val && typeof val === 'object' && val.opcode) {
-                      const nestedId = buildBlockStructure(val, target, allBlocks);
-                      if (nestedId) inputs[key] = { name: key, block: nestedId };
-                    } else if (key === 'SUBSTACK' || key === 'SUBSTACK2') {
-                      if (Array.isArray(val)) {
-                        var prevSubId = null;
-                        val.forEach(function(subBlock) {
-                          const subId = buildBlockStructure(subBlock, target, allBlocks);
-                          if (subId) {
-                            if (!inputs[key]) inputs[key] = { name: key, block: subId };
-                            if (prevSubId) {
-                              var prevB = allBlocks.find(function(ab) { return ab.id === prevSubId; });
-                              if (prevB) prevB.next = subId;
-                            }
-                            prevSubId = subId;
-                          }
-                        });
-                      }
-                    } else {
-                      const [shadowBlock, inputRef] = createShadowBlock(blockId, key, val, target);
-                      if (shadowBlock) allBlocks.push(shadowBlock);
-                      if (inputRef) inputs[key] = inputRef;
-                    }
-                  });
-
-                  const fields = {};
-                  if (scriptObj.fields) {
-                    Object.keys(scriptObj.fields).forEach(key => {
-                      if (menuMap[key]) {
-                        const menuOpcode = menuMap[key];
-                        const menuId = generateId();
-                        const menuBlock = { id: menuId, opcode: menuOpcode, next: null, parent: blockId, inputs: {}, fields: { [key]: { name: key, value: String(scriptObj.fields[key]), id: undefined } }, shadow: true, topLevel: false, x: 0, y: 0 };
-                        allBlocks.push(menuBlock);
-                        inputs[key] = { name: key, block: menuId, shadow: menuId };
-                      } else if (key === 'VARIABLE') {
-                        fields[key] = resolveVariableField(target, 'VARIABLE', scriptObj.fields[key]);
-                      } else if (key === 'LIST') {
-                        fields[key] = resolveVariableField(target, 'LIST', scriptObj.fields[key]);
-                      } else {
-                        fields[key] = { name: key, value: String(scriptObj.fields[key]), id: undefined };
-                      }
-                    });
-                  }
-
-                  const blockDef = { id: blockId, opcode: scriptObj.opcode, next: null, parent: null, inputs: inputs, fields: fields, shadow: false, topLevel: false, x: 0, y: 0 };
-                  allBlocks.push(blockDef);
-
-                  if (scriptObj.substack && Array.isArray(scriptObj.substack)) {
-                    const substackId = buildSubstackChain(scriptObj.substack, target, allBlocks, blockId);
-                    if (substackId) blockDef.inputs.SUBSTACK = { name: 'SUBSTACK', block: substackId, shadow: null };
-                  }
-                  if (scriptObj.substack2 && Array.isArray(scriptObj.substack2)) {
-                    const substack2Id = buildSubstackChain(scriptObj.substack2, target, allBlocks, blockId);
-                    if (substack2Id) blockDef.inputs.SUBSTACK2 = { name: 'SUBSTACK2', block: substack2Id, shadow: null };
-                  }
-
-                  if (scriptObj.next) {
-                    const nextId = buildBlockStructure(scriptObj.next, target, allBlocks);
-                    if (nextId) blockDef.next = nextId;
-                  }
-
-                  return blockId;
-                }
-
-                function buildSubstackChain(substackArray, target, allBlocks, parentBlockId) {
-                  if (!Array.isArray(substackArray) || substackArray.length === 0) return null;
-                  var firstId = null;
-                  var prevId = null;
-                  for (var si = 0; si < substackArray.length; si++) {
-                    var subId = buildBlockStructure(substackArray[si], target, allBlocks);
-                    if (!subId) continue;
-                    if (firstId === null) firstId = subId;
-                    var curDef = allBlocks.find(function(ab) { return ab.id === subId; });
-                    if (curDef) curDef.parent = prevId || parentBlockId;
-                    if (prevId) {
-                      var prevDef = allBlocks.find(function(ab) { return ab.id === prevId; });
-                      if (prevDef) prevDef.next = subId;
-                    }
-                    prevId = subId;
-                  }
-                  return firstId;
-                }
 
                 for (let opIdx = 0; opIdx < operations.length; opIdx++) {
                   const op = operations[opIdx];
@@ -2239,30 +2960,13 @@ const DesktopHOC = function (WrappedComponent) {
                           opResults.push({ index: opIdx, type: 'add_script', success: false, error: 'DSL parse error: ' + (parseErr.message || String(parseErr)) + '\nScript text (first 500 chars):\n' + scriptText.substring(0, 500) });
                           break;
                         }
-                        var eoWarnings = (parsed.warnings && parsed.warnings.length > 0)
-                          ? parsed.warnings.join('; ')
-                          : '';
-                        const allBlocks = [];
-                        const hatId = buildBlockStructure(parsed.hat, target, allBlocks);
-                        if (hatId) {
-                          const hatDef = allBlocks.find(b => b.id === hatId);
-                          if (hatDef) {
-                            hatDef.topLevel = true;
-                            hatDef.x = 100 + Math.random() * 200;
-                            hatDef.y = 100 + Math.random() * 200;
-                          }
+                        const validation = validateParsedScript(parsed, target);
+                        if (validation.errors.length > 0) {
+                          opResults.push({ index: opIdx, type: 'add_script', success: false, error: formatValidationError(validation.errors, scriptText) });
+                          break;
                         }
-                        let prevId = hatId;
-                        parsed.blocks.forEach(block => {
-                          const blockId = buildBlockStructure(block, target, allBlocks);
-                          if (blockId) {
-                            const prevBlock = allBlocks.find(b => b.id === prevId);
-                            if (prevBlock) prevBlock.next = blockId;
-                            const curBlock = allBlocks.find(b => b.id === blockId);
-                            if (curBlock) curBlock.parent = prevId;
-                            prevId = blockId;
-                          }
-                        });
+                        var eoWarnings = (parsed.warnings || []).concat(validation.warnings);
+                        const allBlocks = buildScriptBlocks(parsed, target).blocks;
                         if (allBlocks.length > 0) {
                           try {
                             allBlocks.forEach(function(b) { target.blocks.createBlock(b); });
@@ -2281,7 +2985,84 @@ const DesktopHOC = function (WrappedComponent) {
                             break;
                           }
                         }
-                        opResults.push({ index: opIdx, type: 'add_script', success: true, blocksCreated: allBlocks.length, warnings: eoWarnings || undefined });
+                        opResults.push({ index: opIdx, type: 'add_script', success: true, blocksCreated: allBlocks.length, warnings: eoWarnings.length ? eoWarnings : undefined });
+                        break;
+                      }
+                      case 'insert_blocks': {
+                        // Splice blocks into an existing script instead of creating a new stack.
+                        const resolved = resolveBlockId(op.targetId);
+                        if (!resolved) {
+                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: 'Block tid not found: ' + op.targetId + '. Use a tid from the project context.' });
+                          break;
+                        }
+                        const target = resolved.target;
+                        const anchorId = resolved.blockId;
+                        const position = op.position || 'after';
+                        const VALID_POSITIONS = ['after', 'before', 'body_start', 'body_end'];
+                        if (VALID_POSITIONS.indexOf(position) < 0) {
+                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: 'Invalid position "' + position + '". Use one of: ' + VALID_POSITIONS.join(', ') });
+                          break;
+                        }
+                        let insertText = op.blocks !== undefined ? op.blocks : op.script;
+                        if (insertText === undefined || insertText === null || insertText === '') {
+                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: 'No blocks provided. Pass "blocks" as DSL text, e.g. "looks_say \\"hi\\"\ncontrol_wait 1".' });
+                          break;
+                        }
+                        if (typeof insertText === 'object') {
+                          try {
+                            insertText = convertBlockObjToDsl(insertText, 0).join('\n');
+                          } catch (convErr) {
+                            opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: 'Failed to convert blocks object to DSL: ' + (convErr.message || String(convErr)) });
+                            break;
+                          }
+                        }
+                        let parsedIns;
+                        try {
+                          parsedIns = parseScratchDSL(String(insertText), target);
+                        } catch (parseErr) {
+                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: 'DSL parse error: ' + (parseErr.message || String(parseErr)) + '\nBlocks text:\n' + String(insertText).substring(0, 400) });
+                          break;
+                        }
+                        // Inserted fragments are bodies, not scripts: an implicit green-flag hat
+                        // would silently become the first inserted block.
+                        const insBody = { hat: null, blocks: parsedIns.blocks, warnings: parsedIns.warnings };
+                        if (parsedIns.hat && String(insertText).replace(/^[	 ]+/, '').indexOf('event_') === 0) {
+                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: 'insert_blocks takes body blocks only; "' + parsedIns.hat.opcode + '" is a hat block. Use add_script to create a new script.' });
+                          break;
+                        }
+                        if (!insBody.blocks || insBody.blocks.length === 0) {
+                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: 'The DSL produced no blocks. Text was: ' + String(insertText).substring(0, 200) });
+                          break;
+                        }
+                        const insValidation = validateParsedScript(insBody, target);
+                        if (insValidation.errors.length > 0) {
+                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: formatValidationError(insValidation.errors, insertText) });
+                          break;
+                        }
+                        const insBuilt = buildScriptBlocks(insBody, target, { topLevel: false });
+                        const firstBlock = insBuilt.blocks.filter(function(b) { return !b.shadow; })[0];
+                        if (!firstBlock || !insBuilt.lastId) {
+                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: 'Could not build the blocks to insert' });
+                          break;
+                        }
+                        const spliced = spliceBlocksIntoScript(target, insBuilt.blocks, firstBlock.id, insBuilt.lastId, {
+                          position: position,
+                          blockId: anchorId,
+                          branch: op.branch
+                        });
+                        if (!spliced.ok) {
+                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: spliced.error });
+                          break;
+                        }
+                        vm.runtime.emitProjectChanged();
+                        vm.emitWorkspaceUpdate();
+                        vm.emitTargetsUpdate();
+                        opResults.push({
+                          index: opIdx, type: 'insert_blocks', success: true,
+                          blocksInserted: insBuilt.blocks.filter(function(b) { return !b.shadow; }).length,
+                          position: position,
+                          warnings: insValidation.warnings.length ? insValidation.warnings : undefined
+                        });
                         break;
                       }
                       case 'delete_block': {
@@ -2329,6 +3110,19 @@ const DesktopHOC = function (WrappedComponent) {
                         const inputName = op.inputName;
                         const value = op.value;
                         const oldInput = block.inputs[inputName];
+                        // Reject an input name the block doesn't have; otherwise the value goes
+                        // into a slot Scratch never renders and the model thinks it succeeded.
+                        const inputSchema = OPCODE_SCHEMA[block.opcode];
+                        if (inputSchema && inputName !== 'SUBSTACK' && inputName !== 'SUBSTACK2' &&
+                            !schemaArgFor(block.opcode, inputName)) {
+                          opResults.push({
+                            index: opIdx, type: 'modify_input', success: false,
+                            error: block.opcode + ' has no input named "' + inputName + '". Valid: ' +
+                              (inputSchema.args.map(function(a) { return a.name; }).join(', ') || 'none') +
+                              (inputSchema.substack ? ', SUBSTACK' : '') + (inputSchema.substack2 ? ', SUBSTACK2' : '')
+                          });
+                          break;
+                        }
                         function deleteOldShadow() {
                           if (oldInput && oldInput.shadow) {
                             target.blocks.deleteBlock(oldInput.shadow);
@@ -2384,35 +3178,30 @@ const DesktopHOC = function (WrappedComponent) {
                             subAllBlocks.forEach(function(b) { target.blocks.createBlock(b); });
                             block.inputs[inputName] = { name: inputName, block: reporterId, shadow: null };
                           }
-                        } else if (typeof value === 'number') {
+                        } else if (value && typeof value === 'object' && value.opcode) {
+                          // Plug a reporter block into the slot
                           deleteOldShadow();
-                          const sid = generateId();
-                          target.blocks.createBlock({ id: sid, opcode: 'math_number', fields: { NUM: { name: 'NUM', value: value } }, inputs: {}, next: null, parent: blockId, shadow: true, topLevel: false, x: 0, y: 0 });
-                          block.inputs[inputName] = { name: inputName, block: sid, shadow: sid };
-                        } else if (typeof value === 'string') {
-                          deleteOldShadow();
-                          const sid = generateId();
-                          target.blocks.createBlock({ id: sid, opcode: 'text', fields: { TEXT: { name: 'TEXT', value: value } }, inputs: {}, next: null, parent: blockId, shadow: true, topLevel: false, x: 0, y: 0 });
-                          block.inputs[inputName] = { name: inputName, block: sid, shadow: sid };
-                        } else if (typeof value === 'boolean') {
-                          deleteOldShadow();
-                          const sid = generateId();
-                          target.blocks.createBlock({ id: sid, opcode: 'text', fields: { TEXT: { name: 'TEXT', value: value ? 'true' : 'false' } }, inputs: {}, next: null, parent: blockId, shadow: true, topLevel: false, x: 0, y: 0 });
-                          block.inputs[inputName] = { name: inputName, block: sid, shadow: sid };
-                        } else if (value && typeof value === 'object' && value.opcode && inputName !== 'SUBSTACK' && inputName !== 'SUBSTACK2') {
-                          deleteOldShadow();
-                          const allBlocks = [];
-                          const reporterId = buildBlockStructure(value, target, allBlocks);
-                          if (reporterId) {
-                            allBlocks.forEach(function(b) { target.blocks.createBlock(b); });
-                            block.inputs[inputName] = { name: inputName, block: reporterId };
+                          const reporterBlocks = [];
+                          const reporterId = buildBlockStructure(value, target, reporterBlocks);
+                          if (!reporterId) {
+                            opResults.push({ index: opIdx, type: 'modify_input', success: false, error: 'Could not build reporter for ' + inputName + ': missing opcode' });
+                            break;
                           }
-                        } else if (value && typeof value === 'object' && value.VARIABLE) {
+                          const reporterDef = reporterBlocks.find(function(ab) { return ab.id === reporterId; });
+                          if (reporterDef) reporterDef.parent = blockId;
+                          reporterBlocks.forEach(function(b) { target.blocks.createBlock(b); });
+                          block.inputs[inputName] = { name: inputName, block: reporterId, shadow: null };
+                        } else {
+                          // Literal value: let the schema pick the right shadow type so a colour
+                          // stays a colour picker, an angle stays a dial, a menu stays a dropdown.
                           deleteOldShadow();
-                          const vf = resolveVariableField(target, 'VARIABLE', value.VARIABLE);
-                          const vsid = generateId();
-                          target.blocks.createBlock({ id: vsid, opcode: 'data_variable', fields: { VARIABLE: vf }, inputs: {}, next: null, parent: blockId, shadow: true, topLevel: false, x: 0, y: 0 });
-                          block.inputs[inputName] = { name: inputName, block: vsid, shadow: vsid };
+                          const shadowPair = createInputShadow(target, blockId, block.opcode, inputName, value);
+                          if (shadowPair[0]) {
+                            target.blocks.createBlock(shadowPair[0]);
+                            block.inputs[inputName] = shadowPair[1];
+                          } else {
+                            delete block.inputs[inputName];
+                          }
                         }
                         vm.runtime.emitProjectChanged();
                         vm.emitWorkspaceUpdate();
@@ -3058,73 +3847,77 @@ const DesktopHOC = function (WrappedComponent) {
               break;
             }
             case 'setListItem': {
-              const target = params.spriteName ? (vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName)) : vm.runtime.getTargetForStage();
-              if (!target) { result = { success: false, error: 'Target not found' }; break; }
-              const list = target.lookupVariableByNameAndType(params.listName, 'list');
-              if (!list) { result = { success: false, error: 'List "' + params.listName + '" not found' }; break; }
-              if (!Array.isArray(list.value)) { result = { success: false, error: 'Variable "' + params.listName + '" is not a list' }; break; }
-              const idx = parseInt(params.index);
-              if (isNaN(idx) || idx < 1 || idx > list.value.length) {
-                result = { success: false, error: 'Index out of range: ' + params.index + '. List length: ' + list.value.length };
+              const setItemTargetInfo = resolveDataTarget(vm, params);
+              if (!setItemTargetInfo.target) { result = { success: false, error: setItemTargetInfo.error }; break; }
+              const setItemName = params.listName || params.list_name;
+              const setItemFound = findDataVariable(vm, setItemTargetInfo.target, setItemName, 'list');
+              if (!setItemFound.variable) { result = { success: false, error: setItemFound.error }; break; }
+              const setItemList = setItemFound.variable;
+              if (!Array.isArray(setItemList.value)) setItemList.value = [];
+              if (setItemList.value.length === 0) {
+                result = { success: false, error: 'List "' + setItemName + '" is empty, so there is no item to replace. Use add_to_list first.' };
                 break;
               }
-              // Convert item type: numeric strings become numbers
-              let itemVal = params.item;
-              if (typeof itemVal === 'string') {
-                const numVal = Number(itemVal);
-                if (itemVal.trim() !== '' && !isNaN(numVal)) itemVal = numVal;
-              }
-              list.value[idx - 1] = itemVal;
+              const setItemIdx = resolveListIndex(params.index, setItemList.value.length, {});
+              if (setItemIdx.error) { result = { success: false, error: setItemIdx.error }; break; }
+              if (params.item === undefined) { result = { success: false, error: 'No item provided' }; break; }
+              const replacedValue = setItemList.value[setItemIdx.index];
+              setItemList.value[setItemIdx.index] = coerceScratchValue(params.item);
               vm.runtime.emitProjectChanged();
               vm.emitWorkspaceUpdate();
-              result = { success: true, data: { listName: params.listName, index: idx, value: itemVal, length: list.value.length } };
+              result = { success: true, data: Object.assign({
+                listName: setItemName, index: setItemIdx.index + 1,
+                previousValue: replacedValue, value: setItemList.value[setItemIdx.index],
+                owner: setItemFound.owner.getName()
+              }, listPreview(setItemList.value)) };
               break;
             }
             case 'insertToList': {
-              const target = params.spriteName ? (vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName)) : vm.runtime.getTargetForStage();
-              if (!target) { result = { success: false, error: 'Target not found' }; break; }
+              const insTargetInfo = resolveDataTarget(vm, params);
+              if (!insTargetInfo.target) { result = { success: false, error: insTargetInfo.error }; break; }
+              const insTarget = insTargetInfo.target;
+              const insName = String(params.listName || params.list_name || '').trim();
+              if (!insName) { result = { success: false, error: 'No list name provided' }; break; }
               if (params.item === undefined || params.item === null) { result = { success: false, error: 'No item provided' }; break; }
-              let list = target.lookupVariableByNameAndType(params.listName, 'list');
-              if (!list) {
-                const listId = '_ai_list_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-                target.createVariable(listId, params.listName, 'list', false);
-                list = target.variables[listId];
-                vm.emitWorkspaceUpdate();
-              }
-              if (!Array.isArray(list.value)) list.value = [];
-              // Convert item type
-              let itemVal = params.item;
-              if (typeof itemVal === 'string') {
-                const numVal = Number(itemVal);
-                if (itemVal.trim() !== '' && !isNaN(numVal)) itemVal = numVal;
-              }
-              if (params.index === 'last' || params.index === undefined) {
-                list.value.push(itemVal);
-              } else if (params.index === 'first') {
-                list.value.unshift(itemVal);
+              let insList = null;
+              let insCreated = false;
+              const insFound = findDataVariable(vm, insTarget, insName, 'list');
+              if (insFound.variable) {
+                insList = insFound.variable;
               } else {
-                const idx = parseInt(params.index);
-                if (isNaN(idx) || idx < 1 || idx > list.value.length + 1) {
-                  result = { success: false, error: 'Index out of range: ' + params.index };
+                if (insTarget.lookupVariableByNameAndType(insName, '')) {
+                  result = { success: false, error: 'A variable named "' + insName + '" already exists in this scope, so a list cannot share that name.' };
                   break;
                 }
-                list.value.splice(idx - 1, 0, itemVal);
+                const insId = '_ai_list_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+                insTarget.createVariable(insId, insName, 'list', false);
+                insList = insTarget.variables[insId];
+                insCreated = true;
               }
+              if (!Array.isArray(insList.value)) insList.value = [];
+              // allowAppend：插入允许落在"末尾之后"，即长度+1
+              const insIdx = resolveListIndex(params.index, insList.value.length, { allowAppend: true });
+              if (insIdx.error) { result = { success: false, error: insIdx.error }; break; }
+              insList.value.splice(insIdx.index, 0, coerceScratchValue(params.item));
               vm.runtime.emitProjectChanged();
               vm.emitWorkspaceUpdate();
-              result = { success: true, data: { listName: params.listName, length: list.value.length } };
+              result = { success: true, data: Object.assign({
+                listName: insName, index: insIdx.index + 1, createdList: insCreated,
+                owner: (insFound.owner || insTarget).getName()
+              }, listPreview(insList.value)) };
               break;
             }
             case 'clearList': {
-              const target = params.spriteName ? (vm.runtime.getTargetById(params.targetId) || vm.runtime.targets.find(t => t.getName() === params.spriteName)) : vm.runtime.getTargetForStage();
-              if (!target) { result = { success: false, error: 'Target not found' }; break; }
-              const list = target.lookupVariableByNameAndType(params.listName, 'list');
-              if (!list) { result = { success: false, error: 'List "' + params.listName + '" not found' }; break; }
-              if (!Array.isArray(list.value)) { result = { success: false, error: 'Variable "' + params.listName + '" is not a list' }; break; }
-              list.value = [];
+              const clrTargetInfo = resolveDataTarget(vm, params);
+              if (!clrTargetInfo.target) { result = { success: false, error: clrTargetInfo.error }; break; }
+              const clrName = params.listName || params.list_name;
+              const clrFound = findDataVariable(vm, clrTargetInfo.target, clrName, 'list');
+              if (!clrFound.variable) { result = { success: false, error: clrFound.error }; break; }
+              const clearedCount = Array.isArray(clrFound.variable.value) ? clrFound.variable.value.length : 0;
+              clrFound.variable.value = [];
               vm.runtime.emitProjectChanged();
               vm.emitWorkspaceUpdate();
-              result = { success: true, data: { listName: params.listName, length: 0 } };
+              result = { success: true, data: { listName: clrName, removedCount: clearedCount, length: 0, owner: clrFound.owner.getName() } };
               break;
             }
             case 'getExtensionCode': {
@@ -3253,19 +4046,123 @@ const DesktopHOC = function (WrappedComponent) {
             }
             case 'duplicateSprite': {
               try {
-                const sourceName = params.sourceName || '';
-                const newName = params.newName || '';
-                if (!sourceName) { result = { success: false, error: 'No source sprite name provided' }; break; }
-                if (!newName) { result = { success: false, error: 'No new sprite name provided' }; break; }
-                const target = vm.runtime.targets.find(t => t.getName() === sourceName);
-                if (!target) { result = { success: false, error: 'Sprite "' + sourceName + '" not found' }; break; }
-                await vm.duplicateSprite(target.id);
-                vm.renameSprite(vm.editingTarget.id, newName);
-                result = { success: true, data: { sourceName: sourceName, newName: newName, message: 'Sprite "' + sourceName + '" duplicated as "' + newName + '"' } };
+                const dupSourceName = String(params.sourceName || params.source_name || params.spriteName || params.sprite_name || '').trim();
+                const dupNewName = String(params.newName || params.new_name || '').trim();
+                if (!dupSourceName) { result = { success: false, error: 'No source sprite name provided' }; break; }
+                const dupSource = vm.runtime.targets.find(t => !t.isStage && t.getName() === dupSourceName);
+                if (!dupSource) {
+                  const names = vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).map(t => t.getName());
+                  const hint = closestName(dupSourceName, names);
+                  result = { success: false, error: 'Sprite "' + dupSourceName + '" not found.' +
+                    (hint ? ' Did you mean "' + hint + '"?' : '') +
+                    ' Available: ' + (names.length ? names.join(', ') : '(none)') };
+                  break;
+                }
+                if (dupNewName && vm.runtime.targets.some(t => !t.isStage && t.getName() === dupNewName)) {
+                  result = { success: false, error: 'A sprite named "' + dupNewName + '" already exists. Pick another name.' };
+                  break;
+                }
+                const idsBefore = vm.runtime.targets.map(t => t.id);
+                await vm.duplicateSprite(dupSource.id);
+                // 原实现用 vm.editingTarget 猜新角色；那是"当前编辑对象"，并不保证
+                // 就是刚复制出来的那个。改成对比复制前后的 id 集合。
+                const dupTarget = vm.runtime.targets.find(t => idsBefore.indexOf(t.id) < 0);
+                if (!dupTarget) { result = { success: false, error: 'Duplication finished but the new sprite could not be located.' }; break; }
+                const autoName = dupTarget.getName();
+                if (dupNewName) vm.renameSprite(dupTarget.id, dupNewName);
+                const finalName = dupTarget.getName();
+                vm.runtime.emitProjectChanged();
+                vm.emitTargetsUpdate();
+                result = { success: true, data: {
+                  sourceName: dupSourceName, name: finalName,
+                  // 没传 new_name 时 Scratch 会自动编号（Cat2 等），把实际名字回报清楚
+                  autoNamed: !dupNewName, defaultName: autoName,
+                  renamedAsRequested: !dupNewName || finalName === dupNewName,
+                  copiedScripts: Object.keys(dupTarget.blocks._blocks).filter(id => dupTarget.blocks._blocks[id].topLevel).length,
+                  copiedCostumes: dupTarget.getCostumes().length,
+                  copiedLocalVariables: Object.values(dupTarget.variables).map(v => v.name)
+                } };
               } catch (e) { result = { success: false, error: 'Failed to duplicate sprite: ' + e.message }; }
               break;
             }
-            default:
+            case 'captureProjectSnapshot': {
+              // 撤销 AI 更改：在动手前存一份完整工程快照。
+              // 用 sb3 压缩包而非 project.json，因为恢复走的 loadProject 不带 zip 时
+              // 造型/声音只能靠 storage 缓存命中——AI 新加的素材未必在缓存里，
+              // 那样恢复出来会缺图。压缩包自带资产，恢复必然完整。
+              // ArrayBuffer 留在编辑器这一侧，AI 窗口只拿 id，避免几十 MB 走 IPC。
+              try {
+                const snapId = params.snapshotId ? String(params.snapshotId) : ('snap_' + Date.now());
+                if (aiSnapshots.has(snapId)) {
+                  result = { success: true, data: { snapshotId: snapId, existed: true, bytes: aiSnapshots.get(snapId).bytes } };
+                  break;
+                }
+                const buffer = await vm.saveProjectSb3('arraybuffer');
+                // 只保留最近若干份，免得连续多轮对话把内存吃满
+                while (aiSnapshotOrder.length >= AI_SNAPSHOT_LIMIT) {
+                  const evicted = aiSnapshotOrder.shift();
+                  aiSnapshots.delete(evicted);
+                }
+                aiSnapshots.set(snapId, {
+                  buffer: buffer,
+                  bytes: buffer.byteLength,
+                  createdAt: Date.now(),
+                  spriteCount: vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).length
+                });
+                aiSnapshotOrder.push(snapId);
+                result = { success: true, data: { snapshotId: snapId, existed: false, bytes: buffer.byteLength } };
+              } catch (e) {
+                result = { success: false, error: 'Failed to capture project snapshot: ' + (e.message || String(e)) };
+              }
+              break;
+            }
+            case 'restoreProjectSnapshot': {
+              try {
+                const restoreId = String(params.snapshotId || '');
+                const snap = aiSnapshots.get(restoreId);
+                if (!snap) {
+                  result = { success: false, error: 'Snapshot "' + restoreId + '" is no longer available. It may have been evicted, or the editor was reopened since it was taken.' };
+                  break;
+                }
+                const beforeSprites = vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).length;
+                // 先停掉正在跑的脚本：loadProject 会换掉整个 runtime，
+                // 让线程继续跑到一半再被抽走会留下悬空引用。
+                vm.stopAll();
+                await vm.loadProject(snap.buffer);
+                vm.runtime.emitProjectChanged();
+                vm.emitWorkspaceUpdate();
+                vm.emitTargetsUpdate();
+                result = { success: true, data: {
+                  snapshotId: restoreId,
+                  spriteCountBefore: beforeSprites,
+                  spriteCountAfter: vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).length,
+                  capturedAt: snap.createdAt
+                } };
+              } catch (e) {
+                result = { success: false, error: 'Failed to restore project: ' + (e.message || String(e)) };
+              }
+              break;
+            }
+            case 'hasProjectSnapshot': {
+              // 会话是从 localStorage 恢复的，快照却只活在编辑器内存里；
+              // 渲染撤销按钮前先问一句，免得摆出一个点了必然失败的按钮。
+              const askId = String(params.snapshotId || '');
+              const askSnap = aiSnapshots.get(askId);
+              result = { success: true, data: {
+                snapshotId: askId, exists: !!askSnap,
+                bytes: askSnap ? askSnap.bytes : 0,
+                capturedAt: askSnap ? askSnap.createdAt : null
+              } };
+              break;
+            }
+            case 'dropProjectSnapshot': {
+              const dropId = String(params.snapshotId || '');
+              const had = aiSnapshots.delete(dropId);
+              const orderIdx = aiSnapshotOrder.indexOf(dropId);
+              if (orderIdx >= 0) aiSnapshotOrder.splice(orderIdx, 1);
+              result = { success: true, data: { snapshotId: dropId, existed: had } };
+              break;
+            }            default:
               result = { success: false, error: 'Unknown tool: ' + toolName };
           }
         } catch (e) {

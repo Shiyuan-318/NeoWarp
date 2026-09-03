@@ -57,6 +57,25 @@ class CollaborationServer {
     return count;
   }
 
+  // Full member list for the collaboration window's roster panel. The host is
+  // not a WebSocket client, so it is prepended manually.
+  getRoster () {
+    const roster = [{
+      name: this.hostName,
+      avatar: this.hostAvatar,
+      role: 'host'
+    }];
+    for (const client of this.clients.values()) {
+      if (!client.authenticated) continue;
+      roster.push({
+        name: client.username,
+        avatar: client.avatar,
+        role: 'participant'
+      });
+    }
+    return roster;
+  }
+
   // Total humans in the room: connected clients plus the host.
   getTotalOnlineCount () {
     return this.getOnlineCount() + 1;
@@ -327,7 +346,9 @@ class CollaborationServer {
           username: client.username,
           avatar: client.avatar,
           onlineCount: this.getTotalOnlineCount(),
-          hostName: this.hostName
+          hostName: this.hostName,
+          hostAvatar: this.hostAvatar,
+          members: this.getRoster()
         }));
 
         // Tell the other clients about the new member
@@ -337,7 +358,8 @@ class CollaborationServer {
             type: 'member-joined',
             username: client.username,
             avatar: client.avatar,
-            onlineCount: this.getTotalOnlineCount()
+            onlineCount: this.getTotalOnlineCount(),
+            members: this.getRoster()
           }));
         }
 
@@ -531,7 +553,8 @@ class CollaborationServer {
         this.sendToClient(otherClient, JSON.stringify({
           type: 'member-left',
           username: username,
-          onlineCount: this.getTotalOnlineCount()
+          onlineCount: this.getTotalOnlineCount(),
+          members: this.getRoster()
         }));
       }
       if (this.onClientLeave) {

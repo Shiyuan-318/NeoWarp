@@ -20,3 +20,10 @@ development.provisionprofile
 
 # Apple App Store Connect API key
 *.p8
+
+# Local artifacts
+.dbg/
+backups/
+webpack-build.log
+nul
+build/rcedit-x64.exe

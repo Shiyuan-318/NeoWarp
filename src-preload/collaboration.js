@@ -2,6 +2,7 @@ const {contextBridge, ipcRenderer} = require('electron');
 
 contextBridge.exposeInMainWorld('CollaborationPreload', {
   getMode: () => ipcRenderer.invoke('collab-get-mode'),
+  getTheme: () => ipcRenderer.invoke('collab-get-theme'),
   getLocalIP: () => ipcRenderer.invoke('collab-get-local-ip'),
   discoverSessions: (port) => ipcRenderer.invoke('collab-discover-sessions', { port }),
   startHost: (password, port, permissions, nickname, avatar) => ipcRenderer.invoke('collab-start-host', { password, port, permissions, nickname, avatar }),
@@ -21,4 +22,5 @@ contextBridge.exposeInMainWorld('CollaborationPreload', {
   onFocusChat: (callback) => ipcRenderer.on('collab-focus-chat', () => callback()),
   onEndRequested: (callback) => ipcRenderer.on('collab-end-requested', () => callback()),
   onLeaveRequested: (callback) => ipcRenderer.on('collab-leave-requested', () => callback()),
+  onThemeChanged: (callback) => ipcRenderer.on('collab-theme-changed', (e, data) => callback(data)),
 });

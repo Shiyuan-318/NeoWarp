@@ -406,17 +406,22 @@ class AIAssistantWindow extends AbstractWindow {
       return getLocale() || 'en';
     });
 
-    // 手机编程：局域网同步服务（扫码后手机获得与桌面一致的 AI 聊天界面）
+    // 手机编程：局域网同步服务（扫码后手机加载的就是这份桌面页面本体）
     this.ipc.handle('ai-get-phone-link', () => {
       phoneSync.register(this, ipcMain);
       return phoneSync.getLinkInfo();
     });
     this.ipc.handle('ai-phone-get-state', () => phoneSync.getSnapshot());
-    ipcMain.on('ai-phone-broadcast', (event, payload) => {
+    const onPhoneBroadcast = (event, payload) => {
       // 只接受 AI 窗口自身的广播
       if (event.sender === this.window.webContents) {
         phoneSync.broadcast(payload);
       }
+    };
+    ipcMain.on('ai-phone-broadcast', onPhoneBroadcast);
+    // ipcMain 是全局的，窗口关掉后要摘掉监听，否则反复开关会越积越多
+    this.window.on('closed', () => {
+      ipcMain.removeListener('ai-phone-broadcast', onPhoneBroadcast);
     });
 
     this.ipc.handle('ai-close-window', () => {

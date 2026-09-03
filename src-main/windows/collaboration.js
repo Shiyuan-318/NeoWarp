@@ -1,5 +1,6 @@
 const AbstractWindow = require('./abstract');
 const CollaborationServer = require('../collaboration-server');
+const {ipcMain} = require('electron');
 const os = require('os');
 const http = require('http');
 
@@ -125,6 +126,8 @@ class CollaborationWindow extends AbstractWindow {
       return this.mode;
     });
 
+    this.ipc.handle('collab-get-theme', () => this.requestEditorTheme());
+
     this.ipc.handle('collab-get-local-ip', () => {
       const interfaces = os.networkInterfaces();
       for (const name of Object.keys(interfaces)) {
@@ -158,8 +161,13 @@ class CollaborationWindow extends AbstractWindow {
       });
 
       this.server.onClientJoin = (username, avatar) => {
-        const onlineCount = this.server.getOnlineCount() + 1; // +1 for host
-        this.sendToCollabWindow('collab-client-join', { username, avatar, onlineCount });
+        const onlineCount = this.server.getTotalOnlineCount();
+        this.sendToCollabWindow('collab-client-join', {
+          username,
+          avatar,
+          onlineCount,
+          members: this.server.getRoster()
+        });
         this.sendToEditor('collaboration-state-changed', {
           isCollaborating: true,
           role: 'host',
@@ -169,8 +177,12 @@ class CollaborationWindow extends AbstractWindow {
       };
 
       this.server.onClientLeave = (username) => {
-        const onlineCount = this.server.getOnlineCount() + 1;
-        this.sendToCollabWindow('collab-client-leave', { username, onlineCount });
+        const onlineCount = this.server.getTotalOnlineCount();
+        this.sendToCollabWindow('collab-client-leave', {
+          username,
+          onlineCount,
+          members: this.server.getRoster()
+        });
         this.sendToEditor('collaboration-state-changed', {
           isCollaborating: true,
           role: 'host',
@@ -200,7 +212,8 @@ class CollaborationWindow extends AbstractWindow {
           success: true,
           onlineCount: 1,
           nickname: this.hostNickname,
-          avatar: this.hostAvatar
+          avatar: this.hostAvatar,
+          members: this.server.getRoster()
         });
         this.sendToEditor('collaboration-state-changed', {
           isCollaborating: true,
@@ -295,7 +308,10 @@ class CollaborationWindow extends AbstractWindow {
                   permissions: message.permissions,
                   username: message.username,
                   avatar: this.joinAvatar,
-                  onlineCount: message.onlineCount
+                  onlineCount: message.onlineCount,
+                  hostName: message.hostName,
+                  hostAvatar: message.hostAvatar,
+                  members: message.members
                 });
                 this.sendToEditor('collaboration-state-changed', {
                   isCollaborating: true,
@@ -539,6 +555,31 @@ class CollaborationWindow extends AbstractWindow {
     }
   }
 
+  // Ask the editor renderer which theme it is currently using, so the
+  // collaboration window opens in light/dark to match it.
+  requestEditorTheme () {
+    const editorWindow = this.editorWindow;
+    if (!editorWindow || !editorWindow.window || editorWindow.window.isDestroyed()) {
+      return 'light';
+    }
+    return new Promise((resolve) => {
+      const requestId = `collaboration-${Date.now()}`;
+      const handler = (event, data) => {
+        if (data && data.requestId === requestId) {
+          ipcMain.removeListener('theme-response', handler);
+          clearTimeout(timeout);
+          resolve(data.theme || 'light');
+        }
+      };
+      const timeout = setTimeout(() => {
+        ipcMain.removeListener('theme-response', handler);
+        resolve('light');
+      }, 3000);
+      ipcMain.on('theme-response', handler);
+      editorWindow.window.webContents.send('request-theme', {requestId});
+    });
+  }
+
   getDimensions () {
     return {
       width: 460,
@@ -555,7 +596,7 @@ class CollaborationWindow extends AbstractWindow {
   }
 
   getBackgroundColor () {
-    return '#f5f5f7';
+    return '#f2f2f7';
   }
 
   static showHost (editorWindow) {

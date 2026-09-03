@@ -16,9 +16,6 @@ contextBridge.exposeInMainWorld('AIAssistantPreload', {
   getPhoneLink: () => ipcRenderer.invoke('ai-get-phone-link'),
   // 手机编程：把聊天状态变化广播给已连接的手机
   phoneSyncBroadcast: (payload) => ipcRenderer.send('ai-phone-broadcast', payload),
-  onPhoneRemoteMessage: (callback) => {
-    ipcRenderer.on('ai-phone-remote-message', (event, data) => callback(data));
-  },
   onPhoneClientsChanged: (callback) => {
     ipcRenderer.on('ai-phone-clients', (event, data) => callback(data));
   },

@@ -111,7 +111,7 @@ const FILE_SCHEMES = {
     root: path.resolve(__dirname, '../src-renderer/collaboration'),
     standard: true,
     secure: true,
-    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
+    csp: "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:"
   },
   'tw-mobile-preview': {
     root: path.resolve(__dirname, '../src-renderer/mobile-preview'),

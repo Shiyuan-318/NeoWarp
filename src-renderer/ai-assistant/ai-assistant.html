@@ -2353,8 +2353,9 @@
             transform: none;
         }
 
-        /* ── 模型设置：全屏页面（不再是底部弹层） ──
-           整页覆盖聊天区，头部吸顶，内容列居中，进出场用轻微上移+淡入。 */
+        /* ── 设置页：左侧目录 + 右侧内容 ──
+           整页覆盖聊天区。左栏是分类导航并吸附在视口，右栏独立滚动，
+           这样切分类时不会把长长的模型列表也一起滚走。 */
         .settings-overlay {
             position: fixed;
             inset: 0;
@@ -2365,40 +2366,116 @@
             transition: opacity var(--transition-slow);
             display: flex;
             justify-content: center;
-            overflow-y: auto;
-            overflow-x: hidden;
+            overflow: hidden;
         }
         .settings-overlay.open {
             opacity: 1;
             pointer-events: auto;
         }
 
-        .settings-panel {
+        .settings-shell {
             width: 100%;
-            max-width: 780px;
-            padding: 0 24px 56px;
-            transform: translateY(26px);
+            max-width: 1080px;
+            height: 100%;
+            display: grid;
+            grid-template-columns: minmax(180px, var(--settings-nav-w, 224px)) minmax(0, 1fr);
+            transform: translateY(22px);
             opacity: 0;
             transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
                         opacity 0.3s ease;
         }
-        .settings-overlay.open .settings-panel { transform: none; opacity: 1; }
+        .settings-overlay.open .settings-shell { transform: none; opacity: 1; }
 
-        .settings-page-head {
-            position: sticky;
-            top: 0;
-            z-index: 5;
+        /* ── 左栏：目录 ── */
+        .settings-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 16px 12px 20px 20px;
+            border-right: 0.5px solid var(--border);
+            overflow-y: auto;
+            min-width: 0;
+        }
+        .settings-nav-head {
             display: flex;
             align-items: center;
-            gap: 14px;
-            padding: 16px 0 14px;
-            margin-bottom: 16px;
-            background: var(--bg);
-            border-bottom: 0.5px solid var(--border);
+            gap: 10px;
+            padding: 0 4px 12px;
+            margin-bottom: 4px;
         }
+        .settings-nav-title {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .settings-nav-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        .settings-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 9px 11px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 600;
+            letter-spacing: -0.1px;
+            text-align: left;
+            cursor: pointer;
+            outline: none;
+            transition: background var(--transition), color var(--transition);
+        }
+        .settings-nav-item:hover { background: var(--surface-hover); color: var(--text); }
+        .settings-nav-item.active {
+            background: var(--accent-ghost);
+            color: var(--accent);
+        }
+        .settings-nav-item:focus-visible { box-shadow: 0 0 0 3px var(--accent-ring); }
+        .settings-nav-icon {
+            width: 17px;
+            height: 17px;
+            flex-shrink: 0;
+        }
+        .settings-nav-label {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .settings-nav-badge {
+            flex-shrink: 0;
+            min-width: 20px;
+            padding: 1px 6px;
+            border-radius: var(--radius-full);
+            background: var(--surface-tertiary);
+            color: var(--text-tertiary);
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+        .settings-nav-badge:empty { display: none; }
+        .settings-nav-item.active .settings-nav-badge {
+            background: var(--accent);
+            color: #fff;
+        }
+
         .settings-back-btn {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border-radius: var(--radius-full);
             border: none;
             background: var(--surface-secondary);
@@ -2417,11 +2494,32 @@
         }
         .settings-back-btn:active { transform: scale(0.92); }
         .settings-back-btn:focus-visible { box-shadow: 0 0 0 3px var(--accent-ring); }
-        .settings-back-btn svg { width: 18px; height: 18px; }
+        .settings-back-btn svg { width: 17px; height: 17px; }
+
+        /* ── 右栏：内容 ── */
+        .settings-content {
+            min-width: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0 24px 48px;
+        }
+        .settings-content::-webkit-scrollbar { width: 6px; }
+        .settings-content::-webkit-scrollbar-track { background: transparent; }
+        .settings-content::-webkit-scrollbar-thumb { background: transparent; border-radius: 10px; }
+        .settings-content:hover::-webkit-scrollbar-thumb { background: var(--border); }
+        .settings-content-head {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            padding: 18px 0 13px;
+            margin-bottom: 16px;
+            background: var(--bg);
+            border-bottom: 0.5px solid var(--border);
+        }
         .settings-head-titles { min-width: 0; }
         .settings-title {
             font-weight: 700;
-            font-size: 18px;
+            font-size: 19px;
             margin: 0;
             text-align: left;
             letter-spacing: -0.5px;
@@ -2432,10 +2530,340 @@
             text-align: left;
             font-size: 12.5px;
             color: var(--text-tertiary);
-            margin: 2px 0 0;
+            margin: 3px 0 0;
             line-height: 1.5;
         }
         .settings-section { margin-bottom: 18px; }
+        .settings-pane { display: none; }
+        .settings-pane.active { display: block; }
+
+        /* ── 使用统计 ── */
+        .usage-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .usage-range {
+            display: inline-flex;
+            gap: 2px;
+            padding: 3px;
+            background: var(--surface-secondary);
+            border-radius: var(--radius-full);
+        }
+        .usage-range-btn {
+            padding: 6px 13px;
+            border: none;
+            border-radius: var(--radius-full);
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            outline: none;
+            transition: background var(--transition), color var(--transition);
+        }
+        .usage-range-btn:hover { color: var(--text); }
+        .usage-range-btn.active {
+            background: var(--accent);
+            color: #fff;
+        }
+        .usage-range-btn:focus-visible { box-shadow: 0 0 0 3px var(--accent-ring); }
+        .usage-updated {
+            font-size: 11.5px;
+            color: var(--text-tertiary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* 概览卡片：主数字 + 次要拆解，窄屏自动降列 */
+        .usage-cards {
+            display: grid;
+            /* 固定 4 张卡：只用 4 列或 2 列。auto-fit 在中等宽度会给出 3 列，
+               第 4 张便单独落到第二行，行高也和前一排对不齐。 */
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        @media (max-width: 1000px) {
+            .usage-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        .usage-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            background: var(--surface-secondary);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 13px 15px 14px;
+            min-width: 0;
+            /* 副行长度不一会让各行卡片高度差十几像素，给个下限使其读作一整排 */
+            min-height: 112px;
+        }
+        /* 命中率条贴在卡片底部，不随副行长短上下浮动 */
+        .usage-card .usage-meter { margin-top: auto; }
+        .usage-card-head {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 7px;
+        }
+        .usage-card-icon {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            color: var(--text-tertiary);
+        }
+        .usage-card-label {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .usage-card-value {
+            font-size: 23px;
+            font-weight: 700;
+            letter-spacing: -0.7px;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+        .usage-card-sub {
+            font-size: 11.5px;
+            color: var(--text-tertiary);
+            margin-top: 5px;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.45;
+        }
+        .usage-card.accent .usage-card-value,
+        .usage-card.accent .usage-card-icon { color: var(--accent); }
+        .usage-card.warn .usage-card-value,
+        .usage-card.warn .usage-card-icon { color: #f59e0b; }
+        /* 命中率条：把百分比画出来，比纯数字更快读懂 */
+        .usage-meter {
+            height: 4px;
+            margin-top: 8px;
+            border-radius: var(--radius-full);
+            background: var(--surface-tertiary);
+            overflow: hidden;
+        }
+        .usage-meter i {
+            display: block;
+            height: 100%;
+            border-radius: var(--radius-full);
+            background: var(--accent);
+            transition: width var(--transition-slow);
+        }
+
+        .usage-card-block {
+            background: var(--surface-secondary);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 14px 15px 12px;
+            margin-bottom: 14px;
+        }
+        .usage-block-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .usage-block-title {
+            display: block;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.2px;
+        }
+        .usage-block-sub {
+            display: block;
+            font-size: 11.5px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+            font-variant-numeric: tabular-nums;
+        }
+        .usage-block-sub:empty { display: none; }
+        .usage-legend {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 11.5px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+        .usage-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .usage-legend i {
+            width: 9px;
+            height: 9px;
+            border-radius: 2.5px;
+            flex-shrink: 0;
+        }
+        .usage-chart-wrap {
+            position: relative;
+            width: 100%;
+            height: 200px;
+        }
+        .usage-chart {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .usage-chart-wrap.is-empty { display: none; }
+        .usage-tooltip {
+            position: absolute;
+            z-index: 3;
+            padding: 8px 11px;
+            border-radius: var(--radius-xs);
+            background: var(--code-bg);
+            color: var(--code-text);
+            font-size: 11.5px;
+            line-height: 1.6;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transform: translate(-50%, -100%);
+            transition: opacity 0.15s ease;
+            font-variant-numeric: tabular-nums;
+            box-shadow: var(--shadow-md);
+        }
+        .usage-tooltip.show { opacity: 1; }
+        .usage-tooltip b { font-weight: 700; }
+        .usage-chart-empty {
+            display: none;
+            padding: 52px 0 48px;
+            text-align: center;
+            font-size: 12.5px;
+            color: var(--text-tertiary);
+            line-height: 1.7;
+        }
+        .usage-chart-empty.show { display: block; }
+
+        .usage-model-row {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 9px 0;
+            min-width: 0;
+        }
+        .usage-model-row + .usage-model-row { border-top: 0.5px solid var(--border-light); }
+        .usage-model-logo {
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius-xs);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .usage-model-info { flex: 1; min-width: 0; }
+        .usage-model-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .usage-model-meta {
+            font-size: 11.5px;
+            color: var(--text-tertiary);
+            font-variant-numeric: tabular-nums;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        /* 服务商名与统计各占一行，窄屏才不会把 "43% cached" 截成没有单位的 "43" */
+        .usage-model-meta + .usage-model-meta { margin-top: 1px; }
+        /* 占比条：轨道固定宽度，填充长度表示该模型占最大值的比例，
+           填充内部再按输入/输出分段，一眼看出用量规模与结构。
+           注意填充宽度必须相对轨道计算——写在轨道自身上会相对整行宽度，
+           再被 max-width 截断后所有行都一样长。 */
+        .usage-model-bar {
+            width: 92px;
+            height: 6px;
+            border-radius: var(--radius-full);
+            background: var(--surface-tertiary);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .usage-model-bar-fill {
+            display: flex;
+            height: 100%;
+            min-width: 3px;
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+        .usage-model-bar i { display: block; height: 100%; }
+        .usage-model-bar .seg-in { background: var(--accent); }
+        .usage-model-bar .seg-out { background: #34c759; }
+        .usage-model-total {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
+            min-width: 58px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .usage-model-share {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            font-variant-numeric: tabular-nums;
+            min-width: 38px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .usage-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .usage-footnote {
+            flex: 1;
+            min-width: 140px;
+            font-size: 11.5px;
+            color: var(--text-tertiary);
+            line-height: 1.6;
+        }
+        .usage-reset-btn {
+            padding: 9px 16px;
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius-lg);
+            background: transparent;
+            color: var(--text-tertiary);
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            outline: none;
+            transition: all var(--transition);
+        }
+        .usage-reset-btn:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .usage-reset-btn:active { transform: scale(0.98); }
+        .usage-reset-btn:focus-visible { box-shadow: 0 0 0 3px var(--accent-ring); }
 
         /* ── 模型配置卡片：整卡可点即切换，编辑/删除收进悬浮出现的图标按钮 ── */
         .model-config-card {
@@ -3090,9 +3518,6 @@
                 width: 34px;
                 height: 34px;
             }
-            .settings-panel {
-                padding: 0 14px 40px;
-            }
             .new-chat-dropdown {
                 right: -60px;
                 min-width: 180px;
@@ -3119,6 +3544,93 @@
             .chat-area { padding: calc(var(--float-gap) * 2 + var(--float-bar-h)) 10px 6px; }
             .new-chat-btn { width: 30px; height: 30px; }
             .app-logo { width: 26px; height: 26px; }
+        }
+        /* ── 设置页自适应 ──
+           三档：宽屏用图标+文字的完整目录；中窄屏把目录压成纯图标竖条，
+           省下的横向空间全给内容；手机竖屏改为上下堆叠的横向分段。 */
+        @media (max-width: 900px) {
+            .settings-shell { --settings-nav-w: 188px; }
+            .settings-content { padding: 0 18px 44px; }
+        }
+        @media (max-width: 760px) {
+            .settings-shell { grid-template-columns: 62px minmax(0, 1fr); }
+            .settings-nav {
+                padding: 14px 8px 18px 10px;
+                align-items: center;
+            }
+            .settings-nav-head {
+                justify-content: center;
+                padding: 0 0 12px;
+            }
+            .settings-nav-title { display: none; }
+            .settings-nav-item {
+                justify-content: center;
+                padding: 10px 0;
+            }
+            /* 只剩图标时，文字与计数徽标都藏起来，用 title 兜底可读性 */
+            .settings-nav-label,
+            .settings-nav-badge { display: none; }
+            .settings-nav-icon { width: 19px; height: 19px; }
+            .settings-content { padding: 0 16px 40px; }
+        }
+        @media (max-width: 560px) {
+            .settings-shell {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-rows: auto minmax(0, 1fr);
+            }
+            .settings-nav {
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 12px;
+                padding-top: max(10px, env(safe-area-inset-top, 0px));
+                border-right: none;
+                border-bottom: 0.5px solid var(--border);
+                overflow-x: auto;
+                overflow-y: hidden;
+            }
+            .settings-nav::-webkit-scrollbar { height: 0; }
+            .settings-nav-head {
+                padding: 0;
+                margin: 0;
+                flex-shrink: 0;
+            }
+            .settings-nav-list {
+                flex-direction: row;
+                gap: 4px;
+                padding: 3px;
+                background: var(--surface-secondary);
+                border-radius: var(--radius-full);
+            }
+            .settings-nav-item {
+                padding: 7px 14px;
+                border-radius: var(--radius-full);
+                white-space: nowrap;
+            }
+            .settings-nav-label { display: inline; }
+            .settings-nav-icon { display: none; }
+            .settings-nav-item.active {
+                background: var(--surface);
+                color: var(--text);
+                box-shadow: var(--shadow-sm);
+            }
+            .settings-content { padding: 0 14px 40px; }
+            .settings-content-head { padding: 14px 0 11px; margin-bottom: 14px; }
+            .settings-title { font-size: 17px; }
+            .usage-cards { gap: 8px; }
+            .usage-card { padding: 11px 13px 12px; min-height: 100px; }
+            .usage-card-value { font-size: 20px; }
+            .usage-chart-wrap { height: 168px; }
+            .usage-model-bar { width: 52px; }
+            .usage-model-share { display: none; }
+            .usage-footer { flex-direction: column; align-items: stretch; }
+            .usage-reset-btn { width: 100%; }
+        }
+        @media (max-width: 400px) {
+            .usage-card-value { font-size: 18px; }
+            .usage-model-bar { width: 34px; }
+            .usage-model-total { min-width: 50px; }
+            .usage-range-btn { padding: 6px 10px; font-size: 12px; }
         }
         @media (min-width: 1280px) {
             .chat-area,
@@ -3475,28 +3987,101 @@
         </div>
 
         <div class="settings-overlay" id="settingsOverlay">
-            <div class="settings-panel" id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-                <div class="settings-page-head">
-                    <button class="settings-back-btn" id="settingsHandle" type="button" aria-label="返回对话">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                        </svg>
-                    </button>
-                    <div class="settings-head-titles">
-                        <div class="settings-title" id="settingsTitle">Model Settings</div>
-                        <div class="settings-subtitle" id="settingsSubtitle"></div>
+            <div class="settings-shell" id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+                <nav class="settings-nav" id="settingsNav" aria-label="设置分类">
+                    <div class="settings-nav-head">
+                        <button class="settings-back-btn" id="settingsHandle" type="button" aria-label="返回对话">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+                        <span class="settings-nav-title" id="settingsNavTitle">设置</span>
+                    </div>
+                    <div class="settings-nav-list" role="tablist">
+                        <button class="settings-nav-item active" id="settingsTabModels" type="button" role="tab" aria-selected="true" aria-controls="settingsPaneModels">
+                            <svg class="settings-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7" rx="1.6"></rect>
+                                <rect x="14" y="3" width="7" height="7" rx="1.6"></rect>
+                                <rect x="3" y="14" width="7" height="7" rx="1.6"></rect>
+                                <rect x="14" y="14" width="7" height="7" rx="1.6"></rect>
+                            </svg>
+                            <span class="settings-nav-label" id="settingsNavModels">模型</span>
+                            <span class="settings-nav-badge" id="settingsNavModelCount"></span>
+                        </button>
+                        <button class="settings-nav-item" id="settingsTabUsage" type="button" role="tab" aria-selected="false" aria-controls="settingsPaneUsage">
+                            <svg class="settings-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="20" x2="18" y2="10"></line>
+                                <line x1="12" y1="20" x2="12" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="14"></line>
+                            </svg>
+                            <span class="settings-nav-label" id="settingsNavUsage">使用统计</span>
+                        </button>
+                    </div>
+                </nav>
+
+                <div class="settings-content" id="settingsContent">
+                    <div class="settings-content-head">
+                        <div class="settings-head-titles">
+                            <div class="settings-title" id="settingsTitle">Model Settings</div>
+                            <div class="settings-subtitle" id="settingsSubtitle"></div>
+                        </div>
+                    </div>
+
+                    <div class="settings-pane active" id="settingsPaneModels" role="tabpanel">
+                        <div class="model-config-list" id="modelConfigList"></div>
+
+                        <button class="add-model-btn" id="addModelBtn" type="button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            添加模型
+                        </button>
+                    </div>
+
+                    <div class="settings-pane" id="settingsPaneUsage" role="tabpanel">
+                        <div class="usage-toolbar">
+                            <div class="usage-range" id="usageRange" role="tablist">
+                                <button class="usage-range-btn active" data-range="today" type="button" role="tab" aria-selected="true">今日</button>
+                                <button class="usage-range-btn" data-range="7d" type="button" role="tab" aria-selected="false">近 7 天</button>
+                                <button class="usage-range-btn" data-range="30d" type="button" role="tab" aria-selected="false">近 30 天</button>
+                            </div>
+                            <span class="usage-updated" id="usageUpdated"></span>
+                        </div>
+
+                        <div class="usage-cards" id="usageCards"></div>
+
+                        <div class="usage-card-block">
+                            <div class="usage-block-head">
+                                <div>
+                                    <span class="usage-block-title" id="usageChartTitle">Token 用量</span>
+                                    <span class="usage-block-sub" id="usageChartSub"></span>
+                                </div>
+                                <div class="usage-legend" id="usageLegend"></div>
+                            </div>
+                            <div class="usage-chart-wrap">
+                                <canvas class="usage-chart" id="usageChart" role="img"></canvas>
+                                <div class="usage-tooltip" id="usageTooltip"></div>
+                            </div>
+                            <div class="usage-chart-empty" id="usageChartEmpty">暂无用量数据</div>
+                        </div>
+
+                        <div class="usage-card-block">
+                            <div class="usage-block-head">
+                                <div>
+                                    <span class="usage-block-title" id="usageModelsTitle">按模型</span>
+                                    <span class="usage-block-sub" id="usageModelsSub"></span>
+                                </div>
+                            </div>
+                            <div id="usageModelList"></div>
+                        </div>
+
+                        <div class="usage-footer">
+                            <span class="usage-footnote" id="usageFootnote"></span>
+                            <button class="usage-reset-btn" id="usageResetBtn" type="button">清除用量记录</button>
+                        </div>
                     </div>
                 </div>
-
-                <div class="model-config-list" id="modelConfigList"></div>
-
-                <button class="add-model-btn" id="addModelBtn" type="button">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    添加模型
-                </button>
             </div>
         </div>
     </div> <!-- end settingsOverlay -->
@@ -3628,8 +4213,22 @@
         {
             type: 'function',
             function: {
+                name: 'get_sprite_scripts',
+                description: 'Read a sprite\'s existing scripts back as DSL text (the same format add_script and insert_blocks accept). Call this before editing code you did not just write, so you can see the exact blocks and pick the right insert position.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        sprite_name: { type: 'string', description: 'Name of the sprite (or "Stage")' }
+                    },
+                    required: ['sprite_name']
+                }
+            }
+        },
+        {
+            type: 'function',
+            function: {
                 name: 'set_sprite_property',
-                description: 'Move, resize, rotate, or change visibility of a sprite. Set any combination of x, y, size, direction, visible properties.',
+                description: 'Move, resize, rotate, show/hide a sprite, or set draggable / rotation style. Pass any combination. Out-of-range numbers are clamped by Scratch and reported back in warnings; the result includes before and after values.',
                 parameters: {
                     type: 'object',
                     properties: {
@@ -3637,8 +4236,10 @@
                         x: { type: 'number', description: 'X position (-240 to 240)' },
                         y: { type: 'number', description: 'Y position (-180 to 180)' },
                         size: { type: 'number', description: 'Size percentage (5 to 535)' },
-                        direction: { type: 'number', description: 'Direction degrees (-180 to 180, 90=right)' },
-                        visible: { type: 'boolean', description: 'Show or hide the sprite' }
+                        direction: { type: 'number', description: 'Direction in degrees (90 = right, 0 = up)' },
+                        visible: { type: 'boolean', description: 'Show or hide the sprite' },
+                        draggable: { type: 'boolean', description: 'Whether the player can drag the sprite in the player view' },
+                        rotation_style: { type: "string", description: "One of: \"all around\", \"left-right\", \"don't rotate\"" }
                     },
                     required: ['sprite_name']
                 }
@@ -3648,7 +4249,7 @@
             type: 'function',
             function: {
                 name: 'create_variable',
-                description: 'Create a new Scratch variable on a sprite or the stage (global). If the variable already exists, this is a no-op.',
+                description: 'Create a variable. Omit sprite_name for a GLOBAL variable on the Stage (readable by every sprite) — that is what you usually want. Give sprite_name only for a sprite-local variable, e.g. per-clone state. Returns existed:true (and the current value) if it was already there, and always reports which scope it ended up in. Fails if a LIST already has that name.',
                 parameters: {
                     type: 'object',
                     properties: {
@@ -3664,12 +4265,13 @@
             type: 'function',
             function: {
                 name: 'create_list',
-                description: 'Create a new Scratch list on a sprite or the stage (global). Lists can hold multiple items. If the list already exists, this is a no-op.',
+                description: 'Create a list. Omit sprite_name for a GLOBAL list on the Stage (usual choice); give sprite_name only for a sprite-local list. Pass items to fill it immediately. Returns existed:true with the current contents if it already exists. Fails if a VARIABLE already has that name.',
                 parameters: {
                     type: 'object',
                     properties: {
                         sprite_name: { type: 'string', description: 'Name of sprite owning the list. Leave empty or omit for global (stage) lists.' },
-                        list_name: { type: 'string', description: 'Name of the list to create' }
+                        list_name: { type: 'string', description: 'Name of the list to create' },
+                        items: { type: 'array', items: { type: 'string' }, description: 'Initial contents (optional)' }
                     },
                     required: ['list_name']
                 }
@@ -3679,7 +4281,7 @@
             type: 'function',
             function: {
                 name: 'set_variable',
-                description: 'Set the value of a Scratch variable. Can set sprite-local or global (stage) variables.',
+                description: 'Set a variable\'s value. Looks on the sprite first then falls back to the Stage, like Scratch does, so a sprite_name does not stop you from writing a global. Numeric strings become numbers. Returns the previous value and the scope actually written. Refuses if the name belongs to a list.',
                 parameters: {
                     type: 'object',
                     properties: {
@@ -3695,15 +4297,16 @@
             type: 'function',
             function: {
                 name: 'add_to_list',
-                description: 'Add an item to a Scratch list.',
+                description: 'Append to a list. Pass item for one value or items for an array to append several at once. Creates the list if it does not exist. Returns the new length and a preview of the contents.',
                 parameters: {
                     type: 'object',
                     properties: {
                         sprite_name: { type: 'string', description: 'Name of sprite owning the list. Leave empty for stage lists.' },
                         list_name: { type: 'string', description: 'Name of the list' },
-                        item: { type: 'string', description: 'Item to add' }
+                        item: { type: 'string', description: 'A single value to append' },
+                        items: { type: 'array', items: { type: 'string' }, description: 'Several values to append in order (use instead of item)' }
                     },
-                    required: ['list_name', 'item']
+                    required: ['list_name']
                 }
             }
         },
@@ -3711,13 +4314,13 @@
             type: 'function',
             function: {
                 name: 'delete_from_list',
-                description: 'Delete an item from a Scratch list by its position (1-indexed).',
+                description: 'Delete one item from a list by position (1 = first). "first"/"last" work too, and index "all" empties the list. Returns the removed value and the remaining contents.',
                 parameters: {
                     type: 'object',
                     properties: {
                         sprite_name: { type: 'string', description: 'Name of sprite owning the list' },
                         list_name: { type: 'string', description: 'Name of the list' },
-                        index: { type: 'number', description: 'Position of item to delete (1=first)' }
+                        index: { type: 'string', description: 'Position to delete: 1 = first, or "first" / "last" / "all"' }
                     },
                     required: ['list_name', 'index']
                 }
@@ -3741,13 +4344,166 @@
             type: 'function',
             function: {
                 name: 'delete_sprite',
-                description: 'Delete a sprite from the project.',
+                description: 'Delete a sprite along with its scripts, costumes, sounds and local variables. The result lists exactly what was removed, so check it before telling the user it is done.',
                 parameters: {
                     type: 'object',
                     properties: {
                         sprite_name: { type: 'string', description: 'Name of the sprite to delete' }
                     },
                     required: ['sprite_name']
+                }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'list_sprites',
+                description: 'List every sprite with its position, size, costumes, sounds, script count, and which variables/lists it owns, plus the Stage backdrops and global variables/lists. Call this first when you need to know what exists before touching anything.',
+                parameters: { type: 'object', properties: {}, required: [] }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'rename_sprite',
+                description: 'Rename a sprite. Blocks that reference it (go to, touching, clone of, sensing of) are updated automatically.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        sprite_name: { type: 'string', description: 'Current name of the sprite' },
+                        new_name: { type: 'string', description: 'New name' }
+                    },
+                    required: ['sprite_name', 'new_name']
+                }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'get_variable',
+                description: 'Read one variable\'s current value. Looks on the sprite first, then falls back to the Stage (global), exactly like Scratch does. Returns which scope it came from.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        variable_name: { type: 'string', description: 'Name of the variable' },
+                        sprite_name: { type: 'string', description: 'Sprite to look on first. Omit for global (Stage) scope.' }
+                    },
+                    required: ['variable_name']
+                }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'list_variables',
+                description: 'List every variable in the project with its value, owner sprite and scope (global/local). Use this instead of guessing variable names.',
+                parameters: { type: 'object', properties: {}, required: [] }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'delete_variable',
+                description: 'Delete a variable or list. Refuses if blocks still reference it and tells you which sprites use it; pass force: true to delete anyway.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        variable_name: { type: 'string', description: 'Name of the variable or list to delete' },
+                        sprite_name: { type: 'string', description: 'Sprite that owns it. Omit for global (Stage).' },
+                        is_list: { type: 'boolean', description: 'Set true when deleting a list rather than a variable' },
+                        force: { type: 'boolean', description: 'Delete even if blocks still reference it (those blocks are left with an empty slot)' }
+                    },
+                    required: ['variable_name']
+                }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'rename_variable',
+                description: 'Rename a variable or list. Blocks referencing it are updated automatically.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        variable_name: { type: 'string', description: 'Current name' },
+                        new_name: { type: 'string', description: 'New name' },
+                        sprite_name: { type: 'string', description: 'Sprite that owns it. Omit for global (Stage).' },
+                        is_list: { type: 'boolean', description: 'Set true when renaming a list rather than a variable' }
+                    },
+                    required: ['variable_name', 'new_name']
+                }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'get_list',
+                description: 'Read a list\'s contents. Returns the items, the length, and which scope the list came from. Call this before editing a list so you use the right indices.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        list_name: { type: 'string', description: 'Name of the list' },
+                        sprite_name: { type: 'string', description: 'Sprite to look on first. Omit for global (Stage).' },
+                        limit: { type: 'number', description: 'Maximum items to return (default 200). The response says how many were left out.' }
+                    },
+                    required: ['list_name']
+                }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'list_lists',
+                description: 'List every list in the project with its length, a preview of the first items, owner sprite and scope.',
+                parameters: { type: 'object', properties: {}, required: [] }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'set_list_item',
+                description: 'Replace the item at one position in a list. Indices are 1-based; "first" and "last" also work.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        list_name: { type: 'string', description: 'Name of the list' },
+                        index: { type: 'string', description: 'Position to replace: 1 = first, or "first" / "last"' },
+                        item: { type: 'string', description: 'New value for that position' },
+                        sprite_name: { type: 'string', description: 'Sprite that owns the list. Omit for global (Stage).' }
+                    },
+                    required: ['list_name', 'index', 'item']
+                }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'insert_to_list',
+                description: 'Insert an item at a position in a list, pushing later items down. Indices are 1-based; "first"/"last" work, and length+1 appends.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        list_name: { type: 'string', description: 'Name of the list' },
+                        index: { type: 'string', description: 'Position to insert at: 1 = before the first item, or "first" / "last"' },
+                        item: { type: 'string', description: 'Value to insert' },
+                        sprite_name: { type: 'string', description: 'Sprite that owns the list. Omit for global (Stage).' }
+                    },
+                    required: ['list_name', 'item']
+                }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'clear_list',
+                description: 'Remove every item from a list, keeping the list itself.',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        list_name: { type: 'string', description: 'Name of the list' },
+                        sprite_name: { type: 'string', description: 'Sprite that owns the list. Omit for global (Stage).' }
+                    },
+                    required: ['list_name']
                 }
             }
         },
@@ -3900,11 +4656,11 @@
             type: 'function',
             function: {
                 name: 'execute_operations',
-                description: 'Execute structured operations on the Scratch project. You MUST output a JSON array of operation objects. Each operation has a "type" field. Available types: add_script (add a new complete script), delete_block (delete a block by tid), modify_input (change a block input value), add_comment (add/update a comment on a block or as a standalone workspace comment), delete_comment (remove a comment), explain (display a text explanation to the user). Comments are allowed and encouraged for code documentation. See the system prompt for the full protocol specification including opcode dictionary, nesting rules, and examples.',
+                description: 'Apply structured edits to the Scratch project. Pass a JSON array of operation objects; each needs a "type". Types: add_script (create a new script), insert_blocks (insert blocks into an existing script at a position relative to a tid), delete_block, modify_input, add_comment, delete_comment, explain. Blocks are written as positional DSL text — one block per line, two-space indent for a C-block body — NOT as JSON block objects. Scripts are validated before anything is applied, so a rejected operation changes nothing and tells you exactly what to fix. See the system prompt for the block dictionary and examples.',
                 parameters: {
                     type: 'object',
                     properties: {
-                        operations: { type: 'string', description: 'JSON string of operation array. Each object must contain "type" field. Example: [{"type":"modify_input","sprite":"Cat","targetId":"b2","inputName":"TIMES","value":20},{"type":"explain","text":"Done."}]' }
+                        operations: { type: 'string', description: 'JSON string of the operation array. Examples: [{"type":"add_script","sprite":"Cat","script":"event_whenflagclicked\\n  looks_say \\"hi\\""}] · [{"type":"insert_blocks","targetId":"b4","position":"body_end","blocks":"control_wait 0.5\\nlooks_nextcostume"}] · [{"type":"modify_input","sprite":"Cat","targetId":"b2","inputName":"TIMES","value":20},{"type":"explain","text":"Done."}]' }
                     },
                     required: ['operations']
                 }
@@ -4091,6 +4847,23 @@
     var disclaimerCountdown = $('disclaimerCountdown');
     var disclaimerExitBtn = $('disclaimerExitBtn');
 
+    // ── 远程模式（手机扫码打开的同一份页面）──
+    // 手机端加载的就是这份文件本体，DOM/CSS/渲染函数全部复用，所以两端观感一致。
+    // 差别只有两条：会话状态一律来自桌面推送的快照，所有会改变状态的操作都回投
+    // 桌面执行（模型调用、工具执行、localStorage 只发生在桌面）。
+    var IS_REMOTE = !!window.__NeoWarpRemote;
+    var remoteBridge = window.__NeoWarpRemote || null;
+    // 桌面算好的上下文上限，远程端照用（本地 PROVIDERS 表可能查不到自定义模型）
+    var remoteContextLimit = 0;
+
+    function remoteSend(cmd, payload) {
+        if (!remoteBridge) return Promise.resolve({ ok: false, error: 'no bridge' });
+        return remoteBridge.send(cmd, payload).then(function(res) {
+            if (res && res.ok === false && res.error) showToast(res.error, 'error');
+            return res;
+        });
+    }
+
     var chatHistory = [];
     var savedConfigs = [];
     var activeConfigIndex = -1;
@@ -4201,6 +4974,51 @@
             phoneQrError: 'QR generation failed',
             phoneServerOff: 'Server unavailable',
             phoneLinked: 'Phone connected',
+            tabModels: 'Models',
+            tabUsage: 'Usage',
+            usageSubtitle: 'Token usage recorded on this device. Kept for 30 days.',
+            usageSubtitleRemote: 'Token usage recorded on the computer. Kept for 30 days.',
+            usageToday: 'Today',
+            usage30d: 'Last 30 days',
+            usageTotalTokens: 'Total tokens',
+            usageInOut: 'In {in} · Out {out}',
+            usageCacheHit: 'Cache hit rate',
+            usageCachedTokens: '{n} cached input tokens',
+            usageRequests: 'Requests',
+            usageAvgPerRequest: '{n} tokens per request on average',
+            usageEstimated: 'Estimated',
+            usageEstimatedHint: 'requests where the API returned no usage; counted from local estimates',
+            usageChartToday: 'Tokens by hour',
+            usageInput: 'Input',
+            usageOutput: 'Output',
+            usageByModel: 'By model',
+            usageNoData: 'No usage recorded yet',
+            usageRequestsShort: '{n} req',
+            usageHitShort: '{n}% cached',
+            usageTipTotal: 'Total {n}',
+            usageTipInOut: 'In {in} · Out {out}',
+            usageTipHit: 'Cache {n}% ({c})',
+            usageReset: 'Clear usage records',
+            usageResetConfirm: 'Clear all recorded usage data?',
+            usageResetDone: 'Usage records cleared',
+            usageRemoteOnly: 'Usage records live on the computer',
+            settingsNavTitle: 'Settings',
+            usage7d: 'Last 7 days',
+            usageChartByDay: 'Tokens by day',
+            usageActiveHours: '{n} of 24 hours had activity',
+            usageActiveDays: '{n} days had activity',
+            usageSpanToday: '{d} · hourly',
+            usageSpanDays: '{from} – {to}',
+            usageEstimatedNote: '{n} request(s) had no usage reported and were counted from local estimates.',
+            usagePeakHour: 'Busiest hour',
+            usagePeakDay: 'Busiest day',
+            usagePeakTokens: '{n} tokens in that slot',
+            usageNoActivity: 'No activity in this range',
+            usageModelCount: '{n} model(s) used',
+            usageTipRequests: '{n} request(s)',
+            usageTipNone: 'No usage',
+            usageFootnote: 'Counted from what the API reports for each request, stored only on this device.',
+            usageFootnoteRemote: 'Counted on the computer; this page is a read-only view.',
             groupProvider: 'Provider',
             groupModel: 'Model',
             groupEndpoint: 'Endpoint',
@@ -4322,6 +5140,51 @@
             phoneQrError: '二维码生成失败',
             phoneServerOff: '服务不可用',
             phoneLinked: '手机已连接',
+            tabModels: '模型',
+            tabUsage: '使用统计',
+            usageSubtitle: '记录在本机的 Token 用量，保留最近 30 天。',
+            usageSubtitleRemote: '来自电脑端的 Token 用量，保留最近 30 天。',
+            usageToday: '今日',
+            usage30d: '近 30 天',
+            usageTotalTokens: 'Token 总用量',
+            usageInOut: '输入 {in} · 输出 {out}',
+            usageCacheHit: '缓存命中率',
+            usageCachedTokens: '命中缓存的输入 {n}',
+            usageRequests: '请求次数',
+            usageAvgPerRequest: '平均每次 {n} Token',
+            usageEstimated: '估算条目',
+            usageEstimatedHint: '接口未返回用量，这些请求按本地估算计入',
+            usageChartToday: '各时段 Token 用量',
+            usageInput: '输入',
+            usageOutput: '输出',
+            usageByModel: '按模型',
+            usageNoData: '暂无用量数据',
+            usageRequestsShort: '{n} 次',
+            usageHitShort: '命中 {n}%',
+            usageTipTotal: '合计 {n}',
+            usageTipInOut: '输入 {in} · 输出 {out}',
+            usageTipHit: '缓存 {n}%（{c}）',
+            usageReset: '清除用量记录',
+            usageResetConfirm: '确定清除全部用量记录？',
+            usageResetDone: '用量记录已清除',
+            usageRemoteOnly: '用量记录保存在电脑端',
+            settingsNavTitle: '设置',
+            usage7d: '近 7 天',
+            usageChartByDay: '每日 Token 用量',
+            usageActiveHours: '24 小时中有 {n} 个时段有用量',
+            usageActiveDays: '有 {n} 天产生了用量',
+            usageSpanToday: '{d} · 按小时',
+            usageSpanDays: '{from} – {to}',
+            usageEstimatedNote: '其中 {n} 次请求接口未回报用量，按本地估算计入。',
+            usagePeakHour: '用量最高时段',
+            usagePeakDay: '用量最高日期',
+            usagePeakTokens: '该时段 {n} Token',
+            usageNoActivity: '该区间没有用量',
+            usageModelCount: '共使用 {n} 个模型',
+            usageTipRequests: '{n} 次请求',
+            usageTipNone: '无用量',
+            usageFootnote: '数字来自接口对每次请求的回报，仅保存在本机。',
+            usageFootnoteRemote: '数字在电脑端统计，本页只用于查看。',
             groupProvider: '服务商',
             groupModel: '模型',
             groupEndpoint: '接口地址',
@@ -4416,9 +5279,31 @@
         if (welcomeSubtitleEl) welcomeSubtitleEl.innerHTML = t('welcomeSubtitle');
         renderWelcomeTags();
         var settingsTitleEl = document.querySelector('.settings-title');
-        if (settingsTitleEl) settingsTitleEl.textContent = t('modelSettings');
+        if (settingsTitleEl) settingsTitleEl.textContent = settingsTab === 'usage' ? t('tabUsage') : t('modelSettings');
         var settingsSubtitleEl = document.getElementById('settingsSubtitle');
-        if (settingsSubtitleEl) settingsSubtitleEl.textContent = t('settingsSubtitle');
+        if (settingsSubtitleEl) settingsSubtitleEl.textContent = settingsTab === 'usage' ? t(IS_REMOTE ? 'usageSubtitleRemote' : 'usageSubtitle') : t('settingsSubtitle');
+        var settingsNavTitleEl = document.getElementById('settingsNavTitle');
+        if (settingsNavTitleEl) settingsNavTitleEl.textContent = t('settingsNavTitle');
+        // 窄屏下目录只剩图标，把文案挂到 title 上仍可读
+        var navModelsEl = document.getElementById('settingsNavModels');
+        if (navModelsEl) navModelsEl.textContent = t('tabModels');
+        var navUsageEl = document.getElementById('settingsNavUsage');
+        if (navUsageEl) navUsageEl.textContent = t('tabUsage');
+        var tabModelsEl = document.getElementById('settingsTabModels');
+        if (tabModelsEl) tabModelsEl.title = t('tabModels');
+        var tabUsageEl = document.getElementById('settingsTabUsage');
+        if (tabUsageEl) tabUsageEl.title = t('tabUsage');
+        var RANGE_KEYS = { today: 'usageToday', '7d': 'usage7d', '30d': 'usage30d' };
+        document.querySelectorAll('.usage-range-btn').forEach(function(b) {
+            b.textContent = t(RANGE_KEYS[b.getAttribute('data-range')] || 'usageToday');
+        });
+        var usageModelsTitleEl = document.getElementById('usageModelsTitle');
+        if (usageModelsTitleEl) usageModelsTitleEl.textContent = t('usageByModel');
+        var usageEmptyEl = document.getElementById('usageChartEmpty');
+        if (usageEmptyEl) usageEmptyEl.textContent = t('usageNoData');
+        var usageResetEl = document.getElementById('usageResetBtn');
+        if (usageResetEl) usageResetEl.textContent = t('usageReset');
+        if (settingsOpen && settingsTab === 'usage') renderUsage();
         var settingsBackBtn = document.getElementById('settingsHandle');
         if (settingsBackBtn) settingsBackBtn.setAttribute('aria-label', t('backToChat'));
         var addModelBtnEl = document.getElementById('addModelBtn');
@@ -4475,6 +5360,8 @@
         } else {
             document.documentElement.classList.remove('dark-mode');
         }
+        // 手机端跟随电脑端的深浅色，否则两端观感会分叉
+        if (!IS_REMOTE) phonePushHistory();
     }
 
     function syncThemeWithNeoWarp() {
@@ -4505,10 +5392,16 @@
                 setLocale('en');
             }
         } catch(e) { try { setLocale('en'); } catch(e2) {} }
-        try { loadConfigs(); } catch(e) { console.error('loadConfigs error:', e); }
-        try { loadConversations(); } catch(e) { console.error('loadConversations error:', e); }
+        if (IS_REMOTE) {
+            // 会话、模型列表、免责声明状态全部来自桌面快照，本地不读写 localStorage
+            try { setupRemoteSync(); } catch(e) { console.error('setupRemoteSync error:', e); }
+        } else {
+            try { loadConfigs(); } catch(e) { console.error('loadConfigs error:', e); }
+            try { loadUsage(); } catch(e) { console.error('loadUsage error:', e); }
+            try { loadConversations(); } catch(e) { console.error('loadConversations error:', e); }
+            try { setupDisclaimer(); } catch(e) { console.error('setupDisclaimer error:', e); }
+        }
         try { autoResize(); } catch(e) { console.error('autoResize error:', e); }
-        try { setupDisclaimer(); } catch(e) { console.error('setupDisclaimer error:', e); }
         try { setupSidebarEvents(); } catch(e) { console.error('setupSidebarEvents error:', e); }
         try { setupThinkingSlider(); } catch(e) { console.error('setupThinkingSlider error:', e); }
         try { updateThinkingControlVisibility(); } catch(e) { console.error('updateThinkingControlVisibility error:', e); }
@@ -4668,6 +5561,8 @@
     }
 
     function saveConversations() {
+        // 远程端只是桌面状态的镜子，不落本地存储，避免手机浏览器里留下半份会话
+        if (IS_REMOTE) return;
         try {
             var payload = JSON.stringify({
                 conversations: conversations.map(function(c) {
@@ -4773,6 +5668,7 @@
     function deleteConversation(id) {
         customConfirm(t('deleteConfirm')).then(function(confirmed) {
             if (!confirmed) return;
+            if (IS_REMOTE) { remoteSend('deleteChat', { id: id }); return; }
             var idx = conversations.findIndex(function(c) { return c.id === id; });
             if (idx === -1) return;
             if (activeConversationId === id && isLoading && abortController) {
@@ -4820,7 +5716,8 @@
             var item = document.createElement('div');
             item.className = 'chat-item' + (conv.id === activeConversationId ? ' active' : '');
             var timeStr = formatConversationTime(conv.updatedAt);
-            var msgCount = (conv.messages || []).filter(function(m) {
+            // 远程端拿到的是会话摘要（不含消息体），条数由桌面一并算好带过来
+            var msgCount = typeof conv.messageCount === 'number' ? conv.messageCount : (conv.messages || []).filter(function(m) {
                 return m && (m.role === 'user' || (m.role === 'assistant' && m.content));
             }).length;
             var isZh = (currentLocale || 'en').split('-')[0] === 'zh';
@@ -4837,10 +5734,14 @@
                 '</button>';
             item.addEventListener('click', function(e) {
                 if (e.target.closest('.chat-item-delete')) return;
-                if (conv.id !== activeConversationId) {
-                    saveCurrentConversation();
-                    loadConversation(conv.id);
+                if (conv.id === activeConversationId) return;
+                if (IS_REMOTE) {
+                    remoteSend('selectChat', { id: conv.id });
+                    closeSidebarMobile();
+                    return;
                 }
+                saveCurrentConversation();
+                loadConversation(conv.id);
             });
             var delBtn = item.querySelector('.chat-item-delete');
             if (delBtn) {
@@ -4853,12 +5754,611 @@
         });
     }
 
+    /* ══════════════════════════════════════════════════════════════════════
+       使用统计
+       用量按两种粒度落盘：今日按 24 个小时桶，历史按自然日（保留 30 天）。
+       每个桶再按模型细分，这样"今日各时段""近 30 天曲线""按模型"三个视图
+       都能从同一份数据算出来，不必存三套。
+
+       数字来自接口返回的 usage 分片（stream_options.include_usage）；服务端
+       不给时退回本地估算，并标记 estimated，界面上如实说明。
+       ══════════════════════════════════════════════════════════════════════ */
+    var USAGE_STORAGE_KEY = 'neowarp_ai_usage_v1';
+    var USAGE_KEEP_DAYS = 30;
+    // { days: { 'YYYY-MM-DD': { models: {id: bucket}, hours: { '0'..'23': {models:{}} } } } }
+    var usageData = { days: {} };
+
+    function emptyBucket() {
+        return { requests: 0, prompt: 0, completion: 0, cached: 0, estimated: 0 };
+    }
+
+    function addToBucket(target, delta) {
+        target.requests += delta.requests;
+        target.prompt += delta.prompt;
+        target.completion += delta.completion;
+        target.cached += delta.cached;
+        target.estimated += delta.estimated;
+    }
+
+    function dayKey(d) {
+        return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    }
+
+    function loadUsage() {
+        if (IS_REMOTE) return;
+        try {
+            var raw = localStorage.getItem(USAGE_STORAGE_KEY);
+            if (raw) {
+                var parsed = JSON.parse(raw);
+                if (parsed && parsed.days) usageData = { days: parsed.days };
+            }
+        } catch (e) { usageData = { days: {} }; }
+        pruneUsage();
+    }
+
+    // 只保留最近 30 天；小时粒度只有"今日"视图会用到，历史日期的小时桶直接丢掉，
+    // 否则 30 天 × 24 小时 × 模型的明细会把 localStorage 和手机端推送都撑大。
+    function pruneUsage() {
+        var today = new Date();
+        var todayKey = dayKey(today);
+        var cutoff = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (USAGE_KEEP_DAYS - 1));
+        var cutoffKey = dayKey(cutoff);
+        Object.keys(usageData.days).forEach(function(k) {
+            if (k < cutoffKey) { delete usageData.days[k]; return; }
+            if (k !== todayKey && usageData.days[k].hours) delete usageData.days[k].hours;
+        });
+    }
+
+    function saveUsage() {
+        if (IS_REMOTE) return;
+        try { localStorage.setItem(USAGE_STORAGE_KEY, JSON.stringify(usageData)); } catch (e) {}
+    }
+
+    // 当前配置在统计里的身份：同一模型换了别名也应归并，故用「服务商:模型」做键
+    function usageModelKey() {
+        return currentConfig.provider + ':' + getEffectiveModelId();
+    }
+
+    function usageModelLabel(key) {
+        var parts = String(key).split(':');
+        var providerId = parts.shift();
+        var modelId = parts.join(':');
+        var p = PROVIDERS[providerId];
+        var m = p && (p.models || []).find(function(x) { return x.id === modelId; });
+        return {
+            provider: p ? p.name : providerId,
+            logo: p ? p.logo : '#888',
+            logoText: p ? p.logoText : '?',
+            model: m ? m.name : modelId
+        };
+    }
+
+    /**
+     * 记一次请求的用量。
+     * @param {object|null} usage 接口返回的 usage 对象
+     * @param {number} fallbackPrompt 服务端不给 usage 时的本地估算输入量
+     */
+    function recordUsage(usage, fallbackPrompt) {
+        if (IS_REMOTE) return;
+        var prompt = 0, completion = 0, cached = 0, estimated = 0;
+        if (usage && (usage.prompt_tokens || usage.completion_tokens || usage.total_tokens)) {
+            prompt = usage.prompt_tokens || 0;
+            completion = usage.completion_tokens || 0;
+            // 各家字段名不一：OpenAI 在 prompt_tokens_details.cached_tokens，
+            // DeepSeek/Kimi 用 prompt_cache_hit_tokens / cached_tokens。
+            var details = usage.prompt_tokens_details || {};
+            cached = details.cached_tokens || usage.prompt_cache_hit_tokens || usage.cached_tokens || 0;
+            if (!prompt && usage.total_tokens) prompt = usage.total_tokens;
+        } else {
+            prompt = fallbackPrompt || 0;
+            estimated = 1;
+        }
+        if (!prompt && !completion) return;
+
+        var delta = { requests: 1, prompt: prompt, completion: completion, cached: cached, estimated: estimated };
+        var now = new Date();
+        var dk = dayKey(now);
+        var hk = String(now.getHours());
+        var mk = usageModelKey();
+
+        var day = usageData.days[dk];
+        if (!day) { day = usageData.days[dk] = { models: {}, hours: {} }; }
+        if (!day.models) day.models = {};
+        if (!day.hours) day.hours = {};
+        if (!day.models[mk]) day.models[mk] = emptyBucket();
+        addToBucket(day.models[mk], delta);
+
+        var hour = day.hours[hk];
+        if (!hour) { hour = day.hours[hk] = { models: {} }; }
+        if (!hour.models[mk]) hour.models[mk] = emptyBucket();
+        addToBucket(hour.models[mk], delta);
+
+        pruneUsage();
+        saveUsage();
+        if (settingsOpen && settingsTab === 'usage') renderUsage();
+        phonePushHistory();
+    }
+
+    /** 把一组「模型 -> bucket」合并成一个总 bucket */
+    function sumModels(models) {
+        var total = emptyBucket();
+        Object.keys(models || {}).forEach(function(k) { addToBucket(total, models[k]); });
+        return total;
+    }
+
+    // 三档视图对应的天数；'today' 走小时粒度，其余走自然日
+    var USAGE_RANGES = { today: 1, '7d': 7, '30d': USAGE_KEEP_DAYS };
+
+    /**
+     * 组织出当前视图需要的序列。
+     * @returns {{points: Array, models: object, total: object, peak: object, activeSlots: number}}
+     */
+    function buildUsageSeries(range) {
+        var points = [];
+        var models = {};
+        var now = new Date();
+
+        if (range === 'today') {
+            var day = usageData.days[dayKey(now)] || { models: {}, hours: {} };
+            var hours = day.hours || {};
+            for (var h = 0; h < 24; h++) {
+                var hb = hours[String(h)];
+                points.push({
+                    label: ('0' + h).slice(-2) + ':00',
+                    shortLabel: ('0' + h).slice(-2),
+                    bucket: hb ? sumModels(hb.models) : emptyBucket()
+                });
+            }
+            models = day.models || {};
+        } else {
+            var days = USAGE_RANGES[range] || USAGE_KEEP_DAYS;
+            for (var i = days - 1; i >= 0; i--) {
+                var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+                var key = dayKey(d);
+                var db = usageData.days[key];
+                points.push({
+                    label: (d.getMonth() + 1) + '/' + d.getDate(),
+                    shortLabel: (d.getMonth() + 1) + '/' + d.getDate(),
+                    bucket: db ? sumModels(db.models) : emptyBucket()
+                });
+                if (db) {
+                    Object.keys(db.models || {}).forEach(function(mk) {
+                        if (!models[mk]) models[mk] = emptyBucket();
+                        addToBucket(models[mk], db.models[mk]);
+                    });
+                }
+            }
+        }
+
+        // 汇总数字取自按模型的日累计（权威值），曲线只负责展示分布。
+        // 正常记账时两者相等；万一小时桶被裁剪过，卡片仍然准确。
+        var total = emptyBucket();
+        Object.keys(models).forEach(function(mk) { addToBucket(total, models[mk]); });
+
+        // 峰值与活跃槽位数：卡片上用来回答"什么时候用得最多"
+        var peak = null;
+        var activeSlots = 0;
+        points.forEach(function(p) {
+            var sum = p.bucket.prompt + p.bucket.completion;
+            if (sum <= 0) return;
+            activeSlots++;
+            if (!peak || sum > peak.value) peak = { label: p.label, value: sum };
+        });
+        var spanLabel = '';
+        if (points.length) {
+            spanLabel = range === 'today'
+                ? tf('usageSpanToday', { d: (now.getMonth() + 1) + '/' + now.getDate() })
+                : tf('usageSpanDays', { from: points[0].label, to: points[points.length - 1].label });
+        }
+        return {
+            points: points, models: models, total: total, peak: peak,
+            activeSlots: activeSlots, range: range, spanLabel: spanLabel
+        };
+    }
+
+    // ── 用量视图 ──
+    var settingsTab = 'models';
+    var usageRange = 'today';
+    var usageChartPoints = [];
+    var usageChartGeometry = null;
+    // 当前鼠标/手指指向的柱子下标，-1 表示没有；重画时用它做高亮
+    var usageChartHoverIndex = -1;
+
+    function formatUsageNumber(n) {
+        n = n || 0;
+        if (n >= 1000000) return (Math.round(n / 100000) / 10) + 'M';
+        if (n >= 10000) return (Math.round(n / 100) / 10) + 'K';
+        return n.toLocaleString();
+    }
+
+    function renderUsageCards(series) {
+        var host = document.getElementById('usageCards');
+        if (!host) return;
+        var sum = series.total;
+        var totalTokens = sum.prompt + sum.completion;
+        var hitRate = sum.prompt > 0 ? Math.round(sum.cached / sum.prompt * 1000) / 10 : 0;
+        var avg = sum.requests > 0 ? Math.round(totalTokens / sum.requests) : 0;
+
+        var ICONS = {
+            tokens: '<path d="M12 2 2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path>',
+            cache: '<ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>',
+            requests: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>',
+            peak: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline>',
+            estimate: '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>'
+        };
+
+        var cards = [
+            {
+                icon: ICONS.tokens,
+                label: t('usageTotalTokens'),
+                value: formatUsageNumber(totalTokens),
+                sub: tf('usageInOut', { in: formatUsageNumber(sum.prompt), out: formatUsageNumber(sum.completion) })
+            },
+            {
+                icon: ICONS.cache,
+                label: t('usageCacheHit'),
+                value: hitRate + '%',
+                sub: tf('usageCachedTokens', { n: formatUsageNumber(sum.cached) }),
+                meter: Math.min(100, hitRate),
+                accent: true
+            },
+            {
+                icon: ICONS.requests,
+                label: t('usageRequests'),
+                value: sum.requests.toLocaleString(),
+                sub: tf('usageAvgPerRequest', { n: formatUsageNumber(avg) })
+            },
+            {
+                // "什么时候用得最多"比又一个总量更有信息量
+                icon: ICONS.peak,
+                label: series.range === 'today' ? t('usagePeakHour') : t('usagePeakDay'),
+                value: series.peak ? series.peak.label : '—',
+                sub: series.peak
+                    ? tf('usagePeakTokens', { n: formatUsageNumber(series.peak.value) })
+                    : t('usageNoActivity')
+            }
+        ];
+        host.innerHTML = cards.map(function(c) {
+            var cls = 'usage-card' + (c.accent ? ' accent' : '') + (c.warn ? ' warn' : '');
+            return '<div class="' + cls + '">' +
+                '<div class="usage-card-head">' +
+                '<svg class="usage-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + c.icon + '</svg>' +
+                '<span class="usage-card-label">' + escapeHtml(c.label) + '</span>' +
+                '</div>' +
+                '<div class="usage-card-value">' + escapeHtml(c.value) + '</div>' +
+                '<div class="usage-card-sub">' + escapeHtml(c.sub) + '</div>' +
+                (typeof c.meter === 'number'
+                    ? '<div class="usage-meter"><i style="width:' + c.meter + '%;"></i></div>'
+                    : '') +
+                '</div>';
+        }).join('');
+    }
+
+    function renderUsageModelList(series) {
+        var host = document.getElementById('usageModelList');
+        var subEl = document.getElementById('usageModelsSub');
+        if (!host) return;
+        var keys = Object.keys(series.models);
+        if (!keys.length) {
+            host.innerHTML = '<div class="usage-chart-empty show">' + escapeHtml(t('usageNoData')) + '</div>';
+            if (subEl) subEl.textContent = '';
+            return;
+        }
+        var rows = keys.map(function(k) {
+            var b = series.models[k];
+            return { key: k, total: b.prompt + b.completion, bucket: b };
+        }).sort(function(a, b) { return b.total - a.total; });
+        var grand = rows.reduce(function(acc, r) { return acc + r.total; }, 0) || 1;
+        var max = rows[0].total || 1;
+        if (subEl) subEl.textContent = tf('usageModelCount', { n: rows.length });
+
+        host.innerHTML = rows.map(function(r) {
+            var info = usageModelLabel(r.key);
+            // 条形按占最大值的比例定总宽，再按输入/输出比例内部分段
+            var width = Math.max(4, Math.round(r.total / max * 100));
+            var inPct = r.total > 0 ? Math.round(r.bucket.prompt / r.total * 100) : 100;
+            var share = Math.round(r.total / grand * 100);
+            var hit = r.bucket.prompt > 0 ? Math.round(r.bucket.cached / r.bucket.prompt * 100) : 0;
+            return '<div class="usage-model-row">' +
+                '<span class="usage-model-logo" style="background:' + info.logo + ';">' + escapeHtml(info.logoText) + '</span>' +
+                '<div class="usage-model-info">' +
+                '<div class="usage-model-name">' + escapeHtml(info.model) + '</div>' +
+                '<div class="usage-model-meta">' + escapeHtml(info.provider) + '</div>' +
+                '<div class="usage-model-meta">' +
+                escapeHtml(tf('usageRequestsShort', { n: r.bucket.requests })) + ' · ' +
+                escapeHtml(tf('usageHitShort', { n: hit })) + '</div>' +
+                '</div>' +
+                '<div class="usage-model-bar">' +
+                '<div class="usage-model-bar-fill" style="width:' + width + '%;">' +
+                '<i class="seg-in" style="width:' + inPct + '%;"></i>' +
+                '<i class="seg-out" style="width:' + (100 - inPct) + '%;"></i>' +
+                '</div></div>' +
+                '<span class="usage-model-total">' + escapeHtml(formatUsageNumber(r.total)) + '</span>' +
+                '<span class="usage-model-share">' + share + '%</span>' +
+                '</div>';
+        }).join('');
+    }
+
+    /**
+     * 画柱状图：输入/输出上下堆叠，横轴按视图给出稀疏刻度。
+     * 用 canvas 而非引入图表库，省一个依赖，也便于跟随主题变量取色。
+     * 悬停高亮那一根柱子，所以每次重画都要知道当前指向的下标。
+     */
+    function drawUsageChart(series) {
+        var canvas = document.getElementById('usageChart');
+        var wrap = canvas && canvas.parentElement;
+        var emptyEl = document.getElementById('usageChartEmpty');
+        if (!canvas || !wrap) return;
+
+        var totalTokens = series.total.prompt + series.total.completion;
+        usageChartPoints = series.points;
+        if (!totalTokens) {
+            wrap.classList.add('is-empty');
+            if (emptyEl) emptyEl.classList.add('show');
+            usageChartGeometry = null;
+            return;
+        }
+        wrap.classList.remove('is-empty');
+        if (emptyEl) emptyEl.classList.remove('show');
+
+        var dpr = window.devicePixelRatio || 1;
+        var cssW = wrap.clientWidth || 320;
+        var cssH = wrap.clientHeight || 180;
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+        var ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, cssW, cssH);
+
+        var css = getComputedStyle(document.documentElement);
+        var pick = function(name, fallback) {
+            var v = css.getPropertyValue(name);
+            return (v && v.trim()) || fallback;
+        };
+        var accent = pick('--accent', '#007aff');
+        var gridColor = pick('--border', '#e5e5ea');
+        var textColor = pick('--text-tertiary', '#9ca3af');
+        var isDark = document.documentElement.classList.contains('dark-mode');
+        var outColor = isDark ? 'rgba(52, 199, 89, 0.9)' : 'rgba(52, 199, 89, 0.95)';
+        var dimAlpha = 0.32;
+
+        var padL = 44, padR = 8, padT = 12, padB = 24;
+        var plotW = Math.max(10, cssW - padL - padR);
+        var plotH = Math.max(10, cssH - padT - padB);
+
+        var peak = 0;
+        series.points.forEach(function(p) {
+            var v = p.bucket.prompt + p.bucket.completion;
+            if (v > peak) peak = v;
+        });
+        // 纵轴：把每格步长向上取到一个"好读"的整数再乘格数。
+        // 只用 1/2/5 这三档太粗——峰值 22.5K 时步长会从 5625 抬到 10000，轴变成 40K，
+        // 柱子只占一半高度。加密阶梯后同样是整数刻度，但空白通常不超过一成。
+        var GRID_LINES = 4;
+        var STEP_LADDER = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+        var niceMax = (function(v) {
+            if (v <= 0) return 1;
+            var rough = v / GRID_LINES;
+            var exp = Math.pow(10, Math.floor(Math.log(rough) / Math.LN10));
+            var frac = rough / exp;
+            for (var li = 0; li < STEP_LADDER.length; li++) {
+                if (frac <= STEP_LADDER[li] + 1e-9) return STEP_LADDER[li] * exp * GRID_LINES;
+            }
+            return 10 * exp * GRID_LINES;
+        })(peak);
+
+        ctx.font = '10px ' + pick('--font-sans', 'sans-serif');
+        ctx.textBaseline = 'middle';
+        for (var g = 0; g <= GRID_LINES; g++) {
+            var y = padT + plotH - (plotH * g / GRID_LINES);
+            ctx.strokeStyle = gridColor;
+            ctx.globalAlpha = g === 0 ? 0.9 : 0.4;
+            ctx.beginPath();
+            ctx.moveTo(padL, y);
+            ctx.lineTo(padL + plotW, y);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = textColor;
+            ctx.textAlign = 'right';
+            ctx.fillText(formatUsageNumber(Math.round(niceMax * g / GRID_LINES)), padL - 7, y);
+        }
+
+        var n = series.points.length;
+        var slot = plotW / n;
+        var barW = Math.max(2, Math.min(slot * 0.6, 20));
+        var radius = Math.min(3, barW / 2);
+        var bars = [];
+        series.points.forEach(function(p, i) {
+            var cx = padL + slot * (i + 0.5);
+            var x = cx - barW / 2;
+            var inH = plotH * (p.bucket.prompt / niceMax);
+            var outH = plotH * (p.bucket.completion / niceMax);
+            var baseY = padT + plotH;
+            // 悬停时非目标柱淡出，读数时视线不会被邻柱干扰
+            var dim = usageChartHoverIndex >= 0 && usageChartHoverIndex !== i;
+            ctx.globalAlpha = dim ? dimAlpha : 1;
+            if (inH + outH > 0) {
+                ctx.fillStyle = accent;
+                ctx.fillRect(x, baseY - inH, barW, inH);
+                if (outH > 0) {
+                    ctx.fillStyle = outColor;
+                    var topY = baseY - inH - outH;
+                    ctx.beginPath();
+                    ctx.moveTo(x, baseY - inH);
+                    ctx.lineTo(x, topY + radius);
+                    ctx.quadraticCurveTo(x, topY, x + radius, topY);
+                    ctx.lineTo(x + barW - radius, topY);
+                    ctx.quadraticCurveTo(x + barW, topY, x + barW, topY + radius);
+                    ctx.lineTo(x + barW, baseY - inH);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+            ctx.globalAlpha = 1;
+            bars.push({
+                index: i, cx: cx,
+                left: padL + slot * i, right: padL + slot * (i + 1),
+                top: baseY - inH - outH
+            });
+        });
+
+        // 横轴刻度：今日每 3 小时，7 天全标，30 天每 5 天。末尾那格只在离前一个刻度
+        // 足够远时才补，否则 21 和 23 会挤成一团。
+        var step = series.range === 'today' ? 3 : (n <= 10 ? 1 : 5);
+        var lastTick = n - 1;
+        var showLast = lastTick % step !== 0 && (lastTick - Math.floor(lastTick / step) * step) >= Math.ceil(step / 2);
+        ctx.textAlign = 'center';
+        series.points.forEach(function(p, i) {
+            if (i % step !== 0 && !(showLast && i === lastTick)) return;
+            var isHover = usageChartHoverIndex === i;
+            ctx.fillStyle = isHover ? pick('--text', '#1c1c1e') : textColor;
+            ctx.fillText(p.shortLabel, padL + slot * (i + 0.5), padT + plotH + 12);
+        });
+
+        usageChartGeometry = { bars: bars, plotTop: padT, plotBottom: padT + plotH };
+    }
+
+    function renderUsage() {
+        var series = buildUsageSeries(usageRange);
+        var titleEl = document.getElementById('usageChartTitle');
+        if (titleEl) titleEl.textContent = usageRange === 'today' ? t('usageChartToday') : t('usageChartByDay');
+        var chartSub = document.getElementById('usageChartSub');
+        if (chartSub) {
+            // 说明"有多少个时段/天真的产生了用量"，空白柱多时不会显得像坏了
+            chartSub.textContent = series.activeSlots > 0
+                ? tf(usageRange === 'today' ? 'usageActiveHours' : 'usageActiveDays', { n: series.activeSlots })
+                : '';
+        }
+        var legend = document.getElementById('usageLegend');
+        if (legend) {
+            legend.innerHTML =
+                '<span><i style="background:var(--accent);"></i>' + escapeHtml(t('usageInput')) + '</span>' +
+                '<span><i style="background:#34c759;"></i>' + escapeHtml(t('usageOutput')) + '</span>';
+        }
+        var updated = document.getElementById('usageUpdated');
+        if (updated) updated.textContent = series.spanLabel || '';
+        var footnote = document.getElementById('usageFootnote');
+        if (footnote) {
+            var note = t(IS_REMOTE ? 'usageFootnoteRemote' : 'usageFootnote');
+            // 估算条目是个附注而不是指标，放进脚注比单独占一张卡更合适
+            if (series.total.estimated > 0) {
+                note += ' ' + tf('usageEstimatedNote', { n: series.total.estimated });
+            }
+            footnote.textContent = note;
+        }
+        renderUsageCards(series);
+        renderUsageModelList(series);
+        drawUsageChart(series);
+    }
+
+    function setUsageRange(range) {
+        usageRange = range;
+        usageChartHoverIndex = -1;
+        document.querySelectorAll('.usage-range-btn').forEach(function(b) {
+            var on = b.getAttribute('data-range') === range;
+            b.classList.toggle('active', on);
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        renderUsage();
+    }
+
+    function setSettingsTab(tab) {
+        settingsTab = tab === 'usage' ? 'usage' : 'models';
+        var pairs = [
+            ['settingsTabModels', 'settingsPaneModels', 'models'],
+            ['settingsTabUsage', 'settingsPaneUsage', 'usage']
+        ];
+        pairs.forEach(function(p) {
+            var btn = document.getElementById(p[0]);
+            var pane = document.getElementById(p[1]);
+            var on = p[2] === settingsTab;
+            if (btn) { btn.classList.toggle('active', on); btn.setAttribute('aria-selected', on ? 'true' : 'false'); }
+            if (pane) pane.classList.toggle('active', on);
+        });
+        var titleEl = document.getElementById('settingsTitle');
+        if (titleEl) titleEl.textContent = settingsTab === 'usage' ? t('tabUsage') : t('modelSettings');
+        var subtitle = document.getElementById('settingsSubtitle');
+        if (subtitle) subtitle.textContent = settingsTab === 'usage' ? t(IS_REMOTE ? 'usageSubtitleRemote' : 'usageSubtitle') : t('settingsSubtitle');
+        // 切换分类时内容区回到顶部，否则会停在上一页的滚动位置
+        var content = document.getElementById('settingsContent');
+        if (content) content.scrollTop = 0;
+        if (settingsTab === 'usage') renderUsage();
+    }
+
+    /** 目录里的模型计数徽标 */
+    function updateSettingsNavBadges() {
+        var badge = document.getElementById('settingsNavModelCount');
+        if (badge) badge.textContent = savedConfigs.length ? String(savedConfigs.length) : '';
+    }
+
+    // 悬停/触摸柱子显示明细，并高亮那一根
+    function setupUsageChartHover() {
+        var canvas = document.getElementById('usageChart');
+        var tip = document.getElementById('usageTooltip');
+        if (!canvas || !tip) return;
+
+        function clearHover() {
+            tip.classList.remove('show');
+            if (usageChartHoverIndex !== -1) {
+                usageChartHoverIndex = -1;
+                if (settingsOpen && settingsTab === 'usage') drawUsageChart(buildUsageSeries(usageRange));
+            }
+        }
+        function show(clientX) {
+            if (!usageChartGeometry) { clearHover(); return; }
+            var rect = canvas.getBoundingClientRect();
+            var x = clientX - rect.left;
+            var hit = null;
+            for (var i = 0; i < usageChartGeometry.bars.length; i++) {
+                var b = usageChartGeometry.bars[i];
+                if (x >= b.left && x <= b.right) { hit = b; break; }
+            }
+            if (!hit) { clearHover(); return; }
+            var point = usageChartPoints[hit.index];
+            if (!point) { clearHover(); return; }
+            if (usageChartHoverIndex !== hit.index) {
+                usageChartHoverIndex = hit.index;
+                drawUsageChart(buildUsageSeries(usageRange));
+                // 重画重建了几何信息，重新取当前柱子的位置再摆气泡
+                hit = usageChartGeometry.bars[usageChartHoverIndex] || hit;
+            }
+            var b2 = point.bucket;
+            var total = b2.prompt + b2.completion;
+            var hitRate = b2.prompt > 0 ? Math.round(b2.cached / b2.prompt * 100) : 0;
+            var lines = ['<b>' + escapeHtml(point.label) + '</b>'];
+            if (total > 0) {
+                lines.push(escapeHtml(tf('usageTipTotal', { n: total.toLocaleString() })));
+                lines.push(escapeHtml(tf('usageTipInOut', { in: b2.prompt.toLocaleString(), out: b2.completion.toLocaleString() })));
+                lines.push(escapeHtml(tf('usageTipHit', { n: hitRate, c: b2.cached.toLocaleString() })));
+                lines.push(escapeHtml(tf('usageTipRequests', { n: b2.requests })));
+            } else {
+                lines.push(escapeHtml(t('usageTipNone')));
+            }
+            tip.innerHTML = lines.join('<br>');
+            var left = Math.max(60, Math.min(rect.width - 60, hit.cx));
+            tip.style.left = left + 'px';
+            tip.style.top = Math.max(30, (total > 0 ? hit.top : usageChartGeometry.plotBottom) - 8) + 'px';
+            tip.classList.add('show');
+        }
+
+        canvas.addEventListener('mousemove', function(e) { show(e.clientX); });
+        canvas.addEventListener('mouseleave', clearHover);
+        canvas.addEventListener('touchstart', function(e) {
+            if (e.touches[0]) show(e.touches[0].clientX);
+        }, { passive: true });
+        canvas.addEventListener('touchmove', function(e) {
+            if (e.touches[0]) show(e.touches[0].clientX);
+        }, { passive: true });
+        canvas.addEventListener('touchend', clearHover);
+    }
+
     function setupSidebarEvents() {
         var newChatBtn = document.getElementById('newChatBtn');
 
         if (newChatBtn) {
             newChatBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
+                if (IS_REMOTE) { remoteSend('newChat'); closeSidebarMobile(); return; }
                 saveCurrentConversation();
                 createNewConversation();
                 closeSidebarMobile();
@@ -4901,6 +6401,7 @@
     }
 
     function saveConfigs() {
+        if (IS_REMOTE) return;
         try { localStorage.setItem('neowarp_ai_models_v2', JSON.stringify(savedConfigs)); } catch(e) {}
     }
 
@@ -4959,6 +6460,8 @@
     }
 
     function getContextLimit() {
+        // 远程端的 PROVIDERS 表可能不含桌面那边自定义的模型，直接用桌面算好的上限
+        if (IS_REMOTE && remoteContextLimit) return remoteContextLimit;
         var p = PROVIDERS[currentConfig.provider];
         if (currentConfig.provider === 'custom') return currentConfig.customContextLimit || 32000;
         var m = p && p.models.find(function(x) { return x.id === currentConfig.model; });
@@ -5082,6 +6585,11 @@
         applyThinkingLevelUI(idx);
         if (currentConfig.thinkingLevel !== lvl) {
             currentConfig.thinkingLevel = lvl;
+            if (IS_REMOTE) {
+                // 档位存在桌面的配置里，远程端只发指令，UI 已先动起来做即时反馈
+                remoteSend('setThinking', { level: lvl });
+                return;
+            }
             if (activeConfigIndex >= 0 && savedConfigs[activeConfigIndex]) {
                 savedConfigs[activeConfigIndex].thinkingLevel = lvl;
                 saveConfigs();
@@ -5463,15 +6971,18 @@
 
     function selectConfig(idx) {
         if (idx === activeConfigIndex) return;
+        if (IS_REMOTE) { remoteSend('selectModel', { index: idx }); return; }
         activeConfigIndex = idx;
         applyActiveConfig();
         saveConfigs();
         updateAllUI();
         var cfg = savedConfigs[idx] || {};
         showToast(tf('switchedTo', { name: cfg.name || 'Model' }), 'success');
+        phonePushHistory();
     }
 
     function renderModelConfigList() {
+        updateSettingsNavBadges();
         var list = document.getElementById('modelConfigList');
         if (!list) return;
         list.innerHTML = '';
@@ -5498,7 +7009,7 @@
             var isActive = idx === activeConfigIndex;
             var nameDisplay = cfg.name || (m ? m.name : p.name) || 'Unnamed';
             var modelLabel = p.isCustom ? (cfg.customModelId || cfg.model) : (m ? m.name : cfg.model);
-            var sub = p.isCustom ? (cfg.customEndpoint || p.endpoint || '') : maskApiKey(cfg.apiKey);
+            var sub = p.isCustom ? (cfg.customEndpoint || p.endpoint || '') : (IS_REMOTE ? cfg.apiKey : maskApiKey(cfg.apiKey));
 
             var card = document.createElement('div');
             card.className = 'model-config-card' + (isActive ? ' active' : '');
@@ -5565,6 +7076,8 @@
     // idx 为 null 时是新增。此前 add / edit 是两段几乎重复的内联样式代码，
     // 字段与校验各写一遍，容易走样，这里合并为一处。
     function openModelDialog(idx) {
+        // 密钥只保存在电脑端，远程端拿到的是掩码，就地编辑会把掩码写回真配置
+        if (IS_REMOTE) { showToast('请在电脑端管理模型配置', 'error'); return; }
         var isEdit = typeof idx === 'number';
         var cfg = isEdit ? savedConfigs[idx] : createDefaultConfig();
 
@@ -5919,6 +7432,7 @@
     }
 
     function deleteConfig(idx) {
+        if (IS_REMOTE) { showToast('请在电脑端管理模型配置', 'error'); return; }
         if (savedConfigs.length <= 1) {
             showToast(t('keepOneConfig'), 'error');
             return;
@@ -6000,6 +7514,8 @@
         settingsOverlay.classList.add('open');
         settingsOpen = true;
         renderModelConfigList();
+        // 面板此前是隐藏的，canvas 宽度为 0，展开后才能量出正确尺寸重画
+        setSettingsTab(settingsTab);
         closeModelDropdown();
         closeConfigMenu();
     }
@@ -6032,6 +7548,7 @@
 
     function clearChat() {
         if (!chatHistory.length || isLoading) return;
+        if (IS_REMOTE) { remoteSend('clearChat'); return; }
         chatHistory = [];
         welcomeMessage.style.display = 'flex';
         renderChatHistory();
@@ -6159,12 +7676,36 @@
         return result.join('<br>');
     }
 
+    // 手机端走的是局域网 HTTP（非安全上下文），navigator.clipboard 不可用，
+    // 退回 execCommand 的隐藏 textarea 方案。
+    function copyTextToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        }
+        return new Promise(function(resolve, reject) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            ta.setSelectionRange(0, ta.value.length);
+            var ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            ta.remove();
+            ok ? resolve() : reject(new Error('copy unavailable'));
+        });
+    }
+
     window.copyCode = function(btn) {
         var code = btn.closest('.code-block').querySelector('code').textContent;
-        navigator.clipboard.writeText(code).then(function() {
+        copyTextToClipboard(code).then(function() {
             btn.classList.add('copied');
             btn.innerHTML = 'Copied';
             setTimeout(function() { btn.classList.remove('copied'); btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path></svg>Copy'; }, 2000);
+        }).catch(function() {
+            showToast(t('phoneCopyFail'), 'error');
         });
     };
 
@@ -6172,6 +7713,17 @@
         var code = btn.closest('.code-block').querySelector('code').textContent;
         try {
             var json = JSON.parse(code);
+            if (IS_REMOTE) {
+                // 工程只存在于电脑端的编辑器里，应用动作交给桌面执行
+                btn.disabled = true;
+                btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle></svg>Applying...';
+                remoteSend('applyProject', { projectJSON: code }).then(function(res) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Apply';
+                    if (res && res.ok !== false) showToast('已发送到电脑端应用', 'success');
+                });
+                return;
+            }
             if (!window.AIAssistantPreload) {
                 showToast('Preload not available', 'error');
                 return;
@@ -6567,6 +8119,11 @@
                     return;
                 }
                 var answer = btn.querySelector('.question-option-label').textContent;
+                if (IS_REMOTE) {
+                    // 卡片状态由桌面推回的历史决定，这里只发指令
+                    remoteSend('answerQuestion', { answer: answer, isCustom: false });
+                    return;
+                }
                 finalizeCard(answer, false, btn);
                 if (activeQuestionResolver) {
                     activeQuestionResolver({ success: true, answer: answer, isCustom: false });
@@ -6589,6 +8146,10 @@
                 if (card.classList.contains('answered')) return;
                 var val = otherInput ? otherInput.value.trim() : '';
                 if (!val) return;
+                if (IS_REMOTE) {
+                    remoteSend('answerQuestion', { answer: val, isCustom: true });
+                    return;
+                }
                 var otherBtn = card.querySelector('.question-other-btn');
                 finalizeCard(val, true, otherBtn);
                 if (activeQuestionResolver) {
@@ -6899,7 +8460,7 @@
 
     function buildSystemPrompt() {
         var lang = getSystemPromptLanguage();
-        var desc = 'You are NeoWarp AI, a Scratch 3.0 programming assistant.\n\n=== COMMUNICATION PROTOCOL ===\nYou communicate with the editor through the execute_operations tool. Output a JSON array of operation objects. Each operation must have a "type" field. DO NOT output natural language explanations unless through the "explain" operation type.\n\n=== CONTEXT ===\nThe user message contains a JSON context with the current project state. Blocks use temporary IDs (tid) that you reference in your operations. ONLY use tids from the context — never guess block IDs.\n\n=== OPERATION TYPES ===\n\n1. add_script — Add a new complete script to a sprite\n{\n  "type": "add_script",\n  "sprite": "Cat",\n  "script": {\n    "opcode": "event_whenflagclicked",\n    "fields": {},\n    "inputs": {},\n    "next": {\n      "opcode": "looks_say",\n      "inputs": {"MESSAGE": "Hello"}\n    }\n  }\n}\n- The root block of script must be a hat block (event_whenflagclicked, event_whenkeypressed, etc.)\n- Use "next" to chain blocks. C-blocks use "substack" for inner body.\n- Inputs accept: numbers, strings, or nested reporter block objects\n- Fields accept only strings for dropdown menus\n\n2. delete_block — Delete a block by tid\n{\n  "type": "delete_block",\n  "sprite": "Cat",\n  "targetId": "b2",\n  "mode": "with_children"\n}\n- mode: "with_children" (default) — delete this block, its substack, and next chain\n- mode: "block_only" — delete only this block, connect children to parent\n\n3. modify_input — Change a block\'s input value\n{\n  "type": "modify_input",\n  "sprite": "Cat",\n  "targetId": "b2",\n  "inputName": "TIMES",\n  "value": 20\n}\n- value can be: number, string, boolean, or nested reporter block object\n\n4. add_comment — Add or update a comment. Can be attached to a block or standalone.\nAttached to a block:\n{\n  "type": "add_comment",\n  "sprite": "Cat",\n  "targetId": "b3",\n  "text": "This is the core movement logic",\n  "minimized": false\n}\nStandalone workspace comment (no targetId):\n{\n  "type": "add_comment",\n  "sprite": "Cat",\n  "x": 200,\n  "y": 100,\n  "text": "TODO: add collision detection",\n  "minimized": false\n}\n- minimized: false = expanded, true = collapsed\n- Comments are encouraged to document code logic. Use Chinese text directly.\n\n5. delete_comment — Remove a comment\nRemove the comment attached to a block (pass the block tid):\n{\n  "type": "delete_comment",\n  "sprite": "Cat",\n  "targetId": "b3"\n}\nRemove a standalone workspace comment (pass the commentId that add_comment returned):\n{\n  "type": "delete_comment",\n  "sprite": "Cat",\n  "commentId": "_ai_cmt_123_abc"\n}\n- add_comment returns data.commentId — keep it if you may need to delete that comment later\n- targetId also accepts a commentId as a fallback, so either field works\n\n6. explain — Show text explanation to the user (does not modify blocks)\n{\n  "type": "explain",\n  "text": "Modified the repeat count to 20."\n}\n\n=== NESTING RULES ===\n1. Reporter nesting: any inputs value can be a complete reporter block object (e.g. {"opcode":"operator_add","inputs":{"NUM1":5,"NUM2":3}})\n2. Boolean nesting: any condition inputs can be boolean reporter block objects\n3. Substack: C-blocks (repeat/forever/if) have a "substack" array of block objects for their body\n4. If-else: use both "substack" (then) and "substack2" (else)\n5. Hat blocks MUST be at the top of a script, never nested inside other blocks\n\n=== NAMING RULES ===\n- Sprite names: exactly match context names, case-sensitive\n- Variables/lists/broadcasts: first use auto-creates them, use Chinese names directly\n- Costume/sound/backdrop names: case-sensitive exact match\n- tids: ONLY use tids provided in the context\n\n=== BLOCK OPCODE DICTIONARY (Whitelist) ===\n\nMotion:\nmotion_movesteps {STEPS:number} | motion_turnright {DEGREES} | motion_turnleft {DEGREES}\nmotion_goto fields:{TO:"_random_"|"_mouse_"|"sprite_name"}\nmotion_gotoxy {X,Y} | motion_glideto {SECS} fields:{TO}\nmotion_glidesecstoxy {SECS,X,Y} | motion_pointindirection {DIRECTION}\nmotion_pointtowards fields:{TOWARDS:"_mouse_"|"sprite_name"}\nmotion_changexby {DX} | motion_setx {X} | motion_changeyby {DY} | motion_sety {Y}\nmotion_ifonedgebounce (no params) | motion_setrotationstyle fields:{STYLE:"left-right"|"all around"|"don\'t rotate"}\nmotion_xposition reporter | motion_yposition reporter | motion_direction reporter\n\nLooks:\nlooks_sayforsecs {MESSAGE:string,SECS:number} | looks_say {MESSAGE} | looks_thinkforsecs {MESSAGE,SECS} | looks_think {MESSAGE}\nlooks_switchcostumeto fields:{COSTUME:"name"} | looks_nextcostume (no params)\nlooks_switchbackdropto fields:{BACKDROP:"name"} | looks_nextbackdrop (no params)\nlooks_changesizeby {CHANGE} | looks_setsizeto {SIZE}\nlooks_changeeffectby fields:{EFFECT:"COLOR"|"FISHEYE"|"WHIRL"|"PIXELATE"|"MOSAIC"|"BRIGHTNESS"|"GHOST"} {CHANGE}\nlooks_seteffectto fields:{EFFECT} {VALUE} | looks_cleargraphiceffects (no params)\nlooks_show (no params) | looks_hide (no params)\nlooks_gotofrontback fields:{FRONT_BACK:"front"|"back"}\nlooks_goforwardbackwardlayers fields:{FORWARD_BACKWARD:"forward"|"backward"} {NUM}\nlooks_costumenumbername fields:{NUMBER_NAME:"number"|"name"} reporter\nlooks_backdropnumbername fields:{NUMBER_NAME} reporter | looks_size reporter\n\nSound:\nsound_playuntildone fields:{SOUND:"name"} | sound_play fields:{SOUND}\nsound_stopallsounds (no params)\nsound_changeeffectby fields:{EFFECT:"PITCH"|"PAN"} {VALUE}\nsound_seteffectto fields:{EFFECT} {VALUE} | sound_cleareffects (no params)\nsound_changevolumeby {VOL} | sound_setvolumeto {VOL} | sound_volume reporter\n\nEvents (hat blocks, must be at script top):\nevent_whenflagclicked (no params)\nevent_whenkeypressed fields:{KEY:"space"|"up arrow"|"down arrow"|"left arrow"|"right arrow"|"any"|"a".."z"}\nevent_whenthisspriteclicked (no params) | event_whenstageclicked (no params)\nevent_whenbackdropswitchesto fields:{BACKDROP:"name"}\nevent_whengreaterthan fields:{WHENGREATERTHANMENU:"LOUDNESS"|"TIMER"} {VALUE}\nevent_whenbroadcastreceived fields:{BROADCAST_OPTION:"name"}\nevent_broadcast {BROADCAST_INPUT:string} | event_broadcastandwait {BROADCAST_INPUT}\ncontrol_start_as_clone (no params)\n\nControl:\ncontrol_wait {DURATION}\ncontrol_repeat {TIMES} substack:[]\ncontrol_forever substack:[]\ncontrol_if {CONDITION} substack:[]\ncontrol_if_else {CONDITION} substack:[] substack2:[]\ncontrol_wait_until {CONDITION}\ncontrol_repeat_until {CONDITION} substack:[]\ncontrol_while {CONDITION} substack:[] (TurboWarp)\ncontrol_for_each fields:{VARIABLE:"name"} {VALUE} substack:[] (TurboWarp)\ncontrol_stop fields:{STOP_OPTION:"all"|"this script"|"other scripts in sprite"}\ncontrol_create_clone_of fields:{CLONE_OPTION:"_myself_"|"sprite_name"}\ncontrol_delete_this_clone (no params)\ncontrol_all_at_once substack:[] (TurboWarp)\ncontrol_get_counter reporter | control_incr_counter | control_decr_counter | control_clear_counter\n\nSensing:\nsensing_touchingobject fields:{TOUCHINGOBJECTMENU:"_mouse_"|"_edge_"|"sprite_name"} boolean\nsensing_touchingcolor {COLOR:number} boolean (e.g. 16711680 for red)\nsensing_coloristouchingcolor {COLOR,COLOR2} boolean\nsensing_distanceto fields:{DISTANCETOMENU:"_mouse_"|"sprite_name"} reporter\nsensing_askandwait {QUESTION:string} | sensing_answer reporter\nsensing_keypressed fields:{KEY_OPTION:string} boolean\nsensing_mousedown boolean | sensing_mousex reporter | sensing_mousey reporter\nsensing_loudness reporter | sensing_timer reporter | sensing_resettimer\nsensing_of fields:{PROPERTY,OBJECT} reporter\nsensing_current fields:{CURRENTMENU:"YEAR"|"MONTH"|"DATE"|"DAYOFWEEK"|"HOUR"|"MINUTE"|"SECOND"} reporter\nsensing_dayssince2000 reporter | sensing_username reporter\n\nOperators:\noperator_add {NUM1,NUM2} reporter | operator_subtract {NUM1,NUM2} reporter\noperator_multiply {NUM1,NUM2} reporter | operator_divide {NUM1,NUM2} reporter\noperator_random {FROM,TO} reporter\noperator_gt {OPERAND1,OPERAND2} boolean | operator_lt {OPERAND1,OPERAND2} boolean\noperator_equals {OPERAND1,OPERAND2} boolean\noperator_and {OPERAND1,OPERAND2} boolean | operator_or {OPERAND1,OPERAND2} boolean\noperator_not {OPERAND} boolean\noperator_join {STRING1,STRING2} reporter\noperator_letter_of {LETTER,STRING} reporter | operator_length {STRING} reporter\noperator_contains {STRING1,STRING2} boolean\noperator_mod {NUM1,NUM2} reporter | operator_round {NUM} reporter\noperator_mathop fields:{OPERATOR:"abs"|"floor"|"ceiling"|"sqrt"|"sin"|"cos"|"tan"|"asin"|"acos"|"atan"|"ln"|"log"|"e ^"|"10 ^"} {NUM} reporter\n\nVariables:\ndata_setvariableto fields:{VARIABLE:"name"} {VALUE}\ndata_changevariableby fields:{VARIABLE:"name"} {VALUE}\ndata_showvariable fields:{VARIABLE:"name"}\ndata_hidevariable fields:{VARIABLE:"name"}\n\nLists:\ndata_addtolist fields:{LIST:"name"} {ITEM}\ndata_deleteoflist fields:{LIST:"name"} {INDEX}\ndata_deletealloflist fields:{LIST:"name"}\ndata_insertatlist fields:{LIST:"name"} {ITEM,INDEX}\ndata_replaceitemoflist fields:{LIST:"name"} {INDEX,ITEM}\ndata_itemoflist fields:{LIST:"name"} {INDEX} reporter\ndata_itemnumoflist fields:{LIST:"name"} {ITEM} reporter\ndata_lengthoflist fields:{LIST:"name"} reporter\ndata_listcontainsitem fields:{LIST:"name"} {ITEM} boolean\ndata_showlist fields:{LIST:"name"} | data_hidelist fields:{LIST:"name"}\n\nProcedures (custom blocks):\nprocedures_call fields:{custom_block:"name"} — params via inputs arg0, arg1, etc.\n\nTurboWarp:\nlooks_setstretchto {STRETCHX,STRETCHY} | looks_changestretchby {STRETCHX,STRETCHY}\n\n=== PROHIBITED ===\n- DO NOT use opcodes not listed above\n- DO NOT put numbers/expressions in "fields", only strings\n- DO NOT nest hat blocks inside other blocks\n- DO NOT use Scratch internal array format [1,[4,"10"]] for inputs\n- DO NOT fabricate tids — only use tids from the context\n- DO NOT output raw JSON outside of the execute_operations tool call\n\n=== OTHER TOOLS ===\nYou also have access to: get_project_info, set_sprite_property, set_stage_size, create_variable, create_list, set_variable, add_to_list, delete_from_list, add_sprite, delete_sprite, change_costume, add_backdrop, change_backdrop, rename_project, get_installed_extensions, search_extensions, web_search, develop_extension, install_extension, get_system_time, get_system_info, add_costume_from_url, add_sprite_from_url, get_stage_screenshot, pause_output, ask_user.\n\n- create_variable: Create a scalar variable (params: variable_name, sprite_name, initial_value)\n- create_list: Create a list (params: list_name, sprite_name). Use this before add_to_list for explicit list creation.\n- add_to_list: Add an item to a list (auto-creates the list if it does not exist)\n- delete_from_list: Delete an item from a list by 1-based index\n- add_costume_from_url: Add a costume to a sprite from an image URL (params: sprite_name, url, costume_name)\n- add_sprite_from_url: Add a new sprite with a costume from an image URL (params: sprite_name, url)\n- get_stage_screenshot: Capture a screenshot of the current stage (returns base64 PNG image; for multimodal models the screenshot is automatically added as an image to the conversation for visual analysis)\n- develop_extension: Write and load a custom Scratch extension at runtime (params: extension_code, extension_name). extension_code must be a bare class or object literal — e.g. "class MyExt { getInfo(){ return {id:\"myext\", name:\"My Ext\", blocks:[{opcode:\"go\", blockType:\"command\", text:\"go [N]\", arguments:{N:{type:\"number\", defaultValue:1}}}]}; } go(args){ /* ... */ } }" — do NOT prefix it with "const X =" and do NOT call Scratch.extensions.register yourself; the editor wraps and registers it. getInfo() MUST return an object with id, name and blocks. The extension runs unsandboxed so it can use Scratch.vm and Scratch.renderer.\n- web_search: Search the internet for information, documentation, or tutorials. Returns structured results with title, URL, and snippet. Use this to look up Scratch techniques, math formulas, game design patterns, etc.\n- pause_output: Pause output for a specified duration (params: seconds 1-60, reason optional). Shows a countdown indicator in the chat. Use this to give the user time to read important information, wait for user actions, or add natural pauses between steps in multi-step tasks.\n- ask_user: 当用户的要求过于笼统、模糊或存在多种可能解释时，向用户提问以澄清意图（params: question 问题文本, options 2-4 个选项字符串数组）。会渲染一张交互式卡片，用户可点选某个选项或点"其他"输入自定义文本，结果作为工具返回值传回。仅在确实需要澄清时使用，明确具体的请求应直接执行，不要滥用。\n\n=== TODO LIST WORKFLOW (IMPORTANT) ===\nFor multi-step or complex tasks, you MUST plan and execute step-by-step using the todo list:\n1. First call plan_todos(items: ["step 1", "step 2", ...], title: "optional title") to display a todo checklist card in the chat. All items start as pending.\n2. Then execute ONE item at a time: before starting an item call update_todo(index: i, status: "doing"), do the actual work with execute_operations or other tools, then call update_todo(index: i, status: "done").\n3. Move to the next item only after the current one is done. The card progress bar and counter update in real time.\n4. Do NOT cram every step into a single execute_operations call. List todos, then execute them one by one so the user can see clear progress.\n5. Simple single-step tasks do not need a todo list.\n\n=== COMMENTS ===\nYou are encouraged to add comments to document code logic. Use the add_comment operation in execute_operations. Comments can be attached to blocks (via targetId) or placed standalone on the workspace (with x/y coordinates). Comments support Chinese text.\n\nReply in ' + lang + '.';
+        var desc = 'You are NeoWarp AI, a Scratch 3.0 programming assistant.\n\n=== HOW YOU CHANGE THE PROJECT ===\nYou edit the project only through the execute_operations tool. Its "operations" argument is a\nJSON array of operation objects; every object needs a "type". Never print raw JSON or block\ncode in your chat replies — put it in the tool call.\n\nBlocks themselves are written as DSL TEXT, not as JSON objects. One block per line:\n\n    opcode arg1 arg2 ...\n\n- Arguments are POSITIONAL and must follow the order in the block dictionary below.\n- Indent by two spaces to put blocks inside a C-block\'s body. Use a line containing only\n  "else" to start the else branch of control_if_else.\n- Token forms: 42 (number) · "text" (string) · $name (variable) · @name (list) ·\n  (opcode args...) (a reporter plugged into that slot) · # starts a comment line.\n- The first line may be a hat block (event_*, control_start_as_clone). If it is not, a\n  green-flag hat is added automatically.\n\nExample of a complete script:\n\n    event_whenkeypressed "space"\n    control_repeat 10\n      motion_changeyby 6\n      control_wait 0.02\n    control_repeat 10\n      motion_changeyby -6\n      control_wait 0.02\n\nExample with a nested reporter and an else branch:\n\n    event_whenflagclicked\n    control_if_else (operator_gt (sensing_timer) 10)\n      looks_say "time is up"\n    else\n      looks_say (operator_join "left: " (operator_subtract 10 (sensing_timer)))\n\n=== CONTEXT ===\nEach user message carries a JSON context describing the current project. Blocks in it have\ntemporary ids ("tid") that you pass back in targetId. ONLY use tids that appear in the\ncontext — never invent one. Sprite, costume, sound and backdrop names are case-sensitive and\nmust match the context exactly.\n\n=== OPERATION TYPES ===\n\n1. add_script — create a NEW script (its own stack) on a sprite\n{"type":"add_script","sprite":"Cat","script":"event_whenflagclicked\\n  looks_say \\"hi\\""}\n\n2. insert_blocks — insert blocks INTO an existing script (no new stack is created)\n{"type":"insert_blocks","targetId":"b4","position":"after","blocks":"control_wait 0.5\\nlooks_nextcostume"}\n- position "after"      → directly below the anchor block (default)\n- position "before"     → directly above the anchor block (not allowed on a hat block)\n- position "body_start" → as the first block inside the anchor C-block\'s body\n- position "body_end"   → as the last block inside the anchor C-block\'s body\n- add "branch":"else" with body_start/body_end to target the else branch of control_if_else\n- "blocks" is body DSL text; it must NOT start with a hat block\nUse this instead of add_script whenever the user asks to add something to existing code —\nit keeps one script instead of leaving a second disconnected stack on the workspace.\n\n3. delete_block — remove a block by tid\n{"type":"delete_block","sprite":"Cat","targetId":"b2","mode":"with_children"}\n- mode "with_children" (default) removes the block plus its body and everything below it\n- mode "block_only" removes just that block and reconnects its neighbours\n\n4. modify_input — change one input of an existing block\n{"type":"modify_input","sprite":"Cat","targetId":"b2","inputName":"TIMES","value":20}\n- value may be a number, a string, or a reporter as {"opcode":"...","inputs":{...}}\n- inputName must be one of the argument names listed for that opcode\n- for SUBSTACK / SUBSTACK2 you may pass DSL text to replace the whole body\n\n5. add_comment — attach a comment to a block, or place a free-floating one\n{"type":"add_comment","sprite":"Cat","targetId":"b3","text":"jump logic","minimized":false}\n{"type":"add_comment","sprite":"Cat","x":200,"y":100,"text":"TODO: collision"}\n- returns data.commentId; keep it if you might delete that comment later\n- commenting your code is encouraged; Chinese text is fine\n\n6. delete_comment — remove a comment\n{"type":"delete_comment","sprite":"Cat","targetId":"b3"}\n{"type":"delete_comment","sprite":"Cat","commentId":"_ai_cmt_123_abc"}\n\n7. explain — show a short explanation to the user (changes nothing)\n{"type":"explain","text":"Raised the repeat count to 20."}\n\n=== VALIDATION ===\nScripts are checked BEFORE anything is applied. If a check fails, nothing is created and you\nget the exact reason back — read it and fix that specific problem rather than retrying the\nsame text. Rejections happen for: unknown opcodes, a hat block used anywhere but the first\nline, too many arguments, blocks indented under a block that has no body, and "else" on a\nblock without an else branch. You may also get warnings (empty C-block body, a costume or\nsound name that does not exist, a number slot given text); those still apply, but check them.\n\n=== VARIABLES, LISTS AND MESSAGES ===\n- $name and @name auto-create the variable or list on the Stage if it does not exist yet.\n- Broadcast messages are auto-created the same way; just use the message name.\n- Prefer create_variable / create_list when you want to be explicit about ownership.\n\n=== BLOCK DICTIONARY (generated from the editor schema — these signatures are exact) ===\nEach line is: opcode <arg1> <arg2> …  — write the arguments in exactly this order.\n$name = variable, @name = list, "text" = string, bare number = number, (opcode …) = nested reporter.\n[C] marks a C-block: put its body on the following lines, indented two more spaces.\n\nMotion:\n  motion_changexby DX:num\n  motion_changeyby DY:num\n  motion_direction\n  motion_glidesecstoxy SECS:num X:num Y:num\n  motion_glideto SECS:num TO:"_mouse_"|"_random_"|"<sprite name>"\n  motion_goto TO:"_mouse_"|"_random_"|"<sprite name>"\n  motion_gotoxy X:num Y:num\n  motion_ifonedgebounce\n  motion_movesteps STEPS:num\n  motion_pointindirection DIRECTION:num\n  motion_pointtowards TOWARDS:"_mouse_"|"_random_"|"<sprite name>"\n  motion_setrotationstyle STYLE:"left-right"|"don\'t rotate"|"all around"\n  motion_setx X:num\n  motion_sety Y:num\n  motion_turnleft DEGREES:num\n  motion_turnright DEGREES:num\n  motion_xposition\n  motion_yposition\n\nLooks:\n  looks_backdropnumbername NUMBER_NAME:"number"|"name"\n  looks_changeeffectby EFFECT:"COLOR"|"FISHEYE"|"WHIRL"|"PIXELATE"|"MOSAIC"|"BRIGHTNESS"|"GHOST" CHANGE:num\n  looks_changesizeby CHANGE:num\n  looks_changestretchby CHANGE:num\n  looks_cleargraphiceffects\n  looks_costumenumbername NUMBER_NAME:"number"|"name"\n  looks_goforwardbackwardlayers FORWARD_BACKWARD:"forward"|"backward" NUM:num\n  looks_gotofrontback FRONT_BACK:"front"|"back"\n  looks_hide\n  looks_nextbackdrop\n  looks_nextcostume\n  looks_say MESSAGE:text\n  looks_sayforsecs MESSAGE:text SECS:num\n  looks_seteffectto EFFECT:"COLOR"|"FISHEYE"|"WHIRL"|"PIXELATE"|"MOSAIC"|"BRIGHTNESS"|"GHOST" VALUE:num\n  looks_setsizeto SIZE:num\n  looks_setstretchto STRETCH:num\n  looks_show\n  looks_size\n  looks_switchbackdropto BACKDROP:"<backdrop name>"|"next backdrop"|"previous backdrop"|"random backdrop"\n  looks_switchbackdroptoandwait BACKDROP:"<backdrop name>"\n  looks_switchcostumeto COSTUME:"<costume name>"\n  looks_think MESSAGE:text\n  looks_thinkforsecs MESSAGE:text SECS:num\n\nSound:\n  sound_changeeffectby EFFECT:"PITCH"|"PAN" VALUE:num\n  sound_changevolumeby VOLUME:num\n  sound_cleareffects\n  sound_play SOUND_MENU:"<sound name>"\n  sound_playuntildone SOUND_MENU:"<sound name>"\n  sound_seteffectto EFFECT:"PITCH"|"PAN" VALUE:num\n  sound_setvolumeto VOLUME:num\n  sound_stopallsounds\n  sound_volume\n\nEvents:\n  event_broadcast "message"\n  event_broadcastandwait "message"\n  event_whenbackdropswitchesto BACKDROP:"<backdrop name>"\n  event_whenbroadcastreceived "message"\n  event_whenflagclicked\n  event_whengreaterthan WHENGREATERTHANMENU:"LOUDNESS"|"TIMER" VALUE:num\n  event_whenkeypressed KEY_OPTION:"space"|"up arrow"|"down arrow"|"right arrow"|"left arrow"|"any"|"a"|"b"|"c"|"d"|"e"|"f"|"g"|"h"|"i"|"j"|"k"|"l"|"m"|"n"|"o"|"p"|"q"|"r"|"s"|"t"|"u"|"v"|"w"|"x"|"y"|"z"|"0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"\n  event_whenstageclicked\n  event_whenthisspriteclicked\n\nControl:\n  control_all_at_once  [C]\n  control_clear_counter\n  control_create_clone_of CLONE_OPTION:"_myself_"|"<sprite name>"\n  control_delete_this_clone\n  control_for_each $var VALUE:num  [C]\n  control_forever  [C]\n  control_get_counter\n  control_if CONDITION:bool  [C]\n  control_if_else CONDITION:bool  [C + else]\n  control_incr_counter\n  control_repeat TIMES:num  [C]\n  control_repeat_until CONDITION:bool  [C]\n  control_start_as_clone\n  control_stop STOP_OPTION:"all"|"this script"|"other scripts in sprite"\n  control_wait DURATION:num\n  control_wait_until CONDITION:bool\n  control_while CONDITION:bool  [C]\n\nSensing:\n  sensing_answer\n  sensing_askandwait QUESTION:text\n  sensing_coloristouchingcolor COLOR:"#rrggbb" COLOR2:"#rrggbb"\n  sensing_current CURRENTMENU:"YEAR"|"MONTH"|"DATE"|"DAYOFWEEK"|"HOUR"|"MINUTE"|"SECOND"\n  sensing_dayssince2000\n  sensing_distanceto DISTANCETOMENU:"_mouse_"|"<sprite name>"\n  sensing_keypressed KEY_OPTION:"space"|"up arrow"|"down arrow"|"right arrow"|"left arrow"|"any"|"a"|"b"|"c"|"d"|"e"|"f"|"g"|"h"|"i"|"j"|"k"|"l"|"m"|"n"|"o"|"p"|"q"|"r"|"s"|"t"|"u"|"v"|"w"|"x"|"y"|"z"|"0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"\n  sensing_loudness\n  sensing_mousedown\n  sensing_mousex\n  sensing_mousey\n  sensing_of PROPERTY:"x position"|"y position"|"direction"|"costume #"|"costume name"|"size"|"volume"|"backdrop #"|"backdrop name" OBJECT:"_stage_"|"<sprite name>"\n  sensing_resettimer\n  sensing_setdragmode DRAG_MODE:"draggable"|"not draggable"\n  sensing_timer\n  sensing_touchingcolor COLOR:"#rrggbb"\n  sensing_touchingobject TOUCHINGOBJECTMENU:"_mouse_"|"_edge_"|"<sprite name>"\n  sensing_username\n\nOperators:\n  operator_add NUM1:num NUM2:num\n  operator_and OPERAND1:bool OPERAND2:bool\n  operator_contains STRING1:text STRING2:text\n  operator_divide NUM1:num NUM2:num\n  operator_equals OPERAND1:text OPERAND2:text\n  operator_gt OPERAND1:text OPERAND2:text\n  operator_join STRING1:text STRING2:text\n  operator_length STRING:text\n  operator_letter_of LETTER:num STRING:text\n  operator_lt OPERAND1:text OPERAND2:text\n  operator_mathop OPERATOR:"abs"|"floor"|"ceiling"|"sqrt"|"sin"|"cos"|"tan"|"asin"|"acos"|"atan"|"ln"|"log"|"e ^"|"10 ^" NUM:num\n  operator_mod NUM1:num NUM2:num\n  operator_multiply NUM1:num NUM2:num\n  operator_not OPERAND:bool\n  operator_or OPERAND1:bool OPERAND2:bool\n  operator_random FROM:num TO:num\n  operator_round NUM:num\n  operator_subtract NUM1:num NUM2:num\n\nVariables & Lists:\n  data_addtolist ITEM:text @list\n  data_changevariableby $var VALUE:num\n  data_deletealloflist @list\n  data_deleteoflist INDEX:num @list\n  data_hidelist @list\n  data_hidevariable $var\n  data_insertatlist ITEM:text INDEX:num @list\n  data_itemnumoflist ITEM:text @list\n  data_itemoflist INDEX:num @list\n  data_lengthoflist @list\n  data_listcontainsitem @list ITEM:text\n  data_replaceitemoflist INDEX:num @list ITEM:text\n  data_setvariableto $var VALUE:text\n  data_showlist @list\n  data_showvariable $var\n\nPen (extension):\n  pen_changePenColorParamBy COLOR_PARAM:"color"|"saturation"|"brightness"|"transparency" VALUE:num\n  pen_changePenSizeBy SIZE:num\n  pen_clear\n  pen_penDown\n  pen_penUp\n  pen_setPenColorParamTo COLOR_PARAM:"color"|"saturation"|"brightness"|"transparency" VALUE:num\n  pen_setPenColorToColor COLOR:"#rrggbb"\n  pen_setPenSizeTo SIZE:num\n  pen_stamp\n\n=== SPRITES, VARIABLES AND LISTS ===\nRead before you write. list_sprites / list_variables / list_lists / get_list tell you exactly\nwhat exists; guessing a name and getting an error back costs a whole extra round trip.\n\nScope rule for variables and lists: omit sprite_name and it lives on the Stage and is GLOBAL\n(every sprite can use it) — that is the right default. Pass sprite_name only for state that\ngenuinely belongs to one sprite, such as per-clone health. Reads look on the sprite first and\nthen fall back to the Stage, exactly like Scratch, so passing sprite_name never prevents you\nfrom reaching a global. Every result reports the scope it actually used, so check it rather\nthan assuming.\n\nSprites:\n- list_sprites — everything about every sprite plus the Stage; no arguments\n- add_sprite — add from the built-in library by name/keyword. Scratch may append a number if\n  the name is taken; the result tells you the real name, so use that afterwards.\n- duplicate_sprite — copy a sprite with its scripts, costumes and local variables. new_name\n  is optional; without it Scratch auto-numbers and the result reports the name it chose.\n- rename_sprite — blocks that reference the sprite are updated for you\n- delete_sprite — also destroys its scripts, costumes and local variables; the result lists\n  what was removed, so read it before reporting success\n- set_sprite_property — x, y, size, direction, visible, draggable, rotation_style in one call.\n  Out-of-range numbers are clamped by Scratch and reported in warnings.\n\nVariables:\n- create_variable — value type follows Scratch: numeric strings become numbers. Returns\n  existed:true if it was already there instead of failing.\n- set_variable / get_variable — set_variable returns the previous value too\n- rename_variable / delete_variable — delete_variable refuses while blocks still reference\n  the variable and names the sprites using it; pass force:true only if you truly mean it\n- Names are unique per scope across both kinds: you cannot have a variable and a list called\n  the same thing in the same scope, and the tools say so instead of silently doing the wrong\n  thing.\n\nLists (indices are 1-based; "first" and "last" work wherever an index is taken):\n- create_list — pass items to fill it at creation\n- get_list — read the contents; do this before editing so your indices are right\n- add_to_list — item for one value, items for an array to append several at once\n- insert_to_list — insert at a position, pushing later items down (length+1 appends)\n- set_list_item — replace the value at one position\n- delete_from_list — remove one item; index "all" empties the list\n- clear_list — empty it while keeping the list itself\nEvery list-editing result includes the new length and a preview of the contents, so you do\nnot need a follow-up get_list just to confirm what happened.\n\n=== PROHIBITED ===\n- Do NOT use an opcode that is not in the dictionary above\n- Do NOT reorder a block\'s arguments; the DSL is positional\n- Do NOT put a hat block anywhere except the first line of a script\n- Do NOT use Scratch\'s internal array format like [1,[4,"10"]]\n- Do NOT invent tids; only use tids from the context\n- Do NOT print block code or JSON in your chat reply — it belongs in the tool call\n\n=== OTHER TOOLS ===\nProject & code: get_project_info, get_sprite_scripts, click_green_flag, rename_project,\nset_stage_size, get_stage_screenshot.\nSprites: list_sprites, add_sprite, add_sprite_from_url, duplicate_sprite, rename_sprite,\ndelete_sprite, set_sprite_property, change_costume, add_costume_from_url,\nadd_backdrop, change_backdrop.\nVariables: list_variables, create_variable, get_variable, set_variable, rename_variable,\ndelete_variable.\nLists: list_lists, create_list, get_list, add_to_list, insert_to_list, set_list_item,\ndelete_from_list, clear_list.\nExtensions & misc: get_installed_extensions, search_extensions, develop_extension,\ninstall_extension, web_search, get_system_time, get_system_info, pause_output, ask_user.\n\n- get_sprite_scripts: read a sprite\'s existing scripts back as DSL text. Use it before\n  editing unfamiliar code so you insert in the right place.\n- add_costume_from_url / add_sprite_from_url: add art from an image URL\n- get_stage_screenshot: capture the stage as a PNG; for vision models it is added to the\n  conversation as an image so you can look at the result of your own changes\n- develop_extension: write and load a custom extension at runtime (extension_code,\n  extension_name). extension_code must be a bare class or object literal — e.g.\n  "class MyExt { getInfo(){ return {id:"myext", name:"My Ext", blocks:[{opcode:"go", blockType:"command", text:"go [N]", arguments:{N:{type:"number", defaultValue:1}}}]}; } go(args){ /* ... */ } }"\n  — do NOT prefix it with "const X =" and do NOT call Scratch.extensions.register yourself;\n  the editor wraps and registers it. getInfo() must return an object with id, name, blocks.\n- web_search: look up techniques, formulas or documentation on the internet\n- pause_output: pause for 1-60 seconds with a visible countdown (seconds, reason)\n- ask_user: 当用户的要求过于笼统、模糊或存在多种可能解释时，向用户提问以澄清意图（params: question 问题文本, options 2-4 个选项字符串数组）。会渲染一张交互式卡片，用户可点选某个选项或点"其他"输入自定义文本，结果作为工具返回值传回。仅在确实需要澄清时使用，明确具体的请求应直接执行，不要滥用。\n\n=== TODO LIST WORKFLOW (IMPORTANT) ===\nFor multi-step or complex tasks, plan and execute step by step:\n1. Call plan_todos(items: ["step 1", "step 2", ...], title: "optional title") first.\n2. Then do ONE item at a time: update_todo(index: i, status: "doing"), do the work, then\n   update_todo(index: i, status: "done").\n3. Move on only after the current item is done; the card updates in real time.\n4. Do NOT cram every step into a single execute_operations call.\n5. Simple single-step tasks do not need a todo list.\n\n=== WORKING ON EXISTING CODE ===\nWhen the user asks to modify or extend code that already exists, read it first with\nget_sprite_scripts or the context, then use insert_blocks / modify_input / delete_block on\nthe specific tids. Rebuilding a whole script with add_script when the user asked for a small\nchange loses their layout and leaves duplicate stacks behind.\n\nReply in ' + lang + '.';
         return desc;
     }
 
@@ -7023,11 +8584,196 @@
         });
     }
 
+    /* ══════════════════════════════════════════════════════════════════════
+       撤销 AI 更改
+       每个会话只保留一个"基线"：AI 在本次对话里第一次动手之前的完整工程快照。
+       因此每条总结上的撤销按钮语义一致——都是"回到这次对话开始前的样子"，
+       而不是逐步回退，符合"撤销此次对话中的全部更改"。
+
+       快照本体（sb3 压缩包，含素材）留在编辑器渲染进程，这里只持有 id；
+       它随编辑器进程存活，所以按钮渲染前要先确认快照仍然存在。
+       ══════════════════════════════════════════════════════════════════════ */
+
+    // 会改动工程的工具。只读工具（get_*/list_*/搜索/待办/提问）不触发建基线，
+    // 否则用户只是让 AI"看一下"也要付一次全工程打包的开销。
+    var MUTATING_TOOLS = {
+        execute_operations: 1, add_sprite: 1, add_sprite_from_url: 1, delete_sprite: 1,
+        duplicate_sprite: 1, rename_sprite: 1, set_sprite_property: 1,
+        change_costume: 1, add_costume_from_url: 1, add_backdrop: 1, change_backdrop: 1,
+        create_variable: 1, set_variable: 1, delete_variable: 1, rename_variable: 1,
+        create_list: 1, add_to_list: 1, insert_to_list: 1, set_list_item: 1,
+        delete_from_list: 1, clear_list: 1,
+        rename_project: 1, set_stage_size: 1,
+        develop_extension: 1, install_extension: 1,
+        // 点绿旗会跑脚本，而脚本会改变量和角色位置——那也是工程状态的变化
+        click_green_flag: 1
+    };
+
+    /** 当前会话的撤销状态；随会话一起持久化，快照可用性另行核实。 */
+    function currentUndoState() {
+        var conv = conversations.find(function(c) { return c.id === activeConversationId; });
+        return conv && conv.undo ? conv.undo : null;
+    }
+
+    function setUndoState(next) {
+        var conv = conversations.find(function(c) { return c.id === activeConversationId; });
+        if (!conv) return;
+        if (next) conv.undo = next;
+        else delete conv.undo;
+        saveConversations();
+    }
+
+    /**
+     * 在第一次改动前建立基线。已有基线就直接复用——撤销的目标始终是
+     * "这次对话开始前"，不是上一轮。
+     */
+    function ensureUndoBaseline(toolName) {
+        if (IS_REMOTE) return Promise.resolve(null);
+        if (!MUTATING_TOOLS[toolName]) return Promise.resolve(null);
+        if (!window.AIAssistantPreload) return Promise.resolve(null);
+        var existing = currentUndoState();
+        if (existing && existing.snapshotId) {
+            // 上一次撤销之后工程已回到基线，这份快照仍然是正确的基线，继续用
+            if (existing.undone) {
+                existing.undone = false;
+                setUndoState(existing);
+                renderUndoButtons();
+            }
+            return Promise.resolve(existing);
+        }
+        var snapshotId = 'undo_' + (activeConversationId || 'conv') + '_' + Date.now();
+        return window.AIAssistantPreload.callTool('captureProjectSnapshot', { snapshotId: snapshotId })
+            .then(function(res) {
+                if (!res || !res.success) {
+                    // 建基线失败就不装作能撤销：宁可没有按钮，也别给一个点了没用的
+                    console.warn('undo baseline capture failed:', res && res.error);
+                    return null;
+                }
+                var state = { snapshotId: res.data.snapshotId, capturedAt: Date.now(), undone: false };
+                setUndoState(state);
+                renderUndoButtons();
+                return state;
+            })
+            .catch(function(err) {
+                console.warn('undo baseline capture threw:', err);
+                return null;
+            });
+    }
+
+    /** 快照只活在编辑器进程里；会话是持久化的，两者可能不同步。 */
+    function verifyUndoSnapshot() {
+        var state = currentUndoState();
+        if (!state || !state.snapshotId || IS_REMOTE || !window.AIAssistantPreload) {
+            renderUndoButtons();
+            return;
+        }
+        window.AIAssistantPreload.callTool('hasProjectSnapshot', { snapshotId: state.snapshotId })
+            .then(function(res) {
+                if (res && res.success && res.data && !res.data.exists) {
+                    // 编辑器重开过，快照没了：清掉状态，按钮也就不再出现
+                    setUndoState(null);
+                }
+                renderUndoButtons();
+            })
+            .catch(function() { renderUndoButtons(); });
+    }
+
+    /**
+     * 总结气泡下方的脚注：Token 用量 + 撤销按钮。
+     * 两处收尾路径（流式收尾、历史重放）都走这里，保证样式一致、也不会重复插入。
+     */
+    function renderSummaryFooter(wrapper, tokenCount) {
+        if (!wrapper || wrapper.querySelector('.msg-footer')) return;
+        var footer = document.createElement('div');
+        footer.className = 'msg-footer';
+        var usageHtml = formatContextUsageHtml(tokenCount);
+        if (usageHtml) footer.innerHTML = usageHtml;
+        wrapper.appendChild(footer);
+        renderUndoButtons();
+    }
+
+    /** 按当前撤销状态，同步所有总结脚注里的撤销按钮。 */
+    function renderUndoButtons() {
+        var state = currentUndoState();
+        var footers = chatArea.querySelectorAll('.msg-footer');
+        for (var i = 0; i < footers.length; i++) {
+            var footer = footers[i];
+            var btn = footer.querySelector('.undo-ai-btn');
+            if (!state || !state.snapshotId) {
+                if (btn) btn.remove();
+                continue;
+            }
+            if (!btn) {
+                btn = document.createElement('button');
+                btn.className = 'undo-ai-btn';
+                btn.type = 'button';
+                footer.appendChild(btn);
+            }
+            btn.disabled = !!state.undone;
+            btn.classList.toggle('is-done', !!state.undone);
+            btn.title = state.undone ? t('undoAlreadyDone') : t('undoTooltip');
+            btn.innerHTML = state.undone
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' +
+                  '<span>' + escapeHtml(t('undoAlreadyDone')) + '</span>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"></path><path d="M3.51 13a9 9 0 1 0 2.13-9.36L3 7"></path></svg>' +
+                  '<span>' + escapeHtml(t('undoButton')) + '</span>';
+        }
+    }
+
+    /** 执行撤销：确认 → 恢复快照 → 更新按钮状态。 */
+    function performUndo() {
+        var state = currentUndoState();
+        if (!state || !state.snapshotId || state.undone) return;
+        if (isLoading) { showToast(t('undoBusy'), 'error'); return; }
+        if (IS_REMOTE) { remoteSend('undoChanges'); return; }
+
+        customConfirm(t('undoConfirmTitle'), {
+            detail: tf('undoConfirmDetail', { time: formatTime(new Date(state.capturedAt)) }),
+            confirmLabel: t('undoConfirmOk'),
+            danger: true
+        }).then(function(ok) {
+            if (!ok) return;
+            showToast(t('undoRunning'), 'success');
+            return window.AIAssistantPreload.callTool('restoreProjectSnapshot', { snapshotId: state.snapshotId })
+                .then(function(res) {
+                    if (!res || !res.success) {
+                        showToast((res && res.error) || t('undoFailed'), 'error');
+                        // 快照没了就别再留着按钮骗人
+                        if (res && res.error && /no longer available/.test(res.error)) {
+                            setUndoState(null);
+                            renderUndoButtons();
+                        }
+                        return;
+                    }
+                    state.undone = true;
+                    setUndoState(state);
+                    renderUndoButtons();
+                    // 工程内容已变，缓存的工程上下文必须失效，否则下一轮 AI 会基于旧快照推理
+                    projectCodeCache = null;
+                    currentContextMapping = {};
+                    showToast(t('undoDone'), 'success');
+                    phonePushHistory();
+                });
+        });
+    }
+
     function executeToolCall(toolName, params) {
         if (!window.AIAssistantPreload) return Promise.resolve({ success: false, error: 'No preload' });
         var mappedName = toolName;
         switch (toolName) {
             case 'get_project_info': mappedName = 'getProjectSummary'; break;
+            case 'get_sprite_scripts': mappedName = 'getSpriteScripts'; break;
+            case 'list_sprites': mappedName = 'getAllSprites'; break;
+            case 'rename_sprite': mappedName = 'renameSprite'; break;
+            case 'get_variable': mappedName = 'getVariable'; break;
+            case 'list_variables': mappedName = 'getAllVariables'; break;
+            case 'delete_variable': mappedName = 'deleteVariable'; break;
+            case 'rename_variable': mappedName = 'renameVariable'; break;
+            case 'get_list': mappedName = 'getList'; break;
+            case 'list_lists': mappedName = 'getAllLists'; break;
+            case 'set_list_item': mappedName = 'setListItem'; break;
+            case 'insert_to_list': mappedName = 'insertToList'; break;
+            case 'clear_list': mappedName = 'clearList'; break;
             case 'set_sprite_property': mappedName = 'setSpriteProperty'; break;
             case 'set_variable': mappedName = 'setVariable'; break;
             case 'create_variable': mappedName = 'createVariable'; break;
@@ -7128,6 +8874,8 @@
 
         var body = { model: getEffectiveModelId(), messages: messages, stream: true, tools: TOOLS, tool_choice: 'auto' };
         applyThinkingParams(body, modelInfo);
+        // 让服务端在流末尾附一个 usage 分片，用量统计才有真实数字而非本地估算
+        body.stream_options = { include_usage: true };
 
         var inputTokens = currentRequestTokens || 0;
         var ctxLimit = getContextLimit();
@@ -7168,6 +8916,8 @@
                         if (d === '[DONE]') { finish(); return; }
                         try {
                             var j = JSON.parse(d);
+                            // usage 分片可能单独到达（此时 choices 为空数组），要先取
+                            if (j.usage) usageInfo = j.usage;
                             var delta = j.choices && j.choices[0] && j.choices[0].delta;
                             if (!delta) return;
                             if (delta.reasoning_content) {
@@ -7209,6 +8959,7 @@
         function finish() {
             if (finished) return;
             finished = true;
+            recordUsage(usageInfo, inputTokens);
             if (hasToolCall && Object.keys(toolCallsAccum).length > 0) {
                 var toolCalls = [];
                 Object.keys(toolCallsAccum).sort().forEach(function(k) {
@@ -7221,6 +8972,7 @@
         }
 
         var hasOutput = false;
+        var usageInfo = null;
     }
 
     function buildApiMessages() {
@@ -7316,6 +9068,36 @@
     function sendMessage(previousMessages) {
         if (!previousMessages && isLoading) return;
         var isInitial = !previousMessages;
+
+        // 远程端不自己调模型：把文本交给桌面，等桌面把新状态推回来
+        if (IS_REMOTE) {
+            if (!isInitial) return;
+            var remoteText = messageInput.value.trim();
+            var remoteImages = pendingImages.slice();
+            if (!remoteText && !remoteImages.length) return;
+            if (!currentConfig.apiKey) { showToast(t('configureApiKeyFirst'), 'error'); return; }
+            messageInput.value = '';
+            autoResize();
+            pendingImages = [];
+            renderImagePreview();
+            isLoading = true;
+            updateSendBtn();
+            appendUserMessage(remoteText, formatTime(new Date()), remoteImages, true);
+            showTypingIndicator();
+            remoteSend('send', { text: remoteText, images: remoteImages }).then(function(res) {
+                if (!res || res.ok === false) {
+                    // 桌面拒绝了这次发送，回滚乐观渲染并把内容还给输入框
+                    isLoading = false;
+                    messageInput.value = remoteText;
+                    pendingImages = remoteImages;
+                    renderImagePreview();
+                    autoResize();
+                    updateSendBtn();
+                    if (remoteBridge) remoteBridge.refresh();
+                }
+            });
+            return;
+        }
 
         if (isInitial) {
             var content = messageInput.value.trim();
@@ -7605,8 +9387,9 @@
 
     function setupEvents() {
         if (sendBtn) sendBtn.addEventListener('click', function() {
-            if (isLoading && abortController) {
-                abortController.abort();
+            if (isLoading) {
+                if (IS_REMOTE) { remoteSend('abort'); return; }
+                if (abortController) { abortController.abort(); return; }
                 return;
             }
             if (!sendBtn.disabled) sendMessage();
@@ -7616,7 +9399,11 @@
             messageInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) { 
                     e.preventDefault();
-                    if (isLoading && abortController) { abortController.abort(); return; }
+                    if (isLoading) {
+                        if (IS_REMOTE) { remoteSend('abort'); return; }
+                        if (abortController) { abortController.abort(); return; }
+                        return;
+                    }
                     if (!sendBtn.disabled) sendMessage(); 
                 }
             });
@@ -7624,6 +9411,30 @@
         if (settingsBtn) settingsBtn.addEventListener('click', function() { settingsOpen ? closeSettings() : openSettings(); });
         // 全屏页面没有"遮罩"可点，误点内容区边缘不应整页关闭；只留返回按钮和 Esc
         if (settingsHandle) settingsHandle.addEventListener('click', closeSettings);
+        var tabModelsBtn = document.getElementById('settingsTabModels');
+        if (tabModelsBtn) tabModelsBtn.addEventListener('click', function() { setSettingsTab('models'); });
+        var tabUsageBtn = document.getElementById('settingsTabUsage');
+        if (tabUsageBtn) tabUsageBtn.addEventListener('click', function() { setSettingsTab('usage'); });
+        document.querySelectorAll('.usage-range-btn').forEach(function(b) {
+            b.addEventListener('click', function() { setUsageRange(b.getAttribute('data-range')); });
+        });
+        var usageResetBtn = document.getElementById('usageResetBtn');
+        if (usageResetBtn) usageResetBtn.addEventListener('click', function() {
+            if (IS_REMOTE) { showToast(t('usageRemoteOnly'), 'error'); return; }
+            customConfirm(t('usageResetConfirm')).then(function(ok) {
+                if (!ok) return;
+                usageData = { days: {} };
+                saveUsage();
+                renderUsage();
+                showToast(t('usageResetDone'), 'success');
+                phonePushHistory();
+            });
+        });
+        setupUsageChartHover();
+        // 面板宽度随窗口变化，柱状图要跟着重画
+        window.addEventListener('resize', function() {
+            if (settingsOpen && settingsTab === 'usage') renderUsage();
+        });
         if (clearChatBtn) clearChatBtn.addEventListener('click', clearChat);
         var addModelBtn = document.getElementById('addModelBtn');
         if (addModelBtn) addModelBtn.addEventListener('click', function() { openModelDialog(null); });
@@ -7879,8 +9690,9 @@
     }
 
     // ══ 手机编程：局域网同步 ══
-    // 桌面是"事实源"：任何会话变化都推给主进程，由主进程经 SSE 转发给手机；
-    // 手机发来的消息经主进程回投到本页，走与键盘输入完全相同的发送管线。
+    // 桌面是唯一事实源：会话、模型列表、加载态都由桌面推给手机；手机上的每个操作
+    // （发送、切会话、新建、删除、清空、切模型、改思考档、中断）都作为命令回投桌面，
+    // 由桌面执行后再把新状态推回来，所以两端始终一致。
     var phonePopover = document.getElementById('phonePopover');
     var phoneLinkBtn = document.getElementById('phoneLinkBtn');
     var phoneCloseBtn = document.getElementById('phoneCloseBtn');
@@ -7893,7 +9705,6 @@
     var phoneLastStreamPush = 0;
     var phoneStreamTimer = 0;
     var phoneStreamState = null;
-    var phoneLoading = false;
 
     function tf(key, vars) {
         var str = t(key);
@@ -7905,26 +9716,81 @@
         return str;
     }
 
-    // 当前会话快照：手机端渲染所需的全部信息
+    // 手机端要还原完整界面，所以快照带上会话列表与模型列表；API Key 一律不外传，
+    // 只给手机端一个掩码串。图片只保留最近几条，避免每次推送都拖着几 MB base64。
+    var PHONE_IMAGE_KEEP = 4;
+
+    function phoneSnapshotMessages() {
+        var kept = 0;
+        var out = [];
+        for (var i = chatHistory.length - 1; i >= 0; i--) {
+            var m = sanitizeMessageForStorage(chatHistory[i]);
+            if (m && m.role === 'user' && m.images && m.images.length) {
+                if (kept < PHONE_IMAGE_KEEP) {
+                    kept++;
+                } else {
+                    var copy = {};
+                    for (var k in m) copy[k] = m[k];
+                    copy.images = undefined;
+                    m = copy;
+                }
+            }
+            out.unshift(m);
+        }
+        return JSON.parse(JSON.stringify(out));
+    }
+
     function phoneSnapshot() {
         var conv = conversations.find(function(c) { return c.id === activeConversationId; });
         return {
-            title: conv ? conv.title : 'NeoWarp AI',
-            messages: JSON.parse(JSON.stringify(chatHistory)),
+            title: conv ? conv.title : t('appTitle'),
+            messages: phoneSnapshotMessages(),
             loading: !!isLoading,
             stream: phoneStreamState ? JSON.parse(JSON.stringify(phoneStreamState)) : null,
-            theme: document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light'
+            theme: document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light',
+            locale: currentLocale,
+            conversations: conversations.map(function(c) {
+                return {
+                    id: c.id,
+                    title: c.title,
+                    updatedAt: c.updatedAt,
+                    messageCount: (c.messages || []).filter(function(m) {
+                        return m && (m.role === 'user' || (m.role === 'assistant' && m.content));
+                    }).length
+                };
+            }),
+            activeConversationId: activeConversationId,
+            configs: savedConfigs.map(function(cfg) {
+                return {
+                    id: cfg.id,
+                    name: cfg.name,
+                    provider: cfg.provider,
+                    model: cfg.model,
+                    customModelId: cfg.customModelId,
+                    customEndpoint: cfg.customEndpoint,
+                    apiFormat: cfg.apiFormat,
+                    customContextLimit: cfg.customContextLimit,
+                    thinkingLevel: cfg.thinkingLevel,
+                    // 只给掩码串：手机端据此判断"已配置"并原样显示，拿不到真实密钥
+                    apiKeyMask: maskApiKey(cfg.apiKey)
+                };
+            }),
+            activeConfigIndex: activeConfigIndex,
+            thinkingLevel: currentConfig.thinkingLevel || 'medium',
+            contextLimit: getContextLimit(),
+            requestTokens: currentRequestTokens,
+            usage: usageData
         };
     }
 
     function phonePush(kind, data) {
-        if (!window.AIAssistantPreload) return;
+        if (IS_REMOTE || !window.AIAssistantPreload) return;
         try {
             window.AIAssistantPreload.phoneSyncBroadcast({ kind: kind, data: data || {} });
         } catch (e) { void e; }
     }
 
-    // 会话变化（消息增删、工具结果等）→ 推完整历史
+    // 会话变化（消息增删、工具结果、切会话等）→ 推完整快照
     function phonePushHistory() {
         var snap = phoneSnapshot();
         delete snap.stream;
@@ -7954,31 +9820,232 @@
         if (phoneStreamTimer) { clearTimeout(phoneStreamTimer); phoneStreamTimer = 0; }
     }
 
-    // 手机发来的消息：与键盘输入走同一条发送管线
-    function phoneAcceptRemote(text) {
-        text = String(text || '').trim();
-        if (!text) return;
-        if (phoneLinkOpen) togglePhonePopover(false);
-        if (isLoading) {
-            phonePush('history', phoneSnapshot());
-            return;
-        }
-        if (!currentConfig.apiKey) {
-            phonePush('error', { message: t('configureApiKeyFirst') });
-            return;
-        }
-        messageInput.value = text;
-        updateSendBtn();
-        sendMessage();
-    }
-
-    // 供主进程拉取快照（SSE 新客户端接入时）
+    // 供主进程拉取快照（新客户端接入 / 页面首屏内联）
     window.__phoneGetSyncState = function() {
         var snap = phoneSnapshot();
         if (!isLoading) snap.stream = null;
         return snap;
     };
-    window.__phoneAcceptRemote = phoneAcceptRemote;
+    // 手机端发起的操作在桌面这一侧真正执行，走的都是与本机点击完全相同的函数，
+    // 因此不会出现"手机改了但桌面没变"的分叉。返回值原样回给手机。
+    window.__phoneRemoteCommand = function(msg) {
+        try {
+            return handlePhoneCommand(msg || {});
+        } catch (e) {
+            return { ok: false, error: String((e && e.message) || e) };
+        }
+    };
+
+    function handlePhoneCommand(msg) {
+        var cmd = String(msg.cmd || '');
+        switch (cmd) {
+            case 'send': {
+                var text = String(msg.text || '').trim();
+                var images = Array.isArray(msg.images) ? msg.images.filter(function(s) {
+                    return typeof s === 'string' && s.indexOf('data:image/') === 0;
+                }) : [];
+                if (!text && !images.length) return { ok: false, error: '消息为空' };
+                if (isLoading) return { ok: false, error: '电脑端正在生成，请稍候' };
+                if (!currentConfig.apiKey) return { ok: false, error: t('configureApiKeyFirst') };
+                if (phoneLinkOpen) togglePhonePopover(false);
+                messageInput.value = text;
+                pendingImages = images;
+                renderImagePreview();
+                updateSendBtn();
+                sendMessage();
+                return { ok: true };
+            }
+            case 'abort': {
+                if (!isLoading || !abortController) return { ok: false, error: '当前没有进行中的回答' };
+                abortController.abort();
+                return { ok: true };
+            }
+            case 'newChat': {
+                if (isLoading) return { ok: false, error: '电脑端正在生成，请稍候' };
+                saveCurrentConversation();
+                createNewConversation();
+                return { ok: true };
+            }
+            case 'selectChat': {
+                if (isLoading) return { ok: false, error: '电脑端正在生成，请稍候' };
+                var id = String(msg.id || '');
+                if (!conversations.find(function(c) { return c.id === id; })) {
+                    return { ok: false, error: '会话不存在' };
+                }
+                if (id !== activeConversationId) {
+                    saveCurrentConversation();
+                    loadConversation(id);
+                }
+                return { ok: true };
+            }
+            case 'deleteChat': {
+                if (isLoading) return { ok: false, error: '电脑端正在生成，请稍候' };
+                var delId = String(msg.id || '');
+                var delIdx = conversations.findIndex(function(c) { return c.id === delId; });
+                if (delIdx === -1) return { ok: false, error: '会话不存在' };
+                conversations.splice(delIdx, 1);
+                if (activeConversationId === delId) {
+                    if (conversations.length > 0) {
+                        activeConversationId = conversations[0].id;
+                        loadConversation(activeConversationId);
+                    } else {
+                        createNewConversation();
+                    }
+                }
+                saveConversations();
+                renderConversationList();
+                updateSendBtn();
+                phonePushHistory();
+                return { ok: true };
+            }
+            case 'clearChat': {
+                if (isLoading) return { ok: false, error: '电脑端正在生成，请稍候' };
+                clearChat();
+                phonePushHistory();
+                return { ok: true };
+            }
+            case 'selectModel': {
+                var mIdx = parseInt(msg.index, 10);
+                if (isNaN(mIdx) || mIdx < 0 || mIdx >= savedConfigs.length) {
+                    return { ok: false, error: '模型不存在' };
+                }
+                selectConfig(mIdx);
+                phonePushHistory();
+                return { ok: true };
+            }
+            case 'setThinking': {
+                var lvl = String(msg.level || '');
+                if (!THINKING_LEVELS.some(function(x) { return x.key === lvl; })) {
+                    return { ok: false, error: '无效的思考档位' };
+                }
+                setThinkingLevel(lvl);
+                phonePushHistory();
+                return { ok: true };
+            }
+            case 'answerQuestion': {
+                if (!activeQuestionResolver) return { ok: false, error: '当前没有待回答的问题' };
+                var answer = String(msg.answer || '');
+                if (!answer) return { ok: false, error: '回答为空' };
+                var isCustom = !!msg.isCustom;
+                if (activeQuestionCard && activeQuestionCard._finalizeAnswer) {
+                    var btn = null;
+                    if (isCustom) {
+                        btn = activeQuestionCard.querySelector('.question-other-btn');
+                    } else {
+                        activeQuestionCard.querySelectorAll('.question-option').forEach(function(b) {
+                            if (b.classList.contains('question-other-btn')) return;
+                            var label = b.querySelector('.question-option-label');
+                            if (label && label.textContent === answer) btn = b;
+                        });
+                    }
+                    activeQuestionCard._finalizeAnswer(answer, isCustom, btn);
+                }
+                activeQuestionResolver({ success: true, answer: answer, isCustom: isCustom });
+                return { ok: true };
+            }
+            case 'applyProject': {
+                if (!window.AIAssistantPreload) return { ok: false, error: 'Preload 不可用' };
+                var json;
+                try { json = JSON.parse(String(msg.projectJSON || '')); } catch (e) { return { ok: false, error: '工程 JSON 无效' }; }
+                window.AIAssistantPreload.applyProject(json).then(function(r) {
+                    phonePush('toast', {
+                        message: r && r.success ? '工程已在电脑端应用' : '应用失败',
+                        type: r && r.success ? 'success' : 'error'
+                    });
+                });
+                return { ok: true };
+            }
+            case 'ping':
+                return { ok: true };
+            default:
+                return { ok: false, error: '不支持的操作：' + cmd };
+        }
+    }
+
+    // ── 远程端：把桌面快照套回同一套界面 ──
+    var remoteStreamWrapper = null;
+
+    function remoteApplySnapshot(snap) {
+        if (!snap) return;
+        if (snap.locale && snap.locale !== currentLocale) setLocale(snap.locale);
+        applyTheme(snap.theme || 'light');
+
+        conversations = (snap.conversations || []).map(function(c) {
+            return {
+                id: c.id,
+                title: c.title,
+                messages: [],
+                messageCount: c.messageCount || 0,
+                createdAt: c.updatedAt,
+                updatedAt: c.updatedAt
+            };
+        });
+        activeConversationId = snap.activeConversationId || null;
+
+        savedConfigs = (snap.configs || []).map(function(cfg) {
+            var copy = {};
+            Object.keys(cfg).forEach(function(k) { copy[k] = cfg[k]; });
+            // 真实密钥不出桌面，远程端只拿到掩码串：它既能驱动"已配置"判断，
+            // 又能原样通过 maskApiKey 显示（掩码再掩码结果不变）。
+            copy.apiKey = cfg.apiKeyMask || '';
+            return copy;
+        });
+        activeConfigIndex = typeof snap.activeConfigIndex === 'number' ? snap.activeConfigIndex : -1;
+        applyActiveConfig();
+        remoteContextLimit = snap.contextLimit || 0;
+
+        chatHistory = snap.messages || [];
+        isLoading = !!snap.loading;
+        currentRequestTokens = snap.requestTokens || 0;
+        // 用量记录同样以电脑端为准，手机端只展示
+        if (snap.usage && snap.usage.days) usageData = { days: snap.usage.days };
+
+        updateAllUI();
+        renderConversationList();
+        renderChatHistory();
+        remoteRenderStream(snap.stream);
+        updateSendBtn();
+        if (settingsOpen && settingsTab === 'usage') renderUsage();
+    }
+
+    // 流式片段在远程端每次重建一个临时气泡；推理内容仍走桌面那套分组渲染
+    function remoteRenderStream(stream) {
+        if (remoteStreamWrapper && remoteStreamWrapper.parentNode) remoteStreamWrapper.remove();
+        remoteStreamWrapper = null;
+        var typing = document.getElementById('typingIndicator');
+        if (typing) typing.remove();
+        if (!isLoading) return;
+        if (!stream || (!stream.content && !stream.reasoning)) {
+            showTypingIndicator();
+            return;
+        }
+        welcomeMessage.style.display = 'none';
+        var wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper ai';
+        var bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.innerHTML = formatMarkdown(stream.content || '');
+        wrapper.appendChild(bubble);
+        chatArea.appendChild(wrapper);
+        remoteStreamWrapper = wrapper;
+        if (stream.reasoning) updateStreamingReasoning(wrapper, stream.reasoning);
+        scrollToBottom();
+    }
+
+    function setupRemoteSync() {
+        remoteBridge.on(function(kind, data) {
+            if (kind === 'snapshot' || kind === 'history') {
+                remoteApplySnapshot(data);
+            } else if (kind === 'stream') {
+                isLoading = true;
+                updateSendBtn();
+                remoteRenderStream(data);
+            } else if (kind === 'toast') {
+                showToast(data.message || '', data.type || 'success');
+            }
+        });
+        remoteApplySnapshot(remoteBridge.boot);
+    }
 
     function renderPhoneUrls(urls) {
         phoneUrlList.innerHTML = '';
@@ -7989,15 +10056,11 @@
             btn.title = u;
             btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"></path></svg><span>' + escapeHtml(u) + '</span>';
             btn.addEventListener('click', function() {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(u).then(function() {
-                        showToast(t('phoneCopied'), 'success');
-                    }).catch(function() {
-                        showToast(t('phoneCopyFail'), 'error');
-                    });
-                } else {
+                copyTextToClipboard(u).then(function() {
+                    showToast(t('phoneCopied'), 'success');
+                }).catch(function() {
                     showToast(t('phoneCopyFail'), 'error');
-                }
+                });
             });
             phoneUrlList.appendChild(btn);
         });
@@ -8063,11 +10126,6 @@
     if (window.AIAssistantPreload && window.AIAssistantPreload.onPhoneClientsChanged) {
         window.AIAssistantPreload.onPhoneClientsChanged(function(data) {
             updatePhoneClientStatus(data && typeof data.count === 'number' ? data.count : 0);
-        });
-    }
-    if (window.AIAssistantPreload && window.AIAssistantPreload.onPhoneRemoteMessage) {
-        window.AIAssistantPreload.onPhoneRemoteMessage(function(data) {
-            phoneAcceptRemote(data && data.text);
         });
     }
 
