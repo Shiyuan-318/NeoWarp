@@ -4,6 +4,7 @@ const nodeURL = require('url');
 const {app, protocol, net} = require('electron');
 const {getDist, getPlatform} = require('./platform');
 const packageJSON = require('../package.json');
+const {getExpandsRoots} = require('./neowarp-expands');
 
 /**
  * @typedef Metadata
@@ -86,7 +87,7 @@ const FILE_SCHEMES = {
     root: path.resolve(__dirname, '../src-renderer/ai-assistant'),
     standard: true,
     secure: true,
-    csp: "default-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'unsafe-inline'; connect-src *; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net"
+    csp: "default-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src * tw-ai-proxy:; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net"
   },
   'tw-todo-list': {
     root: path.resolve(__dirname, '../src-renderer/todo-list'),
@@ -110,9 +111,22 @@ const FILE_SCHEMES = {
     root: path.resolve(__dirname, '../src-renderer/collaboration'),
     standard: true,
     secure: true,
+    csp: "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:"
+  },
+  'tw-mobile-preview': {
+    root: path.resolve(__dirname, '../src-renderer/mobile-preview'),
+    standard: true,
+    secure: true,
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
-  }
+  },
+  // nw-expands 由 createExpandsProtocolHandler 处理（根目录运行时才确定），
+  // 不走下面的静态 FILE_SCHEMES 流程
 };
+
+// NeoWarp 本地扩展目录协议：Expands/<扩展名>/<作者>/<简介>/*.js
+// host 为根目录 id（app=主根目录，data=userData）。扩展代码由 VM fetch 加载、
+// 图片由 <img> 加载，因此需要 supportFetchAPI；bypassCSP 免去编辑器 CSP 白名单。
+const EXPANDS_SCHEME = 'nw-expands';
 
 const MIME_TYPES = new Map();
 MIME_TYPES.set('.html', 'text/html');
@@ -125,6 +139,10 @@ MIME_TYPES.set('.wav', 'audio/wav');
 MIME_TYPES.set('.svg', 'image/svg+xml');
 MIME_TYPES.set('.png', 'image/png');
 MIME_TYPES.set('.jpg', 'image/jpeg');
+MIME_TYPES.set('.jpeg', 'image/jpeg');
+MIME_TYPES.set('.webp', 'image/webp');
+MIME_TYPES.set('.bmp', 'image/bmp');
+MIME_TYPES.set('.avif', 'image/avif');
 MIME_TYPES.set('.gif', 'image/gif');
 MIME_TYPES.set('.cur', 'image/x-icon');
 MIME_TYPES.set('.ico', 'image/x-icon');
@@ -141,15 +159,44 @@ MIME_TYPES.set('.zip', 'application/zip');
 MIME_TYPES.set('.xml', 'text/xml');
 MIME_TYPES.set('.md', 'text/markdown');
 
-protocol.registerSchemesAsPrivileged(Object.entries(FILE_SCHEMES).map(([scheme, metadata]) => ({
-  scheme,
-  privileges: {
-    standard: !!metadata.standard,
-    supportFetchAPI: !!metadata.supportFetch,
-    secure: !!metadata.secure,
-    stream: !!metadata.stream
+// AI 请求转发协议：自定义 API 端点普遍不返回 CORS 头，页面直接 fetch 会被
+// 浏览器拦截。该协议把请求交给主进程的 net.fetch 转发（主进程无 CORS 限制），
+// 目标地址与请求头经编码放在查询参数里，SSE 流式响应原样透传。
+const AI_PROXY_SCHEME = 'tw-ai-proxy';
+
+protocol.registerSchemesAsPrivileged([
+  ...Object.entries(FILE_SCHEMES).map(([scheme, metadata]) => ({
+    scheme,
+    privileges: {
+      standard: !!metadata.standard,
+      supportFetchAPI: !!metadata.supportFetch,
+      secure: !!metadata.secure,
+      stream: !!metadata.stream
+    }
+  })),
+  {
+    scheme: AI_PROXY_SCHEME,
+    privileges: {
+      // non-standard：目标 URL 整体编码进查询参数，避免 URL 规范化破坏它
+      standard: false,
+      supportFetchAPI: true,
+      secure: true,
+      stream: true,
+      bypassCSP: true
+    }
+  },
+  {
+    scheme: EXPANDS_SCHEME,
+    privileges: {
+      // non-standard：host 是根目录 id，路径各段单独 encodeURI 后拼接
+      standard: false,
+      supportFetchAPI: true,
+      secure: true,
+      stream: true,
+      bypassCSP: true
+    }
   }
-})));
+]);
 
 /**
  * Promisified zlib.brotliDecompress
@@ -424,6 +471,179 @@ const createLegacyFileProtocolHandler = (metadata) => {
   };
 };
 
+/** @returns {Promise<Buffer | undefined>} */
+const readProtocolRequestBody = async (request) => {
+  if (request.method === 'GET' || request.method === 'HEAD' || !request.body) {
+    return undefined;
+  }
+  const reader = request.body.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > 64 * 1024 * 1024) {
+      throw new Error('AI proxy request body too large');
+    }
+    chunks.push(Buffer.from(value));
+  }
+  return Buffer.concat(chunks);
+};
+
+/**
+ * 转发 AI API 请求。只允许 http/https 目标；Authorization 等请求头
+ * 由页面编码在查询参数中传过来，SSE 响应体以流的形式原样透传。
+ */
+const createAIProxyHandler = () => async (request) => {
+  try {
+    const parsed = new URL(request.url);
+    if (parsed.host !== 'request') {
+      throw new Error('Invalid AI proxy URL');
+    }
+    const target = parsed.searchParams.get('u');
+    const headersParam = parsed.searchParams.get('h');
+    if (!target || !/^https?:\/\//i.test(target)) {
+      throw new Error('Invalid AI proxy target');
+    }
+    const headers = headersParam ?
+      JSON.parse(Buffer.from(headersParam, 'base64url').toString('utf8')) :
+      {};
+    const body = await readProtocolRequestBody(request);
+    const response = await net.fetch(target, {
+      method: request.method,
+      headers,
+      body
+    });
+    const responseHeaders = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+    // 页面源是 tw-ai-assistant://，补一个宽松的 CORS 头以防万一
+    responseHeaders['access-control-allow-origin'] = '*';
+    return new Response(response.body, {
+      status: response.status,
+      headers: responseHeaders
+    });
+  } catch (error) {
+    console.error('[ai-proxy]', error);
+    return new Response(JSON.stringify({
+      error: {message: String((error && error.message) || error)}
+    }), {
+      status: 502,
+      headers: {
+        'content-type': 'application/json',
+        'access-control-allow-origin': '*'
+      }
+    });
+  }
+};
+
+/**
+ * nw-expands:// 协议处理器：Expands 本地扩展目录。
+ * URL 形如 nw-expands://<rootId>/<扩展名>/<作者>/<简介>/<file>，
+ * rootId 在运行时映射到实际根目录（主进程 neowarp-expands.js）。
+ * @returns {(request: Request) => Promise<Response>}
+ */
+const createExpandsProtocolHandler = () => {
+  const baseHeaders = getBaseProtocolHeaders({embeddable: false});
+
+  const resolveRoot = (rootId) => getExpandsRoots().find(rootInfo => rootInfo.id === rootId);
+
+  /**
+   * 解析请求 URL 到绝对路径；非法请求返回 null。
+   * @param {string} url
+   * @returns {Promise<{resolved: string; mimeType: string} | null>}
+   */
+  const resolveFile = async (url) => {
+    const parsedURL = new URL(url);
+    const rootInfo = resolveRoot(parsedURL.hostname);
+    if (!rootInfo) return null;
+    // 各路径段在生成 URL 时单独 encode 过，这里逐段解码，避免 %2F 之类被提前还原
+    const segments = parsedURL.pathname
+      .split('/')
+      .filter(Boolean)
+      .map(segment => decodeURIComponent(segment));
+    if (!segments.length) return null;
+
+    const root = path.join(rootInfo.root, '/');
+    const resolved = path.join(root, ...segments);
+    if (!resolved.startsWith(root)) return null; // path traversal
+
+    const fileExtension = path.extname(resolved).toLowerCase();
+    const mimeType = MIME_TYPES.get(fileExtension);
+    if (!mimeType) return null;
+    return {resolved, mimeType};
+  };
+
+  return async (request) => {
+    try {
+      const file = await resolveFile(request.url);
+      if (!file) {
+        return new Response('Not found', {status: 404, headers: baseHeaders});
+      }
+      const response = await net.fetch(nodeURL.pathToFileURL(file.resolved));
+      return new Response(response.body, {
+        headers: {
+          ...baseHeaders,
+          'content-type': file.mimeType
+        }
+      });
+    } catch (error) {
+      console.error('[nw-expands]', error);
+      return new Response('Error', {status: 400, headers: baseHeaders});
+    }
+  };
+};
+
+/** nw-expands 的传统协议回调版本（Electron 22 / Windows 7/8/8.1） */
+const createLegacyExpandsProtocolHandler = () => {
+  const baseHeaders = getBaseProtocolHeaders({embeddable: false});
+
+  /**
+   * @param {Electron.ProtocolRequest} request
+   * @param {(result: {path: string; statusCode?: number; headers?: Record<string, string>;}) => void} callback
+   */
+  return (request, callback) => {
+    (async () => {
+      const parsedURL = new URL(request.url);
+      const rootInfo = getExpandsRoots().find(root => root.id === parsedURL.hostname);
+      if (!rootInfo) throw new Error('Unknown root');
+      const segments = parsedURL.pathname
+        .split('/')
+        .filter(Boolean)
+        .map(segment => decodeURIComponent(segment));
+      if (!segments.length) throw new Error('Empty path');
+
+      const root = path.join(rootInfo.root, '/');
+      const resolved = path.join(root, ...segments);
+      if (!resolved.startsWith(root)) throw new Error('Path traversal blocked');
+
+      const fileExtension = path.extname(resolved).toLowerCase();
+      const mimeType = MIME_TYPES.get(fileExtension);
+      if (!mimeType) throw new Error(`Invalid file extension: ${fileExtension}`);
+
+      callback({
+        path: resolved,
+        headers: {
+          ...baseHeaders,
+          'content-type': mimeType
+        }
+      });
+    })().catch(error => {
+      console.error('[nw-expands]', error);
+      callback({
+        path: path.join(__dirname, '../src-protocol-error/legacy-file/unknown.html'),
+        statusCode: 400,
+        headers: {
+          ...baseHeaders,
+          ...errorPageHeaders
+        }
+      });
+    });
+  };
+};
+
 app.whenReady().then(() => {
   for (const [scheme, metadata] of Object.entries(FILE_SCHEMES)) {
     // Electron 22 (used by Windows 7/8/8.1 build) does not support protocol.handle() or new Response()
@@ -436,5 +656,12 @@ app.whenReady().then(() => {
         protocol.registerFileProtocol(scheme, createLegacyFileProtocolHandler(metadata));
       }
     }
+  }
+
+  if (protocol.handle) {
+    protocol.handle(AI_PROXY_SCHEME, createAIProxyHandler());
+    protocol.handle(EXPANDS_SCHEME, createExpandsProtocolHandler());
+  } else {
+    protocol.registerFileProtocol(EXPANDS_SCHEME, createLegacyExpandsProtocolHandler());
   }
 });

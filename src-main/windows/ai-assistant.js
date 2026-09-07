@@ -4,6 +4,7 @@ const {translate, getLocale} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const settings = require('../settings');
 const privilegedFetch = require('../fetch');
+const phoneSync = require('../phone-sync');
 const https = require('https');
 const http = require('http');
 
@@ -325,24 +326,32 @@ class AIAssistantWindow extends AbstractWindow {
       return { success: true };
     });
 
+    // 打包/恢复整个工程要压缩全部素材，大工程可能远超普通工具调用的 30 秒
+    const SLOW_TOOLS = {
+      captureProjectSnapshot: 180000,
+      restoreProjectSnapshot: 180000
+    };
+
     this.ipc.handle('ai-tool-call', async (event, toolName, params) => {
       if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
         return { success: false, error: 'Editor window not available' };
       }
       return new Promise((resolve) => {
         const requestId = Date.now().toString();
+        let timer = null;
         const handler = (event, data) => {
           if (data && data.requestId === requestId) {
             ipcMain.removeListener('ai-tool-response', handler);
+            if (timer) clearTimeout(timer);
             resolve(data.result || { success: false, error: 'No response' });
           }
         };
         ipcMain.on('ai-tool-response', handler);
         this.editorWindow.window.webContents.send('ai-tool-call', { requestId, toolName, params });
-        setTimeout(() => {
+        timer = setTimeout(() => {
           ipcMain.removeListener('ai-tool-response', handler);
           resolve({ success: false, error: 'Tool call timeout' });
-        }, 30000);
+        }, SLOW_TOOLS[toolName] || 30000);
       });
     });
 
@@ -403,6 +412,24 @@ class AIAssistantWindow extends AbstractWindow {
 
     this.ipc.handle('ai-get-locale', () => {
       return getLocale() || 'en';
+    });
+
+    // 手机编程：局域网同步服务（扫码后手机加载的就是这份桌面页面本体）
+    this.ipc.handle('ai-get-phone-link', () => {
+      phoneSync.register(this, ipcMain);
+      return phoneSync.getLinkInfo();
+    });
+    this.ipc.handle('ai-phone-get-state', () => phoneSync.getSnapshot());
+    const onPhoneBroadcast = (event, payload) => {
+      // 只接受 AI 窗口自身的广播
+      if (event.sender === this.window.webContents) {
+        phoneSync.broadcast(payload);
+      }
+    };
+    ipcMain.on('ai-phone-broadcast', onPhoneBroadcast);
+    // ipcMain 是全局的，窗口关掉后要摘掉监听，否则反复开关会越积越多
+    this.window.on('closed', () => {
+      ipcMain.removeListener('ai-phone-broadcast', onPhoneBroadcast);
     });
 
     this.ipc.handle('ai-close-window', () => {

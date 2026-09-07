@@ -10,7 +10,9 @@ const privilegedFetch = (url) => new Promise((resolve, reject) => {
   const parsedURL = new URL(url);
   // Import http and https lazily as they take about 17ms to import the first time
   const mod = parsedURL.protocol === 'http:' ? require('http') : require('https');
-  const request = mod.get(url, {
+  // Request with the parsed URL so non-ASCII paths are percent-encoded and
+  // internationalized hostnames are converted to punycode automatically.
+  const request = mod.get(parsedURL, {
     headers: {
       'user-agent': `${name}/${version}`
     }

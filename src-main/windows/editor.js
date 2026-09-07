@@ -27,7 +27,9 @@ const TodoListWindow = require('./todo-list');
 const ProjectAnalysisWindow = require('./project-analysis');
 const TaskManagerWindow = require('./task-manager');
 const CollaborationWindow = require('./collaboration');
+const MobilePreviewWindow = require('./mobile-preview');
 const AbstractWindow = require('./abstract');
+const {scanExpands} = require('../neowarp-expands');
 
 const TYPE_FILE = 'file';
 const TYPE_URL = 'url';
@@ -824,6 +826,14 @@ class EditorWindow extends ProjectRunningWindow {
 
     this.ipc.handle('fetch-image', async (event, url) => {
       try {
+        // Also allow importing images from the local filesystem
+        if (/^file:/i.test(url)) {
+          return await fsPromises.readFile(nodeURL.fileURLToPath(url));
+        }
+        // Windows drive letter ("C:\...") or UNC path ("\\server\...")
+        if (/^(?:[a-zA-Z]:[\\/]|\\\\)/.test(url)) {
+          return await fsPromises.readFile(path.resolve(url));
+        }
         const buffer = await privilegedFetch(url);
         return buffer;
       } catch (e) {
@@ -869,6 +879,10 @@ class EditorWindow extends ProjectRunningWindow {
 
     this.ipc.handle('open-task-manager', () => {
       TaskManagerWindow.show(this);
+    });
+
+    this.ipc.handle('open-mobile-preview', () => {
+      MobilePreviewWindow.show(this);
     });
 
     this.ipc.on('project-json-response', (event, data) => {
@@ -917,6 +931,14 @@ class EditorWindow extends ProjectRunningWindow {
       contactWindows.forEach(w => {
         if (!w.window.isDestroyed()) w.window.webContents.send('contact-theme-changed', data);
       });
+      const mpWindows = AbstractWindow.getWindowsByClass(MobilePreviewWindow);
+      mpWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('mobile-preview-theme-changed', data);
+      });
+      const collabWindows = AbstractWindow.getWindowsByClass(CollaborationWindow);
+      collabWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('collab-theme-changed', data);
+      });
     });
 
     this.ipc.handle('get-advanced-customizations', async () => {
@@ -933,6 +955,9 @@ class EditorWindow extends ProjectRunningWindow {
         userstyle
       };
     });
+
+    // NeoWarp: 本地 Expands 扩展目录（扩展库 NeoWarp 标签的数据源）
+    this.ipc.handle('get-neowarp-expands', () => scanExpands());
 
     this.ipc.on('get-code-area-background-image', (event) => {
       event.returnValue = settings.codeAreaBackgroundImage;
@@ -1007,16 +1032,37 @@ class EditorWindow extends ProjectRunningWindow {
       };
     });
 
+    // NeoWarp: AI tool - get complete system info (uses Node.js native os module
+    // to avoid os-browserify polyfill issue in webpack-bundled renderer)
+    this.ipc.handle('get-ai-system-info', () => {
+      try {
+        const cpus = os.cpus();
+        const cpuModel = cpus.length > 0 ? cpus[0].model : 'Unknown';
+        return {
+          success: true,
+          data: {
+            model: cpuModel,
+            cores: cpus.length,
+            speed: cpus.length > 0 ? cpus[0].speed + ' MHz' : 'Unknown',
+            architecture: os.arch(),
+            platform: os.platform(),
+            release: os.release(),
+            hostname: os.hostname(),
+            totalMemory: Math.round(os.totalmem() / (1024 * 1024 * 1024) * 100) / 100 + ' GB',
+            freeMemory: Math.round(os.freemem() / (1024 * 1024 * 1024) * 100) / 100 + ' GB',
+            uptime: Math.round(os.uptime() / 3600 * 100) / 100 + ' hours',
+            userInfo: os.userInfo().username,
+            homedir: os.homedir(),
+            endianness: os.endianness()
+          }
+        };
+      } catch (e) {
+        return { success: false, error: 'Failed to get system info: ' + e.message };
+      }
+    });
+
     // NeoWarp: Detached stage window
     this.detachedStageWindow = null;
-
-    // NeoWarp: Collaboration state
-    this.collaborationState = {
-      isCollaborating: false,
-      role: null, // 'host' or 'participant'
-      onlineCount: 0,
-      permissions: null
-    };
 
     this.ipc.handle('detach-stage', (event, stageWidth, stageHeight) => {
       if (this.detachedStageWindow) {
@@ -1067,51 +1113,24 @@ class EditorWindow extends ProjectRunningWindow {
       CollaborationWindow.focusChat(this);
     });
 
-    this.ipc.handle('check-collaboration-permission', (event, action) => {
-      if (!this.collaborationState.isCollaborating) {
-        return { allowed: true };
+    // Project JSON flows from the editor renderer to the collaboration window.
+    // Per-frame IPC only delivers messages sent from the same frame, so these
+    // must be registered HERE (on the editor's own frame), not on the
+    // collaboration window's frame, or the messages are silently dropped.
+    this.ipc.on('collab-send-project-json', (event, { project, targetUsername }) => {
+      const collabWindow = AbstractWindow.getWindowsByClass(CollaborationWindow)
+        .find(cw => cw.editorWindow === this);
+      if (collabWindow) {
+        collabWindow.handleProjectJSONFromEditor(project, targetUsername);
       }
-      // Host always has full permissions
-      if (this.collaborationState.role === 'host') {
-        return { allowed: true };
+    });
+
+    this.ipc.on('collab-send-project-update', (event, { project }) => {
+      const collabWindow = AbstractWindow.getWindowsByClass(CollaborationWindow)
+        .find(cw => cw.editorWindow === this);
+      if (collabWindow) {
+        collabWindow.handleProjectUpdateFromEditor(project);
       }
-      // Participant: check permissions
-      const perms = this.collaborationState.permissions || {};
-      const permissionMap = {
-        'add-extension': perms.allowAddExtension !== false,
-        'delete-extension': perms.allowDeleteExtension !== false,
-        'delete-sprite': perms.allowDeleteSprite !== false
-      };
-      return { allowed: permissionMap[action] !== false };
-    });
-
-    // Listen for collaboration state changes from collaboration window
-    this.ipc.on('collab-state-change', (event, data) => {
-      this.collaborationState = {
-        isCollaborating: data.isCollaborating,
-        role: data.role,
-        onlineCount: data.onlineCount || 0,
-        permissions: data.permissions || null
-      };
-      // Push to renderer
-      this.window.webContents.send('collaboration-state-changed', this.collaborationState);
-    });
-
-    // Listen for chat messages to forward to editor renderer
-    this.ipc.on('collab-chat-forward', (event, data) => {
-      this.window.webContents.send('collaboration-chat-message', data);
-    });
-
-    // Listen for collaboration ended
-    this.ipc.on('collab-ended-forward', (event, data) => {
-      this.collaborationState = {
-        isCollaborating: false,
-        role: null,
-        onlineCount: 0,
-        permissions: null
-      };
-      this.window.webContents.send('collaboration-ended', data);
-      this.window.webContents.send('collaboration-state-changed', this.collaborationState);
     });
 
     this.loadURL('tw-editor://./gui/gui.html');

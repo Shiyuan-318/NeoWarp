@@ -1,5 +1,6 @@
 const AbstractWindow = require('./abstract');
 const CollaborationServer = require('../collaboration-server');
+const {ipcMain} = require('electron');
 const os = require('os');
 const http = require('http');
 
@@ -94,9 +95,12 @@ class CollaborationWindow extends AbstractWindow {
     this.server = null;
     this.ws = null;
     this.joinUsername = null;
+    this.joinPermissions = null;
     this.hostNickname = '主机';
     this.hostAvatar = '🏠';
     this.forceClose = false;
+    this.pingInterval = null;
+    this.lastPongTime = 0;
 
     this.window.on('page-title-updated', event => {
       event.preventDefault();
@@ -121,6 +125,8 @@ class CollaborationWindow extends AbstractWindow {
     this.ipc.handle('collab-get-mode', () => {
       return this.mode;
     });
+
+    this.ipc.handle('collab-get-theme', () => this.requestEditorTheme());
 
     this.ipc.handle('collab-get-local-ip', () => {
       const interfaces = os.networkInterfaces();
@@ -155,8 +161,13 @@ class CollaborationWindow extends AbstractWindow {
       });
 
       this.server.onClientJoin = (username, avatar) => {
-        const onlineCount = this.server.getOnlineCount() + 1; // +1 for host
-        this.sendToCollabWindow('collab-client-join', { username, avatar, onlineCount });
+        const onlineCount = this.server.getTotalOnlineCount();
+        this.sendToCollabWindow('collab-client-join', {
+          username,
+          avatar,
+          onlineCount,
+          members: this.server.getRoster()
+        });
         this.sendToEditor('collaboration-state-changed', {
           isCollaborating: true,
           role: 'host',
@@ -166,8 +177,12 @@ class CollaborationWindow extends AbstractWindow {
       };
 
       this.server.onClientLeave = (username) => {
-        const onlineCount = this.server.getOnlineCount() + 1;
-        this.sendToCollabWindow('collab-client-leave', { username, onlineCount });
+        const onlineCount = this.server.getTotalOnlineCount();
+        this.sendToCollabWindow('collab-client-leave', {
+          username,
+          onlineCount,
+          members: this.server.getRoster()
+        });
         this.sendToEditor('collaboration-state-changed', {
           isCollaborating: true,
           role: 'host',
@@ -197,7 +212,8 @@ class CollaborationWindow extends AbstractWindow {
           success: true,
           onlineCount: 1,
           nickname: this.hostNickname,
-          avatar: this.hostAvatar
+          avatar: this.hostAvatar,
+          members: this.server.getRoster()
         });
         this.sendToEditor('collaboration-state-changed', {
           isCollaborating: true,
@@ -286,17 +302,37 @@ class CollaborationWindow extends AbstractWindow {
                 this.ws = ws;
                 this.joinUsername = message.username;
                 this.joinAvatar = message.avatar || this.joinAvatar;
+                this.joinPermissions = message.permissions || null;
                 this.sendToCollabWindow('collab-join-connected', {
                   success: true,
                   permissions: message.permissions,
                   username: message.username,
-                  avatar: this.joinAvatar
+                  avatar: this.joinAvatar,
+                  onlineCount: message.onlineCount,
+                  hostName: message.hostName,
+                  hostAvatar: message.hostAvatar,
+                  members: message.members
                 });
                 this.sendToEditor('collaboration-state-changed', {
                   isCollaborating: true,
                   role: 'participant',
-                  onlineCount: 1,
+                  onlineCount: message.onlineCount,
                   permissions: message.permissions
+                });
+                this.startJoinHeartbeat();
+                // Detect the host going away after the connection was
+                // established (crash, network loss, host app killed)
+                ws.addEventListener('close', () => {
+                  if (this.ws === ws) {
+                    this.stopJoinHeartbeat();
+                    this.ws = null;
+                    this.sendToCollabWindow('collab-collaboration-ended', { reason: 'connection-lost' });
+                    this.sendToEditor('collaboration-state-changed', {
+                      isCollaborating: false,
+                      role: null,
+                      onlineCount: 0
+                    });
+                  }
                 });
                 resolve({ success: true });
               } else {
@@ -321,7 +357,35 @@ class CollaborationWindow extends AbstractWindow {
             return;
           }
 
+          if (message.type === 'pong') {
+            this.lastPongTime = Date.now();
+            return;
+          }
+
+          if (message.type === 'member-joined') {
+            this.sendToCollabWindow('collab-member-joined', message);
+            this.sendToEditor('collaboration-state-changed', {
+              isCollaborating: true,
+              role: 'participant',
+              onlineCount: message.onlineCount,
+              permissions: this.joinPermissions
+            });
+            return;
+          }
+
+          if (message.type === 'member-left') {
+            this.sendToCollabWindow('collab-member-left', message);
+            this.sendToEditor('collaboration-state-changed', {
+              isCollaborating: true,
+              role: 'participant',
+              onlineCount: message.onlineCount,
+              permissions: this.joinPermissions
+            });
+            return;
+          }
+
           if (message.type === 'collaboration-ended') {
+            this.stopJoinHeartbeat();
             this.sendToCollabWindow('collab-collaboration-ended', { reason: message.reason });
             this.sendToEditor('collaboration-state-changed', {
               isCollaborating: false,
@@ -354,6 +418,7 @@ class CollaborationWindow extends AbstractWindow {
     });
 
     this.ipc.handle('collab-leave', async () => {
+      this.stopJoinHeartbeat();
       if (this.ws) {
         try { this.ws.close(); } catch (e) {}
         this.ws = null;
@@ -393,24 +458,9 @@ class CollaborationWindow extends AbstractWindow {
       }
     });
 
-    // Host: editor sends project JSON to broadcast to a specific client or all
-    this.ipc.on('collab-send-project-json', (event, { project, targetUsername }) => {
-      if (this.mode === 'host' && this.server) {
-        this.server.broadcastProject(project, targetUsername);
-      }
-    });
-
-    // Participant: editor sends project update to broadcast to host and others
-    this.ipc.on('collab-send-project-update', (event, { project }) => {
-      if (this.mode === 'join' && this.ws) {
-        try {
-          this.ws.send(JSON.stringify({ type: 'project-update', project }));
-        } catch (e) {
-          // ignore
-        }
-      }
-    });
-
+    // Host: editor sends project JSON to broadcast to a specific client or all.
+    // Registered on the EDITOR window's frame IPC (see EditorWindow) because
+    // per-frame IPC only receives messages sent from that same frame.
     this.ipc.handle('collab-close-window', () => {
       if (this.window && !this.window.isDestroyed()) {
         this.window.close();
@@ -422,7 +472,56 @@ class CollaborationWindow extends AbstractWindow {
     this.show();
   }
 
+  // Called by EditorWindow when the editor renderer exports project JSON
+  handleProjectJSONFromEditor (project, targetUsername) {
+    if (this.mode === 'host' && this.server) {
+      this.server.broadcastProject(project, targetUsername);
+    }
+  }
+
+  // Called by EditorWindow when a participant's editor broadcasts its project
+  handleProjectUpdateFromEditor (project) {
+    if (this.mode === 'join' && this.ws) {
+      try {
+        this.ws.send(JSON.stringify({ type: 'project-update', project }));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  // Application-level liveness probing for the join connection: sends a ping
+  // the server echoes back, so a silently lost network is noticed within ~70s.
+  startJoinHeartbeat () {
+    this.stopJoinHeartbeat();
+    this.lastPongTime = Date.now();
+    this.pingInterval = setInterval(() => {
+      if (!this.ws) {
+        this.stopJoinHeartbeat();
+        return;
+      }
+      if (Date.now() - this.lastPongTime > 70000) {
+        // Server stopped answering: force the close path so the UI resets
+        try { this.ws.close(); } catch (e) {}
+        return;
+      }
+      try {
+        this.ws.send(JSON.stringify({ type: 'ping' }));
+      } catch (e) {
+        // ignore
+      }
+    }, 25000);
+  }
+
+  stopJoinHeartbeat () {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+  }
+
   cleanup () {
+    this.stopJoinHeartbeat();
     if (this.server) {
       this.sendToEditor('collaboration-state-changed', {
         isCollaborating: false,
@@ -456,6 +555,31 @@ class CollaborationWindow extends AbstractWindow {
     }
   }
 
+  // Ask the editor renderer which theme it is currently using, so the
+  // collaboration window opens in light/dark to match it.
+  requestEditorTheme () {
+    const editorWindow = this.editorWindow;
+    if (!editorWindow || !editorWindow.window || editorWindow.window.isDestroyed()) {
+      return 'light';
+    }
+    return new Promise((resolve) => {
+      const requestId = `collaboration-${Date.now()}`;
+      const handler = (event, data) => {
+        if (data && data.requestId === requestId) {
+          ipcMain.removeListener('theme-response', handler);
+          clearTimeout(timeout);
+          resolve(data.theme || 'light');
+        }
+      };
+      const timeout = setTimeout(() => {
+        ipcMain.removeListener('theme-response', handler);
+        resolve('light');
+      }, 3000);
+      ipcMain.on('theme-response', handler);
+      editorWindow.window.webContents.send('request-theme', {requestId});
+    });
+  }
+
   getDimensions () {
     return {
       width: 460,
@@ -472,7 +596,7 @@ class CollaborationWindow extends AbstractWindow {
   }
 
   getBackgroundColor () {
-    return '#f5f5f7';
+    return '#f2f2f7';
   }
 
   static showHost (editorWindow) {
