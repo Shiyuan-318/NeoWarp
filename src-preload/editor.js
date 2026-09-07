@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   },
   setIsFullScreen: (isFullScreen) => ipcRenderer.invoke('set-is-full-screen', isFullScreen),
   getSystemStats: () => ipcRenderer.invoke('get-system-stats'),
+  getAISystemInfo: () => ipcRenderer.invoke('get-ai-system-info'),
   detachStage: () => ipcRenderer.invoke('detach-stage'),
   reattachStage: () => ipcRenderer.invoke('reattach-stage'),
   sendStageFrame: (dataURL) => ipcRenderer.send('stage-frame', dataURL),
@@ -46,10 +47,12 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   getStageAreaBackgroundImage: () => ipcRenderer.sendSync('get-stage-area-background-image'),
   setStageAreaBackgroundImage: (imageData) => ipcRenderer.invoke('set-stage-area-background-image', imageData),
   getTopBarDeviceStats: () => ipcRenderer.sendSync('get-top-bar-device-stats'),
+  getNeowarpExpands: () => ipcRenderer.invoke('get-neowarp-expands'),
   openAI: () => ipcRenderer.invoke('open-ai-assistant'),
   openTodoList: () => ipcRenderer.invoke('open-todo-list'),
   openProjectAnalysis: () => ipcRenderer.invoke('open-project-analysis'),
   openTaskManager: () => ipcRenderer.invoke('open-task-manager'),
+  openMobilePreview: () => ipcRenderer.invoke('open-mobile-preview'),
   onRequestProjectJSON: (callback) => {
     ipcRenderer.on('request-project-json', (event, data) => {
       callback(data);
@@ -116,15 +119,8 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   endCollaboration: () => ipcRenderer.invoke('end-collaboration'),
   leaveCollaboration: () => ipcRenderer.invoke('leave-collaboration'),
   openCollaborationChat: () => ipcRenderer.invoke('open-collaboration-chat'),
-  checkCollaborationPermission: (action) => ipcRenderer.invoke('check-collaboration-permission', action),
   onCollaborationStateChange: (callback) => {
     ipcRenderer.on('collaboration-state-changed', (event, data) => callback(data));
-  },
-  onCollaborationChatMessage: (callback) => {
-    ipcRenderer.on('collaboration-chat-message', (event, data) => callback(data));
-  },
-  onCollaborationEnded: (callback) => {
-    ipcRenderer.on('collaboration-ended', (event, data) => callback(data));
   },
   onCollabRequestProjectJSON: (callback) => {
     ipcRenderer.on('collab-request-project-json', (event, data) => callback(data));
@@ -137,13 +133,6 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   },
   sendCollabProjectUpdate: (project) => {
     ipcRenderer.send('collab-send-project-update', { project });
-  },
-  removeAllCollaborationListeners: () => {
-    ipcRenderer.removeAllListeners('collaboration-state-changed');
-    ipcRenderer.removeAllListeners('collaboration-chat-message');
-    ipcRenderer.removeAllListeners('collaboration-ended');
-    ipcRenderer.removeAllListeners('collab-request-project-json');
-    ipcRenderer.removeAllListeners('collab-project-update');
   }
 });
 

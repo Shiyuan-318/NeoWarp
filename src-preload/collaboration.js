@@ -2,10 +2,12 @@ const {contextBridge, ipcRenderer} = require('electron');
 
 contextBridge.exposeInMainWorld('CollaborationPreload', {
   getMode: () => ipcRenderer.invoke('collab-get-mode'),
+  getTheme: () => ipcRenderer.invoke('collab-get-theme'),
   getLocalIP: () => ipcRenderer.invoke('collab-get-local-ip'),
-  startHost: (password, port, permissions) => ipcRenderer.invoke('collab-start-host', { password, port, permissions }),
+  discoverSessions: (port) => ipcRenderer.invoke('collab-discover-sessions', { port }),
+  startHost: (password, port, permissions, nickname, avatar) => ipcRenderer.invoke('collab-start-host', { password, port, permissions, nickname, avatar }),
   endHost: () => ipcRenderer.invoke('collab-end-host'),
-  joinConnect: (ip, port, password) => ipcRenderer.invoke('collab-join-connect', { ip, port, password }),
+  joinConnect: (ip, port, password, nickname, avatar) => ipcRenderer.invoke('collab-join-connect', { ip, port, password, nickname, avatar }),
   leave: () => ipcRenderer.invoke('collab-leave'),
   sendMessage: (text) => ipcRenderer.send('collab-send-chat', { text }),
   closeWindow: () => ipcRenderer.invoke('collab-close-window'),
@@ -14,8 +16,11 @@ contextBridge.exposeInMainWorld('CollaborationPreload', {
   onChatMessage: (callback) => ipcRenderer.on('collab-chat-message', (e, data) => callback(data)),
   onClientJoin: (callback) => ipcRenderer.on('collab-client-join', (e, data) => callback(data)),
   onClientLeave: (callback) => ipcRenderer.on('collab-client-leave', (e, data) => callback(data)),
+  onMemberJoined: (callback) => ipcRenderer.on('collab-member-joined', (e, data) => callback(data)),
+  onMemberLeft: (callback) => ipcRenderer.on('collab-member-left', (e, data) => callback(data)),
   onCollaborationEnded: (callback) => ipcRenderer.on('collab-collaboration-ended', (e, data) => callback(data)),
   onFocusChat: (callback) => ipcRenderer.on('collab-focus-chat', () => callback()),
   onEndRequested: (callback) => ipcRenderer.on('collab-end-requested', () => callback()),
   onLeaveRequested: (callback) => ipcRenderer.on('collab-leave-requested', () => callback()),
+  onThemeChanged: (callback) => ipcRenderer.on('collab-theme-changed', (e, data) => callback(data)),
 });
