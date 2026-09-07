@@ -1,7 +1,7 @@
 {
   "name": "neowarp",
   "description": "NeoWarp - Scratch mod with a compiler, dark mode, a bunch of addons, and more.",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "license": "GPL-3.0",
   "author": {
     "email": "contact@neowarp.org",
@@ -18,7 +18,7 @@
     "ai:schema": "node scripts/gen-opcode-schema.js",
     "ai:prompt": "node scripts/build-system-prompt.js --write",
     "ai:check": "node scripts/gen-opcode-schema.js --check && node scripts/build-system-prompt.js --check",
-    "ai:test": "node scripts/test-dsl-roundtrip.js && node scripts/test-data-tools.js",
+    "ai:test": "node scripts/test-dsl-roundtrip.js && node scripts/test-data-tools.js && node scripts/test-stream-retry.js",
     "electron:package:dir": "electron-builder --dir",
     "electron:build": "electron-builder"
   },

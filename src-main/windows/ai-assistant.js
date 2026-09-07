@@ -326,24 +326,32 @@ class AIAssistantWindow extends AbstractWindow {
       return { success: true };
     });
 
+    // 打包/恢复整个工程要压缩全部素材，大工程可能远超普通工具调用的 30 秒
+    const SLOW_TOOLS = {
+      captureProjectSnapshot: 180000,
+      restoreProjectSnapshot: 180000
+    };
+
     this.ipc.handle('ai-tool-call', async (event, toolName, params) => {
       if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
         return { success: false, error: 'Editor window not available' };
       }
       return new Promise((resolve) => {
         const requestId = Date.now().toString();
+        let timer = null;
         const handler = (event, data) => {
           if (data && data.requestId === requestId) {
             ipcMain.removeListener('ai-tool-response', handler);
+            if (timer) clearTimeout(timer);
             resolve(data.result || { success: false, error: 'No response' });
           }
         };
         ipcMain.on('ai-tool-response', handler);
         this.editorWindow.window.webContents.send('ai-tool-call', { requestId, toolName, params });
-        setTimeout(() => {
+        timer = setTimeout(() => {
           ipcMain.removeListener('ai-tool-response', handler);
           resolve({ success: false, error: 'Tool call timeout' });
-        }, 30000);
+        }, SLOW_TOOLS[toolName] || 30000);
       });
     });
 

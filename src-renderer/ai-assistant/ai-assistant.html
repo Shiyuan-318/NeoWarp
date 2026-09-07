@@ -1342,6 +1342,63 @@
             line-height: 1.4;
         }
         .msg-context-usage.is-warn { color: #f59e0b; font-weight: 600; }
+        /* ── 总结脚注：Token 用量 + 撤销按钮 ── */
+        .msg-footer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 5px 4px 0 6px;
+            flex-shrink: 0;
+        }
+        /* 脚注自己已经排好版，用量文本不再需要单独的内距 */
+        .msg-footer .msg-context-usage { padding: 0; }
+        .undo-ai-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius-full);
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 11.5px;
+            font-weight: 600;
+            letter-spacing: -0.1px;
+            cursor: pointer;
+            outline: none;
+            transition: all var(--transition);
+        }
+        .undo-ai-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+        /* 撤销是破坏性操作，悬停时才转成警示色，静置时不喧哗 */
+        .undo-ai-btn:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.06);
+        }
+        .undo-ai-btn:active { transform: scale(0.97); }
+        .undo-ai-btn:focus-visible { box-shadow: 0 0 0 3px var(--accent-ring); }
+        .undo-ai-btn.is-done {
+            border-color: transparent;
+            background: transparent;
+            color: var(--text-tertiary);
+            cursor: default;
+        }
+        .undo-ai-btn.is-done:hover {
+            border-color: transparent;
+            background: transparent;
+            color: var(--text-tertiary);
+        }
+        .undo-ai-btn:disabled { cursor: default; }
+        .dialog-detail {
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            text-align: center;
+            margin: -2px 0 4px;
+        }
+
         /* 气泡下方的 Token 用量：与气泡左对齐，读作总结的脚注 */
         .message-wrapper.ai .msg-context-usage {
             text-align: left;
@@ -2929,6 +2986,28 @@
             background: var(--accent);
             color: #fff;
         }
+        .config-card-badge.free {
+            background: rgba(10, 163, 111, 0.14);
+            color: #0a8f60;
+        }
+        .dark-mode .config-card-badge.free { color: #34d399; }
+        /* 额度用尽的提示插在对话流里，比 toast 更难被漏掉 */
+        .quota-notice {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 100%;
+            padding: 10px 14px;
+            border: 0.5px solid rgba(245, 158, 11, 0.45);
+            border-radius: var(--radius);
+            background: rgba(245, 158, 11, 0.1);
+            color: #b45309;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.55;
+        }
+        .dark-mode .quota-notice { color: #fcd34d; }
+        .quota-notice svg { width: 16px; height: 16px; flex-shrink: 0; }
         .config-card-badge.warn {
             background: rgba(245, 158, 11, 0.15);
             color: #b45309;
@@ -2949,6 +3028,12 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+        /* 额度说明是一句话，不是密钥，用等宽字体读起来别扭 */
+        .config-card-sub.is-quota {
+            font-family: inherit;
+            font-size: 11.5px;
+            font-variant-numeric: tabular-nums;
         }
         .config-card-tools {
             display: flex;
@@ -4113,6 +4198,19 @@
     'use strict';
 
     var PROVIDERS = {
+        /* 内置额度服务：装在本机的 OpenAI 兼容端点，随应用提供一份共享额度，
+           让没有自备 API Key 的用户也能直接用。上下文按实际部署给到 20 万。 */
+        neowarpfree: {
+            name: 'NeoWarp 内置额度', logo: '#0aa36f', logoText: 'N',
+            endpoint: 'https://api.sy1.top/v1/chat/completions',
+            supportsVision: false,
+            isBuiltIn: true,
+            models: [
+                { id: 'deepseek-v4-pro-0813', name: 'DeepSeek V4 Pro（免费）', supportsReasoning: true, supportsVision: false, contextLimit: 200000, maxOutput: 16384 },
+                { id: 'GLM-5.3', name: 'GLM-5.3（免费）', supportsReasoning: true, supportsVision: false, contextLimit: 200000, maxOutput: 16384 }
+            ],
+            defaultModel: 'deepseek-v4-pro-0813'
+        },
         openai: {
             name: 'OpenAI', logo: '#10a37f', logoText: 'O',
             endpoint: 'https://api.openai.com/v1/chat/completions',
@@ -4855,6 +4953,8 @@
     var remoteBridge = window.__NeoWarpRemote || null;
     // 桌面算好的上下文上限，远程端照用（本地 PROVIDERS 表可能查不到自定义模型）
     var remoteContextLimit = 0;
+    // 内置额度的已用量同样以桌面为准，手机端只是显示
+    var remoteBuiltinQuotaUsed = null;
 
     function remoteSend(cmd, payload) {
         if (!remoteBridge) return Promise.resolve({ ok: false, error: 'no bridge' });
@@ -4937,6 +5037,9 @@
             settingsSaved: 'Settings saved',
             chatCleared: 'Chat cleared',
             generationCancelled: 'Generation cancelled',
+            streamRetrying: 'Connection lost. Retrying in {s}s ({n}/{max})',
+            streamRetryExhausted: 'Auto-retry failed after 10 attempts. Last error: ',
+            emptyStreamResponse: 'The model returned an empty response (the stream ended without any output).',
             copied: 'Copied',
             copy: 'Copy',
             apply: 'Apply',
@@ -5002,6 +5105,24 @@
             usageResetConfirm: 'Clear all recorded usage data?',
             usageResetDone: 'Usage records cleared',
             usageRemoteOnly: 'Usage records live on the computer',
+            undoButton: 'Undo AI changes',
+            undoTooltip: 'Revert the project to how it was before the AI touched it in this chat',
+            undoAlreadyDone: 'Changes undone',
+            undoConfirmTitle: 'Undo all AI changes in this chat?',
+            undoConfirmDetail: 'The project goes back to how it was at {time}, before the AI first changed anything in this chat. Anything you edited by hand since then is lost too, and this cannot be redone.',
+            undoConfirmOk: 'Undo changes',
+            undoRunning: 'Restoring the project…',
+            undoDone: 'AI changes undone',
+            undoFailed: 'Could not restore the project',
+            undoBusy: 'Wait for the current reply to finish first',
+            undoRemoteOnly: 'Undo runs on the computer',
+            builtinConfigName: 'Free (built in)',
+            builtinBadge: 'Free',
+            builtinQuotaLeft: 'Shared daily quota · {left} of {total} tokens left today',
+            builtinQuotaSpent: 'Daily quota used up · resets tomorrow',
+            quotaExhausted: 'You have hit the daily token limit. Please use your own API key.',
+            builtinNotEditable: 'The built-in free model cannot be edited. Add your own model instead.',
+            builtinNotDeletable: 'The built-in free model cannot be removed.',
             settingsNavTitle: 'Settings',
             usage7d: 'Last 7 days',
             usageChartByDay: 'Tokens by day',
@@ -5103,6 +5224,9 @@
             settingsSaved: '设置已保存',
             chatCleared: '对话已清空',
             generationCancelled: '生成已取消',
+            streamRetrying: '连接断开，{s} 秒后自动重试（{n}/{max}）',
+            streamRetryExhausted: '已自动重试 10 次仍失败，最后一次报错：',
+            emptyStreamResponse: '模型返回了空响应（流已结束但没有任何输出）。',
             copied: '已复制',
             copy: '复制',
             apply: '应用',
@@ -5168,6 +5292,24 @@
             usageResetConfirm: '确定清除全部用量记录？',
             usageResetDone: '用量记录已清除',
             usageRemoteOnly: '用量记录保存在电脑端',
+            undoButton: '撤销 AI 更改',
+            undoTooltip: '把工程恢复到本次对话中 AI 动手之前的状态',
+            undoAlreadyDone: '已撤销',
+            undoConfirmTitle: '撤销本次对话中 AI 的全部更改？',
+            undoConfirmDetail: '工程将恢复到 {time}（AI 在本次对话中第一次改动之前）的状态。你在那之后手动做的修改也会一并丢失，且无法恢复。',
+            undoConfirmOk: '撤销更改',
+            undoRunning: '正在恢复工程…',
+            undoDone: 'AI 的更改已撤销',
+            undoFailed: '恢复工程失败',
+            undoBusy: '请先等当前回答结束',
+            undoRemoteOnly: '撤销操作在电脑端执行',
+            builtinConfigName: '免费模型（内置）',
+            builtinBadge: '免费',
+            builtinQuotaLeft: '共享额度 · 今日剩余 {left} / {total} Token',
+            builtinQuotaSpent: '今日额度已用完 · 次日零点重置',
+            quotaExhausted: '您已达到每日Token限制，请使用您自己的API Key',
+            builtinNotEditable: '内置免费模型不可编辑，如需自定义请新增一个模型。',
+            builtinNotDeletable: '内置免费模型不可删除。',
             settingsNavTitle: '设置',
             usage7d: '近 7 天',
             usageChartByDay: '每日 Token 用量',
@@ -5399,6 +5541,8 @@
             try { loadConfigs(); } catch(e) { console.error('loadConfigs error:', e); }
             try { loadUsage(); } catch(e) { console.error('loadUsage error:', e); }
             try { loadConversations(); } catch(e) { console.error('loadConversations error:', e); }
+            // 会话里的撤销状态是持久化的，快照却随编辑器进程存亡；启动时核实一次
+            try { verifyUndoSnapshot(); } catch(e) { console.error('verifyUndoSnapshot error:', e); }
             try { setupDisclaimer(); } catch(e) { console.error('setupDisclaimer error:', e); }
         }
         try { autoResize(); } catch(e) { console.error('autoResize error:', e); }
@@ -5460,13 +5604,21 @@
             // 历史裁剪实际按 token 预算走 buildApiMessages，故清掉这个死字段。
             delete cfg.contextWindow;
         });
-        if (savedConfigs.length === 0) {
-            savedConfigs = [createDefaultConfig()];
-            activeConfigIndex = 0;
+        // 内置额度对老用户也要出现；固定排在第一位，且不把凭据写进本地存储
+        var builtinIdx = savedConfigs.findIndex(function(cfg) { return isBuiltInProvider(cfg.provider); });
+        if (builtinIdx < 0) {
+            savedConfigs.unshift(createBuiltinConfig());
             saveConfigs();
-        } else {
-            activeConfigIndex = 0;
+        } else if (builtinIdx > 0) {
+            savedConfigs.unshift(savedConfigs.splice(builtinIdx, 1)[0]);
+            saveConfigs();
+        } else if (savedConfigs[0].apiKey || savedConfigs[0].name === 'Free (built in)' || savedConfigs[0].name === '免费模型（内置）') {
+            // 早期版本把凭据或翻译后的名字写进了本地存储，这里一并清掉
+            savedConfigs[0].apiKey = '';
+            savedConfigs[0].name = '';
+            saveConfigs();
         }
+        activeConfigIndex = 0;
         applyActiveConfig();
         updateAllUI();
     }
@@ -5551,7 +5703,7 @@
                     return m;
                 });
             }
-            return { id: c.id, title: c.title, messages: msgs, createdAt: c.createdAt, updatedAt: c.updatedAt };
+            return { id: c.id, title: c.title, messages: msgs, createdAt: c.createdAt, updatedAt: c.updatedAt, undo: c.undo };
         });
         return JSON.stringify({
             conversations: mapped,
@@ -5566,7 +5718,7 @@
         try {
             var payload = JSON.stringify({
                 conversations: conversations.map(function(c) {
-                    return { id: c.id, title: c.title, messages: (c.messages || []).map(sanitizeMessageForStorage), createdAt: c.createdAt, updatedAt: c.updatedAt };
+                    return { id: c.id, title: c.title, messages: (c.messages || []).map(sanitizeMessageForStorage), createdAt: c.createdAt, updatedAt: c.updatedAt, undo: c.undo };
                 }),
                 activeConversationId: activeConversationId,
                 nextConversationId: nextConversationId
@@ -5618,6 +5770,8 @@
         saveConversations();
         renderConversationList();
         updateSendBtn();
+        // 会话是持久化的，快照只活在编辑器进程里；核实后再决定要不要显示撤销按钮
+        verifyUndoSnapshot();
         if (messageInput) messageInput.focus();
     }
 
@@ -5629,19 +5783,30 @@
         saveConversations();
     }
 
-    function customConfirm(message) {
+    /**
+     * @param {string} message 标题
+     * @param {{detail?: string, confirmLabel?: string, danger?: boolean}} [options]
+     *        确认按钮文案可定制——原来写死成"删除"，撤销这类操作用它会读错。
+     */
+    function customConfirm(message, options) {
+        var opts = options || {};
         return new Promise(function(resolve) {
             var overlay = document.createElement('div');
             overlay.className = 'dialog-overlay confirm-overlay open';
             overlay.style.zIndex = '300';
             var panel = document.createElement('div');
             panel.className = 'dialog-panel';
-            panel.style.maxWidth = '360px';
+            panel.style.maxWidth = '380px';
+            var okStyle = opts.danger === false
+                ? 'flex:0 0 auto;padding:10px 22px;'
+                : 'flex:0 0 auto;padding:10px 22px;background:#e74c3c;color:#fff;';
             panel.innerHTML =
                 '<div class="dialog-title">' + escapeHtml(message) + '</div>' +
+                (opts.detail ? '<div class="dialog-detail">' + escapeHtml(opts.detail) + '</div>' : '') +
                 '<div style="display:flex;gap:10px;justify-content:center;margin-top:8px;">' +
                 '<button class="btn btn-secondary" data-action="cancel" style="flex:0 0 auto;padding:10px 22px;">' + t('cancel') + '</button>' +
-                '<button class="btn btn-primary" data-action="ok" style="flex:0 0 auto;padding:10px 22px;background:#e74c3c;color:#fff;">' + t('deleteModel') + '</button>' +
+                '<button class="btn btn-primary" data-action="ok" style="' + okStyle + '">' +
+                escapeHtml(opts.confirmLabel || t('deleteModel')) + '</button>' +
                 '</div>';
             overlay.appendChild(panel);
             document.body.appendChild(overlay);
@@ -5673,6 +5838,11 @@
             if (idx === -1) return;
             if (activeConversationId === id && isLoading && abortController) {
                 abortController.abort();
+            }
+            var goneConv = conversations[idx];
+            if (goneConv && goneConv.undo && goneConv.undo.snapshotId && window.AIAssistantPreload) {
+                // 快照可达几十 MB，会话都删了就没必要继续占着编辑器内存
+                window.AIAssistantPreload.callTool('dropProjectSnapshot', { snapshotId: goneConv.undo.snapshotId });
             }
             conversations.splice(idx, 1);
             if (activeConversationId === id) {
@@ -5833,6 +6003,120 @@
         };
     }
 
+    /* ══════════════════════════════════════════════════════════════════════
+       内置额度
+       随应用提供一份共享额度，让没有自备 API Key 的用户开箱就能用。
+       凭据不落 localStorage，只在发请求时于内存中组装一次。
+
+       注意：前端里的凭据只能做到"不被直接搜到"，无法真正保密——
+       任何人打开开发者工具都能取到。额度靠服务端与下面的每日计数共同约束。
+       ══════════════════════════════════════════════════════════════════════ */
+    var BUILTIN_PROVIDER = 'neowarpfree';
+    var BUILTIN_DAILY_TOKEN_LIMIT = 10000000;
+    var BUILTIN_QUOTA_KEY = 'neowarp_ai_builtin_quota';
+
+    var BUILTIN_SEED_A = 'neowarp.desktop';
+    var BUILTIN_SEED_B = 'tw-ai-assistant';
+    var BUILTIN_PAYLOAD = 'd1UqNhrvx9iFRlU8Rbfx1LXKPxIaPbP4887LNlVjOtWDgrpZeC0tQ/ainopCTwJrNc/C';
+    var builtinCredentialCache = null;
+
+    /** 组装内置凭据；只在内存里保留，不写入任何持久存储。 */
+    function builtinCredential() {
+        if (builtinCredentialCache) return builtinCredentialCache;
+        try {
+            var raw = atob(BUILTIN_PAYLOAD);
+            var out = '';
+            for (var i = 0; i < raw.length; i++) {
+                var a = BUILTIN_SEED_A.charCodeAt(i % BUILTIN_SEED_A.length);
+                var b = BUILTIN_SEED_B.charCodeAt((i * 7 + 3) % BUILTIN_SEED_B.length);
+                var m = (a ^ b ^ ((i * 29 + 11) & 0xff)) & 0xff;
+                out += String.fromCharCode(raw.charCodeAt(i) ^ m);
+            }
+            builtinCredentialCache = out;
+            return out;
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function isBuiltInProvider(providerId) {
+        return providerId === BUILTIN_PROVIDER;
+    }
+
+    function usingBuiltInQuota() {
+        return isBuiltInProvider(currentConfig.provider);
+    }
+
+    /** 今日用量计数。跨天自动归零，只统计内置额度的消耗。 */
+    function readBuiltinQuota() {
+        var today = dayKey(new Date());
+        try {
+            var raw = localStorage.getItem(BUILTIN_QUOTA_KEY);
+            if (raw) {
+                var parsed = JSON.parse(raw);
+                if (parsed && parsed.day === today) {
+                    return { day: today, tokens: parsed.tokens || 0 };
+                }
+            }
+        } catch (e) { void e; }
+        return { day: today, tokens: 0 };
+    }
+
+    function writeBuiltinQuota(state) {
+        try { localStorage.setItem(BUILTIN_QUOTA_KEY, JSON.stringify(state)); } catch (e) { void e; }
+    }
+
+    function builtinQuotaRemaining() {
+        var used = (IS_REMOTE && remoteBuiltinQuotaUsed !== null)
+            ? remoteBuiltinQuotaUsed
+            : readBuiltinQuota().tokens;
+        return Math.max(0, BUILTIN_DAILY_TOKEN_LIMIT - used);
+    }
+
+    function builtinQuotaExhausted() {
+        return readBuiltinQuota().tokens >= BUILTIN_DAILY_TOKEN_LIMIT;
+    }
+
+    // 超额是在一轮对话中途才会被发现的，但按要求不打断正在跑的对话，
+    // 而是等这轮结束后再提示；用这个标记把两件事串起来。
+    var builtinQuotaJustExhausted = false;
+
+    function addBuiltinQuotaUsage(tokens) {
+        if (!tokens || tokens <= 0) return;
+        var state = readBuiltinQuota();
+        var wasExhausted = state.tokens >= BUILTIN_DAILY_TOKEN_LIMIT;
+        state.tokens += tokens;
+        writeBuiltinQuota(state);
+        if (!wasExhausted && state.tokens >= BUILTIN_DAILY_TOKEN_LIMIT) {
+            builtinQuotaJustExhausted = true;
+        }
+        // 设置页开着才有必要重画；否则每次请求都白重建一遍列表
+        if (settingsOpen) renderModelConfigList();
+    }
+
+    /** 一轮对话彻底结束后调用：这时才把超额的事告诉用户。 */
+    function noteBuiltinQuotaIfExhausted() {
+        if (!builtinQuotaJustExhausted) return;
+        builtinQuotaJustExhausted = false;
+        appendQuotaNotice();
+    }
+
+    /** 在对话流里插一条醒目的额度提示，比 toast 更不容易被漏掉。 */
+    function appendQuotaNotice() {
+        if (!chatArea) return;
+        welcomeMessage.style.display = 'none';
+        var wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper system';
+        wrapper.innerHTML = '<div class="quota-notice">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line>' +
+            '<line x1="12" y1="16" x2="12.01" y2="16"></line></svg>' +
+            '<span>' + escapeHtml(t('quotaExhausted')) + '</span>' +
+            '</div>';
+        chatArea.appendChild(wrapper);
+        scrollToBottom();
+    }
+
     /**
      * 记一次请求的用量。
      * @param {object|null} usage 接口返回的 usage 对象
@@ -5856,6 +6140,8 @@
         if (!prompt && !completion) return;
 
         var delta = { requests: 1, prompt: prompt, completion: completion, cached: cached, estimated: estimated };
+        // 内置额度按输入+输出计入每日上限
+        if (usingBuiltInQuota()) addBuiltinQuotaUsage(prompt + completion);
         var now = new Date();
         var dk = dayKey(now);
         var hk = String(now.getHours());
@@ -6400,6 +6686,18 @@
         return { id: 'cfg_' + Date.now(), name: 'Default', provider: 'openai', model: 'gpt-5.4', apiKey: '', customEndpoint: '', customModelId: '', apiFormat: 'openai', customContextLimit: 32000, thinkingLevel: 'medium' };
     }
 
+    /** 内置额度的配置项。apiKey 留空——真正的凭据在 applyActiveConfig 里组装。 */
+    function createBuiltinConfig() {
+        var p = PROVIDERS[BUILTIN_PROVIDER];
+        return {
+            // name 留空：界面会退回显示模型名。若在这里写入翻译后的字符串，
+            // 由于 setLocale 是异步的，中文用户可能被固化成英文名。
+            id: 'cfg_builtin', name: '', provider: BUILTIN_PROVIDER,
+            model: p.defaultModel, apiKey: '', customEndpoint: '', customModelId: '',
+            apiFormat: 'openai', customContextLimit: 200000, thinkingLevel: 'medium'
+        };
+    }
+
     function saveConfigs() {
         if (IS_REMOTE) return;
         try { localStorage.setItem('neowarp_ai_models_v2', JSON.stringify(savedConfigs)); } catch(e) {}
@@ -6408,7 +6706,8 @@
     function applyActiveConfig() {
         if (activeConfigIndex >= 0 && activeConfigIndex < savedConfigs.length) {
             var cfg = savedConfigs[activeConfigIndex];
-            currentConfig.apiKey = cfg.apiKey || '';
+            // 内置额度的凭据不入库，切过来时才在内存里组装
+            currentConfig.apiKey = isBuiltInProvider(cfg.provider) ? builtinCredential() : (cfg.apiKey || '');
             currentConfig.provider = cfg.provider || 'openai';
             currentConfig.model = cfg.model || '';
             currentConfig.customEndpoint = cfg.customEndpoint || '';
@@ -7007,9 +7306,23 @@
             var p = PROVIDERS[cfg.provider] || {};
             var m = (p.models || []).find(function(x) { return x.id === cfg.model; });
             var isActive = idx === activeConfigIndex;
-            var nameDisplay = cfg.name || (m ? m.name : p.name) || 'Unnamed';
+            // 内置额度的标题在渲染时取本地化文案，避免把翻译结果写进本地存储
+            var nameDisplay = isBuiltInProvider(cfg.provider)
+                ? t('builtinConfigName')
+                : (cfg.name || (m ? m.name : p.name) || 'Unnamed');
             var modelLabel = p.isCustom ? (cfg.customModelId || cfg.model) : (m ? m.name : cfg.model);
-            var sub = p.isCustom ? (cfg.customEndpoint || p.endpoint || '') : (IS_REMOTE ? cfg.apiKey : maskApiKey(cfg.apiKey));
+            var sub;
+            if (isBuiltInProvider(cfg.provider)) {
+                // 内置额度没有用户自己的密钥可展示，改成显示今日还剩多少
+                sub = tf('builtinQuotaLeft', {
+                    left: formatUsageNumber(builtinQuotaRemaining()),
+                    total: formatUsageNumber(BUILTIN_DAILY_TOKEN_LIMIT)
+                });
+            } else if (p.isCustom) {
+                sub = cfg.customEndpoint || p.endpoint || '';
+            } else {
+                sub = IS_REMOTE ? cfg.apiKey : maskApiKey(cfg.apiKey);
+            }
 
             var card = document.createElement('div');
             card.className = 'model-config-card' + (isActive ? ' active' : '');
@@ -7017,9 +7330,13 @@
             card.setAttribute('tabindex', '0');
             card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
 
+            var hasUsableKey = !!cfg.apiKey || isBuiltInProvider(cfg.provider);
             var badge = isActive
                 ? '<span class="config-card-badge">' + escapeHtml(t('activeBadge')) + '</span>'
-                : (!cfg.apiKey ? '<span class="config-card-badge warn">' + escapeHtml(t('noKeyBadge')) + '</span>' : '');
+                : (!hasUsableKey ? '<span class="config-card-badge warn">' + escapeHtml(t('noKeyBadge')) + '</span>' : '');
+            if (isBuiltInProvider(cfg.provider)) {
+                badge += '<span class="config-card-badge free">' + escapeHtml(t('builtinBadge')) + '</span>';
+            }
 
             card.innerHTML =
                 '<span class="config-card-logo" style="background:' + (p.logo || '#888') + ';">' +
@@ -7030,7 +7347,8 @@
                 '</div>' +
                 '<div class="config-card-meta">' + escapeHtml(p.name || cfg.provider) +
                 (modelLabel ? ' · ' + escapeHtml(modelLabel) : '') + '</div>' +
-                (sub ? '<div class="config-card-sub">' + escapeHtml(sub) + '</div>' : '') +
+                (sub ? '<div class="config-card-sub' + (isBuiltInProvider(cfg.provider) ? ' is-quota' : '') +
+                  '">' + escapeHtml(sub) + '</div>' : '') +
                 '</div>' +
                 '<div class="config-card-tools">' +
                 '<button class="config-icon-btn edit-cfg-btn" type="button" title="' + escapeHtml(t('editModel')) + '" aria-label="' + escapeHtml(t('editModel')) + '">' +
@@ -7079,6 +7397,11 @@
         // 密钥只保存在电脑端，远程端拿到的是掩码，就地编辑会把掩码写回真配置
         if (IS_REMOTE) { showToast('请在电脑端管理模型配置', 'error'); return; }
         var isEdit = typeof idx === 'number';
+        // 内置额度的端点与凭据都是固定的，放开编辑只会让人以为改得动
+        if (isEdit && savedConfigs[idx] && isBuiltInProvider(savedConfigs[idx].provider)) {
+            showToast(t('builtinNotEditable'), 'error');
+            return;
+        }
         var cfg = isEdit ? savedConfigs[idx] : createDefaultConfig();
 
         // 服务商与模型改用卡片选择，选中值存在 draft 里而非 DOM 的 select.value
@@ -7433,6 +7756,11 @@
 
     function deleteConfig(idx) {
         if (IS_REMOTE) { showToast('请在电脑端管理模型配置', 'error'); return; }
+        if (savedConfigs[idx] && isBuiltInProvider(savedConfigs[idx].provider)) {
+            // 删了下次启动又会补回来，不如直接说明
+            showToast(t('builtinNotDeletable'), 'error');
+            return;
+        }
         if (savedConfigs.length <= 1) {
             showToast(t('keepOneConfig'), 'error');
             return;
@@ -7464,7 +7792,7 @@
             item.innerHTML = '<span class="provider-logo" style="background:' + (p.logo || '#888') + ';">' + escapeHtml(p.logoText || '?') + '</span>' +
                 '<span>' + escapeHtml(cfg.name || (m ? m.name : 'Model')) + '</span>' +
                 '<span style="font-size:11px;color:var(--text-tertiary);">' +
-                escapeHtml(!cfg.apiKey ? t('noKeyBadge') : (p.name || cfg.provider)) + '</span>' +
+                escapeHtml((!cfg.apiKey && !isBuiltInProvider(cfg.provider)) ? t('noKeyBadge') : (p.name || cfg.provider)) + '</span>' +
                 '<svg class="check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
             item.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -7730,6 +8058,8 @@
             }
             btn.disabled = true;
             btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle></svg>Applying...';
+            // 手点 Apply 同样是把 AI 的产物落进工程，因此也要能撤销
+            ensureUndoBaseline('execute_operations').then(function() {
             window.AIAssistantPreload.applyProject(json).then(function(result) {
                 btn.disabled = false;
                 if (result && result.success) {
@@ -7745,6 +8075,7 @@
                 btn.disabled = false;
                 btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Apply';
                 showToast('Failed to apply project', 'error');
+            });
             });
         } catch(e) {
             showToast('Invalid JSON in code block', 'error');
@@ -7786,6 +8117,8 @@
         });
         // 历史以工具结果结尾（无最终总结）时也要收起
         finalizeProcessGroup();
+        // 历史重放会重建所有总结脚注，按当前撤销状态补上按钮
+        renderUndoButtons();
         scrollToBottom();
         if (typeof phonePushHistory === 'function') phonePushHistory();
     }
@@ -8230,12 +8563,10 @@
             return;
         }
 
-        // 无工具调用 = 本回合的最终总结：收起过程，Token 用量挂在总结底部
+        // 无工具调用 = 本回合的最终总结：收起过程，脚注（Token 用量 + 撤销）挂在底部
         finalizeProcessGroup();
-        if (contextTokens && contextTokens > 0) {
-            wrapper.insertAdjacentHTML('beforeend', formatContextUsageHtml(contextTokens));
-        }
         chatArea.appendChild(wrapper);
+        renderSummaryFooter(wrapper, contextTokens);
         scrollToBottom();
     }
 
@@ -8460,7 +8791,7 @@
 
     function buildSystemPrompt() {
         var lang = getSystemPromptLanguage();
-        var desc = 'You are NeoWarp AI, a Scratch 3.0 programming assistant.\n\n=== HOW YOU CHANGE THE PROJECT ===\nYou edit the project only through the execute_operations tool. Its "operations" argument is a\nJSON array of operation objects; every object needs a "type". Never print raw JSON or block\ncode in your chat replies — put it in the tool call.\n\nBlocks themselves are written as DSL TEXT, not as JSON objects. One block per line:\n\n    opcode arg1 arg2 ...\n\n- Arguments are POSITIONAL and must follow the order in the block dictionary below.\n- Indent by two spaces to put blocks inside a C-block\'s body. Use a line containing only\n  "else" to start the else branch of control_if_else.\n- Token forms: 42 (number) · "text" (string) · $name (variable) · @name (list) ·\n  (opcode args...) (a reporter plugged into that slot) · # starts a comment line.\n- The first line may be a hat block (event_*, control_start_as_clone). If it is not, a\n  green-flag hat is added automatically.\n\nExample of a complete script:\n\n    event_whenkeypressed "space"\n    control_repeat 10\n      motion_changeyby 6\n      control_wait 0.02\n    control_repeat 10\n      motion_changeyby -6\n      control_wait 0.02\n\nExample with a nested reporter and an else branch:\n\n    event_whenflagclicked\n    control_if_else (operator_gt (sensing_timer) 10)\n      looks_say "time is up"\n    else\n      looks_say (operator_join "left: " (operator_subtract 10 (sensing_timer)))\n\n=== CONTEXT ===\nEach user message carries a JSON context describing the current project. Blocks in it have\ntemporary ids ("tid") that you pass back in targetId. ONLY use tids that appear in the\ncontext — never invent one. Sprite, costume, sound and backdrop names are case-sensitive and\nmust match the context exactly.\n\n=== OPERATION TYPES ===\n\n1. add_script — create a NEW script (its own stack) on a sprite\n{"type":"add_script","sprite":"Cat","script":"event_whenflagclicked\\n  looks_say \\"hi\\""}\n\n2. insert_blocks — insert blocks INTO an existing script (no new stack is created)\n{"type":"insert_blocks","targetId":"b4","position":"after","blocks":"control_wait 0.5\\nlooks_nextcostume"}\n- position "after"      → directly below the anchor block (default)\n- position "before"     → directly above the anchor block (not allowed on a hat block)\n- position "body_start" → as the first block inside the anchor C-block\'s body\n- position "body_end"   → as the last block inside the anchor C-block\'s body\n- add "branch":"else" with body_start/body_end to target the else branch of control_if_else\n- "blocks" is body DSL text; it must NOT start with a hat block\nUse this instead of add_script whenever the user asks to add something to existing code —\nit keeps one script instead of leaving a second disconnected stack on the workspace.\n\n3. delete_block — remove a block by tid\n{"type":"delete_block","sprite":"Cat","targetId":"b2","mode":"with_children"}\n- mode "with_children" (default) removes the block plus its body and everything below it\n- mode "block_only" removes just that block and reconnects its neighbours\n\n4. modify_input — change one input of an existing block\n{"type":"modify_input","sprite":"Cat","targetId":"b2","inputName":"TIMES","value":20}\n- value may be a number, a string, or a reporter as {"opcode":"...","inputs":{...}}\n- inputName must be one of the argument names listed for that opcode\n- for SUBSTACK / SUBSTACK2 you may pass DSL text to replace the whole body\n\n5. add_comment — attach a comment to a block, or place a free-floating one\n{"type":"add_comment","sprite":"Cat","targetId":"b3","text":"jump logic","minimized":false}\n{"type":"add_comment","sprite":"Cat","x":200,"y":100,"text":"TODO: collision"}\n- returns data.commentId; keep it if you might delete that comment later\n- commenting your code is encouraged; Chinese text is fine\n\n6. delete_comment — remove a comment\n{"type":"delete_comment","sprite":"Cat","targetId":"b3"}\n{"type":"delete_comment","sprite":"Cat","commentId":"_ai_cmt_123_abc"}\n\n7. explain — show a short explanation to the user (changes nothing)\n{"type":"explain","text":"Raised the repeat count to 20."}\n\n=== VALIDATION ===\nScripts are checked BEFORE anything is applied. If a check fails, nothing is created and you\nget the exact reason back — read it and fix that specific problem rather than retrying the\nsame text. Rejections happen for: unknown opcodes, a hat block used anywhere but the first\nline, too many arguments, blocks indented under a block that has no body, and "else" on a\nblock without an else branch. You may also get warnings (empty C-block body, a costume or\nsound name that does not exist, a number slot given text); those still apply, but check them.\n\n=== VARIABLES, LISTS AND MESSAGES ===\n- $name and @name auto-create the variable or list on the Stage if it does not exist yet.\n- Broadcast messages are auto-created the same way; just use the message name.\n- Prefer create_variable / create_list when you want to be explicit about ownership.\n\n=== BLOCK DICTIONARY (generated from the editor schema — these signatures are exact) ===\nEach line is: opcode <arg1> <arg2> …  — write the arguments in exactly this order.\n$name = variable, @name = list, "text" = string, bare number = number, (opcode …) = nested reporter.\n[C] marks a C-block: put its body on the following lines, indented two more spaces.\n\nMotion:\n  motion_changexby DX:num\n  motion_changeyby DY:num\n  motion_direction\n  motion_glidesecstoxy SECS:num X:num Y:num\n  motion_glideto SECS:num TO:"_mouse_"|"_random_"|"<sprite name>"\n  motion_goto TO:"_mouse_"|"_random_"|"<sprite name>"\n  motion_gotoxy X:num Y:num\n  motion_ifonedgebounce\n  motion_movesteps STEPS:num\n  motion_pointindirection DIRECTION:num\n  motion_pointtowards TOWARDS:"_mouse_"|"_random_"|"<sprite name>"\n  motion_setrotationstyle STYLE:"left-right"|"don\'t rotate"|"all around"\n  motion_setx X:num\n  motion_sety Y:num\n  motion_turnleft DEGREES:num\n  motion_turnright DEGREES:num\n  motion_xposition\n  motion_yposition\n\nLooks:\n  looks_backdropnumbername NUMBER_NAME:"number"|"name"\n  looks_changeeffectby EFFECT:"COLOR"|"FISHEYE"|"WHIRL"|"PIXELATE"|"MOSAIC"|"BRIGHTNESS"|"GHOST" CHANGE:num\n  looks_changesizeby CHANGE:num\n  looks_changestretchby CHANGE:num\n  looks_cleargraphiceffects\n  looks_costumenumbername NUMBER_NAME:"number"|"name"\n  looks_goforwardbackwardlayers FORWARD_BACKWARD:"forward"|"backward" NUM:num\n  looks_gotofrontback FRONT_BACK:"front"|"back"\n  looks_hide\n  looks_nextbackdrop\n  looks_nextcostume\n  looks_say MESSAGE:text\n  looks_sayforsecs MESSAGE:text SECS:num\n  looks_seteffectto EFFECT:"COLOR"|"FISHEYE"|"WHIRL"|"PIXELATE"|"MOSAIC"|"BRIGHTNESS"|"GHOST" VALUE:num\n  looks_setsizeto SIZE:num\n  looks_setstretchto STRETCH:num\n  looks_show\n  looks_size\n  looks_switchbackdropto BACKDROP:"<backdrop name>"|"next backdrop"|"previous backdrop"|"random backdrop"\n  looks_switchbackdroptoandwait BACKDROP:"<backdrop name>"\n  looks_switchcostumeto COSTUME:"<costume name>"\n  looks_think MESSAGE:text\n  looks_thinkforsecs MESSAGE:text SECS:num\n\nSound:\n  sound_changeeffectby EFFECT:"PITCH"|"PAN" VALUE:num\n  sound_changevolumeby VOLUME:num\n  sound_cleareffects\n  sound_play SOUND_MENU:"<sound name>"\n  sound_playuntildone SOUND_MENU:"<sound name>"\n  sound_seteffectto EFFECT:"PITCH"|"PAN" VALUE:num\n  sound_setvolumeto VOLUME:num\n  sound_stopallsounds\n  sound_volume\n\nEvents:\n  event_broadcast "message"\n  event_broadcastandwait "message"\n  event_whenbackdropswitchesto BACKDROP:"<backdrop name>"\n  event_whenbroadcastreceived "message"\n  event_whenflagclicked\n  event_whengreaterthan WHENGREATERTHANMENU:"LOUDNESS"|"TIMER" VALUE:num\n  event_whenkeypressed KEY_OPTION:"space"|"up arrow"|"down arrow"|"right arrow"|"left arrow"|"any"|"a"|"b"|"c"|"d"|"e"|"f"|"g"|"h"|"i"|"j"|"k"|"l"|"m"|"n"|"o"|"p"|"q"|"r"|"s"|"t"|"u"|"v"|"w"|"x"|"y"|"z"|"0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"\n  event_whenstageclicked\n  event_whenthisspriteclicked\n\nControl:\n  control_all_at_once  [C]\n  control_clear_counter\n  control_create_clone_of CLONE_OPTION:"_myself_"|"<sprite name>"\n  control_delete_this_clone\n  control_for_each $var VALUE:num  [C]\n  control_forever  [C]\n  control_get_counter\n  control_if CONDITION:bool  [C]\n  control_if_else CONDITION:bool  [C + else]\n  control_incr_counter\n  control_repeat TIMES:num  [C]\n  control_repeat_until CONDITION:bool  [C]\n  control_start_as_clone\n  control_stop STOP_OPTION:"all"|"this script"|"other scripts in sprite"\n  control_wait DURATION:num\n  control_wait_until CONDITION:bool\n  control_while CONDITION:bool  [C]\n\nSensing:\n  sensing_answer\n  sensing_askandwait QUESTION:text\n  sensing_coloristouchingcolor COLOR:"#rrggbb" COLOR2:"#rrggbb"\n  sensing_current CURRENTMENU:"YEAR"|"MONTH"|"DATE"|"DAYOFWEEK"|"HOUR"|"MINUTE"|"SECOND"\n  sensing_dayssince2000\n  sensing_distanceto DISTANCETOMENU:"_mouse_"|"<sprite name>"\n  sensing_keypressed KEY_OPTION:"space"|"up arrow"|"down arrow"|"right arrow"|"left arrow"|"any"|"a"|"b"|"c"|"d"|"e"|"f"|"g"|"h"|"i"|"j"|"k"|"l"|"m"|"n"|"o"|"p"|"q"|"r"|"s"|"t"|"u"|"v"|"w"|"x"|"y"|"z"|"0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"\n  sensing_loudness\n  sensing_mousedown\n  sensing_mousex\n  sensing_mousey\n  sensing_of PROPERTY:"x position"|"y position"|"direction"|"costume #"|"costume name"|"size"|"volume"|"backdrop #"|"backdrop name" OBJECT:"_stage_"|"<sprite name>"\n  sensing_resettimer\n  sensing_setdragmode DRAG_MODE:"draggable"|"not draggable"\n  sensing_timer\n  sensing_touchingcolor COLOR:"#rrggbb"\n  sensing_touchingobject TOUCHINGOBJECTMENU:"_mouse_"|"_edge_"|"<sprite name>"\n  sensing_username\n\nOperators:\n  operator_add NUM1:num NUM2:num\n  operator_and OPERAND1:bool OPERAND2:bool\n  operator_contains STRING1:text STRING2:text\n  operator_divide NUM1:num NUM2:num\n  operator_equals OPERAND1:text OPERAND2:text\n  operator_gt OPERAND1:text OPERAND2:text\n  operator_join STRING1:text STRING2:text\n  operator_length STRING:text\n  operator_letter_of LETTER:num STRING:text\n  operator_lt OPERAND1:text OPERAND2:text\n  operator_mathop OPERATOR:"abs"|"floor"|"ceiling"|"sqrt"|"sin"|"cos"|"tan"|"asin"|"acos"|"atan"|"ln"|"log"|"e ^"|"10 ^" NUM:num\n  operator_mod NUM1:num NUM2:num\n  operator_multiply NUM1:num NUM2:num\n  operator_not OPERAND:bool\n  operator_or OPERAND1:bool OPERAND2:bool\n  operator_random FROM:num TO:num\n  operator_round NUM:num\n  operator_subtract NUM1:num NUM2:num\n\nVariables & Lists:\n  data_addtolist ITEM:text @list\n  data_changevariableby $var VALUE:num\n  data_deletealloflist @list\n  data_deleteoflist INDEX:num @list\n  data_hidelist @list\n  data_hidevariable $var\n  data_insertatlist ITEM:text INDEX:num @list\n  data_itemnumoflist ITEM:text @list\n  data_itemoflist INDEX:num @list\n  data_lengthoflist @list\n  data_listcontainsitem @list ITEM:text\n  data_replaceitemoflist INDEX:num @list ITEM:text\n  data_setvariableto $var VALUE:text\n  data_showlist @list\n  data_showvariable $var\n\nPen (extension):\n  pen_changePenColorParamBy COLOR_PARAM:"color"|"saturation"|"brightness"|"transparency" VALUE:num\n  pen_changePenSizeBy SIZE:num\n  pen_clear\n  pen_penDown\n  pen_penUp\n  pen_setPenColorParamTo COLOR_PARAM:"color"|"saturation"|"brightness"|"transparency" VALUE:num\n  pen_setPenColorToColor COLOR:"#rrggbb"\n  pen_setPenSizeTo SIZE:num\n  pen_stamp\n\n=== SPRITES, VARIABLES AND LISTS ===\nRead before you write. list_sprites / list_variables / list_lists / get_list tell you exactly\nwhat exists; guessing a name and getting an error back costs a whole extra round trip.\n\nScope rule for variables and lists: omit sprite_name and it lives on the Stage and is GLOBAL\n(every sprite can use it) — that is the right default. Pass sprite_name only for state that\ngenuinely belongs to one sprite, such as per-clone health. Reads look on the sprite first and\nthen fall back to the Stage, exactly like Scratch, so passing sprite_name never prevents you\nfrom reaching a global. Every result reports the scope it actually used, so check it rather\nthan assuming.\n\nSprites:\n- list_sprites — everything about every sprite plus the Stage; no arguments\n- add_sprite — add from the built-in library by name/keyword. Scratch may append a number if\n  the name is taken; the result tells you the real name, so use that afterwards.\n- duplicate_sprite — copy a sprite with its scripts, costumes and local variables. new_name\n  is optional; without it Scratch auto-numbers and the result reports the name it chose.\n- rename_sprite — blocks that reference the sprite are updated for you\n- delete_sprite — also destroys its scripts, costumes and local variables; the result lists\n  what was removed, so read it before reporting success\n- set_sprite_property — x, y, size, direction, visible, draggable, rotation_style in one call.\n  Out-of-range numbers are clamped by Scratch and reported in warnings.\n\nVariables:\n- create_variable — value type follows Scratch: numeric strings become numbers. Returns\n  existed:true if it was already there instead of failing.\n- set_variable / get_variable — set_variable returns the previous value too\n- rename_variable / delete_variable — delete_variable refuses while blocks still reference\n  the variable and names the sprites using it; pass force:true only if you truly mean it\n- Names are unique per scope across both kinds: you cannot have a variable and a list called\n  the same thing in the same scope, and the tools say so instead of silently doing the wrong\n  thing.\n\nLists (indices are 1-based; "first" and "last" work wherever an index is taken):\n- create_list — pass items to fill it at creation\n- get_list — read the contents; do this before editing so your indices are right\n- add_to_list — item for one value, items for an array to append several at once\n- insert_to_list — insert at a position, pushing later items down (length+1 appends)\n- set_list_item — replace the value at one position\n- delete_from_list — remove one item; index "all" empties the list\n- clear_list — empty it while keeping the list itself\nEvery list-editing result includes the new length and a preview of the contents, so you do\nnot need a follow-up get_list just to confirm what happened.\n\n=== PROHIBITED ===\n- Do NOT use an opcode that is not in the dictionary above\n- Do NOT reorder a block\'s arguments; the DSL is positional\n- Do NOT put a hat block anywhere except the first line of a script\n- Do NOT use Scratch\'s internal array format like [1,[4,"10"]]\n- Do NOT invent tids; only use tids from the context\n- Do NOT print block code or JSON in your chat reply — it belongs in the tool call\n\n=== OTHER TOOLS ===\nProject & code: get_project_info, get_sprite_scripts, click_green_flag, rename_project,\nset_stage_size, get_stage_screenshot.\nSprites: list_sprites, add_sprite, add_sprite_from_url, duplicate_sprite, rename_sprite,\ndelete_sprite, set_sprite_property, change_costume, add_costume_from_url,\nadd_backdrop, change_backdrop.\nVariables: list_variables, create_variable, get_variable, set_variable, rename_variable,\ndelete_variable.\nLists: list_lists, create_list, get_list, add_to_list, insert_to_list, set_list_item,\ndelete_from_list, clear_list.\nExtensions & misc: get_installed_extensions, search_extensions, develop_extension,\ninstall_extension, web_search, get_system_time, get_system_info, pause_output, ask_user.\n\n- get_sprite_scripts: read a sprite\'s existing scripts back as DSL text. Use it before\n  editing unfamiliar code so you insert in the right place.\n- add_costume_from_url / add_sprite_from_url: add art from an image URL\n- get_stage_screenshot: capture the stage as a PNG; for vision models it is added to the\n  conversation as an image so you can look at the result of your own changes\n- develop_extension: write and load a custom extension at runtime (extension_code,\n  extension_name). extension_code must be a bare class or object literal — e.g.\n  "class MyExt { getInfo(){ return {id:"myext", name:"My Ext", blocks:[{opcode:"go", blockType:"command", text:"go [N]", arguments:{N:{type:"number", defaultValue:1}}}]}; } go(args){ /* ... */ } }"\n  — do NOT prefix it with "const X =" and do NOT call Scratch.extensions.register yourself;\n  the editor wraps and registers it. getInfo() must return an object with id, name, blocks.\n- web_search: look up techniques, formulas or documentation on the internet\n- pause_output: pause for 1-60 seconds with a visible countdown (seconds, reason)\n- ask_user: 当用户的要求过于笼统、模糊或存在多种可能解释时，向用户提问以澄清意图（params: question 问题文本, options 2-4 个选项字符串数组）。会渲染一张交互式卡片，用户可点选某个选项或点"其他"输入自定义文本，结果作为工具返回值传回。仅在确实需要澄清时使用，明确具体的请求应直接执行，不要滥用。\n\n=== TODO LIST WORKFLOW (IMPORTANT) ===\nFor multi-step or complex tasks, plan and execute step by step:\n1. Call plan_todos(items: ["step 1", "step 2", ...], title: "optional title") first.\n2. Then do ONE item at a time: update_todo(index: i, status: "doing"), do the work, then\n   update_todo(index: i, status: "done").\n3. Move on only after the current item is done; the card updates in real time.\n4. Do NOT cram every step into a single execute_operations call.\n5. Simple single-step tasks do not need a todo list.\n\n=== WORKING ON EXISTING CODE ===\nWhen the user asks to modify or extend code that already exists, read it first with\nget_sprite_scripts or the context, then use insert_blocks / modify_input / delete_block on\nthe specific tids. Rebuilding a whole script with add_script when the user asked for a small\nchange loses their layout and leaves duplicate stacks behind.\n\nReply in ' + lang + '.';
+        var desc = 'You are NeoWarp AI, a Scratch 3.0 programming assistant.\n\n=== HOW YOU CHANGE THE PROJECT ===\nYou edit the project only through the execute_operations tool. Its "operations" argument is a\nJSON array of operation objects; every object needs a "type". Never print raw JSON or block\ncode in your chat replies — put it in the tool call.\n\nBlocks themselves are written as DSL TEXT, not as JSON objects. One block per line:\n\n    opcode arg1 arg2 ...\n\n- Arguments are POSITIONAL and must follow the order in the block dictionary below.\n- Indent by two spaces to put blocks inside a C-block\'s body. Use a line containing only\n  "else" to start the else branch of control_if_else.\n- Token forms: 42 (number) · "text" (string) · $name (variable) · @name (list) ·\n  (opcode args...) (a reporter plugged into that slot) · # starts a comment line.\n- The first line may be a hat block (event_*, control_start_as_clone). If it is not, a\n  green-flag hat is added automatically.\n\nExample of a complete script:\n\n    event_whenkeypressed "space"\n    control_repeat 10\n      motion_changeyby 6\n      control_wait 0.02\n    control_repeat 10\n      motion_changeyby -6\n      control_wait 0.02\n\nExample with a nested reporter and an else branch:\n\n    event_whenflagclicked\n    control_if_else (operator_gt (sensing_timer) 10)\n      looks_say "time is up"\n    else\n      looks_say (operator_join "left: " (operator_subtract 10 (sensing_timer)))\n\n=== CONTEXT ===\nEach user message carries a JSON context describing the current project. Blocks in it have\ntemporary ids ("tid") that you pass back in targetId. ONLY use tids that appear in the\ncontext — never invent one. Sprite, costume, sound and backdrop names are case-sensitive and\nmust match the context exactly.\n\n=== OPERATION TYPES ===\n\n1. add_script — create a NEW script (its own stack) on a sprite\n{"type":"add_script","sprite":"Cat","script":"event_whenflagclicked\\n  looks_say \\"hi\\""}\n\n2. insert_blocks — insert blocks INTO an existing script (no new stack is created)\n{"type":"insert_blocks","targetId":"b4","position":"after","blocks":"control_wait 0.5\\nlooks_nextcostume"}\n- position "after"      → directly below the anchor block (default)\n- position "before"     → directly above the anchor block (not allowed on a hat block)\n- position "body_start" → as the first block inside the anchor C-block\'s body\n- position "body_end"   → as the last block inside the anchor C-block\'s body\n- add "branch":"else" with body_start/body_end to target the else branch of control_if_else\n- "blocks" is body DSL text; it must NOT start with a hat block\nUse this instead of add_script whenever the user asks to add something to existing code —\nit keeps one script instead of leaving a second disconnected stack on the workspace.\n\n3. delete_block — remove a block by tid\n{"type":"delete_block","sprite":"Cat","targetId":"b2","mode":"with_children"}\n- mode "with_children" (default) removes the block plus its body and everything below it\n- mode "block_only" removes just that block and reconnects its neighbours\n\n4. modify_input — change one input of an existing block\n{"type":"modify_input","sprite":"Cat","targetId":"b2","inputName":"TIMES","value":20}\n- value may be a number, a string, or a reporter as {"opcode":"...","inputs":{...}}\n- inputName must be one of the argument names listed for that opcode\n- for SUBSTACK / SUBSTACK2 you may pass DSL text to replace the whole body\n\n5. add_comment — attach a comment to a block, or place a free-floating one\n{"type":"add_comment","sprite":"Cat","targetId":"b3","text":"jump logic","minimized":false}\n{"type":"add_comment","sprite":"Cat","x":200,"y":100,"text":"TODO: collision"}\n- returns data.commentId; keep it if you might delete that comment later\n- commenting your code is encouraged; Chinese text is fine\n\n6. delete_comment — remove a comment\n{"type":"delete_comment","sprite":"Cat","targetId":"b3"}\n{"type":"delete_comment","sprite":"Cat","commentId":"_ai_cmt_123_abc"}\n\n7. explain — show a short explanation to the user (changes nothing)\n{"type":"explain","text":"Raised the repeat count to 20."}\n\n=== VALIDATION ===\nScripts are checked BEFORE anything is applied. If a check fails, nothing is created and you\nget the exact reason back — read it and fix that specific problem rather than retrying the\nsame text. Rejections happen for: unknown opcodes, a hat block used anywhere but the first\nline, too many arguments, blocks indented under a block that has no body, and "else" on a\nblock without an else branch. You may also get warnings (empty C-block body, a costume or\nsound name that does not exist, a number slot given text); those still apply, but check them.\n\n=== VARIABLES, LISTS AND MESSAGES ===\n- $name and @name auto-create the variable or list on the Stage if it does not exist yet.\n- Broadcast messages are auto-created the same way; just use the message name.\n- Prefer create_variable / create_list when you want to be explicit about ownership.\n\n=== BLOCK DICTIONARY (generated from the editor schema — these signatures are exact) ===\nEach line is: opcode <arg1> <arg2> …  — write the arguments in exactly this order.\n$name = variable, @name = list, "text" = string, bare number = number, (opcode …) = nested reporter.\n[C] marks a C-block: put its body on the following lines, indented two more spaces.\n\nMotion:\n  motion_changexby DX:num\n  motion_changeyby DY:num\n  motion_direction\n  motion_glidesecstoxy SECS:num X:num Y:num\n  motion_glideto SECS:num TO:"_mouse_"|"_random_"|"<sprite name>"\n  motion_goto TO:"_mouse_"|"_random_"|"<sprite name>"\n  motion_gotoxy X:num Y:num\n  motion_ifonedgebounce\n  motion_movesteps STEPS:num\n  motion_pointindirection DIRECTION:num\n  motion_pointtowards TOWARDS:"_mouse_"|"_random_"|"<sprite name>"\n  motion_setrotationstyle STYLE:"left-right"|"don\'t rotate"|"all around"\n  motion_setx X:num\n  motion_sety Y:num\n  motion_turnleft DEGREES:num\n  motion_turnright DEGREES:num\n  motion_xposition\n  motion_yposition\n\nLooks:\n  looks_backdropnumbername NUMBER_NAME:"number"|"name"\n  looks_changeeffectby EFFECT:"COLOR"|"FISHEYE"|"WHIRL"|"PIXELATE"|"MOSAIC"|"BRIGHTNESS"|"GHOST" CHANGE:num\n  looks_changesizeby CHANGE:num\n  looks_changestretchby CHANGE:num\n  looks_cleargraphiceffects\n  looks_costumenumbername NUMBER_NAME:"number"|"name"\n  looks_goforwardbackwardlayers FORWARD_BACKWARD:"forward"|"backward" NUM:num\n  looks_gotofrontback FRONT_BACK:"front"|"back"\n  looks_hide\n  looks_nextbackdrop\n  looks_nextcostume\n  looks_say MESSAGE:text\n  looks_sayforsecs MESSAGE:text SECS:num\n  looks_seteffectto EFFECT:"COLOR"|"FISHEYE"|"WHIRL"|"PIXELATE"|"MOSAIC"|"BRIGHTNESS"|"GHOST" VALUE:num\n  looks_setsizeto SIZE:num\n  looks_setstretchto STRETCH:num\n  looks_show\n  looks_size\n  looks_switchbackdropto BACKDROP:"<backdrop name>"|"next backdrop"|"previous backdrop"|"random backdrop"\n  looks_switchbackdroptoandwait BACKDROP:"<backdrop name>"\n  looks_switchcostumeto COSTUME:"<costume name>"\n  looks_think MESSAGE:text\n  looks_thinkforsecs MESSAGE:text SECS:num\n\nSound:\n  sound_changeeffectby EFFECT:"PITCH"|"PAN" VALUE:num\n  sound_changevolumeby VOLUME:num\n  sound_cleareffects\n  sound_play SOUND_MENU:"<sound name>"\n  sound_playuntildone SOUND_MENU:"<sound name>"\n  sound_seteffectto EFFECT:"PITCH"|"PAN" VALUE:num\n  sound_setvolumeto VOLUME:num\n  sound_stopallsounds\n  sound_volume\n\nEvents:\n  event_broadcast "message"\n  event_broadcastandwait "message"\n  event_whenbackdropswitchesto BACKDROP:"<backdrop name>"\n  event_whenbroadcastreceived "message"\n  event_whenflagclicked\n  event_whengreaterthan WHENGREATERTHANMENU:"LOUDNESS"|"TIMER" VALUE:num\n  event_whenkeypressed KEY_OPTION:"space"|"up arrow"|"down arrow"|"right arrow"|"left arrow"|"any"|"a"|"b"|"c"|"d"|"e"|"f"|"g"|"h"|"i"|"j"|"k"|"l"|"m"|"n"|"o"|"p"|"q"|"r"|"s"|"t"|"u"|"v"|"w"|"x"|"y"|"z"|"0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"\n  event_whenstageclicked\n  event_whenthisspriteclicked\n\nControl:\n  control_all_at_once  [C]\n  control_clear_counter\n  control_create_clone_of CLONE_OPTION:"_myself_"|"<sprite name>"\n  control_delete_this_clone\n  control_for_each $var VALUE:num  [C]\n  control_forever  [C]\n  control_get_counter\n  control_if CONDITION:bool  [C]\n  control_if_else CONDITION:bool  [C + else]\n  control_incr_counter\n  control_repeat TIMES:num  [C]\n  control_repeat_until CONDITION:bool  [C]\n  control_start_as_clone\n  control_stop STOP_OPTION:"all"|"this script"|"other scripts in sprite"\n  control_wait DURATION:num\n  control_wait_until CONDITION:bool\n  control_while CONDITION:bool  [C]\n\nSensing:\n  sensing_answer\n  sensing_askandwait QUESTION:text\n  sensing_coloristouchingcolor COLOR:"#rrggbb" COLOR2:"#rrggbb"\n  sensing_current CURRENTMENU:"YEAR"|"MONTH"|"DATE"|"DAYOFWEEK"|"HOUR"|"MINUTE"|"SECOND"\n  sensing_dayssince2000\n  sensing_distanceto DISTANCETOMENU:"_mouse_"|"<sprite name>"\n  sensing_keypressed KEY_OPTION:"space"|"up arrow"|"down arrow"|"right arrow"|"left arrow"|"any"|"a"|"b"|"c"|"d"|"e"|"f"|"g"|"h"|"i"|"j"|"k"|"l"|"m"|"n"|"o"|"p"|"q"|"r"|"s"|"t"|"u"|"v"|"w"|"x"|"y"|"z"|"0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"\n  sensing_loudness\n  sensing_mousedown\n  sensing_mousex\n  sensing_mousey\n  sensing_of PROPERTY:"x position"|"y position"|"direction"|"costume #"|"costume name"|"size"|"volume"|"backdrop #"|"backdrop name" OBJECT:"_stage_"|"<sprite name>"\n  sensing_resettimer\n  sensing_setdragmode DRAG_MODE:"draggable"|"not draggable"\n  sensing_timer\n  sensing_touchingcolor COLOR:"#rrggbb"\n  sensing_touchingobject TOUCHINGOBJECTMENU:"_mouse_"|"_edge_"|"<sprite name>"\n  sensing_username\n\nOperators:\n  operator_add NUM1:num NUM2:num\n  operator_and OPERAND1:bool OPERAND2:bool\n  operator_contains STRING1:text STRING2:text\n  operator_divide NUM1:num NUM2:num\n  operator_equals OPERAND1:text OPERAND2:text\n  operator_gt OPERAND1:text OPERAND2:text\n  operator_join STRING1:text STRING2:text\n  operator_length STRING:text\n  operator_letter_of LETTER:num STRING:text\n  operator_lt OPERAND1:text OPERAND2:text\n  operator_mathop OPERATOR:"abs"|"floor"|"ceiling"|"sqrt"|"sin"|"cos"|"tan"|"asin"|"acos"|"atan"|"ln"|"log"|"e ^"|"10 ^" NUM:num\n  operator_mod NUM1:num NUM2:num\n  operator_multiply NUM1:num NUM2:num\n  operator_not OPERAND:bool\n  operator_or OPERAND1:bool OPERAND2:bool\n  operator_random FROM:num TO:num\n  operator_round NUM:num\n  operator_subtract NUM1:num NUM2:num\n\nVariables & Lists:\n  data_addtolist ITEM:text @list\n  data_changevariableby $var VALUE:num\n  data_deletealloflist @list\n  data_deleteoflist INDEX:num @list\n  data_hidelist @list\n  data_hidevariable $var\n  data_insertatlist ITEM:text INDEX:num @list\n  data_itemnumoflist ITEM:text @list\n  data_itemoflist INDEX:num @list\n  data_lengthoflist @list\n  data_listcontainsitem @list ITEM:text\n  data_replaceitemoflist INDEX:num @list ITEM:text\n  data_setvariableto $var VALUE:text\n  data_showlist @list\n  data_showvariable $var\n\nPen (extension):\n  pen_changePenColorParamBy COLOR_PARAM:"color"|"saturation"|"brightness"|"transparency" VALUE:num\n  pen_changePenSizeBy SIZE:num\n  pen_clear\n  pen_penDown\n  pen_penUp\n  pen_setPenColorParamTo COLOR_PARAM:"color"|"saturation"|"brightness"|"transparency" VALUE:num\n  pen_setPenColorToColor COLOR:"#rrggbb"\n  pen_setPenSizeTo SIZE:num\n  pen_stamp\n\n=== SPRITES, VARIABLES AND LISTS ===\nRead before you write. list_sprites / list_variables / list_lists / get_list tell you exactly\nwhat exists; guessing a name and getting an error back costs a whole extra round trip.\n\nScope rule for variables and lists: omit sprite_name and it lives on the Stage and is GLOBAL\n(every sprite can use it) — that is the right default. Pass sprite_name only for state that\ngenuinely belongs to one sprite, such as per-clone health. Reads look on the sprite first and\nthen fall back to the Stage, exactly like Scratch, so passing sprite_name never prevents you\nfrom reaching a global. Every result reports the scope it actually used, so check it rather\nthan assuming.\n\nSprites:\n- list_sprites — everything about every sprite plus the Stage; no arguments\n- add_sprite — add from the built-in library by name/keyword. Scratch may append a number if\n  the name is taken; the result tells you the real name, so use that afterwards.\n- duplicate_sprite — copy a sprite with its scripts, costumes and local variables. new_name\n  is optional; without it Scratch auto-numbers and the result reports the name it chose.\n- rename_sprite — blocks that reference the sprite are updated for you\n- delete_sprite — also destroys its scripts, costumes and local variables; the result lists\n  what was removed, so read it before reporting success\n- set_sprite_property — x, y, size, direction, visible, draggable, rotation_style in one call.\n  Out-of-range numbers are clamped by Scratch and reported in warnings.\n\nVariables:\n- create_variable — value type follows Scratch: numeric strings become numbers. Returns\n  existed:true if it was already there instead of failing.\n- set_variable / get_variable — set_variable returns the previous value too\n- rename_variable / delete_variable — delete_variable refuses while blocks still reference\n  the variable and names the sprites using it; pass force:true only if you truly mean it\n- Names are unique per scope across both kinds: you cannot have a variable and a list called\n  the same thing in the same scope, and the tools say so instead of silently doing the wrong\n  thing.\n\nLists (indices are 1-based; "first" and "last" work wherever an index is taken):\n- create_list — pass items to fill it at creation\n- get_list — read the contents; do this before editing so your indices are right\n- add_to_list — item for one value, items for an array to append several at once\n- insert_to_list — insert at a position, pushing later items down (length+1 appends)\n- set_list_item — replace the value at one position\n- delete_from_list — remove one item; index "all" empties the list\n- clear_list — empty it while keeping the list itself\nEvery list-editing result includes the new length and a preview of the contents, so you do\nnot need a follow-up get_list just to confirm what happened.\n\n=== PROHIBITED ===\n- Do NOT use an opcode that is not in the dictionary above\n- Do NOT reorder a block\'s arguments; the DSL is positional\n- Do NOT put a hat block anywhere except the first line of a script\n- Do NOT use Scratch\'s internal array format like [1,[4,"10"]]\n- Do NOT invent tids; only use tids from the context\n- Do NOT print block code or JSON in your chat reply — it belongs in the tool call\n\n=== OTHER TOOLS ===\nProject & code: get_project_info, get_sprite_scripts, click_green_flag, rename_project,\nset_stage_size, get_stage_screenshot.\nSprites: list_sprites, add_sprite, add_sprite_from_url, duplicate_sprite, rename_sprite,\ndelete_sprite, set_sprite_property, change_costume, add_costume_from_url,\nadd_backdrop, change_backdrop.\nVariables: list_variables, create_variable, get_variable, set_variable, rename_variable,\ndelete_variable.\nLists: list_lists, create_list, get_list, add_to_list, insert_to_list, set_list_item,\ndelete_from_list, clear_list.\nExtensions & misc: get_installed_extensions, search_extensions, develop_extension,\ninstall_extension, web_search, get_system_time, get_system_info, pause_output, ask_user.\n\n- get_sprite_scripts: read a sprite\'s existing scripts back as DSL text. Use it before\n  editing unfamiliar code so you insert in the right place.\n- add_costume_from_url / add_sprite_from_url: add art from an image URL\n- get_stage_screenshot: capture the stage as a PNG; for vision models it is added to the\n  conversation as an image so you can look at the result of your own changes\n- develop_extension: write and load a custom extension at runtime (extension_code,\n  extension_name). extension_code must be a bare class or object literal — e.g.\n  "class MyExt { getInfo(){ return {id:"myext", name:"My Ext", blocks:[{opcode:"go", blockType:"command", text:"go [N]", arguments:{N:{type:"number", defaultValue:1}}}]}; } go(args){ /* ... */ } }"\n  — do NOT prefix it with "const X =" and do NOT call Scratch.extensions.register yourself;\n  the editor wraps and registers it. getInfo() must return an object with id, name, blocks.\n- web_search: look up techniques, formulas or documentation on the internet\n- pause_output: pause for 1-60 seconds with a visible countdown (seconds, reason)\n- ask_user: 当用户的要求过于笼统、模糊或存在多种可能解释时，向用户提问以澄清意图（params: question 问题文本, options 2-4 个选项字符串数组）。会渲染一张交互式卡片，用户可点选某个选项或点"其他"输入自定义文本，结果作为工具返回值传回。仅在确实需要澄清时使用，明确具体的请求应直接执行，不要滥用。\n\n=== THINKING AND OUTPUT DISCIPLINE ===\n- Keep your reasoning SHORT. A brief plan (a few sentences) is enough, even for open-ended\n  tasks — start acting with tool calls and adjust from the results instead of thinking\n  through every detail up front.\n- After reasoning you MUST emit either tool calls or a text answer. NEVER end a turn with\n  an empty response; if there is truly nothing to do, reply with one short sentence saying\n  so.\n\n=== TODO LIST WORKFLOW (IMPORTANT) ===\nFor multi-step or complex tasks, plan and execute step by step:\n1. Call plan_todos(items: ["step 1", "step 2", ...], title: "optional title") first.\n2. Then do ONE item at a time: update_todo(index: i, status: "doing"), do the work, then\n   update_todo(index: i, status: "done").\n3. Move on only after the current item is done; the card updates in real time.\n4. Do NOT cram every step into a single execute_operations call.\n5. Simple single-step tasks do not need a todo list.\n\n=== WORKING ON EXISTING CODE ===\nWhen the user asks to modify or extend code that already exists, read it first with\nget_sprite_scripts or the context, then use insert_blocks / modify_input / delete_block on\nthe specific tids. Rebuilding a whole script with add_script when the user asked for a small\nchange loses their layout and leaves duplicate stacks behind.\n\nReply in ' + lang + '.';
         return desc;
     }
 
@@ -8715,7 +9046,7 @@
             btn.innerHTML = state.undone
                 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' +
                   '<span>' + escapeHtml(t('undoAlreadyDone')) + '</span>'
-                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"></path><path d="M3.51 13a9 9 0 1 0 2.13-9.36L3 7"></path></svg>' +
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg>' +
                   '<span>' + escapeHtml(t('undoButton')) + '</span>';
         }
     }
@@ -8725,36 +9056,52 @@
         var state = currentUndoState();
         if (!state || !state.snapshotId || state.undone) return;
         if (isLoading) { showToast(t('undoBusy'), 'error'); return; }
-        if (IS_REMOTE) { remoteSend('undoChanges'); return; }
+        if (IS_REMOTE) {
+            // 手机上同样要确认；确认过后再让电脑执行，不在两端各弹一次
+            customConfirm(t('undoConfirmTitle'), {
+                detail: tf('undoConfirmDetail', { time: formatTime(new Date(state.capturedAt)) }),
+                confirmLabel: t('undoConfirmOk'),
+                danger: true
+            }).then(function(ok) {
+                if (ok) remoteSend('undoChanges');
+            });
+            return;
+        }
 
         customConfirm(t('undoConfirmTitle'), {
             detail: tf('undoConfirmDetail', { time: formatTime(new Date(state.capturedAt)) }),
             confirmLabel: t('undoConfirmOk'),
             danger: true
         }).then(function(ok) {
-            if (!ok) return;
-            showToast(t('undoRunning'), 'success');
-            return window.AIAssistantPreload.callTool('restoreProjectSnapshot', { snapshotId: state.snapshotId })
-                .then(function(res) {
-                    if (!res || !res.success) {
-                        showToast((res && res.error) || t('undoFailed'), 'error');
-                        // 快照没了就别再留着按钮骗人
-                        if (res && res.error && /no longer available/.test(res.error)) {
-                            setUndoState(null);
-                            renderUndoButtons();
-                        }
-                        return;
-                    }
-                    state.undone = true;
-                    setUndoState(state);
-                    renderUndoButtons();
-                    // 工程内容已变，缓存的工程上下文必须失效，否则下一轮 AI 会基于旧快照推理
-                    projectCodeCache = null;
-                    currentContextMapping = {};
-                    showToast(t('undoDone'), 'success');
-                    phonePushHistory();
-                });
+            if (ok) performUndoConfirmed();
         });
+    }
+
+    /** 已确认后的恢复动作；手机端在自己那边确认过，直接走这里。 */
+    function performUndoConfirmed() {
+        var state = currentUndoState();
+        if (!state || !state.snapshotId || state.undone) return;
+        showToast(t('undoRunning'), 'success');
+        window.AIAssistantPreload.callTool('restoreProjectSnapshot', { snapshotId: state.snapshotId })
+            .then(function(res) {
+                if (!res || !res.success) {
+                    showToast((res && res.error) || t('undoFailed'), 'error');
+                    // 快照没了就别再留着按钮骗人
+                    if (res && res.error && /no longer available/.test(res.error)) {
+                        setUndoState(null);
+                        renderUndoButtons();
+                    }
+                    return;
+                }
+                state.undone = true;
+                setUndoState(state);
+                renderUndoButtons();
+                // 工程内容已变，缓存的工程上下文必须失效，否则下一轮 AI 会基于旧快照推理
+                projectCodeCache = null;
+                currentContextMapping = {};
+                showToast(t('undoDone'), 'success');
+                phonePushHistory();
+            });
     }
 
     function executeToolCall(toolName, params) {
@@ -8839,7 +9186,10 @@
                 };
             });
         }
-        return window.AIAssistantPreload.callTool(mappedName, params);
+        // 改动类工具执行前先建立撤销基线；只读工具不付这个开销
+        return ensureUndoBaseline(toolName).then(function() {
+            return window.AIAssistantPreload.callTool(mappedName, params);
+        });
     }
 
     var currentStreamingWrapper = null;
@@ -8864,6 +9214,16 @@
             return currentConfig.customModelId;
         }
         return currentConfig.model;
+    }
+
+    // 判断一次模型请求失败是否值得自动重试：网络层错误、流中断以及超时/限流/服务端
+    // 故障（408/429/5xx）属于暂时性问题；服务端明确拒绝的 4xx（密钥无效、请求非法等）
+    // 重试也不会成功，直接把报错呈现给用户。
+    function isTransientStreamFailure(err) {
+        if (!err) return true;
+        if (err.name === 'AbortError') return false;
+        if (err.status) return err.status === 408 || err.status === 429 || err.status >= 500;
+        return true;
     }
 
     function doApiCall(messages, callback) {
@@ -8899,7 +9259,12 @@
             body: JSON.stringify(body),
             signal: abortController.signal
         }).then(function(resp) {
-            if (!resp.ok) return resp.json().catch(function() { return {}; }).then(function(e) { throw new Error(e.error ? e.error.message : 'HTTP ' + resp.status); });
+            if (!resp.ok) return resp.json().catch(function() { return {}; }).then(function(e) {
+                //带上 HTTP 状态码，断连重试要靠它区分瞬时故障（5xx/429）和明确拒绝（4xx）
+                var httpErr = new Error(e.error ? e.error.message : 'HTTP ' + resp.status);
+                httpErr.status = resp.status;
+                throw httpErr;
+            });
             var reader = resp.body.getReader();
             var decoder = new TextDecoder();
             var buf = '';
@@ -8922,11 +9287,9 @@
                             if (!delta) return;
                             if (delta.reasoning_content) {
                                 fullReasoning += delta.reasoning_content;
-                                hasOutput = true;
                             }
                             if (delta.content) {
                                 fullContent += delta.content;
-                                hasOutput = true;
                             }
                             if (delta.tool_calls) {
                                 delta.tool_calls.forEach(function(tc) {
@@ -8940,7 +9303,6 @@
                                     }
                                 });
                                 hasToolCall = true;
-                                hasOutput = true;
                             }
                         } catch(e) {}
                     });
@@ -8971,7 +9333,6 @@
             }
         }
 
-        var hasOutput = false;
         var usageInfo = null;
     }
 
@@ -9103,6 +9464,8 @@
             var content = messageInput.value.trim();
             if (!content && pendingImages.length === 0 && pendingFiles.length === 0) return;
             if (!currentConfig.apiKey) { showToast('Configure API Key first', 'error'); openSettings(); return; }
+            // 只在新一轮开始时拦：正在进行的对话（含工具循环）允许跑完
+            if (usingBuiltInQuota() && builtinQuotaExhausted()) { appendQuotaNotice(); return; }
 
             var titleSeed = content;
             var fileBlock = '';
@@ -9192,7 +9555,110 @@
             var lastContent = '';
             var lastReasoning = '';
 
-            doApiCall(apiMessages, function(result) {
+            // ── 断连自动重试（issue #8）──────────────────────────────────────
+            // 连接断开或收到空响应时，每 5 秒重试一次，最多重试 10 次；仍失败则把
+            // 最后一次的报错呈现给用户。等待期间 Esc / 删除会话仍可随时取消。
+            var MAX_STREAM_RETRIES = 10;
+            var STREAM_RETRY_DELAY_MS = 5000;
+            var retryAttempt = 0;
+            var lastStreamError = null;
+            var streamSettled = false;
+            var retryTimer = null;
+            var retryCountdownTimer = null;
+
+            function clearStreamRetry() {
+                if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+                if (retryCountdownTimer) { clearInterval(retryCountdownTimer); retryCountdownTimer = null; }
+            }
+
+            function finishWithError(detail, exhausted) {
+                if (streamSettled) return;
+                streamSettled = true;
+                clearStreamRetry();
+                streamingWrapper.remove();
+                if (activeProcessBody) {
+                    activeProcessBody.querySelectorAll('.reasoning-box.is-streaming').forEach(function(el) {
+                        el.classList.remove('is-streaming');
+                        var rc = el.querySelector('.reasoning-content');
+                        if (rc) rc.classList.remove('streaming');
+                    });
+                }
+                finalizeProcessGroup();
+                var em = { role: 'assistant', content: 'Error: ' + (exhausted ? t('streamRetryExhausted') : '') + detail, time: formatTime(new Date()) };
+                chatHistory.push(em);
+                saveCurrentConversation();
+                appendAIMessage(em.content, em.time, '', [], true);
+                phoneClearStream();
+                phonePushHistory();
+                isLoading = false;
+                abortController = null;
+                updateSendBtn();
+                noteBuiltinQuotaIfExhausted();
+                scrollToBottom();
+            }
+
+            // 中断：清掉本回合尚未定稿的推理框，空分组随之移除
+            function abortStreamCleanup() {
+                if (activeProcessBody) {
+                    activeProcessBody.querySelectorAll('.reasoning-box.is-streaming').forEach(function(el) { el.remove(); });
+                }
+                finalizeProcessGroup();
+                phoneClearStream();
+                phonePushHistory();
+            }
+
+            function onRetryAborted() {
+                if (streamSettled) return;
+                streamSettled = true;
+                clearStreamRetry();
+                streamingWrapper.remove();
+                abortStreamCleanup();
+                isLoading = false;
+                abortController = null;
+                updateSendBtn();
+                noteBuiltinQuotaIfExhausted();
+            }
+
+            function showRetryCountdown(secondsLeft) {
+                var prefix = (lastStreamError && lastStreamError.message) ? escapeHtml(lastStreamError.message) + ' — ' : '';
+                streamingBubble.innerHTML = '<span style="opacity:0.65">⚠️ ' + prefix + escapeHtml(t('streamRetrying').replace('{s}', secondsLeft).replace('{n}', retryAttempt).replace('{max}', MAX_STREAM_RETRIES)) + '</span><div class="message-time">' + formatTime(new Date()) + '</div>';
+                scrollToBottom();
+            }
+
+            function scheduleStreamRetry(err) {
+                if (streamSettled) return;
+                clearStreamRetry();
+                lastStreamError = err || null;
+                retryAttempt++;
+                if (retryAttempt > MAX_STREAM_RETRIES) {
+                    // 重试 10 次仍失败：把最后一次的报错（或空响应说明）交给用户
+                    var detail = lastStreamError ? (lastStreamError.message || String(lastStreamError)) : t('emptyStreamResponse');
+                    finishWithError(detail, true);
+                    return;
+                }
+                var secondsLeft = STREAM_RETRY_DELAY_MS / 1000;
+                showRetryCountdown(secondsLeft);
+                retryCountdownTimer = setInterval(function() {
+                    secondsLeft--;
+                    if (secondsLeft > 0) showRetryCountdown(secondsLeft);
+                }, 1000);
+                retryTimer = setTimeout(function() {
+                    clearStreamRetry();
+                    startStreamAttempt();
+                }, STREAM_RETRY_DELAY_MS);
+                // 等待重试的间隙没有活跃请求，把取消动作挂到上一次请求的 abort 信号上
+                if (abortController) {
+                    abortController.signal.addEventListener('abort', onRetryAborted);
+                }
+            }
+
+            function startStreamAttempt() {
+                streamingBubble.innerHTML = '<span style="opacity:0.5">' + t('thinking') + '</span>';
+                doApiCall(apiMessages, handleStreamResult);
+            }
+
+            function handleStreamResult(result) {
+                if (streamSettled) return;
                 if (result.type === 'chunk') {
                     if (result.fullContent !== lastContent) {
                         lastContent = result.fullContent;
@@ -9205,23 +9671,16 @@
                     }
                     phonePushStream(lastContent, lastReasoning);
                 } else if (result.type === 'error') {
-                    streamingWrapper.remove();
-                    if (result.error.name === 'AbortError') {
-                        // 中断：清掉本回合尚未定稿的推理框，空分组随之移除
-                        if (activeProcessBody) {
-                            activeProcessBody.querySelectorAll('.reasoning-box.is-streaming').forEach(function(el) { el.remove(); });
-                        }
-                        finalizeProcessGroup();
-                        phoneClearStream();
-                        phonePushHistory();
+                    if (result.error && result.error.name === 'AbortError') {
+                        // 用户手动中断（Esc / 删除会话）：取消挂起的重试并清理本回合 UI
+                        onRetryAborted();
+                    } else if (isTransientStreamFailure(result.error)) {
+                        // 断连或瞬时故障：进入自动重试
+                        scheduleStreamRetry(result.error);
                     } else {
-                        var em = { role: 'assistant', content: 'Error: ' + result.error.message, time: formatTime(new Date()) };
-                        chatHistory.push(em);
-                        appendAIMessage(em.content, em.time, '', [], true);
+                        // 服务端明确拒绝（密钥无效、请求非法等）：重试无意义，直接呈现报错
+                        finishWithError(result.error.message || String(result.error), false);
                     }
-                    isLoading = false;
-                    abortController = null;
-                    updateSendBtn();
                 } else if (result.type === 'tool_calls') {
                     streamingWrapper.remove();
                     // 推理框已在分组内定稿，去掉流式光标标记
@@ -9318,6 +9777,12 @@
                         sendMessage(toolMessages);
                     });
                 } else if (result.type === 'text') {
+                    // 空文本保护（issue #8）：DeepSeek 长时间思考后可能只留下推理就断流，
+                    // 流结束却没有任何正文。空响应按断连处理，交给自动重试。
+                    if (!result.content || !result.content.trim()) {
+                        scheduleStreamRetry(null);
+                        return;
+                    }
                     // 本回合的最终总结：先收起过程分组，再把 Token 用量挂到总结底部
                     streamingWrapper.id = '';
                     chatArea.querySelectorAll('.reasoning-box').forEach(function(el) {
@@ -9329,10 +9794,7 @@
                     // 分组折叠后总结气泡要留在最后，重新挂到 chatArea 末尾
                     if (streamingWrapper.parentNode === chatArea) chatArea.appendChild(streamingWrapper);
                     streamingBubble.innerHTML = formatMarkdown(result.content) + '<div class="message-time">' + formatTime(new Date()) + '</div>';
-                    var usageHtml = formatContextUsageHtml(currentRequestTokens);
-                    if (usageHtml && !streamingWrapper.querySelector('.msg-context-usage')) {
-                        streamingWrapper.insertAdjacentHTML('beforeend', usageHtml);
-                    }
+                    renderSummaryFooter(streamingWrapper, currentRequestTokens);
 
                     var aiMsg = { role: 'assistant', content: result.content, time: formatTime(new Date()), reasoning: result.reasoning || undefined };
                     chatHistory.push(aiMsg);
@@ -9342,9 +9804,13 @@
                     updateSendBtn();
                     phoneClearStream();
                     phonePushHistory();
+                    // 这一轮跑完了，如果中途用超了额度，现在才提示
+                    noteBuiltinQuotaIfExhausted();
                     scrollToBottom();
                 }
-            });
+            }
+
+            startStreamAttempt();
         }).catch(function(err) {
             var typingEl = document.getElementById('typingIndicator');
             if (typingEl) typingEl.remove();
@@ -9356,6 +9822,7 @@
             phonePushHistory();
             isLoading = false;
             updateSendBtn();
+            noteBuiltinQuotaIfExhausted();
         });
     }
 
@@ -9446,6 +9913,14 @@
         document.addEventListener('click', function(e) {
             if (modelDropdownOpen && !modelDropdown.contains(e.target) && e.target !== modelSelectBtn && !modelSelectBtn.contains(e.target)) closeModelDropdown();
             if (configMenuOpen && configMenu && !configMenu.contains(e.target) && e.target !== configBtn && !configBtn.contains(e.target)) closeConfigMenu();
+        });
+
+        // 撤销按钮所在的总结会被反复重建，故用事件委托而不是逐个绑定
+        if (chatArea) chatArea.addEventListener('click', function(e) {
+            var undoBtn = e.target.closest ? e.target.closest('.undo-ai-btn') : null;
+            if (!undoBtn || undoBtn.disabled) return;
+            e.preventDefault();
+            performUndo();
         });
 
         document.addEventListener('keydown', function(e) {
@@ -9749,6 +10224,11 @@
             stream: phoneStreamState ? JSON.parse(JSON.stringify(phoneStreamState)) : null,
             theme: document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light',
             locale: currentLocale,
+            builtinQuotaUsed: readBuiltinQuota().tokens,
+            undo: (function() {
+                var u = currentUndoState();
+                return u ? { snapshotId: u.snapshotId, capturedAt: u.capturedAt, undone: !!u.undone } : null;
+            })(),
             conversations: conversations.map(function(c) {
                 return {
                     id: c.id,
@@ -9898,6 +10378,15 @@
                 phonePushHistory();
                 return { ok: true };
             }
+            case 'undoChanges': {
+                var undoState = currentUndoState();
+                if (!undoState || !undoState.snapshotId) return { ok: false, error: '本次对话没有可撤销的更改' };
+                if (undoState.undone) return { ok: false, error: '更改已经撤销过了' };
+                if (isLoading) return { ok: false, error: '电脑端正在生成，请稍候' };
+                // 手机上已经确认过一次，这里直接执行，不在电脑端再弹一次确认框
+                performUndoConfirmed();
+                return { ok: true };
+            }
             case 'clearChat': {
                 if (isLoading) return { ok: false, error: '电脑端正在生成，请稍候' };
                 clearChat();
@@ -9981,6 +10470,12 @@
             };
         });
         activeConversationId = snap.activeConversationId || null;
+        // 撤销状态由电脑端持有，挂到当前会话上，渲染脚注时才知道要不要出按钮
+        var remoteActive = conversations.find(function(c) { return c.id === activeConversationId; });
+        if (remoteActive) {
+            if (snap.undo && snap.undo.snapshotId) remoteActive.undo = snap.undo;
+            else delete remoteActive.undo;
+        }
 
         savedConfigs = (snap.configs || []).map(function(cfg) {
             var copy = {};
@@ -9993,6 +10488,10 @@
         activeConfigIndex = typeof snap.activeConfigIndex === 'number' ? snap.activeConfigIndex : -1;
         applyActiveConfig();
         remoteContextLimit = snap.contextLimit || 0;
+        // 额度由电脑端统计，手机端直接采用它的数字
+        if (typeof snap.builtinQuotaUsed === 'number') {
+            remoteBuiltinQuotaUsed = snap.builtinQuotaUsed;
+        }
 
         chatHistory = snap.messages || [];
         isLoading = !!snap.loading;
@@ -10004,6 +10503,7 @@
         renderConversationList();
         renderChatHistory();
         remoteRenderStream(snap.stream);
+        renderUndoButtons();
         updateSendBtn();
         if (settingsOpen && settingsTab === 'usage') renderUsage();
     }
