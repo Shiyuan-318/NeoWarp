@@ -30,11 +30,26 @@ Suitable for:
 - **Detached Stage**: Stage can be popped out as an independent window, convenient for multi-screen demonstrations or debugging
 
 ### 🛠 Functional Enhancements
-- **AI Assistant**: Provides AI-assisted capabilities through an independent window, can read current project structure and apply modifications to projects or sprites
+- **AI Assistant**: Provides AI-assisted capabilities through an independent window
+  - Comes with 42 tools that can read the project structure, add / remove / modify block scripts, and manage costumes / sounds / variables
+  - DSL-based block script generation, so AI modifications map precisely to individual blocks
+  - Supports stage screenshots, allowing multimodal models to actually "see" how the project runs
+  - Supports adding costumes and sprites from URL, with enhanced built-in Web search
 - **Todo List**: Built-in lightweight todo window for recording ideas and tasks during creation
 - **Project Analysis**: Provides analysis view of project structure
 - **Data Preview**: Convenient for quickly previewing data resources in projects
-- **Protocol-based Windows**: Editor, AI assistant, todo list, extension docs are all loaded via `tw-*` custom protocols, decoupled from main process
+- **Protocol-based Windows**: Editor, AI assistant, todo list, collaboration, extension docs are all loaded via `tw-*` custom protocols, decoupled from main process
+
+### 🤝 Collaboration
+- **Host / Join**: One side hosts a session, other devices join via address, or automatically discover sessions on the same LAN
+- **Permission Control**: The host can manage guests' editing permissions, keeping collaboration under control
+- **Live Chat**: Built-in iOS-style chat area so you can communicate without leaving the editor
+- **Stable Connection**: Built-in heartbeat detection, authentication timeout, and host info broadcast mechanisms
+
+### 📱 Mobile Programming
+- **Connect by QR Code**: The AI assistant can generate a QR code; scan it with your phone to connect to the editor over LAN
+- **Consistent Experience**: The phone gets the same AI chat interface as the desktop, so you can send block commands anytime, anywhere
+- The mobile page is served via the `tw-mobile-preview` custom protocol
 
 ### 🧩 Compatibility & Ecosystem
 - Supports **all extensions** from original TurboWarp (`@turbowarp/extensions`)
@@ -65,6 +80,24 @@ Please visit the project's [Releases](https://github.com/Shiyuan-318/Neowarp/rel
 | **Windows** | `NeoWarp Portable x.y.z x64.exe` | Portable version (unzip and run) |
 
 > Since this project is a personal secondary development work, the release channel and signing policy may differ from upstream TurboWarp, please refer to actual published Releases.
+
+---
+
+## 🧑‍💻 Running from Source
+
+```bash
+npm install              # Install dependencies (runs patch-package automatically)
+npm run fetch            # Download library files, packager and extension resources
+npm run webpack:compile  # Compile the renderer (use webpack:watch during development)
+npm run electron:start   # Start the editor
+npm run electron:build   # Package installers
+```
+
+Helper scripts for the AI assistant:
+
+- `npm run ai:schema` — Generate the block opcode schema
+- `npm run ai:prompt` — Build the AI system prompt
+- `npm run ai:test` — Run DSL round-trip and data tool tests
 
 ---
 
