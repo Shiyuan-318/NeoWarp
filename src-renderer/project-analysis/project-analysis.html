@@ -703,8 +703,17 @@
             var totalMemory = assetSize || 0;
 
             targets.forEach(function(target) {
-                var blocksSize = target.blocks ? JSON.stringify(target.blocks).length : 0;
-                totalMemory += blocksSize;
+                if (target.blocks) {
+                    var realBlocks = {};
+                    Object.keys(target.blocks).forEach(function(blockId) {
+                        var block = target.blocks[blockId];
+                        if (block && !block.shadow) {
+                            realBlocks[blockId] = block;
+                        }
+                    });
+                    var blocksSize = JSON.stringify(realBlocks).length;
+                    totalMemory += blocksSize;
+                }
             });
 
             var categoryCounts = {};
@@ -976,7 +985,7 @@
             else if (memoryBytes > 10 * 1024 * 1024) { memoryLevel = '中'; memoryClass = 'medium'; }
             else { memoryClass = 'low'; }
 
-            var memoryPct = Math.min(100, Math.round((memoryBytes / (80 * 1024 * 1024)) * 100));
+            var memoryPct = Math.min(100, Math.round((memoryBytes / (200 * 1024 * 1024)) * 100));
 
             var elapsedScore = elapsedMin > 120 ? 2 : (elapsedMin > 60 ? 1 : 0);
             var memoryScore = memoryBytes > 50 * 1024 * 1024 ? 2 : (memoryBytes > 10 * 1024 * 1024 ? 1 : 0);

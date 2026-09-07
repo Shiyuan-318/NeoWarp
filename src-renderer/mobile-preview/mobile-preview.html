@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>手机预览</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --card-bg: #ffffff;
+    --text: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --border: #e5e5ea;
+    --accent: #3b82f6;
+    --accent-soft: rgba(59, 130, 246, 0.1);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --radius: 12px;
+  }
+  [data-theme="dark"] {
+    --bg: #1c1c1e;
+    --card-bg: #2c2c2e;
+    --text: #f5f5f7;
+    --text-secondary: #a1a1a6;
+    --border: #3a3a3c;
+    --accent: #60a5fa;
+    --accent-soft: rgba(96, 165, 250, 0.16);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  main {
+    padding: 24px 22px 28px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card:last-child { margin-bottom: 0; }
+  .qr-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  #qr {
+    width: 220px;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: var(--shadow-md);
+  }
+  #qr svg { width: 100%; height: 100%; display: block; }
+  #qr .placeholder {
+    font-size: 13px;
+    color: #6e6e73;
+    text-align: center;
+    padding: 0 16px;
+  }
+  h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .url-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .url-box {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: "Consolas", "Menlo", monospace;
+    font-size: 14px;
+    background: var(--accent-soft);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    word-break: break-all;
+    user-select: all;
+  }
+  button {
+    flex: 0 0 auto;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:active { filter: brightness(0.94); }
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--border);
+  }
+  ol, ul {
+    padding-left: 20px;
+    color: var(--text-secondary);
+  }
+  li { margin-bottom: 4px; }
+  li:last-child { margin-bottom: 0; }
+  .alt-list {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .alt-list code {
+    font-family: "Consolas", "Menlo", monospace;
+    color: var(--text);
+    user-select: all;
+  }
+  .status {
+    font-size: 13px;
+    text-align: center;
+    color: var(--text-secondary);
+    min-height: 22px;
+    margin-top: 12px;
+  }
+  .status.error { color: #ef4444; }
+  .status.ok { color: #22c55e; }
+  .note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>手机预览</h1>
+  <p class="subtitle">用手机扫码或打开链接，即可在其他设备上运行当前项目</p>
+
+  <div class="card qr-card">
+    <div id="qr"><div class="placeholder">正在启动预览服务…</div></div>
+    <div class="url-row">
+      <div class="url-box" id="url">—</div>
+      <button id="copy" type="button">复制</button>
+    </div>
+    <div class="alt-list" id="alt-urls" hidden></div>
+  </div>
+
+  <div class="card">
+    <h2>使用方法</h2>
+    <ol>
+      <li>确保手机与这台电脑连接在同一个 Wi-Fi 或局域网中。</li>
+      <li>用手机相机或扫码工具扫描上方二维码，也可以在浏览器里手动输入链接。</li>
+      <li>页面会自动下载当前项目并开始运行，可以直接在手机上点击、拖动操作。</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>说明</h2>
+    <p class="note">
+      手机端运行的是当前项目的一份独立副本，操作不会同步回软件里的舞台。<br>
+      关闭这个窗口会停止预览服务，手机端将无法再加载项目。<br>
+      如果扫码后打不开，请检查电脑防火墙是否拦截了 NeoWarp 的局域网访问。
+    </p>
+  </div>
+
+  <div class="status" id="status"></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var qrEl = document.getElementById('qr');
+  var urlEl = document.getElementById('url');
+  var altUrlsEl = document.getElementById('alt-urls');
+  var copyButton = document.getElementById('copy');
+  var statusEl = document.getElementById('status');
+
+  var currentURL = '';
+
+  var setStatus = function (text, kind) {
+    statusEl.textContent = text || '';
+    statusEl.className = 'status' + (kind ? ' ' + kind : '');
+  };
+
+  var setPlaceholder = function (text) {
+    qrEl.innerHTML = '';
+    var div = document.createElement('div');
+    div.className = 'placeholder';
+    div.textContent = text;
+    qrEl.appendChild(div);
+  };
+
+  var applyTheme = function (theme) {
+    document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+  };
+
+  var renderQRCode = function (url) {
+    return MobilePreviewPreload.getQRCode(url).then(function (svg) {
+      // 主进程返回的是自己生成的 SVG 字符串，这里只做展示
+      qrEl.innerHTML = svg;
+    }).catch(function () {
+      setPlaceholder('二维码生成失败，请手动输入下方链接');
+    });
+  };
+
+  var renderAltURLs = function (urls) {
+    var others = (urls || []).filter(function (url) {
+      return url !== currentURL;
+    });
+    if (!others.length) {
+      altUrlsEl.hidden = true;
+      altUrlsEl.textContent = '';
+      return;
+    }
+    altUrlsEl.hidden = false;
+    altUrlsEl.textContent = '如果无法访问，也可以试试：';
+    others.forEach(function (url) {
+      var br = document.createElement('br');
+      var code = document.createElement('code');
+      code.textContent = url;
+      altUrlsEl.appendChild(br);
+      altUrlsEl.appendChild(code);
+    });
+  };
+
+  copyButton.addEventListener('click', function () {
+    if (!currentURL) return;
+    navigator.clipboard.writeText(currentURL).then(function () {
+      setStatus('链接已复制到剪贴板', 'ok');
+    }).catch(function () {
+      setStatus('复制失败，请手动选中链接复制', 'error');
+    });
+  });
+
+  MobilePreviewPreload.getTheme().then(applyTheme).catch(function () {
+    applyTheme('light');
+  });
+  MobilePreviewPreload.onThemeChanged(function (data) {
+    applyTheme(data && data.theme);
+  });
+
+  MobilePreviewPreload.start().then(function (result) {
+    if (!result || !result.success) {
+      setPlaceholder('预览服务启动失败');
+      setStatus((result && result.error) || '预览服务启动失败', 'error');
+      return;
+    }
+    currentURL = result.url;
+    urlEl.textContent = result.url;
+    renderAltURLs(result.urls);
+    setStatus('预览服务已启动，端口 ' + result.port, 'ok');
+    return renderQRCode(result.url);
+  }).catch(function (error) {
+    setPlaceholder('预览服务启动失败');
+    setStatus(String(error && error.message ? error.message : error), 'error');
+  });
+})();
+</script>
+</body>
+</html>

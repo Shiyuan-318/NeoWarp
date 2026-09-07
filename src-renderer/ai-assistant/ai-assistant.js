@@ -35,21 +35,33 @@
       name: 'Kimi (Moonshot)', logo: '#10b981', logoText: 'K',
       endpoint: 'https://api.moonshot.cn/v1/chat/completions',
       models: [
+        { id: 'kimi-k3', name: 'Kimi K3', supportsReasoning: true },
         { id: 'moonshot-v1-8k', name: 'Kimi 8K', supportsReasoning: false },
         { id: 'moonshot-v1-32k', name: 'Kimi 32K', supportsReasoning: false },
         { id: 'moonshot-v1-128k', name: 'Kimi 128K', supportsReasoning: false }
       ],
-      defaultModel: 'moonshot-v1-32k'
+      defaultModel: 'kimi-k3'
+    },
+    mimo: {
+      name: 'Xiaomi MiMo', logo: '#ff6900', logoText: 'M',
+      endpoint: 'https://api.xiaomimimo.com/v1/chat/completions',
+      models: [
+        { id: 'mimo-v2.5-pro', name: 'MiMo V2.5 Pro', supportsReasoning: true },
+        { id: 'mimo-v2.5-pro-ultraspeed', name: 'MiMo V2.5 Pro UltraSpeed', supportsReasoning: true },
+        { id: 'mimo-v2.5', name: 'MiMo V2.5', supportsReasoning: true }
+      ],
+      defaultModel: 'mimo-v2.5-pro'
     },
     qwen: {
       name: 'Qwen (通义千问)', logo: '#6366f1', logoText: 'Q',
       endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
       models: [
-        { id: 'qwen-plus', name: 'Qwen Plus', supportsReasoning: false },
-        { id: 'qwen-max', name: 'Qwen Max', supportsReasoning: false },
-        { id: 'qwen-turbo', name: 'Qwen Turbo', supportsReasoning: false }
+        { id: 'qwen3.8-max-preview', name: 'Qwen3.8 Max Preview', supportsReasoning: true },
+        { id: 'qwen3.7-max', name: 'Qwen3.7 Max', supportsReasoning: true },
+        { id: 'qwen3.7-plus', name: 'Qwen3.7 Plus', supportsReasoning: true },
+        { id: 'qwen3.6-flash', name: 'Qwen3.6 Flash', supportsReasoning: true }
       ],
-      defaultModel: 'qwen-plus'
+      defaultModel: 'qwen3.7-plus'
     },
     custom: {
       name: 'Custom', logo: '#888', logoText: '?',
@@ -453,12 +465,15 @@
       '- **getAllSprites()**: List all sprites with properties.',
       '- **setSpriteProperty(spriteName, x?, y?, size?, direction?, visible?, ...)**: Set sprite properties.',
       '- **getSpriteProperty(spriteName)**: Get sprite properties.',
+      '- **getSpriteScripts(spriteName)**: View all existing scripts in a sprite as DSL text. Use before modifying existing blocks.',
       '- **getProjectSummary()**: Get project summary.',
       '- **getExtensionCode(extensionId?, extensionName?)**: View the JavaScript source code of a loaded extension. Provide the extension ID/URL or name.',
       '- **sendKeyToStage(key, duration?)**: Send a keyboard key press to the stage (e.g., "a", "space", "up", "enter"). Duration in ms (default 100).',
-      '- **addScript(spriteName, hat, blocks, hatKey?, hatMessage?, hatBackdrop?)**: Add a script to a sprite/stage. hat defaults to "event_whenflagclicked".',
-      '- **executeOperations(operations, contextMapping?)**: Batch operations: add_script, delete_block, modify_input, add_comment, delete_comment, explain.',
-      '- **addSprite(spriteName?)**: Add a new sprite with a colored circle costume.',
+      '- **addScript(spriteName, script)**: Add a COMPLETE script (all blocks at once) using Scratch DSL. First line = hat block, body lines use 2-space indent. Put ALL blocks in one call, do NOT add one block at a time.',
+      '- **executeOperations(operations, contextMapping?)**: Batch operations in ONE call. Use add_script (DSL text) for multiple scripts, plus delete_block, modify_input, add_comment, delete_comment, explain. PREFER this when adding 2+ scripts.',
+      '- **addSprite(spriteName?)**: Add a sprite. If spriteName provided, loads from Scratch library (e.g. "Cat"). If omitted, creates blank sprite. Use getSpriteLibrary to browse available sprites.',
+      '- **getSpriteLibrary()**: Browse the built-in Scratch sprite library. Returns sprite names and tags.',
+      '- **addCostumeFromLibrary(spriteName, costumeName)**: Add a costume from the built-in Scratch costume library to a sprite.',
       '- **addBackdrop(backdropName?)**: Add a new backdrop with gradient color.',
       '- **deleteSprite(spriteName)**: Delete a sprite.',
       '- **changeCostume(spriteName, costumeName)**: Switch sprite costume by name.',
@@ -481,26 +496,140 @@
       'When spriteName is omitted for variable/list operations, the stage (global) scope is used.'
     ].join('\n');
 
+    var dslSyntax = [
+      '## Scratch DSL Syntax',
+      '**CRITICAL: The "script" parameter MUST be a plain text string, NOT a JSON object.**',
+      '**WRONG: {"script": {"opcode":"event_whenflagclicked","next":{...}}} — this will FAIL.**',
+      '**RIGHT: {"script": "event_whenflagclicked\\n  motion_movesteps 10"} — DSL text with \\n for newlines.**',
+      '',
+      'Write Scratch scripts as code-like text (NOT JSON). Rules:',
+      '- One block per line: `opcode arg1 arg2 ...` (space-separated)',
+      '- 2-space indentation = nesting inside C-blocks (if/forever/repeat)',
+      '- First line (no indent) = hat block (e.g. event_whenflagclicked)',
+      '- `else` on its own line (same indent as control_if_else) = separate SUBSTACK2',
+      '- Number args: bare (10, -5, 3.14)',
+      '- String args: double-quoted ("Hello World")',
+      '- Variable: $varName (e.g. $score)',
+      '- List: @listName (e.g. @items)',
+      '- Nested reporter: (opcode args...) e.g. (operator_add 5 10)',
+      '- Comments: lines starting with #',
+      '- Args are POSITIONAL (in the order shown in the Opcode Reference below), no arg names needed',
+      '- In JSON tool calls, the "script" param is a single string: use \\n for newlines and \\" for quotes inside it. Example: "event_whenflagclicked\\n  motion_movesteps 10"',
+      '- Multiple blocks at the same indent level = a sequence (they chain via "next")',
+      '',
+      'Examples:',
+      '```',
+      'event_whenflagclicked',
+      '  motion_movesteps 10',
+      '  looks_say "Hello World"',
+      '  control_if operator_equals $score 10',
+      '    looks_say "You win!"',
+      '  control_forever',
+      '    motion_turnright 15',
+      '    control_wait 0.5',
+      '```',
+      '',
+      '```',
+      'event_whenflagclicked',
+      '  control_if_else operator_gt $lives 0',
+      '    looks_say "Still alive!"',
+      '  else',
+      '    looks_say "Game over!"',
+      '```',
+      '',
+      '```',
+      'event_whenkeypressed space',
+      '  motion_movesteps operator_random 1 10',
+      '  data_setvariableto $counter operator_add $counter 1',
+      '```',
+      '',
+      '```',
+      '# A complete game loop — ALL blocks in ONE addScript call:',
+      'event_whenflagclicked',
+      '  data_setvariableto $score 0',
+      '  control_forever',
+      '    motion_movesteps 5',
+      '    control_if sensing_touchingobject "_edge_"',
+      '      motion_ifonedgebounce',
+      '    control_if operator_gt $score 10',
+      '      looks_say "Level up!"',
+      '      sound_play "Win"',
+      '```'
+    ].join('\n');
+
     var opcodeRef = [
-      '## Scratch Opcode Reference',
-      'Motion: motion_movesteps, motion_turnright, motion_turnleft, motion_goto, motion_glideto, motion_pointindirection, motion_pointtowards, motion_changexby, motion_setx, motion_changeyby, motion_sety, motion_ifonedgebounce, motion_setrotationstyle',
-      'Looks: looks_sayforsecs, looks_say, looks_thinkforsecs, looks_think, looks_switchcostumeto, looks_nextcostume, looks_switchbackdropto, looks_nextbackdrop, looks_changesizeby, looket_setsizeto, looks_changeeffectby, looks_seteffectto, looks_cleargraphiceffects, looks_show, looks_hide, looks_gotofrontback, looks_goforwardbackwardlayers',
-      'Sound: sound_playuntildone, sound_play, sound_stopallsounds, sound_changeeffectby, sound_seteffectto, sound_cleareffects, sound_changevolumeby, sound_setvolumeto',
-      'Control: control_wait, control_wait_until, control_repeat, control_forever, control_if, control_if_else, control_repeat_until, control_stop, control_start_as_clone, control_create_clone_of, control_delete_this_clone',
-      'Sensing: sensing_touchingobject, sensing_touchingcolor, sensing_coloristouchingcolor, sensing_distanceto, sensing_askandwait, sensing_answer, sensing_keypressed, sensing_mousedown, sensing_mousex, sensing_mousey, sensing_loudness, sensing_timer, sensing_resettimer, sensing_of, sensing_current',
-      'Operators: operator_add, operator_subtract, operator_multiply, operator_divide, operator_random, operator_gt, operator_lt, operator_equals, operator_and, operator_or, operator_not, operator_join, operator_letter_of, operator_length, operator_contains, operator_round, operator_mathop',
-      'Data: data_setvariableto, data_changevariableby, data_showvariable, data_hidevariable, data_addtolist, data_deleteoflist, data_deletealloflist, data_insertatlist, data_replaceitemoflist, data_itemoflist, data_itemnumoflist, data_lengthoflist, data_listcontainsitem',
-      'Events: event_whenflagclicked, event_whenkeypressed, event_whenthisspriteclicked, event_whenbackdropswitchesto, event_whengreaterthan, event_whenbroadcastreceived, event_broadcast, event_broadcastandwait'
+      '## Scratch Opcode Reference (args in order, space-separated; [C]=has substack, [C+else]=substack+else)',
+      'Motion: motion_movesteps STEPS, motion_turnright DEGREES, motion_turnleft DEGREES, motion_goto TO, motion_glideto TO SECS, motion_pointindirection DIRECTION, motion_pointtowards TOWARDS, motion_changexby DX, motion_setx X, motion_changeyby DY, motion_sety Y, motion_ifonedgebounce, motion_setrotationstyle STYLE',
+      'Looks: looks_say MESSAGE, looks_sayforsecs MESSAGE SECS, looks_think MESSAGE, looks_thinkforsecs MESSAGE SECS, looks_switchcostumeto COSTUME, looks_nextcostume, looks_switchbackdropto BACKDROP, looks_nextbackdrop, looks_changesizeby CHANGE, looks_setsizeto SIZE, looks_changeeffectby EFFECT CHANGE, looks_seteffectto EFFECT VALUE, looks_cleargraphiceffects, looks_show, looks_hide, looks_gotofrontback FRONT_BACK, looks_goforwardbackwardlayers FRONT_BACK NUM',
+      'Sound: sound_play SOUND_MENU, sound_playuntildone SOUND_MENU, sound_stopallsounds, sound_changeeffectby EFFECT VALUE, sound_seteffectto EFFECT VALUE, sound_cleareffects, sound_changevolumeby VOLUME, sound_setvolumeto VOLUME',
+      'Control: control_wait DURATION, control_wait_until CONDITION, control_repeat TIMES [C], control_forever [C], control_if CONDITION [C], control_if_else CONDITION [C+else], control_repeat_until CONDITION [C], control_stop STOP_OPTION, control_create_clone_of CLONE_OPTION, control_delete_this_clone, control_start_as_clone',
+      'Sensing: sensing_touchingobject TOUCHINGOBJECTMENU, sensing_touchingcolor COLOR, sensing_distanceto DISTANCETOMENU, sensing_askandwait QUESTION, sensing_keypressed KEY_OPTION, sensing_of PROPERTY OBJECT, sensing_current CURRENTMENU',
+      'Operators: operator_add NUM1 NUM2, operator_subtract NUM1 NUM2, operator_multiply NUM1 NUM2, operator_divide NUM1 NUM2, operator_random FROM TO, operator_gt OPERAND1 OPERAND2, operator_lt OPERAND1 OPERAND2, operator_equals OPERAND1 OPERAND2, operator_and OPERAND1 OPERAND2, operator_or OPERAND1 OPERAND2, operator_not OPERAND, operator_join STRING1 STRING2, operator_letter_of LETTER STRING, operator_length STRING, operator_contains STRING1 STRING2, operator_round NUM, operator_mathop OPERATOR NUM',
+      'Data: data_setvariableto VARIABLE VALUE, data_changevariableby VARIABLE VALUE, data_showvariable VARIABLE, data_hidevariable VARIABLE, data_addtolist LIST ITEM, data_deleteoflist LIST INDEX, data_deletealloflist LIST, data_insertatlist LIST INDEX ITEM, data_replaceitemoflist LIST INDEX ITEM, data_itemoflist LIST INDEX, data_itemnumoflist LIST ITEM, data_lengthoflist LIST, data_listcontainsitem LIST ITEM',
+      'Events: event_whenflagclicked, event_whenkeypressed KEY_OPTION, event_whenthisspriteclicked, event_whenbackdropswitchesto BACKDROP, event_whenbroadcastreceived BROADCAST_OPTION, event_broadcast BROADCAST_INPUT, event_broadcastandwait BROADCAST_INPUT',
+      '',
+      '## Field Value Guide (for dropdown/field args)',
+      '- TO (motion_goto/motion_glideto): "_random_" | "_mouse_" | sprite name e.g. "Sprite1"',
+      '- TOWARDS (motion_pointtowards): "_mouse_" | sprite name',
+      '- STYLE (motion_setrotationstyle): "all around" | "left-right" | "don\'t rotate"',
+      '- KEY_OPTION (event_whenkeypressed/sensing_keypressed): "space" | "up arrow" | "down arrow" | "left arrow" | "right arrow" | "a"-"z" | "0"-"9"',
+      '- COSTUME (looks_switchcostumeto): costume name or number (e.g. "costume1")',
+      '- BACKDROP (looks_switchbackdropto/event_whenbackdropswitchesto): backdrop name',
+      '- STOP_OPTION (control_stop): "all" | "this script" | "other scripts in sprite" | "other scripts in stage"',
+      '- CLONE_OPTION (control_create_clone_of): "_myself_" | sprite name',
+      '- FRONT_BACK (looks_gotofrontback): "front" | "back"',
+      '- EFFECT (looks_changeeffectby/seteffectto): "COLOR" | "FISHEYE" | "WHIRL" | "PIXELATE" | "MOSAIC" | "BRIGHTNESS" | "GHOST"',
+      '- COLOR (sensing_touchingcolor): hex color e.g. "#ff0000"',
+      '- TOUCHINGOBJECTMENU (sensing_touchingobject): "_mouse_" | "_edge_" | sprite name',
+      '- PROPERTY (sensing_of): "x position" | "y position" | "direction" | "costume #" | "size" | "volume"',
+      '- OPERATOR (operator_mathop): "abs" | "floor" | "ceiling" | "sqrt" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "ln" | "log" | "e ^" | "10 ^"',
+      '- VARIABLE (data_*): use $varName syntax (e.g. $score)',
+      '- LIST (data_*list): use @listName syntax (e.g. @items)'
     ].join('\n');
 
     var rules = [
       '## Rules',
       '1. Ranges: x(-240~240) y(-180~180) size(5~535) dir(-180~180).',
-      '2. Blocks: opcode, next, parent, inputs, fields, shadow, topLevel, x, y.',
-      '3. Reply in Chinese.'
+      '2. Use Scratch DSL (not JSON) for addScript and executeOperations add_script.',
+      '3. Reply in Chinese.',
+      '4. **GENERATE COMPLETE SCRIPTS IN ONE CALL**: When the user asks for blocks, write the ENTIRE script (hat + all body blocks) in a single addScript call. NEVER add one block at a time — that wastes tokens and time. A script can have many blocks chained at the same indent level.',
+      '5. **MULTIPLE SCRIPTS**: If the user needs multiple independent scripts (e.g. different hat blocks), use executeOperations with multiple add_script operations in ONE call, NOT multiple addScript calls.',
+      '6. **DO NOT over-explain**: After generating blocks, give a brief 1-2 sentence summary. Do not repeat the DSL code in your text response — it is already sent via the tool call.',
+      '7. **modify_input SUBSTACK**: To modify a C-block body, pass inputName="SUBSTACK" and value=<DSL text string>. For else branch use inputName="SUBSTACK2". Example: {"type":"modify_input","targetId":"b1","inputName":"SUBSTACK","value":"motion_movesteps 10\\n  looks_say \\"Hi\\""}.',
+      '8. **View before modify**: Use getSpriteScripts(spriteName) to view existing scripts BEFORE modifying them. You need the blockId from the result to target specific blocks with modify_input or delete_block.',
+      '9. **Format rule**: ALWAYS pass "script" as a DSL text string (e.g. "event_whenflagclicked\\n  motion_movesteps 10"). NEVER pass a JSON object like {"opcode":"...","next":{...}}. If you pass an object, the system will auto-convert it, but this may lose information — always use text.'
     ].join('\n');
 
-    var baseSections = '\n\n' + toolList + '\n\n' + rules + '\n\n' + opcodeRef;
+    var modifyInputGuide = [
+      '## modify_input Usage (inside executeOperations)',
+      'Modify an existing block\'s input. The `value` field accepts multiple formats:',
+      '',
+      '### Scalar inputs (numbers, strings, booleans)',
+      '```json',
+      '{"type":"modify_input","targetId":"b1","inputName":"STEPS","value":10}',
+      '{"type":"modify_input","targetId":"b2","inputName":"MESSAGE","value":"Hello"}',
+      '```',
+      '',
+      '### Reporter block input (pass as object)',
+      '```json',
+      '{"type":"modify_input","targetId":"b3","inputName":"OPERAND1","value":{"opcode":"operator_random","inputs":{"FROM":1,"TO":10}}}',
+      '```',
+      '',
+      '### SUBSTACK / SUBSTACK2 input (pass as DSL text string)',
+      'To replace the body of a C-block (if/forever/repeat), pass DSL text with 2-space indentation:',
+      '```json',
+      '{"type":"modify_input","targetId":"b4","inputName":"SUBSTACK","value":"motion_movesteps 10\\n  looks_say \\"Hi\\""}',
+      '```',
+      'For the else branch of control_if_else, use inputName="SUBSTACK2".',
+      '',
+      '### Variable / List input',
+      '```json',
+      '{"type":"modify_input","targetId":"b5","inputName":"VALUE","value":{"VARIABLE":"score"}}',
+      '{"type":"modify_input","targetId":"b6","inputName":"ITEM","value":{"LIST":"items"}}',
+      '```'
+    ].join('\n');
+
+    var baseSections = '\n\n' + toolList + '\n\n' + dslSyntax + '\n\n' + rules + '\n\n' + modifyInputGuide + '\n\n' + opcodeRef;
     var projectJsonStr = JSON.stringify(projectCodeCache, null, 2);
 
     if (projectJsonStr.length > 5000) {
@@ -835,6 +964,20 @@
     {
       type: 'function',
       function: {
+        name: 'getSpriteScripts',
+        description: 'View all existing scripts in a sprite as DSL text. Use this before modifying existing blocks to understand the current structure. Returns each script with its blockId and DSL representation.',
+        parameters: {
+          type: 'object',
+          properties: {
+            spriteName: { type: 'string', description: 'Name of the sprite' }
+          },
+          required: ['spriteName']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
         name: 'getProjectSummary',
         description: 'Get a summary of the project including sprite count, all sprites with their variables and lists, and stage variables.',
         parameters: { type: 'object', properties: {} }
@@ -874,22 +1017,14 @@
       type: 'function',
       function: {
         name: 'addScript',
-        description: 'Add a script (blocks) to a sprite or stage. Creates a hat block followed by the specified blocks.',
+        description: 'Add a COMPLETE script (hat + all body blocks) to a sprite or stage in ONE call using Scratch DSL. Write ALL blocks at once — do NOT call this tool repeatedly for single blocks. Multiple body blocks at the same indent = sequential chain.',
         parameters: {
           type: 'object',
           properties: {
             spriteName: { type: 'string', description: 'Name of the sprite or "Stage"' },
-            hat: { type: 'string', description: 'Hat block opcode. Default "event_whenflagclicked". Other options: "event_whenkeypressed" (requires hatKey), "event_whenthisspriteclicked", "event_whenbroadcastreceived" (requires hatMessage), "event_whenbackdropswitchesto" (requires hatBackdrop), "control_start_as_clone"' },
-            blocks: {
-              type: 'array',
-              description: 'Array of block objects. Each block has: opcode (string, format: "category_action" e.g. "motion_movesteps", "looks_say", "control_wait"), inputs (object mapping input name to value - number/string/boolean/{VARIABLE:name}/{LIST:name}), fields (object mapping field name to value). Example: [{opcode:"motion_movesteps",inputs:{STEPS:10}},{opcode:"looks_say",inputs:{MESSAGE:"Hello!"}},{opcode:"control_wait",inputs:{DURATION:1}}]',
-              items: { type: 'object' }
-            },
-            hatKey: { type: 'string', description: 'Key for event_whenkeypressed (e.g., "a", "space", "up arrow")' },
-            hatMessage: { type: 'string', description: 'Broadcast message name for event_whenbroadcastreceived' },
-            hatBackdrop: { type: 'string', description: 'Backdrop name for event_whenbackdropswitchesto' }
+            script: { type: 'string', description: 'Scratch DSL script text. First line = hat block opcode + args. Body lines use 2-space indentation for nesting inside C-blocks (if/forever/repeat). Args: numbers bare (10), strings quoted ("Hello"), $var for variables, @list for lists, (opcode args) for nested reporters. Use "else" on its own line at same indent as control_if_else to separate the else body. Example: "event_whenflagclicked\n  motion_movesteps 10\n  looks_say \\"Hello\\""' }
           },
-          required: ['spriteName', 'blocks']
+          required: ['spriteName', 'script']
         }
       }
     },
@@ -903,7 +1038,7 @@
           properties: {
             operations: {
               type: 'array',
-              description: 'Array of operation objects. Each operation has a "type" field: "add_script" (fields: sprite, script), "delete_block" (fields: targetId, mode), "modify_input" (fields: targetId, inputName, value), "add_comment" (fields: sprite, text, targetId, x, y, minimized), "delete_comment" (fields: sprite, targetId, commentId), "explain" (fields: text)',
+              description: 'Array of operation objects. Each operation has a "type" field: "add_script" (fields: sprite, script - where script is Scratch DSL text string), "delete_block" (fields: targetId, mode), "modify_input" (fields: targetId, inputName, value), "add_comment" (fields: sprite, text, targetId, x, y, minimized), "delete_comment" (fields: sprite, targetId, commentId), "explain" (fields: text)',
               items: { type: 'object' }
             },
             contextMapping: { type: 'object', description: 'Map of temporary block IDs to {sprite, blockId} for cross-operation references' }
@@ -916,13 +1051,40 @@
       type: 'function',
       function: {
         name: 'addSprite',
-        description: 'Add a new sprite with a colored circle costume.',
+        description: 'Add a sprite. If spriteName is provided (e.g. "Cat", "Dog"), loads the matching sprite from the built-in Scratch library. If no spriteName, creates a blank sprite. Use getSpriteLibrary to browse available sprites first.',
         parameters: {
           type: 'object',
           properties: {
-            spriteName: { type: 'string', description: 'Name for the new sprite. Default "Sprite"' }
+            spriteName: { type: 'string', description: 'Name of sprite to load from library (e.g. "Cat", "Dog", "Ball"). If omitted, creates a blank sprite.' }
           },
           required: []
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'getSpriteLibrary',
+        description: 'Browse the built-in Scratch sprite library. Returns a list of all available sprites with names and tags. Use this before addSprite to find what sprites are available.',
+        parameters: {
+          type: 'object',
+          properties: {},
+          required: []
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'addCostumeFromLibrary',
+        description: 'Add a costume from the built-in Scratch costume library to an existing sprite.',
+        parameters: {
+          type: 'object',
+          properties: {
+            spriteName: { type: 'string', description: 'Target sprite name' },
+            costumeName: { type: 'string', description: 'Name of the costume to find in the library (e.g. "cat1", "dog1-a", "ball-a")' }
+          },
+          required: ['spriteName', 'costumeName']
         }
       }
     },
@@ -1195,10 +1357,35 @@
     });
   }
 
+  // Lenient JSON fix: escape bare newlines/tabs that appear inside string values.
+  // Many LLMs produce JSON with actual newlines inside the "script" parameter
+  // instead of the required \n escape. This scans the string and fixes only
+  // control characters that occur within double-quoted string values.
+  function lenientFixJsonStrings (str) {
+    var result = '';
+    var inString = false;
+    var escaped = false;
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i];
+      if (escaped) { result += ch; escaped = false; continue; }
+      if (ch === '\\' && inString) { result += ch; escaped = true; continue; }
+      if (ch === '"') { inString = !inString; result += ch; continue; }
+      if (inString) {
+        if (ch === '\n') { result += '\\n'; continue; }
+        if (ch === '\r') { result += '\\r'; continue; }
+        if (ch === '\t') { result += '\\t'; continue; }
+      }
+      result += ch;
+    }
+    return result;
+  }
+
   function runConversationLoop (endpoint, messages, modelInfo) {
     var body = { model: currentConfig.model, messages: messages, stream: true, tools: TOOLS };
     if (currentConfig.provider === 'deepseek' && modelInfo && modelInfo.supportsReasoning) body.thinking = true;
     if (currentConfig.provider === 'openai' && modelInfo && modelInfo.supportsReasoning) body.reasoning_effort = 'high';
+    if (currentConfig.provider === 'mimo' && modelInfo && modelInfo.supportsReasoning) body.thinking = true;
+    if (currentConfig.provider === 'kimi' && modelInfo && modelInfo.supportsReasoning) body.reasoning_effort = 'high';
 
     var typingEl = document.getElementById('typingIndicator');
     if (typingEl) typingEl.remove();
@@ -1295,7 +1482,30 @@
 
         var toolPromises = pendingToolCalls.map(function(tc) {
           var args;
-          try { args = JSON.parse(tc.arguments); } catch(e) { args = {}; }
+          var parseError = null;
+          try {
+            args = JSON.parse(tc.arguments);
+          } catch (e) {
+            // Lenient fix: escape bare newlines/tabs inside string values, then retry
+            try {
+              args = JSON.parse(lenientFixJsonStrings(tc.arguments));
+            } catch (e2) {
+              parseError = e2.message;
+              args = {};
+            }
+          }
+          if (parseError) {
+            return Promise.resolve({
+              toolCallId: tc.id,
+              name: tc.name,
+              result: {
+                success: false,
+                error: 'JSON 参数解析失败: ' + parseError + '\n' +
+                  '提示: script 参数中的换行必须写成 \\n，引号必须写成 \\"\n' +
+                  '原始参数(前500字符): ' + (tc.arguments || '').substring(0, 500)
+              }
+            });
+          }
           return executeToolCall(tc.name, args).then(function(result) {
             return { toolCallId: tc.id, name: tc.name, result: result };
           });
