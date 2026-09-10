@@ -9,6 +9,8 @@ if (!process.mas && !app.requestSingleInstanceLock()) {
 const path = require('path');
 const AbstractWindow = require('./windows/abstract');
 const EditorWindow = require('./windows/editor');
+const HomeWindow = require('./windows/home');
+const ExtensionEditorWindow = require('./windows/extension-editor');
 const {checkForUpdatesOnStartup} = require('./update-checker');
 const {tranlateOrNull} = require('./l10n');
 const migrate = require('./migrate');
@@ -172,8 +174,8 @@ app.on('window-all-closed', () => {
 
 // macOS
 app.on('activate', () => {
-  if (app.isReady() && !isMigrating && AbstractWindow.getWindowsByClass(EditorWindow).length === 0) {
-    EditorWindow.newWindow();
+  if (app.isReady() && !isMigrating && AbstractWindow.getAllWindows().length === 0) {
+    HomeWindow.show();
   }
 });
 
@@ -184,7 +186,7 @@ app.on('open-file', (event, path) => {
   // This event can be called before ready.
   if (app.isReady() && !isMigrating) {
     // The path we get should already be absolute
-    EditorWindow.openFiles([path], '');
+    openFilesByType([path], false, '');
   } else {
     filesQueuedToOpen.push(path);
   }
@@ -221,10 +223,45 @@ const parseCommandLine = (argv) => {
 let isMigrating = true;
 let migratePromise = null;
 
+/**
+ * 按文件类型分流：本地 .js 文件交给扩展项目编辑器，其余交给 Scratch 编辑器。
+ * @param {string[]} files
+ * @param {boolean} fullscreen
+ * @param {string|null} workingDirectory
+ */
+const openFilesByType = (files, fullscreen, workingDirectory) => {
+  const isLocalJsFile = (file) =>
+    !/^[a-z][a-z0-9+.-]*:\/\//i.test(file) && path.extname(file).toLowerCase() === '.js';
+  const jsFiles = files.filter(isLocalJsFile);
+  const projectFiles = files.filter((file) => !isLocalJsFile(file));
+
+  for (const jsFile of jsFiles) {
+    ExtensionEditorWindow.openFile(path.resolve(workingDirectory || '', jsFile));
+  }
+  if (projectFiles.length) {
+    EditorWindow.openFiles(projectFiles, fullscreen, workingDirectory);
+  }
+};
+
+/**
+ * Startup behavior: show the home page when the app is launched on its own;
+ * open the Scratch editor directly when launched with project files.
+ * @param {string[]} files
+ * @param {boolean} fullscreen
+ * @param {string|null} workingDirectory
+ */
+const openStartupTargets = (files, fullscreen, workingDirectory) => {
+  if (files.length === 0) {
+    HomeWindow.show();
+  } else {
+    openFilesByType(files, fullscreen, workingDirectory);
+  }
+};
+
 app.on('second-instance', (event, argv, workingDirectory) => {
   migratePromise.then(() => {
     const commandLineOptions = parseCommandLine(argv);
-    EditorWindow.openFiles(commandLineOptions.files, commandLineOptions.fullscreen, workingDirectory);
+    openStartupTargets(commandLineOptions.files, commandLineOptions.fullscreen, workingDirectory);
   });
 });
 
@@ -242,7 +279,7 @@ app.whenReady().then(() => {
     isMigrating = false;
 
     const commandLineOptions = parseCommandLine(process.argv);
-    EditorWindow.openFiles([
+    openStartupTargets([
       ...filesQueuedToOpen,
       ...commandLineOptions.files
     ], commandLineOptions.fullscreen, process.cwd());

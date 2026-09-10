@@ -41,6 +41,12 @@ const FILE_SCHEMES = {
     root: path.resolve(__dirname, '../src-renderer/about'),
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
   },
+  'tw-home': {
+    root: path.resolve(__dirname, '../src-renderer/home'),
+    standard: true,
+    secure: true,
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
+  },
   'tw-contact': {
     root: path.resolve(__dirname, '../src-renderer/contact'),
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
@@ -118,6 +124,15 @@ const FILE_SCHEMES = {
     standard: true,
     secure: true,
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
+  },
+  'tw-extension-editor': {
+    root: path.resolve(__dirname, '../src-renderer/extension-editor'),
+    standard: true,
+    supportFetch: true,
+    secure: true,
+    // Monaco 的脚本/字体/Worker 全部同源（页面内 vs/ 目录），仅样式需要内联；
+    // connect-src 放开是为了直连自定义 AI 端点（tw-ai-proxy 不可用时回退）
+    csp: "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; worker-src 'self' blob:; connect-src * tw-ai-proxy:"
   },
   // nw-expands 由 createExpandsProtocolHandler 处理（根目录运行时才确定），
   // 不走下面的静态 FILE_SCHEMES 流程

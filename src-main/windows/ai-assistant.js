@@ -378,6 +378,9 @@ class AIAssistantWindow extends AbstractWindow {
     this.ipc.handle('save-ai-settings', async (event, aiSettings) => {
       settings.aiProviders = aiSettings;
       await settings.save();
+      // 同步给所有扩展编辑窗口（以及其他 AI 助手窗口），发起者除外
+      const ExtensionEditorWindow = require('./extension-editor');
+      ExtensionEditorWindow.broadcastAiSettingsChanged(aiSettings, this.window.webContents);
       return { success: true };
     });
 
