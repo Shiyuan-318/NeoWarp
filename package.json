@@ -1,7 +1,7 @@
 {
   "name": "neowarp",
   "description": "NeoWarp - Scratch mod with a compiler, dark mode, a bunch of addons, and more.",
-  "version": "1.0.16",
+  "version": "2.0.0",
   "license": "GPL-3.0",
   "author": {
     "email": "contact@neowarp.org",
@@ -15,11 +15,18 @@
     "webpack:watch": "webpack --watch",
     "webpack:prod": "cross-env NODE_ENV=production webpack",
     "electron:start": "electron src-main/entrypoint.js",
+    "ai:schema": "node scripts/gen-opcode-schema.js",
+    "ai:prompt": "node scripts/build-system-prompt.js --write",
+    "ai:check": "node scripts/gen-opcode-schema.js --check && node scripts/build-system-prompt.js --check",
+    "ai:test": "node scripts/test-dsl-roundtrip.js && node scripts/test-data-tools.js && node scripts/test-stream-retry.js",
     "electron:package:dir": "electron-builder --dir",
     "electron:build": "electron-builder"
   },
   "dependencies": {
+    "@turbowarp/scaffolding": "^0.4.0",
     "html2canvas": "^1.4.1",
+    "monaco-editor": "^0.56.0",
+    "qrcode-generator": "^1.4.4",
     "semver": "^7.7.3"
   },
   "devDependencies": {
@@ -94,11 +101,11 @@
       "target": [
         {
           "target": "nsis",
-          "arch": "arm64"
+          "arch": "x64"
         },
         {
           "target": "portable",
-          "arch": "arm64"
+          "arch": "x64"
         }
       ]
     },
@@ -234,6 +241,13 @@
         "description": "Scratch 1 Project",
         "role": "Editor",
         "mimeType": "application/x.scratch.sb"
+      },
+      {
+        "ext": "js",
+        "name": "JavaScript File",
+        "description": "JavaScript File (NeoWarp Extension)",
+        "role": "Editor",
+        "mimeType": "text/javascript"
       }
     ]
   },
