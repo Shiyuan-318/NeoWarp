@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NeoWarp</title>
+    <link rel="stylesheet" href="extension-editor.css">
+  </head>
+  <body>
+    <div id="app">
+      <!-- 顶部：标签页栏 + 工具按钮 -->
+      <div id="titlebar">
+        <div id="tabs-bar"></div>
+        <button id="btn-new-tab" class="tab-action-btn" type="button" title="">
+          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+        <button id="btn-open-file" class="tab-action-btn" type="button" title="">
+          <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm0 12H4V8h16v10z"/></svg>
+        </button>
+        <div class="spacer"></div>
+        <button id="btn-add-to-my-extensions" class="toolbar-btn hidden" type="button">
+          <svg viewBox="0 0 24 24"><path d="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5a2.5 2.5 0 0 0-5 0V5H4a2 2 0 0 0-2 2v3.8h1.5a2.7 2.7 0 0 1 0 5.4H2V20a2 2 0 0 0 2 2h3.8v-1.5a2.7 2.7 0 0 1 5.4 0V22H17a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 0-5z"/></svg>
+          <span id="btn-add-to-my-extensions-label"></span>
+        </button>
+        <button id="btn-add-to-project" class="toolbar-btn hidden" type="button">
+          <svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 0 1 1 1v8h8a1 1 0 0 1 0 2h-8v8a1 1 0 0 1-2 0v-8H3a1 1 0 0 1 0-2h8V3a1 1 0 0 1 1-1z"/></svg>
+          <span id="btn-add-to-project-label"></span>
+        </button>
+        <button id="btn-save" class="toolbar-btn" type="button">
+          <svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z"/></svg>
+          <span id="btn-save-label"></span>
+        </button>
+        <button id="btn-save-as" class="toolbar-btn" type="button">
+          <svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4v-2H5V5h10v4h4v3h2V7l-4-4zM19 15v-2h-2v2h-2v2h2v-2h2v-2h2v-2h-2z"/></svg>
+          <span id="btn-save-as-label"></span>
+        </button>
+      </div>
+
+      <!-- 中部：编辑器 + AI 面板 + 活动栏 -->
+      <div id="workbench">
+        <div id="editor-container"></div>
+        <div id="editor-empty" class="hidden">
+          <div id="editor-empty-text"></div>
+        </div>
+
+        <div id="ai-panel" class="closed">
+          <div id="ai-header">
+            <span id="ai-title"></span>
+            <button id="ai-model-chip" type="button" title=""></button>
+            <span class="spacer"></span>
+            <button id="ai-popout-btn" class="icon-btn" type="button" title="">
+              <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+            </button>
+            <button id="ai-clear-btn" class="icon-btn" type="button" title="">
+              <svg viewBox="0 0 24 24"><path d="M6 7h12l-.9 12.1a2 2 0 0 1-2 1.9H8.9a2 2 0 0 1-2-1.9L6 7zm3-4h6l1 2h4v2H4V5h4l1-2z"/></svg>
+            </button>
+            <button id="ai-settings-btn" class="icon-btn" type="button" title="">
+              <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            </button>
+            <button id="ai-close-btn" class="icon-btn" type="button" title="">
+              <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+          </div>
+
+          <div id="ai-settings">
+            <div class="ai-field">
+              <label id="ai-model-select-label" for="ai-model-select"></label>
+              <select id="ai-model-select"></select>
+            </div>
+            <div class="ai-settings-actions">
+              <button id="ai-open-settings" type="button"></button>
+            </div>
+            <div id="ai-settings-hint"></div>
+          </div>
+
+          <div id="ai-messages"></div>
+
+          <div id="ai-input-area">
+            <div id="ai-input-row">
+              <textarea id="ai-input" rows="1"></textarea>
+              <button id="ai-send" type="button">
+                <svg id="ai-send-icon" viewBox="0 0 24 24"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                <svg id="ai-stop-icon" class="hidden" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="activity-bar">
+          <button id="activity-ai" class="activity-btn" type="button" title="">
+            <svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 0 1 .95.68l1.7 4.67 4.67 1.7a1 1 0 0 1 0 1.9l-4.67 1.7-1.7 4.67a1 1 0 0 1-1.9 0l-1.7-4.67-4.67-1.7a1 1 0 0 1 0-1.9l4.67-1.7 1.7-4.67A1 1 0 0 1 12 2zm7 12a.9.9 0 0 1 .86.61l.85 2.34 2.34.85a.9.9 0 0 1 0 1.71l-2.34.85-.85 2.34a.9.9 0 0 1-1.71 0l-.85-2.34-2.34-.85a.9.9 0 0 1 0-1.71l2.34-.85.85-2.34A.9.9 0 0 1 19 14z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 底部状态栏 -->
+      <div id="statusbar">
+        <span id="status-path"></span>
+        <span class="spacer"></span>
+        <span id="status-cursor" class="status-item"></span>
+        <span id="status-indent" class="status-item"></span>
+        <span id="status-lang" class="status-item"></span>
+      </div>
+    </div>
+
+    <!-- 添加到项目：选择打开的 Scratch 项目 -->
+    <div id="project-picker" class="hidden">
+      <div id="project-picker-backdrop"></div>
+      <div id="project-picker-dialog">
+        <div id="project-picker-title"></div>
+        <div id="project-picker-list"></div>
+        <div id="project-picker-actions">
+          <button id="project-picker-cancel" class="toolbar-btn" type="button"></button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script src="vs/loader.js"></script>
+    <script src="ai-shared.js"></script>
+    <script src="extension-editor.js"></script>
+  </body>
+</html>

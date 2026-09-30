@@ -1,6 +1,0 @@
-- [x] addSprite 传 spriteName 时自动从角色库加载（不再报错拒绝）
-- [x] addSprite 未传 spriteName 时创建空白矩形角色
-- [x] getSpriteLibrary 工具返回角色库列表（name + tags）
-- [x] addSpriteFromLibrary 从 TOOLS 数组移除
-- [x] toolList 描述与实际行为一致
-- [x] GetDiagnostics 无错误

@@ -1,7 +1,7 @@
 {
   "name": "neowarp",
   "description": "NeoWarp - Scratch mod with a compiler, dark mode, a bunch of addons, and more.",
-  "version": "1.0.22",
+  "version": "2.0.0",
   "license": "GPL-3.0",
   "author": {
     "email": "contact@neowarp.org",
@@ -25,6 +25,7 @@
   "dependencies": {
     "@turbowarp/scaffolding": "^0.4.0",
     "html2canvas": "^1.4.1",
+    "monaco-editor": "^0.56.0",
     "qrcode-generator": "^1.4.4",
     "semver": "^7.7.3"
   },
@@ -64,11 +65,11 @@
   "homepage": "https://desktop.turbowarp.org/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TurboWarp/desktop.git"
+    "url": "https://github.com/Shiyuan-318/NeoWarp.git"
   },
   "bugs": {
-    "url": "https://github.com/TurboWarp/desktop/issues",
-    "email": "contact@turbowarp.org"
+    "url": "https://github.com/Shiyuan-318/NeoWarp/issues",
+    "email": "contact@neowarp.org"
   },
   "main": "./src-main/entrypoint.js",
   "build": {
@@ -240,6 +241,13 @@
         "description": "Scratch 1 Project",
         "role": "Editor",
         "mimeType": "application/x.scratch.sb"
+      },
+      {
+        "ext": "js",
+        "name": "JavaScript File",
+        "description": "JavaScript File (NeoWarp Extension)",
+        "role": "Editor",
+        "mimeType": "text/javascript"
       }
     ]
   },

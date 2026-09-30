@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>How to uninstall TurboWarp Desktop</title>
+    <title>How to uninstall NeoWarp Desktop</title>
     <meta name="theme-color" content="#ff4c4c">
     <link rel="canonical" href="https://desktop.turbowarp.org/uninstall" />
     <style>
@@ -72,70 +72,70 @@
   </head>
   <body>
     <main>
-      <h1>How to completely uninstall TurboWarp Desktop</h1>
-      <p>This page describes how to <i>completely</i> uninstall TurboWarp, including deleting all of your user data where your settings and backpack and stored. Uninstalling the app does not affect projects you have saved on your computer.</p>
+      <h1>How to completely uninstall NeoWarp Desktop</h1>
+      <p>This page describes how to <i>completely</i> uninstall NeoWarp, including deleting all of your user data where your settings and backpack and stored. Uninstalling the app does not affect projects you have saved on your computer.</p>
 
       <h2>Windows</h2>
-      <p>Uninstall TurboWarp like you would any other app.</p>
-      <p>Settings &gt; Add or remove programs &gt; TurboWarp &gt; Remove.</p>
-      <p>To delete user data, open file explorer, type <code>%APPDATA%</code> into the location bar, then delete the <code>turbowarp-desktop</code> folder. Repeat for each user that used the app.</p>
+      <p>Uninstall NeoWarp like you would any other app.</p>
+      <p>Settings &gt; Add or remove programs &gt; NeoWarp &gt; Remove.</p>
+      <p>To delete user data, open file explorer, type <code>%APPDATA%</code> into the location bar, then delete the <code>neowarp-desktop</code> folder. Repeat for each user that used the app.</p>
 
       <h2>macOS</h2>
-      <p>If you installed it from our website, open Finder > Go to Applications > Drag TurboWarp into the trash icon on your dock.</p>
-      <p>To delete user data, open Finder, press Shift+Command+G, type in <code>~/Library/Application Support/</code>, then delete the <code>turbowarp-desktop</code> folder if it exists.</p>
-      <p>If you installed it from the Mac App Store, open Launchpad, long click on TurboWarp, then click the X.</p>
-      <p>To delete user data, open Finder, press Shift+Command+G, type in <code>~/Library/Containers/</code>, then delete the <code>TurboWarp</code> and <code>org.turbowarp.desktop</code> folders if they exist.</p>
+      <p>If you installed it from our website, open Finder > Go to Applications > Drag NeoWarp into the trash icon on your dock.</p>
+      <p>To delete user data, open Finder, press Shift+Command+G, type in <code>~/Library/Application Support/</code>, then delete the <code>neowarp-desktop</code> folder if it exists.</p>
+      <p>If you installed it from the Mac App Store, open Launchpad, long click on NeoWarp, then click the X.</p>
+      <p>To delete user data, open Finder, press Shift+Command+G, type in <code>~/Library/Containers/</code>, then delete the <code>NeoWarp</code> and <code>org.neowarp.desktop</code> folders if they exist.</p>
 
       <h2>Linux</h2>
-      <p>Typically you can open up your distributions software manager, search for "TurboWarp", and just uninstall it from there.</p>
+      <p>Typically you can open up your distributions software manager, search for "NeoWarp", and just uninstall it from there.</p>
 
       <p>If you installed it manually or from the command line or want to delete user data, you may need to run some commands.</p>
       <p class="warning">Please be careful running these. Small typos could break your system.</p>
 
       <p>If you installed it from the Snap Store:</p>
       <code class="terminal">
-        <div class="command">snap remove turbowarp-desktop</div>
+        <div class="command">snap remove neowarp-desktop</div>
         <div class="comment">Remove file association helper file workaround, if it exists</div>
-        <div class="command">sudo rm /usr/share/mime/packages/turbowarp-desktop-snap.xml</div>
+        <div class="command">sudo rm /usr/share/mime/packages/neowarp-desktop-snap.xml</div>
       </code>
 
       <p>If you installed it using Flatpak from Flathub:</p>
       <code class="terminal">
         <div class="comment">To uninstall without removing user data:</div>
-        <div class="command">flatpak uninstall org.turbowarp.TurboWarp</div>
+        <div class="command">flatpak uninstall org.neowarp.NeoWarp</div>
         <div class="comment">To uninstall and remove user data:</div>
-        <div class="command">flatpak uninstall org.turbowarp.TurboWarp --delete-data</div>
+        <div class="command">flatpak uninstall org.neowarp.NeoWarp --delete-data</div>
       </code>
 
       <p>If you installed it using the Debian/Ubuntu repository or .deb packages:</p>
       <code class="terminal">
         <div class="comment">Remove app files</div>
-        <div class="command">sudo apt remove turbowarp-desktop</div>
+        <div class="command">sudo apt remove neowarp-desktop</div>
         <div class="comment">Remove our repository from your computer</div>
-        <div class="command">sudo rm /etc/apt/sources.list.d/turbowarp.list</div>
+        <div class="command">sudo rm /etc/apt/sources.list.d/neowarp.list</div>
         <div class="comment">Remove our repository signing key</div>
-        <div class="command">sudo rm /usr/share/keyrings/turbowarp.gpg</div>
+        <div class="command">sudo rm /usr/share/keyrings/neowarp.gpg</div>
         <div class="comment">Refresh apt to finish removing our repository</div>
         <div class="command">sudo apt update</div>
       </code>
 
       <p>If you installed it from the Arch User Repository:</p>
       <code class="terminal">
-        <div class="command">sudo pacman -R turbowarp-desktop-bin</div>
+        <div class="command">sudo pacman -R neowarp-desktop-bin</div>
       </code>
 
       <p>If you installed it manually or using the legacy install script:</p>
       <code class="terminal">
         <div class="comment">Remove app files</div>
-        <div class="command">sudo rm /opt/TurboWarp -rf</div>
+        <div class="command">sudo rm /opt/NeoWarp -rf</div>
         <div class="comment">Remove shortcut in PATH</div>
-        <div class="command">sudo rm /usr/bin/turbowarp-desktop</div>
+        <div class="command">sudo rm /usr/bin/neowarp-desktop</div>
         <div class="comment">Remove desktop launch menu item</div>
-        <div class="command">sudo rm /usr/share/applications/turbowarp-desktop.desktop</div>
+        <div class="command">sudo rm /usr/share/applications/neowarp-desktop.desktop</div>
         <div class="comment">Remove file type information</div>
-        <div class="command">sudo rm /usr/share/mime/packages/turbowarp-desktop.xml</div>
+        <div class="command">sudo rm /usr/share/mime/packages/neowarp-desktop.xml</div>
         <div class="comment">Remove icon</div>
-        <div class="command">sudo rm /usr/share/icons/hicolor/512x512/apps/turbowarp-desktop.png</div>
+        <div class="command">sudo rm /usr/share/icons/hicolor/512x512/apps/neowarp-desktop.png</div>
         <div class="comment">May have to reboot for full effect</div>
       </code>
 
@@ -145,7 +145,7 @@
 
       <p>Delete user data:</p>
       <code class="terminal">
-        <div class="command">rm ~/.config/turbowarp-desktop -rf</div>
+        <div class="command">rm ~/.config/neowarp-desktop -rf</div>
       </code>
       <p>Repeat for each user that used the app.</p>
     </main>

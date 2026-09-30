@@ -5,8 +5,10 @@ contextBridge.exposeInMainWorld('AIAssistantPreload', {
   applyProject: (projectJSON) => ipcRenderer.invoke('apply-project', projectJSON),
   applySprite: (spriteJSON, targetId) => ipcRenderer.invoke('apply-sprite', spriteJSON, targetId),
   getSpriteLibrary: () => ipcRenderer.invoke('get-sprite-library'),
-  getSettings: () => ipcRenderer.invoke('get-ai-settings'),
-  saveSettings: (settings) => ipcRenderer.invoke('save-ai-settings', settings),
+  // 统一的 AI 模型配置存储（与 SOLO、扩展编辑器、桌面设置共用）
+  getModelConfigs: () => ipcRenderer.invoke('ai-get-model-configs'),
+  saveModelConfigs: (payload) => ipcRenderer.invoke('ai-save-model-configs', payload),
+  openDesktopSettings: () => ipcRenderer.invoke('open-desktop-settings'),
   callTool: (toolName, params) => ipcRenderer.invoke('ai-tool-call', toolName, params),
   webSearch: (query) => ipcRenderer.invoke('web-search', query),
   getTheme: () => ipcRenderer.invoke('ai-get-theme'),
@@ -24,6 +26,9 @@ contextBridge.exposeInMainWorld('AIAssistantPreload', {
   },
   onThemeChanged: (callback) => {
     ipcRenderer.on('ai-theme-changed', (event, data) => callback(data));
+  },
+  onAiModelConfigsChanged: (callback) => {
+    ipcRenderer.on('ai-model-configs-changed', (event, data) => callback(data));
   },
   onLocaleChanged: (callback) => {
     ipcRenderer.on('ai-locale-changed', (event, data) => callback(data));

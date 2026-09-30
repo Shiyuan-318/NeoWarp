@@ -1,2 +1,0 @@
-- [x] package.json 版本号为合法 semver 格式（1.0.18）
-- [x] `npm run electron:start` 不再抛出 Invalid Version 错误

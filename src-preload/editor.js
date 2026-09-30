@@ -88,6 +88,68 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   sendAIToolResponse: (data) => {
     ipcRenderer.send('ai-tool-response', data);
   },
+  // 扩展编辑器「添加到项目」：主进程转来的扩展代码，由当前项目的 VM 加载
+  onAddExtension: (callback) => {
+    ipcRenderer.on('extension-add-to-project', (event, data) => {
+      callback(data);
+    });
+  },
+  sendAddExtensionResult: (data) => {
+    ipcRenderer.send('extension-add-to-project-result', data);
+  },
+  // 扩展库「我的扩展」右键「编辑」：解码扩展代码并送入扩展编辑器
+  openExtensionInEditor: (payload) => ipcRenderer.invoke('open-extension-in-editor', payload),
+  // 扩展编辑器「添加到/更新我的扩展」：写入本渲染层的 localStorage 我的扩展列表
+  onMyExtensionsUpsert: (callback) => {
+    ipcRenderer.on('my-extensions-upsert', (event, data) => {
+      callback(data);
+    });
+  },
+  sendMyExtensionsUpsertResult: (data) => {
+    ipcRenderer.send('my-extensions-upsert-result', data);
+  },
+  // SOLO：后台编辑器请求导出整个工程（保存回 sb3 文件）
+  onSoloExportProject: (callback) => {
+    ipcRenderer.on('solo-export-project', (event, data) => {
+      callback(data);
+    });
+  },
+  sendSoloExportProject: (data) => {
+    ipcRenderer.send('solo-export-project-response', data);
+  },
+  // SOLO：主进程指令开始/停止把舞台画面转发给 SOLO 窗口
+  onSoloStageStream: (callback) => {
+    ipcRenderer.on('solo-stage-stream', (event, data) => {
+      callback(data);
+    });
+  },
+  sendSoloStageFrame: (dataURL) => {
+    ipcRenderer.send('solo-stage-frame', dataURL);
+  },
+  // SOLO：随帧推送的舞台 DOM 覆盖层状态（变量监视器 + 提问框）——
+  // 它们是 scratch-gui 的 DOM 元素，不在 canvas 快照里，必须单独转发
+  sendSoloStageOverlays: (data) => {
+    ipcRenderer.send('solo-stage-overlays', data);
+  },
+  // SOLO：舞台窗口里用户提交的"回答"，转发给 VM 结束 ask and wait
+  onSoloStageAnswer: (callback) => {
+    ipcRenderer.on('solo-stage-answer', (event, data) => {
+      callback(data);
+    });
+  },
+  // SOLO：舞台窗口的绿旗/暂停/继续/停止按钮 → 后台 VM
+  onSoloStageControl: (callback) => {
+    ipcRenderer.on('solo-stage-control', (event, data) => {
+      callback(data);
+    });
+  },
+  sendSoloStageControl: (data) => {
+    ipcRenderer.send('solo-stage-control-response', data);
+  },
+  // SOLO：VM 运行状态变化 → 主进程（按钮亮灭跟随）
+  sendSoloStageRunStatus: (data) => {
+    ipcRenderer.send('solo-stage-run-status', data);
+  },
   onRequestTheme: (callback) => {
     ipcRenderer.on('request-theme', (event, data) => {
       callback(data);
@@ -98,6 +160,13 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   },
   notifyThemeChanged: (theme) => {
     ipcRenderer.send('theme-changed', { theme });
+  },
+  // 全局 UI 主题（桌面设置里配置）：挂载时读取一次 + 变更推送
+  getGlobalUITheme: () => ipcRenderer.invoke('editor-get-global-ui-theme'),
+  onGlobalUIThemeChanged: (callback) => {
+    ipcRenderer.on('global-ui-theme-changed', (event, mode) => {
+      callback(mode);
+    });
   },
   onRequestSpriteStats: (callback) => {
     ipcRenderer.on('request-sprite-stats', (event, data) => {

@@ -194,7 +194,7 @@ const createAtomicWriteStream = async (path) => {
 
         const finalHash = await sha512(path);
         if (expectedHash !== finalHash) {
-          throw new Error('Atomc write stream integrity check failed');
+          throw new Error('Atomic write stream integrity check failed');
         }
       } catch (err) {
         if (err.syscall === 'rename' && err.code === 'EXDEV') {
@@ -216,7 +216,7 @@ const createAtomicWriteStream = async (path) => {
 
           const finalHash = await sha512(path);
           if (expectedHash !== finalHash) {
-            throw new Error('Atomc write stream integrity check failed in EXDEV fallback');
+            throw new Error('Atomic write stream integrity check failed in EXDEV fallback');
           }
 
           await fsPromises.unlink(tempPath);

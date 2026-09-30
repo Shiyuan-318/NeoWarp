@@ -15,6 +15,22 @@
     "string": "Any unsaved changes will be lost.",
     "developer_comment": "Part of confirmation prompt that appears when closing with unsaved changes in desktop app"
   },
+  "ai-close.stay": {
+    "string": "Keep Waiting",
+    "developer_comment": "Part of confirmation prompt that appears when closing the AI assistant or NeoWarp SOLO window while the AI is still generating a response"
+  },
+  "ai-close.leave": {
+    "string": "Close Anyway",
+    "developer_comment": "Part of confirmation prompt that appears when closing the AI assistant or NeoWarp SOLO window while the AI is still generating a response"
+  },
+  "ai-close.message": {
+    "string": "AI is still generating a response",
+    "developer_comment": "Part of confirmation prompt that appears when closing the AI assistant or NeoWarp SOLO window while the AI is still generating a response"
+  },
+  "ai-close.detail": {
+    "string": "The current task has not finished yet. Closing the window now will interrupt the AI output.",
+    "developer_comment": "Part of confirmation prompt that appears when closing the AI assistant or NeoWarp SOLO window while the AI is still generating a response"
+  },
   "addon-settings": {
     "string": "Addon Settings",
     "developer_comment": "Title of addon settings window"
@@ -331,6 +347,118 @@
     "string": "You are using the latest version!",
     "developer_comment": "Message shown when no update is available"
   },
+  "desktop-settings.section-updates": {
+    "string": "Updates",
+    "developer_comment": "Name of the updates section in desktop settings sidebar"
+  },
+  "desktop-settings.section-media": {
+    "string": "Media Devices",
+    "developer_comment": "Name of the media devices section in desktop settings sidebar"
+  },
+  "desktop-settings.section-performance": {
+    "string": "Performance",
+    "developer_comment": "Name of the performance section in desktop settings sidebar"
+  },
+  "desktop-settings.section-ui": {
+    "string": "UI Settings",
+    "developer_comment": "Name of the UI settings section in desktop settings sidebar"
+  },
+  "desktop-settings.section-privacy": {
+    "string": "Privacy & Security",
+    "developer_comment": "Name of the privacy and security section in desktop settings sidebar"
+  },
+  "desktop-settings.section-integrations": {
+    "string": "Integrations",
+    "developer_comment": "Name of the integrations section in desktop settings sidebar"
+  },
+  "desktop-settings.section-advanced": {
+    "string": "Advanced",
+    "developer_comment": "Name of the advanced section in desktop settings sidebar"
+  },
+  "desktop-settings.version": {
+    "string": "Version",
+    "developer_comment": "Row in desktop settings advanced section showing the app version"
+  },
+  "desktop-settings.ui-theme": {
+    "string": "Interface Theme",
+    "developer_comment": "Label of the global interface theme option in desktop settings"
+  },
+  "desktop-settings.ui-theme-desc": {
+    "string": "Applies to the editor, SOLO and tool windows",
+    "developer_comment": "Description of the global interface theme option in desktop settings"
+  },
+  "desktop-settings.ui-theme-system": {
+    "string": "Auto",
+    "developer_comment": "Global interface theme option that follows the system setting"
+  },
+  "desktop-settings.ui-theme-light": {
+    "string": "Light",
+    "developer_comment": "Global interface theme option for light appearance"
+  },
+  "desktop-settings.ui-theme-dark": {
+    "string": "Dark",
+    "developer_comment": "Global interface theme option for dark appearance"
+  },
+  "desktop-settings.home-logo": {
+    "string": "Home Logo",
+    "developer_comment": "Label of the home page logo option in desktop settings UI section"
+  },
+  "desktop-settings.home-logo-desc": {
+    "string": "The logo on the left side of the home page. Use an image or custom HTML",
+    "developer_comment": "Description of the home page logo option in desktop settings"
+  },
+  "desktop-settings.home-logo-pick": {
+    "string": "Choose Image",
+    "developer_comment": "Button to pick a custom image for the home page logo"
+  },
+  "desktop-settings.home-logo-html": {
+    "string": "Custom HTML",
+    "developer_comment": "Button to open the custom HTML editor for the home page logo"
+  },
+  "desktop-settings.home-logo-html-apply": {
+    "string": "Apply",
+    "developer_comment": "Button to apply the custom HTML logo for the home page"
+  },
+  "desktop-settings.home-text": {
+    "string": "Home Title Text",
+    "developer_comment": "Label of the home page title text option in desktop settings"
+  },
+  "desktop-settings.home-text-desc": {
+    "string": "The text below the logo. Leave empty for the default",
+    "developer_comment": "Description of the home page title text option in desktop settings"
+  },
+  "desktop-settings.home-reset": {
+    "string": "Restore Default",
+    "developer_comment": "Button that restores the default home page logo, title text and background"
+  },
+  "desktop-settings.home-reset-desc": {
+    "string": "Restore the default home page logo, title text and background",
+    "developer_comment": "Description of the restore default home branding option in desktop settings"
+  },
+  "desktop-settings.home-background": {
+    "string": "Home Background",
+    "developer_comment": "Label of the home page background image option in desktop settings UI section"
+  },
+  "desktop-settings.home-background-desc": {
+    "string": "A custom background image for the home page. Buttons switch to a liquid glass style",
+    "developer_comment": "Description of the home page background image option in desktop settings"
+  },
+  "desktop-settings.home-background-pick": {
+    "string": "Choose Image",
+    "developer_comment": "Button to pick a custom background image for the home page"
+  },
+  "desktop-settings.home-background-clear": {
+    "string": "Clear",
+    "developer_comment": "Button to remove the custom home page background image"
+  },
+  "desktop-settings.show-recent-projects": {
+    "string": "Show Recent Projects on Home",
+    "developer_comment": "Option in desktop settings to show the list of recently opened projects on the home page"
+  },
+  "desktop-settings.show-recent-projects-desc": {
+    "string": "Show recently opened Scratch and extension projects below the buttons on the home page",
+    "developer_comment": "Description of the show recent projects option in desktop settings"
+  },
   "migrate.title": {
     "string": "Finishing update...",
     "developer_comment": "Title of window that does various things to finish an update"
@@ -389,7 +517,7 @@
   },
   "downgrade-warning.message": {
     "string": "You are using an older version of {APP_NAME} after using a later version. Please exit and download the latest version from {website}.\n\nIf you continue, it is VERY LIKELY that you will PERMANENTLY lose all of your settings and backpack. We WILL NOT be able to recover your data.\n\n(Debug info: {debugInfo})",
-    "developer_comment": "Appears when someone installs the latest version of the dekstop app, runs it, then installs and runs an older version. {APP_NAME} becomes 'TurboWarp Desktop'. {website} becomes a URL like 'desktop.turbowarp.org'. {debugInfo} becomes some internal stuff that shouldn't matter. This is supposed to be a very scary warning."
+    "developer_comment": "Appears when someone installs the latest version of the dekstop app, runs it, then installs and runs an older version. {APP_NAME} becomes 'NeoWarp Desktop'. {website} becomes a URL like 'desktop.turbowarp.org'. {debugInfo} becomes some internal stuff that shouldn't matter. This is supposed to be a very scary warning."
   },
   "downgrade-warning.exit": {
     "string": "Exit and Update",
@@ -413,11 +541,11 @@
   },
   "update.normal-description": {
     "string": "{appNameVersion} is now available.",
-    "developer_comment": "Description of update available window for normal update. {appNameVersion} will be replaced with something like 'TurboWarp Desktop v1.2.3'."
+    "developer_comment": "Description of update available window for normal update. {appNameVersion} will be replaced with something like 'NeoWarp Desktop v1.2.3'."
   },
   "update.security-description": {
     "string": "{appNameVersion} is now available. This release contains security fixes. Updating is highly recommended.",
-    "developer_comment": "Description of update available window for security update. {appNameVersion} will be replaced with something like 'TurboWarp Desktop v1.2.3'."
+    "developer_comment": "Description of update available window for security update. {appNameVersion} will be replaced with something like 'NeoWarp Desktop v1.2.3'."
   },
   "update.loading": {
     "string": "Loading...",
@@ -542,6 +670,10 @@
   "detached-stage.title": {
     "string": "Detached Stage",
     "developer_comment": "Title of window when the stage is detached into a separate window."
+  },
+  "solo-stage.title": {
+    "string": "Stage",
+    "developer_comment": "Title of the stage window opened from NeoWarp SOLO."
   },
   "encrypted-save.title": {
     "string": "Encrypted Save",

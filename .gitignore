@@ -25,5 +25,13 @@ development.provisionprofile
 .dbg/
 backups/
 webpack-build.log
+*.log
 nul
 build/rcedit-x64.exe
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# ZCode session artifacts
+.zcode/

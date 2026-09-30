@@ -1,4 +1,4 @@
-This document is the authoritative source for TurboWarp's changelogs. Everything else gets generated from this list by `node scripts/generate-changelogs.mjs`.
+This document is the authoritative source for NeoWarp's changelogs. Everything else gets generated from this list by `node scripts/generate-changelogs.mjs`.
 
 Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **formatting** or [links](https://desktop.turbowarp.org/).
 
@@ -207,7 +207,7 @@ Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **form
 
  - Added support for unsandboxed extensions from extensions.turbowarp.org
  - The desktop app includes an offline copy of extensions.turbowarp.org
- - Custom extensions will now be automatically loaded when you open a project made with recent versions of TurboWarp (a confirmation prompt appears for third-party extensions)
+ - Custom extensions will now be automatically loaded when you open a project made with recent versions of NeoWarp (a confirmation prompt appears for third-party extensions)
  - Project saving now uses significantly less memory
  - The old button to open the packager in the "?" menu has been moved; use the button in the "File" menu instead. The old button has mentioned the new location for a while. This matches the web app.
  - Added "Rename broadcasts" addon (enabled by default)
@@ -235,7 +235,7 @@ Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **form
  - New addon: Pick colors from stage (enabled by default)
  - New addon: Zebra striping
  - Bitmap costume editor now supports transparency
- - SVGs exported by TurboWarp and imported to TurboWarp won't be re-centered unnecessarily
+ - SVGs exported by NeoWarp and imported to NeoWarp won't be re-centered unnecessarily
  - Sound editor now shows a sound's size, whether it's stereo or not, and its sample rate
  - Maximum SVG size has been reverted to the same as Scratch due to too many crashes
  - Added option to clone counter to only show icon
@@ -275,7 +275,7 @@ Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **form
 
 # 1.4.0 (2022-06-24)
 
- - Moved the builtin copy of the TurboWarp Packager to the File > Package project menu
+ - Moved the builtin copy of the NeoWarp Packager to the File > Package project menu
  - Added a sound duration indicator to the sound editor
  - Added partial support for the "Threads" tab in the debugger addon, including single stepping
  - Fixed high CPU usage when project is paused

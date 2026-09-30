@@ -1,7 +1,0 @@
-- [x] `src-renderer-webpack/editor/gui/gui.css` 中 `:global([class*="menu-bar_menu-bar_"])` 的 `background-color` 已改为带 fallback 的链式 var 表达式
-- [x] `@media (prefers-color-scheme: dark)` 块内已新增 `background-color: var(--menu-bar-background, #333333) !important;`
-- [x] 注释已更新，说明 fallback 链用途，无误导性表述
-- [x] GetDiagnostics 检查 gui.css 无语法错误
-- [x] `.trae/developlog/log.md` 已追加本次修复的开发日志
-- [x] 未修改 scratch-gui 源码、patch 文件或其他无关文件
-- [x] 未触碰 menu-bar 的圆角、高度、margin、box-shadow（除深色块新增 background-color 外）等其他样式

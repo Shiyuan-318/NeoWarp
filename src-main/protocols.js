@@ -31,7 +31,9 @@ const FILE_SCHEMES = {
   },
   'tw-desktop-settings': {
     root: path.resolve(__dirname, '../src-renderer/desktop-settings'),
-    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
+    // connect-src 放开是为了「AI 模型」页的测试连接（tw-ai-proxy 转发，直连回退）
+    // img-src 放开 http/https：主页自定义 HTML Logo 可能引用网络图片，设置页预览需保持一致
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data: http: https:; connect-src * tw-ai-proxy:"
   },
   'tw-privacy': {
     root: path.resolve(__dirname, '../src-renderer/privacy'),
@@ -40,6 +42,13 @@ const FILE_SCHEMES = {
   'tw-about': {
     root: path.resolve(__dirname, '../src-renderer/about'),
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
+  },
+  'tw-home': {
+    root: path.resolve(__dirname, '../src-renderer/home'),
+    standard: true,
+    secure: true,
+    // img-src / font-src 放开 http/https：自定义 Logo HTML 可能引用网络图片与字体
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data: http: https:; font-src 'self' data: https:"
   },
   'tw-contact': {
     root: path.resolve(__dirname, '../src-renderer/contact'),
@@ -89,11 +98,30 @@ const FILE_SCHEMES = {
     secure: true,
     csp: "default-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src * tw-ai-proxy:; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net"
   },
+  // SOLO 与 AI 助手共用同一套页面文件，但协议不同源：
+  // localStorage 隔离，SOLO 拥有独立的会话记录与免责声明状态
+  'tw-solo': {
+    root: path.resolve(__dirname, '../src-renderer/ai-assistant'),
+    standard: true,
+    secure: true,
+    csp: "default-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src * tw-ai-proxy:; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net"
+  },
+  // SOLO 舞台窗口：展示后台编辑器 VM 的舞台画面（帧由主进程推送）
+  'tw-solo-stage': {
+    root: path.resolve(__dirname, '../src-renderer/solo-stage'),
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
+  },
   'tw-todo-list': {
     root: path.resolve(__dirname, '../src-renderer/todo-list'),
     standard: true,
     secure: true,
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
+  },
+  'tw-image-editor': {
+    root: path.resolve(__dirname, '../src-renderer/image-editor'),
+    standard: true,
+    secure: true,
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data: blob:"
   },
   'tw-project-analysis': {
     root: path.resolve(__dirname, '../src-renderer/project-analysis'),
@@ -118,6 +146,15 @@ const FILE_SCHEMES = {
     standard: true,
     secure: true,
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
+  },
+  'tw-extension-editor': {
+    root: path.resolve(__dirname, '../src-renderer/extension-editor'),
+    standard: true,
+    supportFetch: true,
+    secure: true,
+    // Monaco 的脚本/字体/Worker 全部同源（页面内 vs/ 目录），仅样式需要内联；
+    // connect-src 放开是为了直连自定义 AI 端点（tw-ai-proxy 不可用时回退）
+    csp: "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; worker-src 'self' blob:; connect-src * tw-ai-proxy:"
   },
   // nw-expands 由 createExpandsProtocolHandler 处理（根目录运行时才确定），
   // 不走下面的静态 FILE_SCHEMES 流程
@@ -240,7 +277,7 @@ const createErrorPageHTML = (request, errorMessage) => `<!DOCTYPE html>
   </head>
   <body bgcolor="white" text="black">
     <h1>Protocol handler error</h1>
-    <p>If you can see this page, <a href="https://github.com/TurboWarp/desktop/issues" target="_blank" rel="noreferrer">please open a GitHub issue</a> or <a href="mailto:contact@turbowarp.org" target="_blank" rel="noreferrer">email us</a> with all the information below.</p>
+    <p>If you can see this page, <a href="https://github.com/Shiyuan-318/NeoWarp/issues" target="_blank" rel="noreferrer">please open a GitHub issue</a> or <a href="mailto:contact@neowarp.org" target="_blank" rel="noreferrer">email us</a> with all the information below.</p>
     <pre>${escapeXML(errorMessage)}</pre>
     <pre>URL: ${escapeXML(request.url)}</pre>
     <pre>Version ${escapeXML(packageJSON.version)}, Electron ${escapeXML(process.versions.electron)}, Platform ${escapeXML(getPlatform())} ${escapeXML(process.arch)}, Distribution ${escapeXML(getDist())}</pre>

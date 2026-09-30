@@ -1,6 +1,6 @@
 # Description of the desktop app in the Microsoft Store.
 microsoft-store-description: |
-  TurboWarp is a mod of the Scratch programming language with a compiler to run projects faster, dark mode, a bunch of addons, and more.
+  NeoWarp is a mod of the Scratch programming language with a compiler to run projects faster, dark mode, a bunch of addons, and more.
 
     - Runs projects up to 20x faster than Scratch
     - Uses significantly less memory and energy when idle
@@ -14,7 +14,7 @@ microsoft-store-description: |
     - Backpack
     - and more
 
-  The developers of TurboWarp have no affiliation with the Scratch Team. This is a community-developed mod.
+  The developers of NeoWarp have no affiliation with the Scratch Team. This is a community-developed mod.
 
   Project shown in screenshots is {screenshot_project_link}
 

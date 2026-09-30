@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI</title>
+    <link rel="stylesheet" href="extension-editor.css">
+  </head>
+  <body class="ai-popout-body">
+    <div id="ai-popout-app">
+      <div id="ai-header">
+        <span id="ai-title"></span>
+        <button id="ai-model-chip" type="button" title=""></button>
+        <span class="spacer"></span>
+        <button id="ai-clear-btn" class="icon-btn" type="button" title="">
+          <svg viewBox="0 0 24 24"><path d="M6 7h12l-.9 12.1a2 2 0 0 1-2 1.9H8.9a2 2 0 0 1-2-1.9L6 7zm3-4h6l1 2h4v2H4V5h4l1-2z"/></svg>
+        </button>
+        <button id="ai-settings-btn" class="icon-btn" type="button" title="">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        </button>
+        <button id="ai-dock-btn" class="icon-btn" type="button" title="">
+          <svg viewBox="0 0 24 24"><path d="M21 3H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H3V5h18v14zM13 7h6v6h-6v-6z"/></svg>
+        </button>
+      </div>
+
+      <div id="ai-settings">
+        <div class="ai-field">
+          <label id="ai-model-select-label" for="ai-model-select"></label>
+          <select id="ai-model-select"></select>
+        </div>
+        <div class="ai-settings-actions">
+          <button id="ai-open-settings" type="button"></button>
+        </div>
+        <div id="ai-settings-hint"></div>
+      </div>
+
+      <div id="ai-messages"></div>
+
+      <div id="ai-input-area">
+        <div id="ai-input-row">
+          <textarea id="ai-input" rows="1"></textarea>
+          <button id="ai-send" type="button">
+            <svg id="ai-send-icon" viewBox="0 0 24 24"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            <svg id="ai-stop-icon" class="hidden" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script src="ai-shared.js"></script>
+    <script src="ai-panel.js"></script>
+  </body>
+</html>

@@ -17,6 +17,7 @@ const {translate, updateLocale, getStrings} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const prompts = require('../prompts');
 const settings = require('../settings');
+const {recordRecentProject} = require('../recent-projects');
 const privilegedFetch = require('../fetch');
 const RichPresence = require('../rich-presence.js');
 const FileAccessWindow = require('./file-access-window.js');
@@ -28,6 +29,7 @@ const ProjectAnalysisWindow = require('./project-analysis');
 const TaskManagerWindow = require('./task-manager');
 const CollaborationWindow = require('./collaboration');
 const MobilePreviewWindow = require('./mobile-preview');
+const HomeWindow = require('./home');
 const AbstractWindow = require('./abstract');
 const {scanExpands} = require('../neowarp-expands');
 
@@ -331,6 +333,24 @@ const isChildPath = (parent, child) => {
 };
 
 /**
+ * 解码 data: URL 为 UTF-8 文本（我的扩展的 extensionURL 通常是 .js 文件的 data: URL）。
+ * @param {string} url
+ * @returns {string}
+ */
+const decodeDataUrl = url => {
+  const commaIndex = url.indexOf(',');
+  if (commaIndex === -1) {
+    throw new Error('Invalid data URL');
+  }
+  const meta = url.slice(5, commaIndex);
+  const data = url.slice(commaIndex + 1);
+  if (/;base64$/i.test(meta)) {
+    return Buffer.from(data, 'base64').toString('utf8');
+  }
+  return decodeURIComponent(data);
+};
+
+/**
  * @returns {string} A unique string.
  */
 const generateFileId = () => {
@@ -342,9 +362,14 @@ class EditorWindow extends ProjectRunningWindow {
   /**
    * @param {OpenedFile|null} initialFile
    * @param {boolean} isInitiallyFullscreen
+   * @param {{hidden?: boolean}} [options] hidden=true 时不显示窗口（SOLO 后台工程宿主）
    */
-  constructor (initialFile, isInitiallyFullscreen) {
+  constructor (initialFile, isInitiallyFullscreen, options) {
     super();
+
+    // SOLO 的后台工程宿主（hidden=true）：不显示窗口，不应出现在
+    // 扩展编辑器「添加到项目」的项目列表里
+    this.isHiddenHost = !!(options && options.hidden);
 
     /**
      * Ideally we would revoke access after loading a new project, but our file handle handling in
@@ -429,6 +454,11 @@ class EditorWindow extends ProjectRunningWindow {
     this.window.on('closed', () => {
       const collabWindows = AbstractWindow.getWindowsByClass(CollaborationWindow);
       for (const cw of collabWindows) {
+        // 只清理挂在本编辑器上的协作会话；
+        // 主页「加入协作」的独立表单窗口（尚无编辑器）不受其他编辑器关闭影响
+        if (cw.editorWindow !== this) {
+          continue;
+        }
         cw.forceClose = true;
         if (cw.server) {
           cw.server.end().then(() => { cw.server = null; });
@@ -540,6 +570,10 @@ class EditorWindow extends ProjectRunningWindow {
       this.activeFileId = id;
       this.openedProjectAt = Date.now();
       this.window.setRepresentedFilename(file.path);
+      // SOLO 的隐藏工程宿主不算用户主动打开，不进最近列表
+      if (!this.isHiddenHost) {
+        recordRecentProject(file.path, 'scratch');
+      }
     });
 
     this.ipc.handle('closed-file', () => {
@@ -885,6 +919,26 @@ class EditorWindow extends ProjectRunningWindow {
       MobilePreviewWindow.show(this);
     });
 
+    // NeoWarp: 扩展库「我的扩展」右键「编辑」——解码扩展代码送入扩展编辑器
+    this.ipc.handle('open-extension-in-editor', async (event, payload) => {
+      const {id, name, url} = payload || {};
+      let code = null;
+      if (typeof url === 'string' && url.startsWith('data:')) {
+        code = decodeDataUrl(url);
+      } else if (typeof url === 'string' && /^https?:/i.test(url)) {
+        code = (await privilegedFetch(url)).toString('utf8');
+      } else {
+        throw new Error('Unsupported extension URL');
+      }
+      // Imported late due to circular dependencies
+      const ExtensionEditorWindow = require('./extension-editor');
+      ExtensionEditorWindow.openMemoryFile({
+        name: name || 'extension.js',
+        content: code,
+        myExtId: id || null
+      });
+    });
+
     this.ipc.on('project-json-response', (event, data) => {
       const aiWindows = AbstractWindow.getWindowsByClass(AIAssistantWindow);
       aiWindows.forEach(w => {
@@ -907,10 +961,8 @@ class EditorWindow extends ProjectRunningWindow {
     });
 
     this.ipc.on('theme-changed', (event, data) => {
-      const aiWindows = AbstractWindow.getWindowsByClass(AIAssistantWindow);
-      aiWindows.forEach(w => {
-        if (!w.window.isDestroyed()) w.window.webContents.send('ai-theme-changed', data);
-      });
+      // 统一走 AIAssistantWindow.broadcastTheme：里面会连同 SOLO（子类）一起广播
+      AIAssistantWindow.broadcastTheme(data.theme);
       const todoWindows = AbstractWindow.getWindowsByClass(TodoListWindow);
       todoWindows.forEach(w => {
         if (!w.window.isDestroyed()) w.window.webContents.send('todo-theme-changed', data);
@@ -939,6 +991,10 @@ class EditorWindow extends ProjectRunningWindow {
       collabWindows.forEach(w => {
         if (!w.window.isDestroyed()) w.window.webContents.send('collab-theme-changed', data);
       });
+      const homeWindows = AbstractWindow.getWindowsByClass(HomeWindow);
+      homeWindows.forEach(w => {
+        if (!w.window.isDestroyed()) w.window.webContents.send('home-theme-changed', data);
+      });
     });
 
     this.ipc.handle('get-advanced-customizations', async () => {
@@ -958,6 +1014,10 @@ class EditorWindow extends ProjectRunningWindow {
 
     // NeoWarp: 本地 Expands 扩展目录（扩展库 NeoWarp 标签的数据源）
     this.ipc.handle('get-neowarp-expands', () => scanExpands());
+
+    // 全局 UI 主题（桌面设置里配置）：编辑器挂载时读取一次，
+    // 之后的变更由桌面设置广播（global-ui-theme-changed）推送
+    this.ipc.handle('editor-get-global-ui-theme', () => settings.uiTheme);
 
     this.ipc.on('get-code-area-background-image', (event) => {
       event.returnValue = settings.codeAreaBackgroundImage;
@@ -1134,7 +1194,16 @@ class EditorWindow extends ProjectRunningWindow {
     });
 
     this.loadURL('tw-editor://./gui/gui.html');
-    this.show();
+    if (!options || !options.hidden) {
+      this.show();
+    }
+
+    // 扩展编辑器「添加到项目」按钮的显隐跟随可见编辑器数量；
+    // 打开/关闭编辑器窗口时广播一次（循环依赖，运行时再加载）
+    require('./extension-editor').notifyProjectsChanged();
+    this.window.on('closed', () => {
+      require('./extension-editor').notifyProjectsChanged();
+    });
   }
 
   handleDetachedStageClosed() {
@@ -1265,21 +1334,35 @@ class EditorWindow extends ProjectRunningWindow {
    * @param {string|null} workingDirectory
    */
   static openFiles (files, fullscreen, workingDirectory) {
+    const windows = [];
     if (files.length === 0) {
-      EditorWindow.newWindow(fullscreen);
+      windows.push(EditorWindow.newWindow(fullscreen));
     } else {
       for (const file of files) {
-        new EditorWindow(parseOpenedFile(file, workingDirectory), fullscreen);
+        windows.push(new EditorWindow(parseOpenedFile(file, workingDirectory), fullscreen));
       }
     }
+    return windows;
   }
 
   /**
    * Open a new window with the default project.
    * @param {boolean} fullscreen
+   * @returns {EditorWindow} the created window
    */
   static newWindow (fullscreen) {
-    new EditorWindow(null, fullscreen);
+    const window = new EditorWindow(null, fullscreen);
+    return window;
+  }
+
+  /**
+   * 以隐藏窗口打开工程文件：窗口不显示，仅作为 SOLO 这类
+   * "无编辑器界面"功能的工程宿主（VM、AI 工具 IPC 都照常工作）。
+   * @param {string} filePath 本地工程文件绝对路径
+   * @returns {EditorWindow}
+   */
+  static openHidden (filePath) {
+    return new EditorWindow(parseOpenedFile(filePath, null), false, {hidden: true});
   }
 }
 

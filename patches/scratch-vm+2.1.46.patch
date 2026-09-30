@@ -1,14 +1,83 @@
+diff --git a/node_modules/scratch-vm/src/engine/tw-platform.js b/node_modules/scratch-vm/src/engine/tw-platform.js
+index ee6a2e2..4c1e30b 100644
+--- a/node_modules/scratch-vm/src/engine/tw-platform.js
++++ b/node_modules/scratch-vm/src/engine/tw-platform.js
+@@ -2,6 +2,6 @@
+ // This can be accessed externally on `vm.runtime.platform`
+ 
+ module.exports = {
+-    name: 'TurboWarp',
+-    url: 'https://turbowarp.org/'
++    name: 'NeoWarp',
++    url: 'https://github.com/Shiyuan-318/Neowarp'
+ };
 diff --git a/node_modules/scratch-vm/src/extension-support/extension-manager.js b/node_modules/scratch-vm/src/extension-support/extension-manager.js
-index 0000000..1111111 100644
+index 5268ad9..ac8ee92 100644
 --- a/node_modules/scratch-vm/src/extension-support/extension-manager.js
 +++ b/node_modules/scratch-vm/src/extension-support/extension-manager.js
-@@ -190,7 +190,9 @@ class ExtensionManager {
+@@ -189,7 +189,10 @@ class ExtensionManager {
+                 parsedURL.protocol === 'https:' ||
                  parsedURL.protocol === 'http:' ||
                  parsedURL.protocol === 'data:' ||
-                 parsedURL.protocol === 'file:' ||
+-                parsedURL.protocol === 'file:'
++                parsedURL.protocol === 'file:' ||
 +                // NeoWarp: 本地 Expands 扩展目录（扩展库 NeoWarp 标签），
-                 // 由主进程 protocols.js 提供内容，仅限应用自身的 Expands 根目录
++                // 由主进程 protocols.js 提供内容，仅限应用自身的 Expands 根目录
 +                parsedURL.protocol === 'nw-expands:'
              );
          } catch (e) {
              return false;
+diff --git a/node_modules/scratch-vm/src/virtual-machine.js b/node_modules/scratch-vm/src/virtual-machine.js
+index 2cc5d26..b894db0 100644
+--- a/node_modules/scratch-vm/src/virtual-machine.js
++++ b/node_modules/scratch-vm/src/virtual-machine.js
+@@ -604,6 +604,49 @@ class VirtualMachine extends EventEmitter {
+         });
+     }
+ 
++    /**
++     * @returns {JSZip} JSZip zip object representing the np1.
++     */
++    _saveProjectNp1Zip () {
++        const projectJson = this.toJSON();
++
++        const zip = new JSZip();
++
++        zip.file('project.json', projectJson);
++        this._addFileDescsToZip(this.serializeAssets(), zip);
++
++        const date = new Date(1591657163000);
++        for (const file of Object.values(zip.files)) {
++            file.date = date;
++            file.options.compression = 'STORE';
++        }
++
++        return zip;
++    }
++
++    /**
++     * @param {JSZip.OutputType} [type] JSZip output type. Defaults to 'blob'.
++     * @returns {Promise<unknown>} Uncompressed np1 file in a type determined by the type argument.
++     */
++    saveProjectNp1 (type) {
++        return this._saveProjectNp1Zip().generateAsync({
++            type: type || 'blob',
++            mimeType: 'application/x.scratch.np1'
++        });
++    }
++
++    /**
++     * @param {JSZip.OutputType} [type] JSZip output type. Defaults to 'arraybuffer'.
++     * @returns {StreamHelper} JSZip StreamHelper object generating the uncompressed np1.
++     */
++    saveProjectNp1Stream (type) {
++        return this._saveProjectNp1Zip().generateInternalStream({
++            type: type || 'arraybuffer',
++            mimeType: 'application/x.scratch.np1',
++            compression: 'STORE'
++        });
++    }
++
+     /**
+      * tw: Serialize the project into a map of files without actually zipping the project.
+      * The buffers returned are the exact same ones used internally, not copies. Avoid directly

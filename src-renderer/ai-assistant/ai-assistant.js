@@ -343,11 +343,30 @@
 
   window.copyCode = function(btn) {
     var code = btn.closest('.code-block').querySelector('code').textContent;
-    navigator.clipboard.writeText(code).then(function() {
+    function legacyCopy() {
+      var ta = document.createElement('textarea');
+      ta.value = code;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      try { document.execCommand('copy'); } catch (e) { /* ignore */ }
+      ta.remove();
+    }
+    var done = function() {
       btn.classList.add('copied');
       btn.innerHTML = 'Copied';
       setTimeout(function() { btn.classList.remove('copied'); btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path></svg>Copy'; }, 2000);
-    });
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      // 剪贴板权限被拒时退回 execCommand
+      navigator.clipboard.writeText(code).then(done, function() { legacyCopy(); done(); });
+    } else {
+      legacyCopy();
+      done();
+    }
   };
 
   function scrollToBottom () {
@@ -484,6 +503,7 @@
       '- **searchExtensions(keyword)**: Search TurboWarp extensions by keyword.',
       '- **developExtension(extension_code, extension_name?)**: Load custom extension JS code.',
       '- **installExtension(extension_url)**: Install extension by URL or known ID.',
+      '- **deleteExtension(extensionId?, extensionName?)**: Delete an extension that you (the AI) added earlier via installExtension or developExtension. You can ONLY remove extensions you added yourself — built-in extensions and user-installed extensions are protected. Use getInstalledExtensions() to find the exact id/name, then pass it here to remove the extension and its blocks from the palette.',
       '- **addCostumeFromUrl(spriteName, url, costumeName?)**: Add costume from image URL.',
       '- **searchAndAddCostume(spriteName, query, costumeName?)**: Search Wikimedia Commons and add costume.',
       '- **addSpriteFromUrl(url, spriteName?)**: Create new sprite from image URL.',
@@ -597,7 +617,8 @@
       '6. **DO NOT over-explain**: After generating blocks, give a brief 1-2 sentence summary. Do not repeat the DSL code in your text response — it is already sent via the tool call.',
       '7. **modify_input SUBSTACK**: To modify a C-block body, pass inputName="SUBSTACK" and value=<DSL text string>. For else branch use inputName="SUBSTACK2". Example: {"type":"modify_input","targetId":"b1","inputName":"SUBSTACK","value":"motion_movesteps 10\\n  looks_say \\"Hi\\""}.',
       '8. **View before modify**: Use getSpriteScripts(spriteName) to view existing scripts BEFORE modifying them. You need the blockId from the result to target specific blocks with modify_input or delete_block.',
-      '9. **Format rule**: ALWAYS pass "script" as a DSL text string (e.g. "event_whenflagclicked\\n  motion_movesteps 10"). NEVER pass a JSON object like {"opcode":"...","next":{...}}. If you pass an object, the system will auto-convert it, but this may lose information — always use text.'
+      '9. **Format rule**: ALWAYS pass "script" as a DSL text string (e.g. "event_whenflagclicked\\n  motion_movesteps 10"). NEVER pass a JSON object like {"opcode":"...","next":{...}}. If you pass an object, the system will auto-convert it, but this may lose information — always use text.',
+      '10. **Extension deletion**: deleteExtension only works on extensions YOU added through installExtension or developExtension. It will refuse to delete built-in extensions or extensions the user added manually (you will get an error). To clean up, call getInstalledExtensions() to get the id/name, then deleteExtension with that id/name.'
     ].join('\n');
 
     var modifyInputGuide = [
@@ -1209,6 +1230,20 @@
             extension_url: { type: 'string', description: 'Full URL to extension .js file, or a known extension ID (e.g., "text", "pen", "music")' }
           },
           required: ['extension_url']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
+        name: 'deleteExtension',
+        description: 'Delete an extension that was previously added by the AI itself. You can ONLY remove extensions you added via installExtension or developExtension — built-in extensions and extensions the user installed manually are protected and cannot be deleted. Provide the extension id (e.g. "text", "pen") or its display name. Use getInstalledExtensions() to find the available id/name first.',
+        parameters: {
+          type: 'object',
+          properties: {
+            extensionId: { type: 'string', description: 'The extension id (e.g., "text", "pen") or its loaded URL.' },
+            extensionName: { type: 'string', description: 'The extension display name (e.g., "Text"). Used if extensionId is not provided or not matched.' }
+          }
         }
       }
     },

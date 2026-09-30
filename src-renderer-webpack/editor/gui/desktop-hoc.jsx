@@ -24,7 +24,10 @@ import {
   setViewOnly,
   setFullScreen
 } from 'scratch-gui/src/reducers/mode';
-import {getAutoAddExtensions} from 'scratch-gui/src/lib/tw-my-extensions';
+import {setTheme} from 'scratch-gui/src/reducers/theme';
+import {BLOCKS_CUSTOM} from 'scratch-gui/src/lib/themes';
+import {detectTheme} from 'scratch-gui/src/lib/themes/themePersistance';
+import {getAutoAddExtensions, addMyExtension, updateMyExtension, getMyExtensionById, generateId} from 'scratch-gui/src/lib/tw-my-extensions';
 import {manuallyTrustExtension} from 'scratch-gui/src/containers/tw-security-manager.jsx';
 import {WrappedFileHandle} from './filesystem-api.js';
 import {setStrings} from '../prompt/prompt.js';
@@ -35,6 +38,9 @@ let isStageDetached = false;
 let frameStreamingActive = false;
 let frameAnimationId = null;
 let aiListenersRegistered = false;
+// SOLO：后台编辑器把舞台画面流转发给 SOLO 窗口的开关（独立于 detach 舞台）
+let soloStreamActive = false;
+let soloStreamTimer = null;
 
 /**
  * @param {string} filename
@@ -175,6 +181,190 @@ const stopFrameStreaming = () => {
   if (frameAnimationId !== null) {
     clearTimeout(frameAnimationId);
     frameAnimationId = null;
+  }
+};
+
+/* ── SOLO 舞台画面流 ──
+   与 detach 舞台的流式推送相互独立：SOLO 只要求画面（预览缩略图 + 弹出的
+   舞台窗口），编辑器本体隐藏与否都不影响。帧率取较低值（~8fps），
+   足够看动画效果又不会让隐藏窗口的 CPU 占用明显上升。 */
+let soloQuestion = null; // 当前待回答的提问文本；null 表示没有提问
+
+// 常用非变量类监视器的标签（与 Scratch 界面用词一致），不在表内的用 opcode 兜底
+const SOLO_MONITOR_LABELS = {
+  motion_xposition: 'x position',
+  motion_yposition: 'y position',
+  motion_direction: 'direction',
+  looks_costumenumbername: 'costume #',
+  looks_backdropnumbername: 'backdrop #',
+  looks_size: 'size',
+  sensing_timer: 'timer',
+  sensing_loudness: 'loudness',
+  sensing_dayssince2000: 'days since 2000',
+  sensing_username: 'username',
+  sound_volume: 'volume'
+};
+
+// 列表监视器最多推送的条目数（防超大列表每帧序列化撑爆 IPC）
+const SOLO_LIST_MAX_ITEMS = 50;
+// 单个值字符串的推送上限
+const SOLO_VALUE_MAX_CHARS = 200;
+
+const soloClipValue = (value) => {
+  const str = String(value);
+  return str.length > SOLO_VALUE_MAX_CHARS ? str.slice(0, SOLO_VALUE_MAX_CHARS) + '…' : str;
+};
+
+/**
+ * 收集舞台上的变量/列表监视器与提问框状态。
+ * 这些都是 scratch-gui 的 DOM 覆盖层，canvas 快照拍不到，必须单独序列化。
+ */
+const getSoloStageOverlays = (vm) => {
+  const monitors = [];
+  try {
+    const state = vm.runtime && vm.runtime._monitorState;
+    if (state && state.map) {
+      state.map.forEach((rec, id) => {
+        if (!rec || rec.visible === false) return;
+        const params = rec.params || {};
+        let label;
+        if (rec.opcode === 'data_variable') {
+          label = (rec.spriteName ? rec.spriteName + ': ' : '') + (params.VARIABLE || '');
+        } else if (rec.opcode === 'data_list') {
+          label = (rec.spriteName ? rec.spriteName + ': ' : '') + (params.LIST || '');
+        } else if (rec.opcode === 'sensing_current') {
+          label = String(params.CURRENTMENU || '').toLowerCase();
+        } else if (SOLO_MONITOR_LABELS[rec.opcode]) {
+          label = SOLO_MONITOR_LABELS[rec.opcode];
+        } else if (params.PROPERTY && rec.opcode === 'sensing_of') {
+          label = (params.OBJECT && params.OBJECT !== '_stage_' ? params.OBJECT + ': ' : '') + params.PROPERTY;
+        } else {
+          label = String(rec.opcode || '').replace(/^[a-z]+_/, '').replace(/_/g, ' ');
+        }
+        const isList = (rec.mode || 'default') === 'list';
+        let value = rec.value;
+        let listTotal = 0;
+        if (isList && Array.isArray(value)) {
+          listTotal = value.length;
+          value = value.slice(0, SOLO_LIST_MAX_ITEMS).map(soloClipValue);
+        } else if (isList) {
+          value = [];
+        } else {
+          value = soloClipValue(value);
+        }
+        // 每帧全量推送；舞台端按 id 复用 DOM 元素，只在列表内容真正变化时
+        // 才重绘行（滚动位置得以保留），这里不做变化过滤
+        monitors.push({
+          id,
+          mode: rec.mode || 'default',
+          label,
+          value,
+          listTotal,
+          x: typeof rec.x === 'number' ? rec.x : null,
+          y: typeof rec.y === 'number' ? rec.y : null,
+          width: rec.width || 0
+        });
+      });
+    }
+  } catch (e) {
+    // 监视器状态读取失败不阻塞画面流
+  }
+  return {
+    monitors,
+    prompt: soloQuestion === null ? null : { question: soloQuestion }
+  };
+};
+
+const startSoloStream = (vm) => {
+  if (soloStreamActive) return;
+  soloStreamActive = true;
+  // 监视器/提问是 DOM 覆盖层，canvas 快照拍不到；在这里顺带监听并随帧推送。
+  // VM 换工程后会换实例，绑定标记挂在 runtime 上保证每个实例只绑一次
+  try {
+    if (vm.runtime && !vm.runtime.__soloOverlaysBound) {
+      vm.runtime.__soloOverlaysBound = true;
+      vm.runtime.on('QUESTION', (question) => {
+        soloQuestion = question === null || typeof question === 'undefined' ? null : String(question);
+      });
+      vm.runtime.on('PROJECT_STOP_ALL', () => {
+        soloQuestion = null;
+      });
+    }
+  } catch (e) {
+    // ignore - 事件绑定失败只影响监视器/提问显示
+  }
+  const streamFrame = () => {
+    if (!soloStreamActive) return;
+    try {
+      if (vm.renderer && vm.renderer.requestSnapshot) {
+        vm.renderer.requestSnapshot((dataURL) => {
+          if (soloStreamActive) {
+            EditorPreload.sendSoloStageFrame(dataURL);
+            try {
+              EditorPreload.sendSoloStageOverlays(getSoloStageOverlays(vm));
+            } catch (e) {
+              // ignore - 覆盖层收集失败不阻塞画面
+            }
+          }
+        });
+      }
+    } catch (e) {
+      // ignore - 编辑器窗口可能在关闭过程中
+    }
+    soloStreamTimer = setTimeout(streamFrame, 125);
+  };
+  streamFrame();
+};
+
+const stopSoloStream = () => {
+  soloStreamActive = false;
+  soloQuestion = null;
+  if (soloStreamTimer !== null) {
+    clearTimeout(soloStreamTimer);
+    soloStreamTimer = null;
+  }
+};
+
+/* SOLO 舞台控制：绿旗 = 重头运行；暂停/继续 = 直接停/启 VM 的帧循环
+   （scratch-vm 的 FrameLoop，stop 后所有线程原样冻结，start 后接着跑）。 */
+const handleSoloStageControl = (vm, action) => {
+  try {
+    if (action === 'greenFlag') {
+      if (vm.runtime && vm.runtime.frameLoop && vm.runtime.frameLoop.running === false) {
+        vm.runtime.start();
+      }
+      vm.greenFlag();
+      return { success: true, running: true };
+    }
+    if (action === 'pause') {
+      if (vm.runtime && vm.runtime.frameLoop && vm.runtime.frameLoop.running) {
+        vm.runtime.frameLoop.stop();
+      }
+      return { success: true, running: false };
+    }
+    if (action === 'resume') {
+      if (vm.runtime && vm.runtime.frameLoop && vm.runtime.frameLoop.running === false) {
+        vm.runtime.start();
+      }
+      return { success: true, running: true };
+    }
+    if (action === 'stop') {
+      if (vm.runtime && vm.runtime.frameLoop && vm.runtime.frameLoop.running === false) {
+        vm.runtime.start();
+      }
+      vm.stopAll();
+      return { success: true, running: false };
+    }
+    if (action === 'getState') {
+      // "在运行" = 帧循环转着且还有活线程；stopAll 后线程清空，
+      // 按此判断按钮能正确回到"未运行"档位
+      const loopRunning = !!(vm.runtime && vm.runtime.frameLoop && vm.runtime.frameLoop.running);
+      const hasThreads = !!(vm.runtime && vm.runtime.threads && vm.runtime.threads.length > 0);
+      return { success: true, running: loopRunning && hasThreads };
+    }
+    return { success: false, error: 'Unknown action: ' + action };
+  } catch (e) {
+    return { success: false, error: (e && e.message) || String(e) };
   }
 };
 
@@ -1963,6 +2153,156 @@ const DesktopHOC = function (WrappedComponent) {
         }
       });
 
+      // 扩展编辑器「添加到项目」：把扩展脚本加载进当前项目的 VM
+      if (typeof EditorPreload.onAddExtension === 'function') {
+        EditorPreload.onAddExtension(async (data) => {
+          const { requestId, name, code } = data || {};
+          const vm = this.props.vm;
+          let response;
+          try {
+            if (!vm || !vm.extensionManager || !vm.extensionManager.loadExtensionURL) {
+              response = { success: false, error: 'Extension manager not available' };
+            } else if (!code || String(code).trim().length < 10) {
+              response = { success: false, error: 'Extension code is empty' };
+            } else {
+              const dataUrl = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(code);
+              // 与 AI 助手 developExtension 相同：把该 data: URL 判为 unsandboxed，
+              // 沙箱 worker 里拿不到 Scratch 全局，注册回调不会回传；加载完恢复原策略
+              const secMgr = vm.extensionManager.securityManager;
+              const prevGetSandboxMode = secMgr.getSandboxMode;
+              secMgr.getSandboxMode = function (url) {
+                if (url === dataUrl) return Promise.resolve('unsandboxed');
+                return prevGetSandboxMode.call(secMgr, url);
+              };
+              const prevExtKeys = new Set(vm.extensionManager._loadedExtensions.keys());
+              try {
+                // 注册回调迟迟不来会一直挂着，加超时避免扩展编辑器侧白等
+                await Promise.race([
+                  vm.extensionManager.loadExtensionURL(dataUrl),
+                  new Promise((_, rej) => {
+                    setTimeout(() => rej(new Error('Extension registration timed out after 20s')), 20000);
+                  })
+                ]);
+              } finally {
+                secMgr.getSandboxMode = prevGetSandboxMode;
+              }
+              let newIds = [];
+              try {
+                newIds = Array.from(vm.extensionManager._loadedExtensions.keys())
+                  .filter(id => !prevExtKeys.has(id));
+              } catch (e) { void e; }
+              response = { success: true, data: { name, extensionIds: newIds } };
+            }
+          } catch (e) {
+            response = { success: false, error: (e && e.message) || String(e) };
+          }
+          EditorPreload.sendAddExtensionResult({ requestId, ...response });
+        });
+      }
+
+      // 扩展编辑器「添加到/更新我的扩展」：写入本渲染层 localStorage 的我的扩展列表。
+      // id 为空新增；否则只更新代码，名称/图标/沙盒等元数据仍由扩展库「设置」弹窗管理
+      if (typeof EditorPreload.onMyExtensionsUpsert === 'function') {
+        EditorPreload.onMyExtensionsUpsert(async (data) => {
+          const { requestId, id, name, code } = data || {};
+          let response;
+          try {
+            if (!code || String(code).trim().length < 10) {
+              response = { success: false, error: 'Extension code is empty' };
+            } else if (id) {
+              const existing = getMyExtensionById(id);
+              if (!existing) {
+                response = { success: false, error: 'Extension not found in My Extensions' };
+              } else {
+                updateMyExtension(id, {
+                  extensionURL: 'data:text/javascript;charset=utf-8,' + encodeURIComponent(code),
+                  extensionFileName: name || existing.extensionFileName
+                });
+                response = { success: true, data: { id, updated: true } };
+              }
+            } else {
+              const newId = generateId();
+              addMyExtension({
+                id: newId,
+                name: name || 'My Extension',
+                extensionURL: 'data:text/javascript;charset=utf-8,' + encodeURIComponent(code),
+                extensionFileName: name || null,
+                iconURL: '',
+                unsandboxed: false,
+                autoAddToNewProjects: false
+              });
+              response = { success: true, data: { id: newId, updated: false } };
+            }
+          } catch (e) {
+            response = { success: false, error: (e && e.message) || String(e) };
+          }
+          EditorPreload.sendMyExtensionsUpsertResult({ requestId, ...response });
+        });
+      }
+
+      // SOLO：窗口隐藏在后台时，主进程从这里拿完整 sb3 字节流写回源文件
+      if (typeof EditorPreload.onSoloExportProject === 'function') {
+        EditorPreload.onSoloExportProject(async (data) => {
+          try {
+            const buffer = await this.props.vm.saveProjectSb3('arraybuffer');
+            EditorPreload.sendSoloExportProject({
+              requestId: data && data.requestId,
+              data: buffer
+            });
+          } catch (e) {
+            EditorPreload.sendSoloExportProject({
+              requestId: data && data.requestId,
+              error: (e && e.message) || String(e)
+            });
+          }
+        });
+      }
+
+      // SOLO：主进程发来"开始/停止转发舞台画面"的指令（选了 sb3 工程即开始）
+      if (typeof EditorPreload.onSoloStageStream === 'function') {
+        EditorPreload.onSoloStageStream((data) => {
+          if (data && data.active) {
+            startSoloStream(this.props.vm);
+          } else {
+            stopSoloStream();
+          }
+        });
+      }
+
+      // SOLO：舞台窗口上的绿旗/暂停/继续/停止按钮走这里控制后台 VM
+      if (typeof EditorPreload.onSoloStageControl === 'function') {
+        EditorPreload.onSoloStageControl((data) => {
+          const result = handleSoloStageControl(this.props.vm, data && data.action);
+          EditorPreload.sendSoloStageControl({
+            requestId: data && data.requestId,
+            result
+          });
+        });
+      }
+
+      // SOLO：舞台窗口提问框提交的"回答"，交给 VM 结束 ask and wait
+      // （与 scratch-gui 自己的提问框回答方式一致：runtime emit ANSWER）
+      if (typeof EditorPreload.onSoloStageAnswer === 'function') {
+        EditorPreload.onSoloStageAnswer((data) => {
+          try {
+            this.props.vm.runtime.emit('ANSWER', String((data && data.text) ?? ''));
+          } catch (e) {
+            console.error('Failed to deliver solo stage answer:', e);
+          }
+        });
+      }
+
+      // SOLO：VM 运行状态变化时推给主进程（frameLoop 由我们的暂停/继续直接
+      // start/stop，只有 RUNTIME_STARTED/STOPPED 事件会跟着发）
+      if (typeof EditorPreload.onSoloStageRunStatus === 'function') {
+        this.props.vm.on('RUNTIME_STARTED', () => {
+          if (soloStreamActive) EditorPreload.sendSoloStageRunStatus({ running: true });
+        });
+        this.props.vm.on('RUNTIME_STOPPED', () => {
+          if (soloStreamActive) EditorPreload.sendSoloStageRunStatus({ running: false });
+        });
+      }
+
       EditorPreload.onApplySprite(async (data) => {
         try {
           if (data.targetId) {
@@ -3459,6 +3799,7 @@ const DesktopHOC = function (WrappedComponent) {
                 };
 
                 var loadedIds = [];
+                var prevExtKeys = new Set(vm.extensionManager._loadedExtensions.keys());
                 try {
                   // loadExtensionURL 在注册回调迟迟不来时会一直挂着，加超时避免
                   // 阻塞整条工具调用链（主进程侧 30s 后会判定 Tool call timeout）。
@@ -3474,6 +3815,9 @@ const DesktopHOC = function (WrappedComponent) {
                 } finally {
                   secMgr.getSandboxMode = prevGetSandboxMode;
                 }
+                // 记录本次由 AI 工具新加入的扩展，供 deleteExtension 校验（仅允许删除 AI 自己加入的扩展）
+                var aiAddedExt = (this.aiAddedExtensionIds = this.aiAddedExtensionIds || new Set());
+                loadedIds.forEach(function(id) { if (!prevExtKeys.has(id)) aiAddedExt.add(id); });
 
                 result = {
                   success: true,
@@ -3533,9 +3877,87 @@ const DesktopHOC = function (WrappedComponent) {
                 if (KNOWN_URLS[extUrl]) extUrl = KNOWN_URLS[extUrl];
                 if (KNOWN_URLS[extUrl.toLowerCase()]) extUrl = KNOWN_URLS[extUrl.toLowerCase()];
                 if (!extUrl.startsWith('http')) { result = { success: false, error: 'Invalid URL. Provide a full URL or known extension ID.' }; break; }
+                var prevExtKeys2 = new Set(vm.extensionManager._loadedExtensions.keys());
                 await vm.extensionManager.loadExtensionURL(extUrl);
+                // 记录本次由 AI 工具新加入的扩展，供 deleteExtension 校验（仅允许删除 AI 自己加入的扩展）
+                var aiAddedExt2 = (this.aiAddedExtensionIds = this.aiAddedExtensionIds || new Set());
+                Array.from(vm.extensionManager._loadedExtensions.keys()).forEach(function(id) { if (!prevExtKeys2.has(id)) aiAddedExt2.add(id); });
                 result = { success: true, data: { url: extUrl, message: 'Extension loaded successfully' } };
               } catch (e) { result = { success: false, error: 'Failed to install extension: ' + e.message }; }
+              break;
+            }
+            case 'deleteExtension': {
+              try {
+                const extensionManager = vm.extensionManager;
+                if (!extensionManager) { result = { success: false, error: 'Extension manager not available' }; break; }
+                const loadedExtensions = extensionManager._loadedExtensions;
+                if (!loadedExtensions) { result = { success: false, error: 'No loaded extensions' }; break; }
+                // 收集所有已加载扩展（兼容 Map 与纯对象两种存储形态）
+                const entries = [];
+                if (typeof loadedExtensions.entries === 'function') {
+                  for (const [k, v] of loadedExtensions.entries()) entries.push([k, v]);
+                } else {
+                  Object.keys(loadedExtensions).forEach(k => entries.push([k, loadedExtensions[k]]));
+                }
+                if (entries.length === 0) { result = { success: false, error: 'No loaded extensions to delete' }; break; }
+                const queryId = (params.extensionId || '').toLowerCase();
+                const queryName = (params.extensionName || '').toLowerCase();
+                // 定位目标扩展（按 key/URL、info.id 或 info.name 匹配）
+                let matchedKey = null;
+                let matchedExt = null;
+                let matchedInfoId = null;
+                for (const [key, ext] of entries) {
+                  if (queryId && key && key.toLowerCase() === queryId) { matchedKey = key; matchedExt = ext; break; }
+                  try {
+                    const info = ext && ext.getInfo ? ext.getInfo() : null;
+                    if (info) {
+                      if (queryId && info.id && info.id.toLowerCase() === queryId) { matchedKey = key; matchedExt = ext; break; }
+                      if (queryName && info.name && info.name.toLowerCase() === queryName) { matchedKey = key; matchedExt = ext; break; }
+                    }
+                  } catch (e2) { /* ignore */ }
+                }
+                if (!matchedKey) {
+                  const available = entries.map(([key, ext]) => {
+                    let name = key;
+                    try { const info = ext && ext.getInfo ? ext.getInfo() : null; if (info && info.name) name = info.name + ' (id: ' + (info.id || key) + ')'; } catch (e2) { /* ignore */ }
+                    return name;
+                  });
+                  result = { success: false, error: 'Extension not found. Available: ' + available.join(', ') };
+                  break;
+                }
+                if (matchedExt && matchedExt.getInfo) {
+                  try { const info = matchedExt.getInfo(); if (info && info.id) matchedInfoId = info.id; } catch (e2) { /* ignore */ }
+                }
+                // 仅允许删除 AI 自己通过工具（installExtension / developExtension）加入的扩展
+                const aiAddedExt = this.aiAddedExtensionIds = this.aiAddedExtensionIds || new Set();
+                const isAiAdded = aiAddedExt.has(matchedKey) ||
+                  (matchedInfoId && aiAddedExt.has(matchedInfoId));
+                if (!isAiAdded) {
+                  result = {
+                    success: false,
+                    error: '只能删除由 AI 自己加入的扩展。该扩展并非通过 AI 工具（installExtension/developExtension）加载，无法删除。'
+                  };
+                  break;
+                }
+                // 从已加载扩展与积木调色板中移除
+                loadedExtensions.delete(matchedKey);
+                if (matchedInfoId) loadedExtensions.delete(matchedInfoId);
+                const blockInfo = vm.runtime._blockInfo;
+                if (Array.isArray(blockInfo)) {
+                  for (let i = blockInfo.length - 1; i >= 0; i--) {
+                    if (blockInfo[i] && (blockInfo[i].id === matchedKey || (matchedInfoId && blockInfo[i].id === matchedInfoId))) {
+                      blockInfo.splice(i, 1);
+                    }
+                  }
+                }
+                aiAddedExt.delete(matchedKey);
+                if (matchedInfoId) aiAddedExt.delete(matchedInfoId);
+                // 重建积木调色板，使该扩展的积木从界面消失
+                try { vm.refreshWorkspace(); } catch (e2) { /* ignore */ }
+                result = { success: true, data: { extensionId: matchedInfoId || matchedKey, message: '扩展已删除' } };
+              } catch (e) {
+                result = { success: false, error: 'Failed to delete extension: ' + e.message };
+              }
               break;
             }
             case 'renameProject': {
@@ -4171,15 +4593,17 @@ const DesktopHOC = function (WrappedComponent) {
         EditorPreload.sendAIToolResponse({ requestId, result });
       });
 
-      EditorPreload.onRequestSpriteLibrary(() => {
+      EditorPreload.onRequestSpriteLibrary((data) => {
+        const libRequestId = data && data.requestId;
         try {
           import(
             /* webpackChunkName: "sprite-library" */
             'scratch-gui/src/lib/libraries/tw-async-libraries'
           ).then(module => {
             const library = module.getSpriteLibrary();
-            const resolveLibrary = (data) => {
-              EditorPreload.sendSpriteLibrary(data);
+            const resolveLibrary = (payload) => {
+              // 回带 requestId：多个窗口（SOLO + AI 助手）并发取素材库时结果不能串台
+              EditorPreload.sendSpriteLibrary({ requestId: libRequestId, data: payload });
             };
             if (library && library.then) {
               library.then(resolveLibrary);
@@ -4187,10 +4611,10 @@ const DesktopHOC = function (WrappedComponent) {
               resolveLibrary(library);
             }
           }).catch(() => {
-            EditorPreload.sendSpriteLibrary([]);
+            EditorPreload.sendSpriteLibrary({ requestId: libRequestId, data: [] });
           });
         } catch (e) {
-          EditorPreload.sendSpriteLibrary([]);
+          EditorPreload.sendSpriteLibrary({ requestId: libRequestId, data: [] });
         }
       });
 
@@ -4247,6 +4671,51 @@ const DesktopHOC = function (WrappedComponent) {
         } catch(e) {}
       };
       var themeInterval = setInterval(checkThemeChange, 1000);
+
+      // 全局 UI 主题（桌面设置 → UI 设置）：写入 tw:theme 保证重启与系统主题
+      // 变化后仍保持全局设置；再 dispatch Redux setTheme 让编辑器即时切换，
+      // 并广播给 SOLO、AI 助手等子窗口（不等 1 秒轮询）。
+      var applyGlobalUITheme = function(mode) {
+        try {
+          var parsed = {};
+          try {
+            parsed = JSON.parse(localStorage.getItem('tw:theme'));
+          } catch (e) {}
+          if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+            parsed = {};
+          }
+          if (mode === 'light' || mode === 'dark') {
+            parsed.gui = mode;
+            localStorage.setItem('tw:theme', JSON.stringify(parsed));
+          } else {
+            // 跟随系统：移除 gui 覆盖，保留 accent/blocks 等自定义
+            delete parsed.gui;
+            if (Object.keys(parsed).length === 0) {
+              localStorage.removeItem('tw:theme');
+            } else {
+              localStorage.setItem('tw:theme', JSON.stringify(parsed));
+            }
+          }
+          var theme = detectTheme();
+          if (this.props.guiTheme && this.props.guiTheme.blocks === BLOCKS_CUSTOM) {
+            theme = theme.set('blocks', BLOCKS_CUSTOM);
+          }
+          if (mode === 'light' || mode === 'dark') {
+            theme = theme.set('gui', mode);
+          }
+          this.props.onSetGuiTheme(theme);
+          var current = (mode === 'light' || mode === 'dark') ? mode : (theme.gui === 'dark' ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-gui-theme', current);
+          lastTheme = current;
+          EditorPreload.notifyThemeChanged(current);
+        } catch (e) {}
+      }.bind(this);
+      if (EditorPreload.getGlobalUITheme) {
+        EditorPreload.getGlobalUITheme().then(applyGlobalUITheme).catch(() => {});
+      }
+      if (EditorPreload.onGlobalUIThemeChanged) {
+        EditorPreload.onGlobalUIThemeChanged(applyGlobalUITheme);
+      }
 
       // This component is re-mounted when the locale changes, but we only want to load
       // the initial project once.
@@ -4413,6 +4882,7 @@ const DesktopHOC = function (WrappedComponent) {
     }
     componentWillUnmount () {
       stopFrameStreaming();
+      stopSoloStream();
       isStageDetached = false;
       if (this._flyoutFrostInterval) {
         clearInterval(this._flyoutFrostInterval);
@@ -4887,6 +5357,7 @@ const DesktopHOC = function (WrappedComponent) {
     projectChanged: state.scratchGui.projectChanged,
     fileHandle: state.scratchGui.tw.fileHandle,
     reduxUsername: state.scratchGui.tw.username,
+    guiTheme: state.scratchGui.theme.theme,
     vm: state.scratchGui.vm
   });
 
@@ -4908,6 +5379,7 @@ const DesktopHOC = function (WrappedComponent) {
     onSetReduxUsername: username => dispatch(setUsername(username)),
     onSetViewOnly: isViewOnly => dispatch(setViewOnly(isViewOnly)),
     onSetFullScreen: isFullScreen => dispatch(setFullScreen(isFullScreen)),
+    onSetGuiTheme: theme => dispatch(setTheme(theme)),
     onShowErrorModal: error => {
       dispatch(setProjectError(error));
       dispatch(openInvalidProjectModal());

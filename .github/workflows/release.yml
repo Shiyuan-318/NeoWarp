@@ -45,9 +45,9 @@ jobs:
           dist/*.AppImage
     - name: Upload artifacts to tag
       run: |
-        node scripts/upload-to-github-releases.mjs TurboWarp desktop "dist/*.deb"
-        node scripts/upload-to-github-releases.mjs TurboWarp desktop "dist/*.tar.gz"
-        node scripts/upload-to-github-releases.mjs TurboWarp desktop "dist/*.AppImage"
+        node scripts/upload-to-github-releases.mjs Shiyuan-318 NeoWarp "dist/*.deb"
+        node scripts/upload-to-github-releases.mjs Shiyuan-318 NeoWarp "dist/*.tar.gz"
+        node scripts/upload-to-github-releases.mjs Shiyuan-318 NeoWarp "dist/*.AppImage"
       env:
         GH_TOKEN: "${{ github.token }}"
 
@@ -103,7 +103,7 @@ jobs:
         path: dist/*.dmg
     - name: Upload artifacts to tag
       run: |
-        node scripts/upload-to-github-releases.mjs TurboWarp desktop "dist/*.dmg"
+        node scripts/upload-to-github-releases.mjs Shiyuan-318 NeoWarp "dist/*.dmg"
       env:
         GH_TOKEN: "${{ github.token }}"
 
@@ -174,7 +174,7 @@ jobs:
         name: artifact-for-signpath
         # keep this list in sync with the signed artifiact upload below
         path: |
-          D:\repo\dist\TurboWarp-Setup*x64.exe
+          D:\repo\dist\NeoWarp-Setup*x64.exe
     - name: Sign executables with SignPath
       uses: signpath/github-action-submit-signing-request@4f13d373e8f0cd8d3c0465ff4877feff27aed2ae
       with:
@@ -193,10 +193,10 @@ jobs:
         name: windows-signed
         # keep this list in sync with the signpath artifact upload above
         path: |
-          D:\repo\dist\TurboWarp-Setup*x64.exe
+          D:\repo\dist\NeoWarp-Setup*x64.exe
     - name: Upload signed artifacts to tag
       working-directory: D:\repo
       run: |
-        node scripts/upload-to-github-releases.mjs TurboWarp desktop "dist/*.exe"
+        node scripts/upload-to-github-releases.mjs Shiyuan-318 NeoWarp "dist/*.exe"
       env:
         GH_TOKEN: "${{ github.token }}"

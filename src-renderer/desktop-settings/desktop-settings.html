@@ -6,7 +6,10 @@
     <style>
       :root {
         --bg: #F2F2F7;
+        --window-bg: linear-gradient(155deg, #EDECF3 0%, #F5F4F8 45%, #EEF2F9 100%);
+        --sidebar-bg: rgba(255, 255, 255, 0.72);
         --card-bg: #FFFFFF;
+        --card-border: rgba(0, 0, 0, 0.05);
         --text: #000000;
         --text-secondary: #8E8E93;
         --text-tertiary: #C7C7CC;
@@ -14,15 +17,19 @@
         --accent: #007AFF;
         --toggle-on: #34C759;
         --toggle-off: #E9E9EB;
-        --shadow: 0 1px 3px rgba(0,0,0,0.08);
-        --radius: 10px;
+        --shadow: 0 2px 10px rgba(30, 30, 60, 0.06), 0 0 0.5px rgba(30, 30, 60, 0.12);
+        --hover-bg: rgba(0, 0, 0, 0.05);
+        --radius: 16px;
         --warning: #FF9500;
         --danger: #FF3B30;
         --success: #34C759;
       }
       [data-theme="dark"] {
         --bg: #000000;
+        --window-bg: radial-gradient(900px 600px at 85% -10%, rgba(10, 132, 255, 0.10) 0%, rgba(10, 132, 255, 0) 55%), linear-gradient(160deg, #131316 0%, #0A0A0C 60%, #0C0D12 100%);
+        --sidebar-bg: rgba(28, 28, 30, 0.72);
         --card-bg: #1C1C1E;
+        --card-border: rgba(255, 255, 255, 0.07);
         --text: #FFFFFF;
         --text-secondary: #8E8E93;
         --text-tertiary: #48484A;
@@ -30,7 +37,8 @@
         --accent: #0A84FF;
         --toggle-on: #30D158;
         --toggle-off: #39393D;
-        --shadow: 0 1px 3px rgba(0,0,0,0.3);
+        --shadow: 0 2px 10px rgba(0, 0, 0, 0.35), 0 0 0.5px rgba(255, 255, 255, 0.10);
+        --hover-bg: rgba(255, 255, 255, 0.08);
         --warning: #FF9F0A;
         --danger: #FF453A;
         --success: #30D158;
@@ -38,52 +46,205 @@
 
       * { margin: 0; padding: 0; box-sizing: border-box; }
 
+      html, body { height: 100%; }
+
       body {
         font-family: -apple-system, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
         color: var(--text);
-        background: var(--bg);
+        background: var(--window-bg) var(--bg);
+        background-attachment: fixed;
         accent-color: var(--accent);
         -webkit-font-smoothing: antialiased;
         font-size: 15px;
         line-height: 1.4;
+        overflow: hidden;
       }
 
-      main {
-        padding: 20px 16px 40px 16px;
-        max-width: 600px;
-        margin: 0 auto;
-        min-height: 100vh;
+      .layout {
+        display: flex;
+        height: 100vh;
       }
 
-      /* Large title */
-      .large-title {
-        font-size: 34px;
-        font-weight: 700;
-        letter-spacing: -0.5px;
-        padding: 8px 16px 8px 16px;
+      /* ===== Sidebar (floating glass panel) ===== */
+      .sidebar {
+        width: 212px;
+        flex-shrink: 0;
+        margin: 10px 0 10px 10px;
+        display: flex;
+        flex-direction: column;
+        padding: 14px 10px 10px 10px;
+        background: var(--sidebar-bg);
+        -webkit-backdrop-filter: blur(28px) saturate(180%);
+        backdrop-filter: blur(28px) saturate(180%);
+        border-radius: 20px;
+        box-shadow: var(--shadow);
       }
 
-      /* Group header (above card) */
-      .group-header {
-        font-size: 13px;
-        font-weight: 400;
+      .sidebar-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 2px 8px 14px 8px;
+      }
+      .app-icon {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        border-radius: 9px;
+        background: linear-gradient(135deg, #0A84FF, #5E5CE6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(10, 132, 255, 0.35);
+      }
+      .app-icon svg {
+        width: 20px;
+        height: 20px;
+      }
+      .sidebar-title {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .sidebar-subtitle {
+        font-size: 11px;
         color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        padding: 0 16px 6px 16px;
-        margin-top: 24px;
       }
-      .group-header:first-of-type {
-        margin-top: 8px;
+
+      .nav {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        overflow-y: auto;
+        min-height: 0;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 6px 10px;
+        border: none;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      .nav-item:hover {
+        background: var(--hover-bg);
+      }
+      .nav-item .nav-icon {
+        width: 26px;
+        height: 26px;
+        flex-shrink: 0;
+        border-radius: 7px;
+        background: var(--tint);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        transition: transform 0.15s ease;
+      }
+      .nav-item .nav-icon svg {
+        width: 14px;
+        height: 14px;
+      }
+      .nav-item:active .nav-icon {
+        transform: scale(0.92);
+      }
+      .nav-item.selected {
+        background: var(--tint-soft);
+        color: var(--tint-text);
+        font-weight: 600;
+      }
+      .nav-label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Section tints (light) */
+      .nav-item[data-page="updates"]      { --tint: #34C759; --tint-soft: rgba(52, 199, 89, 0.15);  --tint-text: #248A3D; }
+      .nav-item[data-page="ui"]           { --tint: #5856D6; --tint-soft: rgba(88, 86, 214, 0.13);  --tint-text: #5856D6; }
+      .nav-item[data-page="media"]        { --tint: #007AFF; --tint-soft: rgba(0, 122, 255, 0.13);  --tint-text: #007AFF; }
+      .nav-item[data-page="performance"]  { --tint: #FF9500; --tint-soft: rgba(255, 149, 0, 0.16);  --tint-text: #C77800; }
+      .nav-item[data-page="privacy"]      { --tint: #FF3B30; --tint-soft: rgba(255, 59, 48, 0.13);  --tint-text: #E0362B; }
+      .nav-item[data-page="integrations"] { --tint: #AF52DE; --tint-soft: rgba(175, 82, 222, 0.14); --tint-text: #A028C9; }
+      .nav-item[data-page="advanced"]     { --tint: #8E8E93; --tint-soft: rgba(142, 142, 147, 0.18); --tint-text: #636366; }
+      /* Section tints (dark) */
+      [data-theme="dark"] .nav-item[data-page="updates"]      { --tint: #30D158; --tint-text: #30D158; }
+      [data-theme="dark"] .nav-item[data-page="ui"]           { --tint: #7D7AFF; --tint-text: #7D7AFF; }
+      [data-theme="dark"] .nav-item[data-page="media"]        { --tint: #0A84FF; --tint-text: #0A84FF; }
+      [data-theme="dark"] .nav-item[data-page="performance"]  { --tint: #FF9F0A; --tint-text: #FF9F0A; }
+      [data-theme="dark"] .nav-item[data-page="privacy"]      { --tint: #FF453A; --tint-text: #FF453A; }
+      [data-theme="dark"] .nav-item[data-page="integrations"] { --tint: #BF5AF2; --tint-text: #BF5AF2; }
+      [data-theme="dark"] .nav-item[data-page="advanced"]     { --tint: #98989D; --tint-text: #98989D; }
+
+      .sidebar-footer {
+        margin-top: auto;
+        padding: 10px 8px 2px 8px;
+        font-size: 11px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* ===== Content pane ===== */
+      .content {
+        flex: 1;
+        min-width: 0;
+        overflow-y: auto;
+        padding: 20px 20px 32px 18px;
+      }
+      .page {
+        display: none;
+        max-width: 620px;
+      }
+      .page.active {
+        display: block;
+        animation: page-in 0.26s cubic-bezier(0.2, 0.7, 0.3, 1);
+      }
+      @keyframes page-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .page.active { animation: none; }
+      }
+
+      .page-title {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.6px;
+        padding: 2px 4px 14px 4px;
+        color: var(--text);
       }
 
       /* Card */
       .card {
         background: var(--card-bg);
+        border: 0.5px solid var(--card-border);
         border-radius: var(--radius);
         overflow: hidden;
-        margin-bottom: 0;
         box-shadow: var(--shadow);
+      }
+      .card + .card {
+        margin-top: 12px;
       }
 
       /* Setting row */
@@ -91,13 +252,13 @@
         position: relative;
         display: flex;
         align-items: center;
-        padding: 8px 16px;
-        min-height: 44px;
+        padding: 9px 16px;
+        min-height: 46px;
       }
       .setting-row + .setting-row::before {
         content: '';
         position: absolute;
-        left: 16px;
+        left: 60px;
         right: 0;
         top: 0;
         height: 0.5px;
@@ -125,11 +286,11 @@
         min-height: 31px;
       }
 
-      /* Row icon (iOS colored square) */
+      /* Row icon (iOS colored squircle) */
       .row-icon {
         width: 28px;
         height: 28px;
-        border-radius: 6px;
+        border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -145,7 +306,46 @@
       .icon-orange { background: #FF9500; }
       .icon-red { background: #FF3B30; }
       .icon-purple { background: #AF52DE; }
+      .icon-indigo { background: #5856D6; }
       .icon-gray { background: #8E8E93; }
+      [data-theme="dark"] .icon-green { background: #30D158; }
+      [data-theme="dark"] .icon-blue { background: #0A84FF; }
+      [data-theme="dark"] .icon-orange { background: #FF9F0A; }
+      [data-theme="dark"] .icon-red { background: #FF453A; }
+      [data-theme="dark"] .icon-purple { background: #BF5AF2; }
+      [data-theme="dark"] .icon-indigo { background: #7D7AFF; }
+      [data-theme="dark"] .icon-gray { background: #98989D; }
+
+      /* Segmented control (iOS) */
+      .segmented {
+        display: inline-flex;
+        padding: 2px;
+        border-radius: 9px;
+        background: var(--toggle-off);
+        gap: 2px;
+      }
+      .segment {
+        font: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        border: none;
+        padding: 5px 14px;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+      }
+      .segment.selected {
+        background: var(--card-bg);
+        color: var(--text);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+      }
+      [data-theme="dark"] .segment.selected {
+        background: #636366;
+        color: #fff;
+      }
 
       /* Toggle Switch (iOS) */
       .toggle {
@@ -217,12 +417,11 @@
         color: #000;
       }
 
-      /* Alert / footer note (iOS inline notice) */
+      /* Alert / inline notice */
       .alert {
         font-size: 13px;
         line-height: 1.4;
-        padding: 7px 16px 0 16px;
-        margin-top: 6px;
+        padding: 8px 18px 0 18px;
       }
       .alert-warning {
         color: var(--warning);
@@ -235,8 +434,7 @@
       .update-status-message {
         font-size: 13px;
         color: var(--text-secondary);
-        padding: 7px 16px 0 16px;
-        margin-top: 6px;
+        padding: 8px 18px 0 18px;
         line-height: 1.4;
       }
       .update-status-message a {
@@ -247,7 +445,7 @@
         text-decoration: underline;
       }
 
-      /* Button (iOS filled blue) */
+      /* Button (iOS filled) */
       .btn {
         display: inline-flex;
         align-items: center;
@@ -257,14 +455,17 @@
         font-size: 15px;
         font-weight: 500;
         border: none;
-        border-radius: 8px;
+        border-radius: 9px;
         background: var(--accent);
         color: #fff;
         cursor: pointer;
-        transition: opacity 0.2s;
+        transition: opacity 0.2s, transform 0.1s;
       }
       .btn:hover {
         opacity: 0.85;
+      }
+      .btn:active {
+        transform: scale(0.97);
       }
       .btn:disabled {
         opacity: 0.4;
@@ -299,8 +500,8 @@
         font: inherit;
         display: flex;
         align-items: center;
-        padding: 8px 16px;
-        min-height: 44px;
+        padding: 9px 16px;
+        min-height: 46px;
         transition: opacity 0.2s;
       }
       .row-button:hover {
@@ -318,16 +519,392 @@
         color: var(--text-tertiary);
       }
 
-      /* Footer */
-      .footer {
-        text-align: center;
-        font-size: 13px;
+      /* Static value (e.g. version row) */
+      .static-value {
+        font-size: 15px;
         color: var(--text-secondary);
-        padding: 32px 16px 0 16px;
+      }
+
+      /* Scrollbars */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(128, 128, 128, 0.35);
+        border-radius: 4px;
+        background-clip: padding-box;
+        border: 2px solid transparent;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(128, 128, 128, 0.55);
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      /* Narrow window: collapse sidebar to icon rail */
+      @media (max-width: 600px) {
+        .sidebar {
+          width: 64px;
+          padding: 14px 8px 10px 8px;
+        }
+        .sidebar-header {
+          justify-content: center;
+          padding-left: 0;
+          padding-right: 0;
+        }
+        .sidebar-header-text, .nav-label, .sidebar-footer {
+          display: none;
+        }
+        .nav-item {
+          justify-content: center;
+          padding: 8px 0;
+        }
       }
 
       /* Misc */
       [hidden] { display: none !important; }
+
+      /* Home branding */
+      .home-text-input {
+        font: inherit;
+        font-size: 15px;
+        padding: 6px 10px;
+        border: 1px solid var(--separator);
+        border-radius: 8px;
+        background: var(--card-bg);
+        color: var(--text);
+        width: 180px;
+        max-width: 100%;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .home-text-input:focus {
+        border-color: var(--accent);
+      }
+      .home-logo-preview {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 10px;
+        flex-shrink: 0;
+        box-shadow: var(--shadow);
+      }
+      .home-logo-html-preview {
+        display: inline-block;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        margin-right: 10px;
+        flex-shrink: 0;
+        overflow: hidden;
+        background: var(--card-bg);
+        box-shadow: var(--shadow);
+      }
+      .home-logo-html-preview[hidden] {
+        display: none;
+      }
+      .home-background-preview {
+        width: 56px;
+        height: 36px;
+        border-radius: 8px;
+        object-fit: cover;
+        margin-right: 10px;
+        flex-shrink: 0;
+        box-shadow: var(--shadow);
+      }
+      .home-logo-html-row .setting-info {
+        display: flex;
+      }
+      .home-logo-html-input {
+        font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        width: 100%;
+        min-height: 76px;
+        padding: 8px 10px;
+        border: 1px solid var(--separator);
+        border-radius: 8px;
+        background: var(--card-bg);
+        color: var(--text);
+        resize: vertical;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .home-logo-html-input:focus {
+        border-color: var(--accent);
+      }
+      .btn-secondary {
+        background: var(--toggle-off);
+        color: var(--text);
+      }
+      .setting-control .btn + .btn {
+        margin-left: 8px;
+      }
+
+      /* ===== AI 模型页 ===== */
+      .nav-item[data-page="ai"]      { --tint: #FF2D55; --tint-soft: rgba(255, 45, 85, 0.13);  --tint-text: #D81E4A; }
+      [data-theme="dark"] .nav-item[data-page="ai"] { --tint: #FF375F; --tint-text: #FF375F; }
+
+      .ai-provider-logo {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 13px;
+        flex-shrink: 0;
+        margin-right: 12px;
+      }
+      .ai-provider-logo svg { width: 17px; height: 17px; }
+      .ai-active-tag {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--success);
+        margin-right: 10px;
+        white-space: nowrap;
+      }
+      .ai-row-btn {
+        border: none;
+        background: var(--toggle-off);
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+        padding: 5px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: opacity 0.15s;
+      }
+      .ai-row-btn:hover { opacity: 0.75; }
+      .ai-row-btn.danger { color: var(--danger); }
+      .setting-control .ai-row-btn + .ai-row-btn { margin-left: 8px; }
+      .ai-empty-row {
+        padding: 18px 16px;
+        font-size: 14px;
+        color: var(--text-secondary);
+      }
+      /* 免费模型分组：标题行 + 绿色“免费”角标；活动结束后整组灰显 */
+      .ai-group-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        padding: 12px 2px 6px;
+      }
+      .ai-group-title {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: var(--text-tertiary);
+      }
+      .ai-group-note {
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--text-tertiary);
+      }
+      .ai-free-tag {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--success);
+        margin-right: 10px;
+        white-space: nowrap;
+      }
+      .ai-free-tag.expired { color: var(--text-tertiary); }
+      .ai-model-row.free-expired {
+        opacity: 0.55;
+      }
+      .ai-model-row.free-expired:hover {
+        background: transparent;
+      }
+
+      /* 模型编辑对话框 */
+      .ai-dialog-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .ai-dialog-overlay.open { opacity: 1; }
+      .ai-dialog {
+        width: 580px;
+        max-width: calc(100vw - 40px);
+        max-height: calc(100vh - 60px);
+        background: var(--card-bg);
+        border-radius: 16px;
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .ai-dialog-head {
+        padding: 16px 20px 6px;
+        font-size: 17px;
+        font-weight: 700;
+      }
+      .ai-dialog-body {
+        overflow-y: auto;
+        padding: 4px 20px 12px;
+      }
+      .ai-dialog-foot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px 16px;
+        border-top: 0.5px solid var(--card-border);
+      }
+      .provider-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+        gap: 8px;
+      }
+      .provider-option {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 4px;
+        border: 1.5px solid var(--card-border);
+        border-radius: 12px;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        cursor: pointer;
+      }
+      .provider-option.selected {
+        border-color: var(--accent);
+      }
+      .provider-option-logo {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .provider-option-logo svg { width: 17px; height: 17px; }
+      .provider-option-name { font-size: 12px; }
+      .model-option-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .model-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border: 1.5px solid var(--card-border);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        cursor: pointer;
+        text-align: left;
+      }
+      .model-option.selected { border-color: var(--accent); }
+      .model-option-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .model-option-name { font-size: 14px; font-weight: 500; }
+      .model-option-meta { font-size: 11px; color: var(--text-secondary); }
+      .model-cap-tag {
+        font-size: 10px;
+        padding: 1px 6px;
+        border-radius: 6px;
+        background: var(--toggle-off);
+        color: var(--text-secondary);
+        margin-left: 4px;
+        white-space: nowrap;
+      }
+      .form-group { margin-top: 16px; }
+      .form-group-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin-bottom: 8px;
+      }
+      .ai-field-row { margin-bottom: 10px; }
+      .ai-field-label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+      .ai-field-hint {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-top: 3px;
+      }
+      .ai-field-error {
+        font-size: 11px;
+        color: var(--danger);
+        margin-top: 3px;
+      }
+      .ai-field-row.has-error .settings-input { border-color: var(--danger); }
+      .settings-input {
+        width: 100%;
+        font: inherit;
+        font-size: 14px;
+        padding: 7px 10px;
+        border: 1px solid var(--separator);
+        border-radius: 8px;
+        background: var(--card-bg);
+        color: var(--text);
+        outline: none;
+      }
+      .settings-input:focus { border-color: var(--accent); }
+      .settings-input-mono {
+        font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+        font-size: 13px;
+      }
+      .settings-input-group { display: flex; gap: 6px; }
+      .settings-input-group .settings-input { flex: 1; }
+      .settings-input-affix {
+        border: none;
+        background: var(--toggle-off);
+        border-radius: 8px;
+        width: 36px;
+        flex-shrink: 0;
+        cursor: pointer;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .settings-input-affix svg { width: 16px; height: 16px; }
+      .test-result {
+        flex: 1;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        min-height: 15px;
+      }
+      .test-result svg { width: 14px; height: 14px; flex-shrink: 0; }
+      .test-result.ok { color: var(--success); }
+      .test-result.fail { color: var(--danger); }
+      .test-result.busy { color: var(--text-secondary); }
+      .ai-spin { animation: ai-spin 1s linear infinite; }
+      @keyframes ai-spin { to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
@@ -340,394 +917,1646 @@
         document.documentElement.setAttribute('data-theme', data.theme || 'light');
       });
     </script>
-    <main>
-      <script>
-        const {locale, strings, settings} = DesktopSettingsPreload.init();
-        document.documentElement.lang = locale;
-      </script>
-
-      <h1 class="large-title page-title"></h1>
-      <script>document.querySelector('.page-title').textContent = strings['desktop-settings.title'];</script>
-
-      <!-- Update Checker -->
-      <div class="group-header">Updates / 更新</div>
-      <div class="card">
-        <div class="setting-row">
-          <div class="row-icon icon-green">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="app-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           </div>
-          <div class="setting-info">
-            <div class="setting-label check-update-label"></div>
-            <div class="setting-desc check-update-desc"></div>
+          <div class="sidebar-header-text">
+            <div class="sidebar-title"></div>
+            <div class="sidebar-subtitle">NeoWarp</div>
           </div>
-          <div class="setting-control">
-            <button class="btn check-for-updates-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-              </svg>
-              <span class="check-btn-text"></span>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-item selected" data-page="updates">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            </span>
+            <span class="nav-label"></span>
+          </button>
+          <button class="nav-item" data-page="ui">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 0 0 20z" fill="#fff" stroke="none"></path></svg>
+            </span>
+            <span class="nav-label"></span>
+          </button>
+          <button class="nav-item" data-page="media">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </span>
+            <span class="nav-label"></span>
+          </button>
+          <button class="nav-item" data-page="performance">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+            </span>
+            <span class="nav-label"></span>
+          </button>
+          <button class="nav-item" data-page="privacy">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </span>
+            <span class="nav-label"></span>
+          </button>
+          <button class="nav-item" data-page="integrations">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            </span>
+            <span class="nav-label"></span>
+          </button>
+          <button class="nav-item" data-page="ai">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2a1 1 0 0 1 .95.68l1.7 4.67 4.67 1.7a1 1 0 0 1 0 1.9l-4.67 1.7-1.7 4.67a1 1 0 0 1-1.9 0l-1.7-4.67-4.67-1.7a1 1 0 0 1 0-1.9l4.67-1.7 1.7-4.67A1 1 0 0 1 12 2zm7 12a.9.9 0 0 1 .86.61l.85 2.34 2.34.85a.9.9 0 0 1 0 1.71l-2.34.85-.85 2.34a.9.9 0 0 1-1.71 0l-.85-2.34-2.34-.85a.9.9 0 0 1 0-1.71l2.34-.85.85-2.34A.9.9 0 0 1 19 14z"/></svg>
+            </span>
+            <span class="nav-label"></span>
+          </button>
+          <button class="nav-item" data-page="advanced">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            </span>
+            <span class="nav-label"></span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer"></div>
+      </aside>
+
+      <!-- Content -->
+      <main class="content" id="content">
+        <!-- Updates -->
+        <section class="page active" data-page="updates">
+          <h1 class="page-title"></h1>
+          <div class="card">
+            <div class="setting-row">
+              <div class="row-icon icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label check-update-label"></div>
+                <div class="setting-desc check-update-desc"></div>
+              </div>
+              <div class="setting-control">
+                <button class="btn check-for-updates-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+                  </svg>
+                  <span class="check-btn-text"></span>
+                </button>
+              </div>
+            </div>
+            <div class="setting-row" id="updateCheckerRow">
+              <div class="row-icon icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label update-checker-label"></div>
+              </div>
+              <div class="setting-control">
+                <select class="select-control update-checker-select" autocomplete="off">
+                  <option value="unstable"></option>
+                  <option value="stable"></option>
+                  <option value="security"></option>
+                  <option value="never"></option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-warning update-checker-warning" hidden></div>
+          <p class="update-status-message"></p>
+        </section>
+
+        <!-- UI Settings -->
+        <section class="page" data-page="ui">
+          <h1 class="page-title"></h1>
+          <div class="card">
+            <div class="setting-row">
+              <div class="row-icon icon-indigo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 0 0 20z" fill="#fff" stroke="none"></path></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label ui-theme-label"></div>
+                <div class="setting-desc ui-theme-desc"></div>
+              </div>
+              <div class="setting-control">
+                <div class="segmented" id="uiThemeSegmented">
+                  <button class="segment" data-value="system"></button>
+                  <button class="segment" data-value="light"></button>
+                  <button class="segment" data-value="dark"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Home branding -->
+          <div class="card">
+            <div class="setting-row">
+              <div class="row-icon icon-indigo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label show-recent-projects-label"></div>
+                <div class="setting-desc show-recent-projects-desc"></div>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="show-recent-projects-checkbox" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="row-icon icon-indigo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label home-logo-label"></div>
+                <div class="setting-desc home-logo-desc"></div>
+              </div>
+              <div class="setting-control">
+                <img class="home-logo-preview" alt="" hidden>
+                <span class="home-logo-html-preview" hidden></span>
+                <button class="btn home-logo-pick"></button>
+                <button class="btn btn-secondary home-logo-html-btn"></button>
+              </div>
+            </div>
+            <div class="setting-row home-logo-html-row" hidden>
+              <div class="setting-info">
+                <textarea class="home-logo-html-input" spellcheck="false"></textarea>
+              </div>
+              <div class="setting-control">
+                <button class="btn home-logo-html-apply"></button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="row-icon icon-indigo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label home-text-label"></div>
+                <div class="setting-desc home-text-desc"></div>
+              </div>
+              <div class="setting-control">
+                <input type="text" class="home-text-input" autocomplete="off">
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="row-icon icon-indigo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label home-background-label"></div>
+                <div class="setting-desc home-background-desc"></div>
+              </div>
+              <div class="setting-control">
+                <img class="home-background-preview" alt="" hidden>
+                <button class="btn home-background-pick"></button>
+                <button class="btn btn-secondary home-background-clear" hidden></button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="row-icon icon-gray">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label home-reset-label"></div>
+                <div class="setting-desc home-reset-desc"></div>
+              </div>
+              <div class="setting-control">
+                <button class="btn home-reset-btn"></button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Media Devices -->
+        <section class="page" data-page="media">
+          <h1 class="page-title"></h1>
+          <div class="card">
+            <div class="setting-row">
+              <div class="row-icon icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label selected-microphone-label"></div>
+              </div>
+              <div class="setting-control">
+                <select class="select-control selected-microphone-select" autocomplete="off">
+                  <option selected disabled></option>
+                </select>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="row-icon icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label selected-camera-label"></div>
+              </div>
+              <div class="setting-control">
+                <select class="select-control selected-camera-select" autocomplete="off">
+                  <option selected disabled></option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-warning media-device-warning" hidden></div>
+        </section>
+
+        <!-- Performance -->
+        <section class="page" data-page="performance">
+          <h1 class="page-title"></h1>
+          <div class="card">
+            <div class="setting-row">
+              <div class="row-icon icon-orange">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label hardware-acceleration-label"></div>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="hardware-acceleration-checkbox" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="row-icon icon-orange">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label background-throttling-label"></div>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="background-throttling-checkbox" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="row-icon icon-orange">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label" id="exitFullscreenLabel"></div>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="exit-fullscreen-on-escape-checkbox" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-danger hardware-acceleration-warning"></div>
+          <div class="alert alert-warning background-throttling-warning"></div>
+        </section>
+
+        <!-- Privacy & Security -->
+        <section class="page" data-page="privacy">
+          <h1 class="page-title"></h1>
+          <div class="card">
+            <div class="setting-row">
+              <div class="row-icon icon-red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label bypass-cors-label"></div>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="bypass-cors-checkbox" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="row-icon icon-red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label spellchecker-label"></div>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="spellchecker-checkbox" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-danger bypass-cors-warning"></div>
+        </section>
+
+        <!-- Integrations -->
+        <section class="page" data-page="integrations">
+          <h1 class="page-title"></h1>
+          <div class="card">
+            <div class="setting-row">
+              <div class="row-icon icon-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label rich-presence-label"></div>
+                <a class="more-info rich-presence-more-information" href="https://docs.turbowarp.org/desktop/rich-presence" target="_blank" rel="noreferrer"></a>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="rich-presence-checkbox" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- AI Models -->
+        <section class="page" data-page="ai">
+          <h1 class="page-title"></h1>
+          <div class="card" id="aiModelList"></div>
+          <div class="alert" id="aiSharedNote" style="padding-top:10px;"></div>
+        </section>
+
+        <!-- Advanced -->
+        <section class="page" data-page="advanced">
+          <h1 class="page-title"></h1>
+          <div class="card">
+            <div class="setting-row">
+              <div class="row-icon icon-gray">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label version-label"></div>
+              </div>
+              <div class="setting-control">
+                <span class="static-value version-value"></span>
+              </div>
+            </div>
+            <button class="row-button open-user-data">
+              <div class="row-icon icon-gray">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+              <span class="row-text"></span>
+              <svg class="chevron" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 2 10 10 2 18"></polyline></svg>
             </button>
           </div>
-        </div>
-      </div>
-      <p class="update-status-message"></p>
+        </section>
+      </main>
+    </div>
 
-      <script>
-        // Manual check for updates
-        const checkForUpdatesBtn = document.querySelector('.check-for-updates-btn');
-        const checkBtnText = document.querySelector('.check-btn-text');
-        const updateStatusMessage = document.querySelector('.update-status-message');
-        const checkUpdateLabel = document.querySelector('.check-update-label');
-        const checkUpdateDesc = document.querySelector('.check-update-desc');
+    <script>
+      const {locale, strings, settings, version} = DesktopSettingsPreload.init();
+      document.documentElement.lang = locale;
 
-        checkUpdateLabel.textContent = strings['desktop-settings.check-for-updates'] || '检查更新';
-        checkUpdateDesc.textContent = strings['desktop-settings.check-for-updates-desc'] || '从 GitHub 手动检查最新版本';
-        checkBtnText.textContent = strings['desktop-settings.check-now'] || '立即检查';
+      // ===== Sidebar & page titles =====
+      const sectionStringKeys = {
+        updates: 'desktop-settings.section-updates',
+        ui: 'desktop-settings.section-ui',
+        media: 'desktop-settings.section-media',
+        performance: 'desktop-settings.section-performance',
+        privacy: 'desktop-settings.section-privacy',
+        integrations: 'desktop-settings.section-integrations',
+        advanced: 'desktop-settings.section-advanced'
+      };
+      for (const [id, key] of Object.entries(sectionStringKeys)) {
+        const label = strings[key];
+        document.querySelector(`.nav-item[data-page="${id}"] .nav-label`).textContent = label;
+        document.querySelector(`.page[data-page="${id}"] .page-title`).textContent = label;
+      }
+      document.querySelector('.sidebar-title').textContent = strings['desktop-settings.title'];
+      document.querySelector('.sidebar-footer').textContent = `NeoWarp ${version}`;
 
-        let isChecking = false;
-        checkForUpdatesBtn.onclick = async () => {
-          if (isChecking) return;
-          isChecking = true;
-          checkBtnText.textContent = strings['desktop-settings.checking'] || '检查中...';
-          checkForUpdatesBtn.disabled = true;
-          updateStatusMessage.textContent = '';
-
-          try {
-            const result = await DesktopSettingsPreload.checkForUpdates();
-
-            if (result.error) {
-              updateStatusMessage.textContent = (strings['desktop-settings.check-error'] || '检查更新失败：{error}').replace('{error}', result.error);
-              updateStatusMessage.style.color = 'var(--danger)';
-            } else if (result.hasUpdate) {
-              updateStatusMessage.innerHTML = (strings['desktop-settings.update-available'] || '发现新版本 {version}！')
-                .replace('{version}', result.latestVersion) + ' <a href="' + result.releaseUrl + '" style="color:var(--accent);">前往下载</a>';
-              updateStatusMessage.style.color = 'var(--success)';
-            } else {
-              updateStatusMessage.textContent = strings['desktop-settings.no-update'] || '已是最新版本！';
-              updateStatusMessage.style.color = 'var(--success)';
-            }
-          } catch (error) {
-            updateStatusMessage.textContent = (strings['desktop-settings.check-error'] || '检查更新失败：{error}').replace('{error}', error.message);
-            updateStatusMessage.style.color = 'var(--danger)';
-          }
-
-          isChecking = false;
-          checkBtnText.textContent = strings['desktop-settings.check-now'] || '立即检查';
-          checkForUpdatesBtn.disabled = false;
-        };
-      </script>
-
-      <!-- Media Devices -->
-      <div class="group-header">Media Devices / 媒体设备</div>
-      <div class="card">
-        <div class="setting-row">
-          <div class="row-icon icon-blue">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-          </div>
-          <div class="setting-info">
-            <div class="setting-label selected-microphone-label"></div>
-          </div>
-          <div class="setting-control">
-            <select class="select-control selected-microphone-select" autocomplete="off">
-              <option selected disabled></option>
-            </select>
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="row-icon icon-blue">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-          </div>
-          <div class="setting-info">
-            <div class="setting-label selected-camera-label"></div>
-          </div>
-          <div class="setting-control">
-            <select class="select-control selected-camera-select" autocomplete="off">
-              <option selected disabled></option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="alert alert-warning media-device-warning" hidden></div>
-
-      <script>
-        const selectedMicrophoneSelect = document.querySelector('.selected-microphone-select');
-        const selectedCameraSelect = document.querySelector('.selected-camera-select');
-        const mediaDeviceWarning = document.querySelector('.media-device-warning');
-        mediaDeviceWarning.textContent = strings['desktop-settings.media-devices-changed'];
-
-        document.querySelector('.selected-microphone-label').textContent = strings['desktop-settings.microphone'];
-        document.querySelector('.selected-camera-label').textContent = strings['desktop-settings.camera'];
-
-        selectedMicrophoneSelect.firstChild.textContent = strings['desktop-settings.loading'];
-        selectedCameraSelect.firstChild.textContent = strings['desktop-settings.loading'];
-
-        selectedMicrophoneSelect.onchange = () => {
-          DesktopSettingsPreload.setMicrophone(selectedMicrophoneSelect.value);
-          mediaDeviceWarning.hidden = false;
-        };
-        selectedCameraSelect.onchange = () => {
-          DesktopSettingsPreload.setCamera(selectedCameraSelect.value);
-          mediaDeviceWarning.hidden = false;
-        };
-
-        const createStatusMessageOption = (text) => {
-          const option = document.createElement('option');
-          option.selected = true;
-          option.disabled = true;
-          option.textContent = text;
-          return option;
-        };
-
-        const addLoadingOption = (element) => {
-          while (element.firstChild) element.removeChild(element.firstChild);
-          element.appendChild(createStatusMessageOption(strings['desktop-settings.loading']));
-        };
-
-        const addOptions = (element, selected, devices) => {
-          while (element.firstChild) element.removeChild(element.firstChild);
-          if (devices.length === 0) {
-            element.appendChild(createStatusMessageOption(strings['desktop-settings.no-devices']));
-          } else {
-            for (const device of devices) {
-              const option = document.createElement('option');
-              option.value = device.deviceId;
-              option.textContent = device.label;
-              element.appendChild(option);
-            }
-            if (selected) element.value = selected;
-          }
-        };
-
-        const addErrorOption = (element, error) => {
-          while (element.firstChild) element.removeChild(element.firstChild);
-          const message = `${error}`.includes('Editor must be open') ?
-            strings['desktop-settings.editor-must-be-open'] :
-            strings['desktop-settings.error'].replace('{error}', error);
-          element.appendChild(createStatusMessageOption(message));
-        };
-
-        const updateLists = async () => {
-          addLoadingOption(selectedCameraSelect);
-          addLoadingOption(selectedMicrophoneSelect);
-          try {
-            const mediaDevices = await DesktopSettingsPreload.enumerateMediaDevices();
-            addOptions(selectedMicrophoneSelect, settings.microphone, mediaDevices.filter((i) => i.kind === 'audioinput'));
-            addOptions(selectedCameraSelect, settings.camera, mediaDevices.filter((i) => i.kind === 'videoinput'));
-          } catch (error) {
-            console.error(error);
-            addErrorOption(selectedMicrophoneSelect, error);
-            addErrorOption(selectedCameraSelect, error);
-          }
-        };
-        updateLists();
-      </script>
-
-      <!-- Performance -->
-      <div class="group-header">Performance / 性能</div>
-      <div class="card">
-        <div class="setting-row">
-          <div class="row-icon icon-orange">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-          </div>
-          <div class="setting-info">
-            <div class="setting-label hardware-acceleration-label"></div>
-            <div class="setting-desc">Restart required / 重启后生效</div>
-          </div>
-          <div class="setting-control">
-            <label class="toggle">
-              <input type="checkbox" class="hardware-acceleration-checkbox" autocomplete="off">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="row-icon icon-orange">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          </div>
-          <div class="setting-info">
-            <div class="setting-label background-throttling-label"></div>
-          </div>
-          <div class="setting-control">
-            <label class="toggle">
-              <input type="checkbox" class="background-throttling-checkbox" autocomplete="off">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="row-icon icon-orange">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
-          </div>
-          <div class="setting-info">
-            <div class="setting-label" id="exitFullscreenLabel"></div>
-          </div>
-          <div class="setting-control">
-            <label class="toggle">
-              <input type="checkbox" class="exit-fullscreen-on-escape-checkbox" autocomplete="off">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-      </div>
-      <div class="alert alert-danger hardware-acceleration-warning"></div>
-      <div class="alert alert-warning background-throttling-warning"></div>
-
-      <!-- Privacy & Security -->
-      <div class="group-header">Privacy &amp; Security / 隐私与安全</div>
-      <div class="card">
-        <div class="setting-row">
-          <div class="row-icon icon-red">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-          </div>
-          <div class="setting-info">
-            <div class="setting-label bypass-cors-label"></div>
-          </div>
-          <div class="setting-control">
-            <label class="toggle">
-              <input type="checkbox" class="bypass-cors-checkbox" autocomplete="off">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="row-icon icon-red">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-          </div>
-          <div class="setting-info">
-            <div class="setting-label spellchecker-label"></div>
-          </div>
-          <div class="setting-control">
-            <label class="toggle">
-              <input type="checkbox" class="spellchecker-checkbox" autocomplete="off">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-      </div>
-      <div class="alert alert-danger bypass-cors-warning"></div>
-
-      <!-- Rich Presence -->
-      <div class="group-header">Integrations / 集成</div>
-      <div class="card">
-        <div class="setting-row">
-          <div class="row-icon icon-purple">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-          </div>
-          <div class="setting-info">
-            <div class="setting-label rich-presence-label"></div>
-            <a class="more-info rich-presence-more-information" href="https://docs.turbowarp.org/desktop/rich-presence" target="_blank" rel="noreferrer"></a>
-          </div>
-          <div class="setting-control">
-            <label class="toggle">
-              <input type="checkbox" class="rich-presence-checkbox" autocomplete="off">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Advanced -->
-      <div class="group-header">Advanced / 高级</div>
-      <div class="card">
-        <button class="row-button open-user-data">
-          <div class="row-icon icon-gray">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-          </div>
-          <span class="row-text"></span>
-          <svg class="chevron" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 2 10 10 2 18"></polyline></svg>
-        </button>
-      </div>
-
-      <script>
-        // Hardware Acceleration
-        const hardwareAcceleration = document.querySelector('.hardware-acceleration-checkbox');
-        const hardwareAccelerationWarning = document.querySelector('.hardware-acceleration-warning');
-        hardwareAcceleration.onchange = () => {
-          DesktopSettingsPreload.setHardwareAcceleration(hardwareAcceleration.checked);
-          hardwareAccelerationWarning.hidden = hardwareAcceleration.checked;
-        };
-        hardwareAcceleration.checked = settings.hardwareAcceleration;
-        hardwareAccelerationWarning.hidden = hardwareAcceleration.checked;
-
-        const chromiumMajorVersion = +(navigator.userAgent.match(/Chrome\/(\d+)/)[1]);
-        document.querySelector('.hardware-acceleration-label').textContent = (
-          chromiumMajorVersion >= 139 ?
-          strings['desktop-settings.hardware-acceleration'] :
-          strings['desktop-settings.hardware-acceleration-when-available']
-        );
-        hardwareAccelerationWarning.textContent = strings['desktop-settings.hardware-acceleration-disabled'];
-
-        // Background Throttling
-        const backgroundThrottling = document.querySelector('.background-throttling-checkbox');
-        const backgroundThrottlingWarning = document.querySelector('.background-throttling-warning');
-        backgroundThrottling.onchange = () => {
-          DesktopSettingsPreload.setBackgroundThrottling(backgroundThrottling.checked);
-          backgroundThrottlingWarning.hidden = backgroundThrottling.checked;
-        };
-        backgroundThrottling.checked = settings.backgroundThrottling;
-        backgroundThrottlingWarning.hidden = backgroundThrottling.checked;
-        document.querySelector('.background-throttling-label').textContent = strings['desktop-settings.background-throttling'];
-        backgroundThrottlingWarning.textContent = strings['desktop-settings.background-throttling-disabled'];
-
-        // Exit Fullscreen on Escape
-        const exitFullscreenOnEscape = document.querySelector('.exit-fullscreen-on-escape-checkbox');
-        exitFullscreenOnEscape.onchange = () => {
-          DesktopSettingsPreload.setExitFullscreenOnEscape(exitFullscreenOnEscape.checked);
-        };
-        exitFullscreenOnEscape.checked = settings.exitFullscreenOnEscape;
-        document.querySelector('#exitFullscreenLabel').textContent = strings['desktop-settings.exit-fullscreen-on-escape'];
-
-        // Bypass CORS
-        const bypassCORS = document.querySelector('.bypass-cors-checkbox');
-        const bypassCORSWarning = document.querySelector('.bypass-cors-warning');
-        bypassCORS.onchange = () => {
-          DesktopSettingsPreload.setBypassCORS(bypassCORS.checked);
-          bypassCORSWarning.hidden = !bypassCORS.checked;
-        };
-        bypassCORS.checked = settings.bypassCORS;
-        bypassCORSWarning.hidden = !bypassCORS.checked;
-        document.querySelector('.bypass-cors-label').textContent = strings['desktop-settings.bypass-cors'];
-        bypassCORSWarning.textContent = strings['desktop-settings.bypass-cors-enabled'];
-
-        // Spellchecker
-        const spellchecker = document.querySelector('.spellchecker-checkbox');
-        spellchecker.onchange = () => {
-          DesktopSettingsPreload.setSpellchecker(spellchecker.checked);
-        };
-        spellchecker.checked = settings.spellchecker;
-        document.querySelector('.spellchecker-label').textContent = strings['desktop-settings.spellchecker'];
-
-        // Rich Presence
-        const richPresence = document.querySelector('.rich-presence-checkbox');
-        const richPresenceLabel = document.querySelector('.rich-presence-label');
-        const richPresenceMoreInformation = document.querySelector('.rich-presence-more-information');
-        if (settings.richPresenceAvailable) {
-          richPresence.onchange = () => {
-            DesktopSettingsPreload.setRichPresence(richPresence.checked);
-          };
-          richPresence.checked = settings.richPresence;
-          richPresenceLabel.textContent = strings['desktop-settings.rich-presence'];
-        } else {
-          richPresence.disabled = true;
-          richPresence.checked = false;
-          richPresenceLabel.textContent = strings['desktop-settings.rich-presence-unavailable'];
-          richPresenceMoreInformation.href += '#supported-platforms';
-        }
-        richPresenceMoreInformation.textContent = strings['desktop-settings.more-information'];
-
-        // Open User Data
-        const openUserData = document.querySelector('.open-user-data');
-        openUserData.addEventListener('click', () => {
-          DesktopSettingsPreload.openUserData();
+      // ===== Section switching =====
+      const content = document.getElementById('content');
+      const navItems = Array.from(document.querySelectorAll('.nav-item'));
+      const pages = Array.from(document.querySelectorAll('.page'));
+      navItems.forEach((item) => {
+        item.addEventListener('click', () => {
+          if (item.classList.contains('selected')) return;
+          navItems.forEach((other) => other.classList.toggle('selected', other === item));
+          const id = item.dataset.page;
+          pages.forEach((page) => page.classList.toggle('active', page.dataset.page === id));
+          content.scrollTop = 0;
         });
-        openUserData.querySelector('span').textContent = strings['desktop-settings.open-user-data'];
-      </script>
+      });
 
-      <div class="footer">NeoWarp 1.0.16</div>
-    </main>
+      // ===== Check for updates =====
+      const checkForUpdatesBtn = document.querySelector('.check-for-updates-btn');
+      const checkBtnText = document.querySelector('.check-btn-text');
+      const updateStatusMessage = document.querySelector('.update-status-message');
+      const checkUpdateLabel = document.querySelector('.check-update-label');
+      const checkUpdateDesc = document.querySelector('.check-update-desc');
+
+      checkUpdateLabel.textContent = strings['desktop-settings.check-for-updates'] || '检查更新';
+      checkUpdateDesc.textContent = strings['desktop-settings.check-for-updates-desc'] || '从 GitHub 手动检查最新版本';
+      checkBtnText.textContent = strings['desktop-settings.check-now'] || '立即检查';
+
+      let isChecking = false;
+      checkForUpdatesBtn.onclick = async () => {
+        if (isChecking) return;
+        isChecking = true;
+        checkBtnText.textContent = strings['desktop-settings.checking'] || '检查中...';
+        checkForUpdatesBtn.disabled = true;
+        updateStatusMessage.textContent = '';
+
+        try {
+          const result = await DesktopSettingsPreload.checkForUpdates();
+
+          if (result.error) {
+            updateStatusMessage.textContent = (strings['desktop-settings.check-error'] || '检查更新失败：{error}').replace('{error}', result.error);
+            updateStatusMessage.style.color = 'var(--danger)';
+          } else if (result.hasUpdate) {
+            updateStatusMessage.innerHTML = (strings['desktop-settings.update-available'] || '发现新版本 {version}！')
+              .replace('{version}', result.latestVersion) + ' <a href="' + result.releaseUrl + '" style="color:var(--accent);">前往下载</a>';
+            updateStatusMessage.style.color = 'var(--success)';
+          } else {
+            updateStatusMessage.textContent = strings['desktop-settings.no-update'] || '已是最新版本！';
+            updateStatusMessage.style.color = 'var(--success)';
+          }
+        } catch (error) {
+          updateStatusMessage.textContent = (strings['desktop-settings.check-error'] || '检查更新失败：{error}').replace('{error}', error.message);
+          updateStatusMessage.style.color = 'var(--danger)';
+        }
+
+        isChecking = false;
+        checkBtnText.textContent = strings['desktop-settings.check-now'] || '立即检查';
+        checkForUpdatesBtn.disabled = false;
+      };
+
+      // ===== Update checker frequency =====
+      const updateCheckerRow = document.getElementById('updateCheckerRow');
+      const updateCheckerSelect = document.querySelector('.update-checker-select');
+      const updateCheckerWarning = document.querySelector('.update-checker-warning');
+      if (settings.updateCheckerAllowed) {
+        document.querySelector('.update-checker-label').textContent = strings['desktop-settings.update-checker'];
+        for (const option of updateCheckerSelect.options) {
+          option.textContent = strings[`desktop-settings.notify-${option.value}`];
+        }
+        updateCheckerSelect.value = settings.updateChecker;
+        updateCheckerWarning.textContent = strings['desktop-settings.disabled-updates'];
+        updateCheckerWarning.hidden = settings.updateChecker !== 'never';
+        updateCheckerSelect.onchange = () => {
+          DesktopSettingsPreload.setUpdateChecker(updateCheckerSelect.value);
+          updateCheckerWarning.hidden = updateCheckerSelect.value !== 'never';
+        };
+      } else {
+        const label = updateCheckerRow.querySelector('.setting-label');
+        label.textContent = strings['desktop-settings.update-checker'];
+        const note = document.createElement('div');
+        note.className = 'setting-desc';
+        note.textContent = strings['desktop-settings.update-checker-not-allowed'];
+        label.parentElement.appendChild(note);
+        updateCheckerRow.querySelector('.setting-control').remove();
+      }
+
+      // ===== UI theme =====
+      const uiThemeSegments = Array.from(document.querySelectorAll('#uiThemeSegmented .segment'));
+      const setUIThemeSelection = (mode) => {
+        for (const segment of uiThemeSegments) {
+          segment.classList.toggle('selected', segment.dataset.value === mode);
+        }
+      };
+      document.querySelector('.ui-theme-label').textContent = strings['desktop-settings.ui-theme'];
+      document.querySelector('.ui-theme-desc').textContent = strings['desktop-settings.ui-theme-desc'];
+      for (const segment of uiThemeSegments) {
+        segment.textContent = strings[`desktop-settings.ui-theme-${segment.dataset.value}`];
+      }
+      setUIThemeSelection(settings.uiTheme);
+      for (const segment of uiThemeSegments) {
+        segment.addEventListener('click', () => {
+          if (segment.classList.contains('selected')) return;
+          setUIThemeSelection(segment.dataset.value);
+          DesktopSettingsPreload.setUITheme(segment.dataset.value);
+        });
+      }
+
+      // ===== Home branding =====
+      const homeLogoPreview = document.querySelector('.home-logo-preview');
+      const homeLogoHtmlPreview = document.querySelector('.home-logo-html-preview');
+      const homeLogoPickBtn = document.querySelector('.home-logo-pick');
+      const homeLogoHtmlBtn = document.querySelector('.home-logo-html-btn');
+      const homeLogoHtmlRow = document.querySelector('.home-logo-html-row');
+      const homeLogoHtmlInput = document.querySelector('.home-logo-html-input');
+      const homeLogoHtmlApply = document.querySelector('.home-logo-html-apply');
+      const homeTextInput = document.querySelector('.home-text-input');
+      const homeResetBtn = document.querySelector('.home-reset-btn');
+
+      document.querySelector('.home-logo-label').textContent = strings['desktop-settings.home-logo'];
+      document.querySelector('.home-logo-desc').textContent = strings['desktop-settings.home-logo-desc'];
+      homeLogoPickBtn.textContent = strings['desktop-settings.home-logo-pick'];
+      homeLogoHtmlBtn.textContent = strings['desktop-settings.home-logo-html'];
+      homeLogoHtmlApply.textContent = strings['desktop-settings.home-logo-html-apply'];
+      document.querySelector('.home-text-label').textContent = strings['desktop-settings.home-text'];
+      document.querySelector('.home-text-desc').textContent = strings['desktop-settings.home-text-desc'];
+      document.querySelector('.home-reset-label').textContent = strings['desktop-settings.home-reset'];
+      document.querySelector('.home-reset-desc').textContent = strings['desktop-settings.home-reset-desc'];
+      homeResetBtn.textContent = strings['desktop-settings.home-reset'];
+
+      homeLogoPreview.hidden = true;
+      let defaultLogoDataUrl = null;
+      DesktopSettingsPreload.getDefaultLogo().then((dataUrl) => {
+        defaultLogoDataUrl = dataUrl;
+        renderLogoPreview();
+      });
+
+      let currentHomeLogo = settings.homeLogo;
+      // 与主页一致：自定义 HTML 在 Shadow DOM 中渲染，样式互不影响
+      const LOGO_PREVIEW_BASE_STYLE =
+        ':host { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }' +
+        ':host > * { max-width: 100%; max-height: 100%; }';
+      const renderLogoHtmlPreview = () => {
+        let shadowRoot = homeLogoHtmlPreview.shadowRoot;
+        if (!shadowRoot) {
+          shadowRoot = homeLogoHtmlPreview.attachShadow({ mode: 'open' });
+        }
+        shadowRoot.innerHTML = '<style>' + LOGO_PREVIEW_BASE_STYLE + '</style>' + currentHomeLogo;
+      };
+      const renderLogoPreview = () => {
+        if (currentHomeLogo && /^data:image/i.test(currentHomeLogo)) {
+          homeLogoPreview.src = currentHomeLogo;
+          homeLogoPreview.alt = '';
+          homeLogoPreview.hidden = false;
+          homeLogoHtmlPreview.hidden = true;
+        } else if (currentHomeLogo) {
+          homeLogoPreview.removeAttribute('src');
+          homeLogoPreview.hidden = true;
+          renderLogoHtmlPreview();
+          homeLogoHtmlPreview.hidden = false;
+        } else if (defaultLogoDataUrl) {
+          homeLogoPreview.src = defaultLogoDataUrl;
+          homeLogoPreview.alt = '';
+          homeLogoPreview.hidden = false;
+          homeLogoHtmlPreview.hidden = true;
+        } else {
+          homeLogoPreview.hidden = true;
+          homeLogoHtmlPreview.hidden = true;
+        }
+      };
+      renderLogoPreview();
+
+      homeLogoPickBtn.addEventListener('click', () => {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.onchange = () => {
+          const file = fileInput.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            DesktopSettingsPreload.setHomeLogo(reader.result);
+            currentHomeLogo = reader.result;
+            renderLogoPreview();
+          };
+          reader.readAsDataURL(file);
+        };
+        fileInput.click();
+      });
+
+      homeLogoHtmlBtn.addEventListener('click', () => {
+        const isHidden = homeLogoHtmlRow.hidden;
+        homeLogoHtmlRow.hidden = !isHidden;
+        if (isHidden) {
+          homeLogoHtmlInput.value = (currentHomeLogo && !/^data:image/i.test(currentHomeLogo)) ? currentHomeLogo : '';
+          homeLogoHtmlInput.focus();
+        }
+      });
+
+      homeLogoHtmlApply.addEventListener('click', () => {
+        const code = homeLogoHtmlInput.value.trim();
+        DesktopSettingsPreload.setHomeLogo(code || null);
+        currentHomeLogo = code || null;
+        renderLogoPreview();
+        homeLogoHtmlRow.hidden = true;
+      });
+
+      homeTextInput.value = settings.homeLogoText || '';
+      homeTextInput.addEventListener('change', () => {
+        const value = homeTextInput.value.trim();
+        DesktopSettingsPreload.setHomeLogoText(value || null);
+      });
+
+      homeResetBtn.addEventListener('click', () => {
+        DesktopSettingsPreload.resetHomeBranding();
+        currentHomeLogo = null;
+        renderLogoPreview();
+        currentHomeBackground = null;
+        renderBackgroundPreview();
+        homeTextInput.value = '';
+        homeLogoHtmlInput.value = '';
+        homeLogoHtmlRow.hidden = true;
+      });
+
+      // ===== Home background =====
+      const homeBackgroundPreview = document.querySelector('.home-background-preview');
+      const homeBackgroundPickBtn = document.querySelector('.home-background-pick');
+      const homeBackgroundClearBtn = document.querySelector('.home-background-clear');
+      document.querySelector('.home-background-label').textContent = strings['desktop-settings.home-background'];
+      document.querySelector('.home-background-desc').textContent = strings['desktop-settings.home-background-desc'];
+      homeBackgroundPickBtn.textContent = strings['desktop-settings.home-background-pick'];
+      homeBackgroundClearBtn.textContent = strings['desktop-settings.home-background-clear'];
+
+      let currentHomeBackground = settings.homeBackground;
+      const renderBackgroundPreview = () => {
+        homeBackgroundClearBtn.hidden = !currentHomeBackground;
+        if (currentHomeBackground) {
+          homeBackgroundPreview.src = currentHomeBackground;
+          homeBackgroundPreview.hidden = false;
+        } else {
+          homeBackgroundPreview.removeAttribute('src');
+          homeBackgroundPreview.hidden = true;
+        }
+      };
+      renderBackgroundPreview();
+
+      // 选择背景图：最长边超过 1920px 时等比缩小后再保存，避免设置文件过大
+      homeBackgroundPickBtn.addEventListener('click', () => {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.onchange = () => {
+          const file = fileInput.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const image = new Image();
+            image.onload = () => {
+              const MAX_SIZE = 1920;
+              const scale = Math.min(1, MAX_SIZE / Math.max(image.naturalWidth, image.naturalHeight));
+              let result = reader.result;
+              if (scale < 1) {
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(image.naturalWidth * scale);
+                canvas.height = Math.round(image.naturalHeight * scale);
+                canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+                // PNG 保留原格式以支持透明；其余转为 JPEG 控制体积
+                result = canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9);
+              }
+              DesktopSettingsPreload.setHomeBackground(result);
+              currentHomeBackground = result;
+              renderBackgroundPreview();
+            };
+            image.src = reader.result;
+          };
+          reader.readAsDataURL(file);
+        };
+        fileInput.click();
+      });
+
+      homeBackgroundClearBtn.addEventListener('click', () => {
+        DesktopSettingsPreload.setHomeBackground(null);
+        currentHomeBackground = null;
+        renderBackgroundPreview();
+      });
+
+      // ===== Show recent projects on home =====
+      const showRecentProjects = document.querySelector('.show-recent-projects-checkbox');
+      showRecentProjects.onchange = () => {
+        DesktopSettingsPreload.setShowRecentProjects(showRecentProjects.checked);
+      };
+      showRecentProjects.checked = settings.showRecentProjects;
+      document.querySelector('.show-recent-projects-label').textContent = strings['desktop-settings.show-recent-projects'];
+      document.querySelector('.show-recent-projects-desc').textContent = strings['desktop-settings.show-recent-projects-desc'];
+
+      // ===== Media devices =====
+      const selectedMicrophoneSelect = document.querySelector('.selected-microphone-select');
+      const selectedCameraSelect = document.querySelector('.selected-camera-select');
+      const mediaDeviceWarning = document.querySelector('.media-device-warning');
+      mediaDeviceWarning.textContent = strings['desktop-settings.media-devices-changed'];
+
+      document.querySelector('.selected-microphone-label').textContent = strings['desktop-settings.microphone'];
+      document.querySelector('.selected-camera-label').textContent = strings['desktop-settings.camera'];
+
+      selectedMicrophoneSelect.firstChild.textContent = strings['desktop-settings.loading'];
+      selectedCameraSelect.firstChild.textContent = strings['desktop-settings.loading'];
+
+      selectedMicrophoneSelect.onchange = () => {
+        DesktopSettingsPreload.setMicrophone(selectedMicrophoneSelect.value);
+        mediaDeviceWarning.hidden = false;
+      };
+      selectedCameraSelect.onchange = () => {
+        DesktopSettingsPreload.setCamera(selectedCameraSelect.value);
+        mediaDeviceWarning.hidden = false;
+      };
+
+      const createStatusMessageOption = (text) => {
+        const option = document.createElement('option');
+        option.selected = true;
+        option.disabled = true;
+        option.textContent = text;
+        return option;
+      };
+
+      const addLoadingOption = (element) => {
+        while (element.firstChild) element.removeChild(element.firstChild);
+        element.appendChild(createStatusMessageOption(strings['desktop-settings.loading']));
+      };
+
+      const addOptions = (element, selected, devices) => {
+        while (element.firstChild) element.removeChild(element.firstChild);
+        if (devices.length === 0) {
+          element.appendChild(createStatusMessageOption(strings['desktop-settings.no-devices']));
+        } else {
+          for (const device of devices) {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.textContent = device.label;
+            element.appendChild(option);
+          }
+          if (selected) element.value = selected;
+        }
+      };
+
+      const addErrorOption = (element, error) => {
+        while (element.firstChild) element.removeChild(element.firstChild);
+        const message = `${error}`.includes('Editor must be open') ?
+          strings['desktop-settings.editor-must-be-open'] :
+          strings['desktop-settings.error'].replace('{error}', error);
+        element.appendChild(createStatusMessageOption(message));
+      };
+
+      const updateLists = async () => {
+        addLoadingOption(selectedCameraSelect);
+        addLoadingOption(selectedMicrophoneSelect);
+        try {
+          const mediaDevices = await DesktopSettingsPreload.enumerateMediaDevices();
+          addOptions(selectedMicrophoneSelect, settings.microphone, mediaDevices.filter((i) => i.kind === 'audioinput'));
+          addOptions(selectedCameraSelect, settings.camera, mediaDevices.filter((i) => i.kind === 'videoinput'));
+        } catch (error) {
+          console.error(error);
+          addErrorOption(selectedMicrophoneSelect, error);
+          addErrorOption(selectedCameraSelect, error);
+        }
+      };
+      updateLists();
+
+      // ===== Hardware acceleration =====
+      const hardwareAcceleration = document.querySelector('.hardware-acceleration-checkbox');
+      const hardwareAccelerationWarning = document.querySelector('.hardware-acceleration-warning');
+      hardwareAcceleration.onchange = () => {
+        DesktopSettingsPreload.setHardwareAcceleration(hardwareAcceleration.checked);
+        hardwareAccelerationWarning.hidden = hardwareAcceleration.checked;
+      };
+      hardwareAcceleration.checked = settings.hardwareAcceleration;
+      hardwareAccelerationWarning.hidden = hardwareAcceleration.checked;
+
+      const chromiumMajorVersion = +(navigator.userAgent.match(/Chrome\/(\d+)/)[1]);
+      document.querySelector('.hardware-acceleration-label').textContent = (
+        chromiumMajorVersion >= 139 ?
+        strings['desktop-settings.hardware-acceleration'] :
+        strings['desktop-settings.hardware-acceleration-when-available']
+      );
+      hardwareAccelerationWarning.textContent = strings['desktop-settings.hardware-acceleration-disabled'];
+
+      // ===== Background throttling =====
+      const backgroundThrottling = document.querySelector('.background-throttling-checkbox');
+      const backgroundThrottlingWarning = document.querySelector('.background-throttling-warning');
+      backgroundThrottling.onchange = () => {
+        DesktopSettingsPreload.setBackgroundThrottling(backgroundThrottling.checked);
+        backgroundThrottlingWarning.hidden = backgroundThrottling.checked;
+      };
+      backgroundThrottling.checked = settings.backgroundThrottling;
+      backgroundThrottlingWarning.hidden = backgroundThrottling.checked;
+      document.querySelector('.background-throttling-label').textContent = strings['desktop-settings.background-throttling'];
+      backgroundThrottlingWarning.textContent = strings['desktop-settings.background-throttling-disabled'];
+
+      // ===== Exit fullscreen on escape =====
+      const exitFullscreenOnEscape = document.querySelector('.exit-fullscreen-on-escape-checkbox');
+      exitFullscreenOnEscape.onchange = () => {
+        DesktopSettingsPreload.setExitFullscreenOnEscape(exitFullscreenOnEscape.checked);
+      };
+      exitFullscreenOnEscape.checked = settings.exitFullscreenOnEscape;
+      document.querySelector('#exitFullscreenLabel').textContent = strings['desktop-settings.exit-fullscreen-on-escape'];
+
+      // ===== Bypass CORS =====
+      const bypassCORS = document.querySelector('.bypass-cors-checkbox');
+      const bypassCORSWarning = document.querySelector('.bypass-cors-warning');
+      bypassCORS.onchange = () => {
+        DesktopSettingsPreload.setBypassCORS(bypassCORS.checked);
+        bypassCORSWarning.hidden = !bypassCORS.checked;
+      };
+      bypassCORS.checked = settings.bypassCORS;
+      bypassCORSWarning.hidden = !bypassCORS.checked;
+      document.querySelector('.bypass-cors-label').textContent = strings['desktop-settings.bypass-cors'];
+      bypassCORSWarning.textContent = strings['desktop-settings.bypass-cors-enabled'];
+
+      // ===== Spellchecker =====
+      const spellchecker = document.querySelector('.spellchecker-checkbox');
+      spellchecker.onchange = () => {
+        DesktopSettingsPreload.setSpellchecker(spellchecker.checked);
+      };
+      spellchecker.checked = settings.spellchecker;
+      document.querySelector('.spellchecker-label').textContent = strings['desktop-settings.spellchecker'];
+
+      // ===== Rich presence =====
+      const richPresence = document.querySelector('.rich-presence-checkbox');
+      const richPresenceLabel = document.querySelector('.rich-presence-label');
+      const richPresenceMoreInformation = document.querySelector('.rich-presence-more-information');
+      if (settings.richPresenceAvailable) {
+        richPresence.onchange = () => {
+          DesktopSettingsPreload.setRichPresence(richPresence.checked);
+        };
+        richPresence.checked = settings.richPresence;
+        richPresenceLabel.textContent = strings['desktop-settings.rich-presence'];
+      } else {
+        richPresence.disabled = true;
+        richPresence.checked = false;
+        richPresenceLabel.textContent = strings['desktop-settings.rich-presence-unavailable'];
+        richPresenceMoreInformation.href += '#supported-platforms';
+      }
+      richPresenceMoreInformation.textContent = strings['desktop-settings.more-information'];
+
+      // ===== Version =====
+      document.querySelector('.version-label').textContent = strings['desktop-settings.version'];
+      document.querySelector('.version-value').textContent = version;
+
+      // ===== Open user data =====
+      const openUserData = document.querySelector('.open-user-data');
+      openUserData.addEventListener('click', () => {
+        DesktopSettingsPreload.openUserData();
+      });
+      openUserData.querySelector('span').textContent = strings['desktop-settings.open-user-data'];
+
+      // ===== AI 模型配置 =====
+      // 与 AI 助手 / NeoWarp SOLO / 扩展编辑器共用同一份中心存储
+      // （tw_config.json），任何一侧修改都会通过广播实时同步到这里。
+      // AI 页文案在此本地化（中/英），不依赖主进程 l10n，缺失语言回退英文。
+      const AI_STRINGS = {
+        zh: {
+          section: 'AI 模型',
+          note: '模型配置由 NeoWarp AI 助手、NeoWarp SOLO 与扩展编辑器共用，修改后实时同步。',
+          noModels: '还没有模型配置，点击下方“添加模型”开始使用 AI 功能。',
+          addModel: '添加模型',
+          edit: '编辑',
+          delete: '删除',
+          active: '使用中',
+          noKey: '未填 API Key',
+          addTitle: '添加模型',
+          editTitle: '编辑模型',
+          groupProvider: '服务商',
+          groupModel: '模型',
+          groupEndpoint: '接口与模型 ID',
+          groupCredentials: '凭据',
+          fieldApiFormat: 'API 格式',
+          fieldEndpoint: '接口地址',
+          fieldModelId: '模型 ID',
+          fieldModelIdHint: '接口实际接受的模型名称，例如 gpt-4o',
+          fieldContextLimit: '上下文上限（tokens）',
+          fieldContextLimitHint: '用于在对话超长前裁剪历史',
+          fieldApiKey: 'API Key',
+          fieldApiKeyHint: '密钥只保存在本机的 tw_config.json 中',
+          fieldName: '备注名称',
+          fieldNameHint: '用于在模型列表中区分多条配置',
+          showKey: '显示密钥',
+          hideKey: '隐藏密钥',
+          capReasoning: '推理',
+          capVision: '视觉',
+          ctxSuffix: '上下文',
+          outSuffix: '输出',
+          save: '保存',
+          cancel: '取消',
+          testConnection: '测试连接',
+          testing: '测试中…',
+          testOk: '连接成功',
+          testFail: '连接失败',
+          errEndpointRequired: '请填写接口地址',
+          errEndpointInvalid: '地址需要以 http:// 或 https:// 开头',
+          errModelIdRequired: '请填写模型 ID',
+          errContextLimit: '上下文上限至少为 1000',
+          errKeyRequired: '请填写 API Key',
+          configSaved: '已保存',
+          modelAdded: '模型已添加',
+          deleteConfirm: '删除这条模型配置？',
+          modelDeleted: '已删除 {name}',
+          switchedTo: '已切换到 {name}',
+          keepOneConfig: '至少保留一条配置',
+          unnamed: '未命名',
+          freeModelsTitle: '免费模型',
+          myModelsTitle: '我的模型',
+          freeBadge: '免费',
+          freeEnded: '免费使用活动已结束',
+          freeGroupNote: 'NeoWarp 免费提供，无需 API Key，点击即可切换 · 活动截止 2026年11月30日 12:00'
+        },
+        en: {
+          section: 'AI Models',
+          note: 'Model configs are shared between the NeoWarp AI assistant, NeoWarp SOLO and the extension editor, and stay in sync.',
+          noModels: 'No model configs yet — add one below to start using AI features.',
+          addModel: 'Add Model',
+          edit: 'Edit',
+          delete: 'Delete',
+          active: 'In use',
+          noKey: 'No API key',
+          addTitle: 'Add Model',
+          editTitle: 'Edit Model',
+          groupProvider: 'Provider',
+          groupModel: 'Model',
+          groupEndpoint: 'Endpoint & model ID',
+          groupCredentials: 'Credentials',
+          fieldApiFormat: 'API format',
+          fieldEndpoint: 'Endpoint',
+          fieldModelId: 'Model ID',
+          fieldModelIdHint: 'The model name expected by the endpoint, e.g. gpt-4o',
+          fieldContextLimit: 'Context limit (tokens)',
+          fieldContextLimitHint: 'Used to trim conversation history before it gets too long',
+          fieldApiKey: 'API Key',
+          fieldApiKeyHint: 'The key is stored locally in tw_config.json',
+          fieldName: 'Name',
+          fieldNameHint: 'Helps tell multiple configs apart in the model list',
+          showKey: 'Show key',
+          hideKey: 'Hide key',
+          capReasoning: 'Reasoning',
+          capVision: 'Vision',
+          ctxSuffix: 'ctx',
+          outSuffix: 'out',
+          save: 'Save',
+          cancel: 'Cancel',
+          testConnection: 'Test connection',
+          testing: 'Testing…',
+          testOk: 'Connection OK',
+          testFail: 'Connection failed',
+          errEndpointRequired: 'Endpoint is required',
+          errEndpointInvalid: 'Endpoint must start with http:// or https://',
+          errModelIdRequired: 'Model ID is required',
+          errContextLimit: 'Context limit must be at least 1000',
+          errKeyRequired: 'API Key is required',
+          configSaved: 'Saved',
+          modelAdded: 'Model added',
+          deleteConfirm: 'Delete this model config?',
+          modelDeleted: 'Deleted {name}',
+          switchedTo: 'Switched to {name}',
+          keepOneConfig: 'Keep at least one config',
+          unnamed: 'Unnamed',
+          freeModelsTitle: 'Free models',
+          myModelsTitle: 'My models',
+          freeBadge: 'Free',
+          freeEnded: 'Free offer has ended',
+          freeGroupNote: 'Provided free by NeoWarp — no API key needed, click to switch · ends Nov 30, 2026, 12:00 (UTC+8)'
+        }
+      };
+      const aiLang = (locale || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+      const aiS = AI_STRINGS[aiLang];
+
+      document.querySelector('.nav-item[data-page="ai"] .nav-label').textContent = aiS.section;
+      document.querySelector('.page[data-page="ai"] .page-title').textContent = aiS.section;
+      document.getElementById('aiSharedNote').textContent = aiS.note;
+
+      // 与 AI 助手一致的服务商/模型表（含上下文规模与能力标签）
+      // 服务商品牌 LOGO（24×24，currentColor 填充，白色显示在品牌色方块上）。
+      // 来源：@lobehub/icons-static-svg（OpenAI/DeepSeek/Zhipu/Kimi/Huawei/Qwen/SenseNova）、
+      // simple-icons（Xiaomi）；free/custom 为通用图标（Material Symbols, Apache-2.0）。
+      // 与 AI 助手（ai-assistant.html）中的 AI_LOGO_SVG 保持一致。
+      const AI_LOGO_SVG = {
+        openai: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"></path></svg>',
+        deepseek: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23.748 4.482c-.254-.124-.364.113-.512.234-.051.039-.094.09-.137.136-.372.397-.806.657-1.373.626-.829-.046-1.537.214-2.163.848-.133-.782-.575-1.248-1.247-1.548-.352-.156-.708-.311-.955-.65-.172-.241-.219-.51-.305-.774-.055-.16-.11-.323-.293-.35-.2-.031-.278.136-.356.276-.313.572-.434 1.202-.422 1.84.027 1.436.633 2.58 1.838 3.393.137.093.172.187.129.323-.082.28-.18.552-.266.833-.055.179-.137.217-.329.14a5.526 5.526 0 01-1.736-1.18c-.857-.828-1.631-1.742-2.597-2.458a11.365 11.365 0 00-.689-.471c-.985-.957.13-1.743.388-1.836.27-.098.093-.432-.779-.428-.872.004-1.67.295-2.687.684a3.055 3.055 0 01-.465.137 9.597 9.597 0 00-2.883-.102c-1.885.21-3.39 1.102-4.497 2.623C.082 8.606-.231 10.684.152 12.85c.403 2.284 1.569 4.175 3.36 5.653 1.858 1.533 3.997 2.284 6.438 2.14 1.482-.085 3.133-.284 4.994-1.86.47.234.962.327 1.78.397.63.059 1.236-.03 1.705-.128.735-.156.684-.837.419-.961-2.155-1.004-1.682-.595-2.113-.926 1.096-1.296 2.746-2.642 3.392-7.003.05-.347.007-.565 0-.845-.004-.17.035-.237.23-.256a4.173 4.173 0 001.545-.475c1.396-.763 1.96-2.015 2.093-3.517.02-.23-.004-.467-.247-.588zM11.581 18c-2.089-1.642-3.102-2.183-3.52-2.16-.392.024-.321.471-.235.763.09.288.207.486.371.739.114.167.192.416-.113.603-.673.416-1.842-.14-1.897-.167-1.361-.802-2.5-1.86-3.301-3.307-.774-1.393-1.224-2.887-1.298-4.482-.02-.386.093-.522.477-.592a4.696 4.696 0 011.529-.039c2.132.312 3.946 1.265 5.468 2.774.868.86 1.525 1.887 2.202 2.891.72 1.066 1.494 2.082 2.48 2.914.348.292.625.514.891.677-.802.09-2.14.11-3.054-.614zm1-6.44a.306.306 0 01.415-.287.302.302 0 01.2.288.306.306 0 01-.31.307.303.303 0 01-.304-.308zm3.11 1.596c-.2.081-.399.151-.59.16a1.245 1.245 0 01-.798-.254c-.274-.23-.47-.358-.552-.758a1.73 1.73 0 01.016-.588c.07-.327-.008-.537-.239-.727-.187-.156-.426-.199-.688-.199a.559.559 0 01-.254-.078c-.11-.054-.2-.19-.114-.358.028-.054.16-.186.192-.21.356-.202.767-.136 1.146.016.352.144.618.408 1.001.782.391.451.462.576.685.914.176.265.336.537.445.848.067.195-.019.354-.25.452z"></path></svg>',
+        glm: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.991 23.503a.24.24 0 00-.244.248.24.24 0 00.244.249.24.24 0 00.245-.249.24.24 0 00-.22-.247l-.025-.001zM9.671 5.365a1.697 1.697 0 011.099 2.132l-.071.172-.016.04-.018.054c-.07.16-.104.32-.104.498-.035.71.47 1.279 1.186 1.314h.366c1.309.053 2.338 1.173 2.286 2.523-.052 1.332-1.152 2.38-2.478 2.327h-.174c-.715.018-1.274.64-1.239 1.368 0 .124.018.23.053.337.209.373.54.658.96.8.75.23 1.517-.125 1.9-.782l.018-.035c.402-.64 1.17-.96 1.92-.711.854.284 1.378 1.226 1.099 2.167a1.661 1.661 0 01-2.077 1.102 1.711 1.711 0 01-.907-.711l-.017-.035c-.2-.323-.463-.58-.851-.711l-.056-.018a1.646 1.646 0 00-1.954.746 1.66 1.66 0 01-1.065.764 1.677 1.677 0 01-1.989-1.279c-.209-.906.332-1.83 1.257-2.043a1.51 1.51 0 01.296-.035h.018c.68-.071 1.151-.622 1.116-1.333a1.307 1.307 0 00-.227-.693 2.515 2.515 0 01-.366-1.403 2.39 2.39 0 01.366-1.208c.14-.195.21-.444.227-.693.018-.71-.506-1.261-1.186-1.332l-.07-.018a1.43 1.43 0 01-.299-.07l-.05-.019a1.7 1.7 0 01-1.047-2.114 1.68 1.68 0 012.094-1.101zm-5.575 10.11c.26-.264.639-.367.994-.27.355.096.633.379.728.74.095.362-.007.748-.267 1.013-.402.41-1.053.41-1.455 0a1.062 1.062 0 010-1.482zm14.845-.294c.359-.09.738.024.992.297.254.274.344.665.237 1.025-.107.36-.396.634-.756.718-.551.128-1.1-.22-1.23-.781a1.05 1.05 0 01.757-1.26zm-.064-4.39c.314.32.49.753.49 1.206 0 .452-.176.886-.49 1.206-.315.32-.74.5-1.185.5-.444 0-.87-.18-1.184-.5a1.727 1.727 0 010-2.412 1.654 1.654 0 012.369 0zm-11.243.163c.364.484.447 1.128.218 1.691a1.665 1.665 0 01-2.188.923c-.855-.36-1.26-1.358-.907-2.228a1.68 1.68 0 011.33-1.038c.593-.08 1.183.169 1.547.652zm11.545-4.221c.368 0 .708.2.892.524.184.324.184.724 0 1.048a1.026 1.026 0 01-.892.524c-.568 0-1.03-.47-1.03-1.048 0-.579.462-1.048 1.03-1.048zm-14.358 0c.368 0 .707.2.891.524.184.324.184.724 0 1.048a1.026 1.026 0 01-.891.524c-.569 0-1.03-.47-1.03-1.048 0-.579.461-1.048 1.03-1.048zm10.031-1.475c.925 0 1.675.764 1.675 1.706s-.75 1.705-1.675 1.705-1.674-.763-1.674-1.705c0-.942.75-1.706 1.674-1.706zm-2.626-.684c.362-.082.653-.356.761-.718a1.062 1.062 0 00-.238-1.028 1.017 1.017 0 00-.996-.294c-.547.14-.881.7-.752 1.257.13.558.675.907 1.225.783zm0 16.876c.359-.087.644-.36.75-.72a1.062 1.062 0 00-.237-1.019 1.018 1.018 0 00-.985-.301 1.037 1.037 0 00-.762.717c-.108.361-.017.754.239 1.028.245.263.606.377.953.305l.043-.01zM17.19 3.5a.631.631 0 00.628-.64c0-.355-.279-.64-.628-.64a.631.631 0 00-.628.64c0 .355.28.64.628.64zm-10.38 0a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64a.631.631 0 00-.628.64c0 .355.279.64.628.64zm-5.182 7.852a.631.631 0 00-.628.64c0 .354.28.639.628.639a.63.63 0 00.627-.606l.001-.034a.62.62 0 00-.628-.64zm5.182 9.13a.631.631 0 00-.628.64c0 .355.279.64.628.64a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64zm10.38.018a.631.631 0 00-.628.64c0 .355.28.64.628.64a.631.631 0 00.628-.64c0-.355-.279-.64-.628-.64zm5.182-9.148a.631.631 0 00-.628.64c0 .354.279.639.628.639a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64zm-.384-4.992a.24.24 0 00.244-.249.24.24 0 00-.244-.249.24.24 0 00-.244.249c0 .142.122.249.244.249zM11.991.497a.24.24 0 00.245-.248A.24.24 0 0011.99 0a.24.24 0 00-.244.249c0 .133.108.236.223.247l.021.001zM2.011 6.36a.24.24 0 00.245-.249.24.24 0 00-.244-.249.24.24 0 00-.244.249.24.24 0 00.244.249zm0 11.263a.24.24 0 00-.243.248.24.24 0 00.244.249.24.24 0 00.244-.249.252.252 0 00-.244-.248zm19.995-.018a.24.24 0 00-.245.248.24.24 0 00.245.25.24.24 0 00.244-.25.252.252 0 00-.244-.248z"></path></svg>',
+        kimi: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.846 0a1.923 1.923 0 110 3.846H20.15a.226.226 0 01-.227-.226V1.923C19.923.861 20.784 0 21.846 0z"></path><path d="M11.065 11.199l7.257-7.2c.137-.136.06-.41-.116-.41H14.3a.164.164 0 00-.117.051l-7.82 7.756c-.122.12-.302.013-.302-.179V3.82c0-.127-.083-.23-.185-.23H3.186c-.103 0-.186.103-.186.23V19.77c0 .128.083.23.186.23h2.69c.103 0 .186-.102.186-.23v-3.25c0-.069.025-.135.069-.178l2.424-2.406a.158.158 0 01.205-.023l6.484 4.772a7.677 7.677 0 003.453 1.283c.108.012.2-.095.2-.23v-3.06c0-.117-.07-.212-.164-.227a5.028 5.028 0 01-2.027-.807l-5.613-4.064c-.117-.078-.132-.279-.028-.381z"></path></svg>',
+        mimo: '<svg aria-hidden="true" focusable="false" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C8.016 0 4.756.255 2.493 2.516.23 4.776 0 8.033 0 12.012c0 3.98.23 7.235 2.494 9.497C4.757 23.77 8.017 24 12 24c3.983 0 7.243-.23 9.506-2.491C23.77 19.247 24 15.99 24 12.012c0-3.984-.233-7.243-2.502-9.504C19.234.252 15.978 0 12 0zM4.906 7.405h5.624c1.47 0 3.007.068 3.764.827.746.746.827 2.233.83 3.676v4.54a.15.15 0 0 1-.152.147h-1.947a.15.15 0 0 1-.152-.148V11.83c-.002-.806-.048-1.634-.464-2.051-.358-.36-1.026-.441-1.72-.458H7.158a.15.15 0 0 0-.151.147v6.98a.15.15 0 0 1-.152.148H4.906a.15.15 0 0 1-.15-.148V7.554a.15.15 0 0 1 .15-.149zm12.131 0h1.949a.15.15 0 0 1 .15.15v8.892a.15.15 0 0 1-.15.148h-1.949a.15.15 0 0 1-.151-.148V7.554a.15.15 0 0 1 .151-.149zM8.92 10.948h2.046c.083 0 .15.066.15.147v5.352a.15.15 0 0 1-.15.148H8.92a.15.15 0 0 1-.152-.148v-5.352a.15.15 0 0 1 .152-.147Z"/></svg>',
+        huaweipangu: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.341 17.042s.062-.061 0-.061C7.516 10.902 3.646 6.22 3.646 6.22S1.557 8.168 1.68 10.174c.061 1.52 1.228 2.37 1.228 2.37 1.843 1.763 6.266 4.012 7.31 4.499h.123zm-.737 1.52c0-.061-.123-.061-.123-.061l-7.371.243c.798 1.398 2.15 2.492 3.563 2.188.983-.243 3.194-1.763 3.87-2.25.123-.12.061-.12.061-.12zm.123-.67c.062-.06 0-.12 0-.12C6.471 15.581.206 12.3.206 12.3c-.553 1.763.184 3.161.184 3.161.798 1.702 2.334 2.189 2.334 2.189.676.303 1.413.303 1.413.303h5.529c.061 0 .061-.06.061-.06zm.492-14.831c-.308 0-1.168.243-1.168.243-1.965.486-2.395 2.249-2.395 2.249-.369 1.094 0 2.31 0 2.31.675 2.857 3.87 7.598 4.545 8.57l.062.062c.061 0 .061-.061.061-.061C12.43 5.796 10.22 3.06 10.22 3.06zm2.457 13.373c.061 0 .123-.061.123-.061.737-1.033 3.87-5.714 4.545-8.57 0 0 .369-1.399 0-2.31 0 0-.491-1.764-2.457-2.25 0 0-.553-.121-1.167-.243 0 0-2.211 2.796-1.106 13.312 0 .122.062.122.062.122zm1.72 2.067s-.062 0-.062.06v.122c.738.486 2.826 2.006 3.87 2.249 0 0 1.905.669 3.563-2.188l-7.371-.243zm9.398-6.261s-6.265 3.343-9.521 5.531c0 0-.062.06-.062.122 0 0 0 .06.062.06h5.651s.553 0 1.29-.303c0 0 1.536-.487 2.396-2.25 0-.06.737-1.458.184-3.16zM13.66 17.042s.061.06.122 0c1.045-.547 5.468-2.736 7.31-4.499 0 0 1.168-.911 1.23-2.37.122-2.067-1.967-3.951-1.967-3.951s-3.87 4.559-6.695 10.698c0 0-.062.06 0 .122z"></path></svg>',
+        qwen: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.604 1.34c.393.69.784 1.382 1.174 2.075a.18.18 0 00.157.091h5.552c.174 0 .322.11.446.327l1.454 2.57c.19.337.24.478.024.837-.26.43-.513.864-.76 1.3l-.367.658c-.106.196-.223.28-.04.512l2.652 4.637c.172.301.111.494-.043.77-.437.785-.882 1.564-1.335 2.34-.159.272-.352.375-.68.37-.777-.016-1.552-.01-2.327.016a.099.099 0 00-.081.05 575.097 575.097 0 01-2.705 4.74c-.169.293-.38.363-.725.364-.997.003-2.002.004-3.017.002a.537.537 0 01-.465-.271l-1.335-2.323a.09.09 0 00-.083-.049H4.982c-.285.03-.553-.001-.805-.092l-1.603-2.77a.543.543 0 01-.002-.54l1.207-2.12a.198.198 0 000-.197 550.951 550.951 0 01-1.875-3.272l-.79-1.395c-.16-.31-.173-.496.095-.965.465-.813.927-1.625 1.387-2.436.132-.234.304-.334.584-.335a338.3 338.3 0 012.589-.001.124.124 0 00.107-.063l2.806-4.895a.488.488 0 01.422-.246c.524-.001 1.053 0 1.583-.006L11.704 1c.341-.003.724.032.9.34zm-3.432.403a.06.06 0 00-.052.03L6.254 6.788a.157.157 0 01-.135.078H3.253c-.056 0-.07.025-.041.074l5.81 10.156c.025.042.013.062-.034.063l-2.795.015a.218.218 0 00-.2.116l-1.32 2.31c-.044.078-.021.118.068.118l5.716.008c.046 0 .08.02.104.061l1.403 2.454c.046.081.092.082.139 0l5.006-8.76.783-1.382a.055.055 0 01.096 0l1.424 2.53a.122.122 0 00.107.062l2.763-.02a.04.04 0 00.035-.02.041.041 0 000-.04l-2.9-5.086a.108.108 0 010-.113l.293-.507 1.12-1.977c.024-.041.012-.062-.035-.062H9.2c-.059 0-.073-.026-.043-.077l1.434-2.505a.107.107 0 000-.114L9.225 1.774a.06.06 0 00-.053-.031zm6.29 8.02c.046 0 .058.02.034.06l-.832 1.465-2.613 4.585a.056.056 0 01-.05.029.058.058 0 01-.05-.029L8.498 9.841c-.02-.034-.01-.052.028-.054l.216-.012 6.722-.012z"></path></svg>',
+        sensenova: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23 8.333h-7.333v7.334H23V8.333z"></path><path d="M1 1v14.667h7.333V8.333h7.334V1H1z" fill-opacity=".33"></path><path d="M14.038 4.333h.17l1.459 1.456v.17l-1.63-1.626zM13.224 4.333h.17l2.273 2.268v.17l-2.443-2.438zM12.41 4.333h.17l3.087 3.08v.17l-3.257-3.25zM11.596 4.333h.17l3.9 3.892v.108h-.06l-4.01-4zM10.782 4.333h.17l4.01 4h-.17l-4.01-4zM9.968 4.333h.17l4.009 4h-.17l-4.01-4zM9.154 4.333h.17l4.009 4h-.17l-4.01-4zM8.34 4.333h.17l4.01 4h-.17l-4.01-4zM7.521 4.333h.17l4.01 4h-.17l-4.01-4zM6.707 4.333h.17l4.01 4h-.17l-4.01-4zM5.892 4.333h.17l4.009 4h-.17l-4.01-4zM5.077 4.333h.17l4.01 4h-.17l-4.01-4zM4.333 4.403v-.07h.1l4.01 4h-.11v.06l-4-3.99zM4.333 5.215v-.17l4 3.991v.17l-4-3.99zM4.333 6.027v-.17l4 3.991v.17l-4-3.99zM4.333 6.84v-.17l4 3.99v.17l-4-3.99zM4.333 7.652v-.17l4 3.99v.17l-4-3.99zM4.333 8.464v-.17l4 3.99v.17l-4-3.99zM4.333 9.276v-.17l4 3.991v.17l-4-3.991zM4.333 10.088v-.17l4 3.991v.17l-4-3.991zM4.333 10.9v-.17l4 3.991v.17l-4-3.991zM4.333 11.712v-.17l4 3.991v.134h-.036l-3.964-3.955zM4.333 12.526v-.17l3.318 3.31h-.17l-3.148-3.14zM4.333 13.34v-.169l2.502 2.496h-.17L4.333 13.34zM4.333 14.152v-.169l1.688 1.684h-.17l-1.518-1.514zM4.333 14.965v-.17l.874.872h-.17l-.704-.702zM15.667 5.146l-.815-.813h.17l.645.644v.169z"></path><path d="M23 15.667h-7.333V23H23v-7.333z" fill-opacity=".33"></path><path d="M15.667 15.667H8.333V23h7.334v-7.333z"></path></svg>',
+        free: '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.11 0-2.08.6-2.6 1.5l-.4.67-.4-.67C11.08 2.6 10.11 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>',
+        custom: '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>'
+      };
+
+      const AI_PROVIDERS = {
+        openai: {
+          name: 'OpenAI', logo: '#10a37f', logoText: 'O',
+          endpoint: 'https://api.openai.com/v1/chat/completions',
+          supportsVision: true,
+          models: [
+            { id: 'gpt-5.6', name: 'GPT-5.6', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-5.5', name: 'GPT-5.5', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-5.4', name: 'GPT-5.4', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', supportsReasoning: false, contextLimit: 400000, maxOutput: 131072 },
+            { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex', supportsReasoning: true, contextLimit: 400000, maxOutput: 131072 }
+          ],
+          defaultModel: 'gpt-5.4'
+        },
+        deepseek: {
+          name: 'DeepSeek', logo: '#4f46e5', logoText: 'D',
+          endpoint: 'https://api.deepseek.com/chat/completions',
+          supportsVision: false,
+          models: [
+            { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', supportsReasoning: true, contextLimit: 1000000, maxOutput: 16384 },
+            { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 16384 }
+          ],
+          defaultModel: 'deepseek-v4-pro'
+        },
+        glm: {
+          name: 'Zhipu GLM', logo: '#3859ff', logoText: 'Z',
+          endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+          supportsVision: true,
+          models: [
+            { id: 'glm-5.3', name: 'GLM-5.3', supportsReasoning: true, supportsVision: false, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
+            { id: 'glm-5.3-flash', name: 'GLM-5.3 Flash', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
+            { id: 'glm-5.2', name: 'GLM-5.2', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 16384 }
+          ],
+          defaultModel: 'glm-5.3'
+        },
+        kimi: {
+          name: 'Kimi (Moonshot)', logo: '#10b981', logoText: 'K',
+          endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+          supportsVision: true,
+          models: [
+            { id: 'kimi-k3', name: 'Kimi K3', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 16384 },
+            { id: 'kimi-k2.7-code', name: 'Kimi K2.7 Code', supportsReasoning: true, supportsVision: true, contextLimit: 262144, maxOutput: 16384 },
+            { id: 'kimi-k2.6', name: 'Kimi K2.6', supportsReasoning: false, contextLimit: 262144, maxOutput: 16384 }
+          ],
+          defaultModel: 'kimi-k3'
+        },
+        mimo: {
+          name: 'Xiaomi MiMo', logo: '#ff6900', logoText: 'M',
+          endpoint: 'https://api.xiaomimimo.com/v1/chat/completions',
+          supportsVision: true,
+          models: [
+            { id: 'mimo-v2.5-pro', name: 'MiMo V2.5 Pro', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 131072 },
+            { id: 'mimo-v2.5-pro-ultraspeed', name: 'MiMo V2.5 Pro UltraSpeed', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 131072 },
+            { id: 'mimo-v2.5', name: 'MiMo V2.5', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 }
+          ],
+          defaultModel: 'mimo-v2.5-pro'
+        },
+        huaweipangu: {
+          name: 'Huawei Pangu', logo: '#cf0a2c', logoText: 'H',
+          endpoint: 'https://api.huaweicloud.com/api/v2/chat/completions',
+          supportsVision: false,
+          models: [
+            { id: 'pangu-2.0-pro', name: 'Pangu 2.0 Pro', supportsReasoning: true, contextLimit: 524288, maxOutput: 16384 },
+            { id: 'pangu-2.0-flash', name: 'Pangu 2.0 Flash', supportsReasoning: false, contextLimit: 524288, maxOutput: 16384 }
+          ],
+          defaultModel: 'pangu-2.0-pro'
+        },
+        qwen: {
+          name: 'Qwen', logo: '#6366f1', logoText: 'Q',
+          endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+          models: [
+            { id: 'qwen3.8-max-preview', name: 'Qwen3.8 Max Preview', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
+            { id: 'qwen3.7-max', name: 'Qwen3.7 Max', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
+            { id: 'qwen3.7-plus', name: 'Qwen3.7 Plus', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
+            { id: 'qwen3.6-flash', name: 'Qwen3.6 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 }
+          ],
+          defaultModel: 'qwen3.7-plus'
+        },
+        // NeoWarp 官方免费中转：仅在模型列表中展示，不进入“添加模型”服务商网格；
+        // 免费配置由主进程动态注入（密钥不落盘），模型与截止时间须与
+        // src-main/ai-model-configs.js 保持一致。
+        free: {
+          name: 'NeoWarp Free', logo: '#16a34a', logoText: 'F',
+          endpoint: 'https://api.sy1.top/v1/chat/completions',
+          supportsVision: false,
+          isFree: true,
+          models: [
+            { id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 100000 },
+            { id: 'glm-5.3-flash', name: 'GLM-5.3 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 100000 },
+            { id: 'sensenova-6.8-flash-lite', name: 'SenseNova 6.8 Flash Lite', supportsReasoning: false, contextLimit: 1000000, maxOutput: 100000 },
+            { id: 'glm-5.2', name: 'GLM-5.2', supportsReasoning: true, contextLimit: 1000000, maxOutput: 100000 }
+          ],
+          defaultModel: 'deepseek-v4.1-flash'
+        },
+        custom: {
+          name: 'Custom', logo: '#888', logoText: '?',
+          endpoint: '',
+          models: [{ id: 'custom', name: 'Custom Model', supportsReasoning: false }],
+          defaultModel: 'custom',
+          isCustom: true
+        }
+      };
+
+      const AI_API_FORMATS = {
+        openai: {name: 'OpenAI 兼容', defaultEndpoint: ''},
+        anthropic: {name: 'Anthropic', defaultEndpoint: 'https://api.anthropic.com/v1/messages'},
+        ollama: {name: 'Ollama', defaultEndpoint: 'http://localhost:11434/api/chat'},
+        custom: {name: 'Custom', defaultEndpoint: ''}
+      };
+
+      let aiConfigs = [];
+      let aiActiveId = null;
+
+      const aiEscape = (text) => String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+      const aiMaskKey = (key) => {
+        if (!key) return '';
+        if (key.length <= 12) return key.slice(0, 3) + '••••';
+        return key.slice(0, 6) + '••••' + key.slice(-4);
+      };
+
+      const aiFormatTokenCount = (n) => {
+        if (!n || isNaN(n)) return '';
+        if (n >= 1000000) {
+          const m = n / 1000000;
+          return (m >= 10 ? Math.round(m) : Math.round(m * 10) / 10) + 'M';
+        }
+        if (n >= 1000) {
+          return Math.round(n / (n % 1024 === 0 ? 1024 : 1000)) + 'K';
+        }
+        return String(n);
+      };
+
+      const aiSaveConfigs = () => DesktopSettingsPreload.saveAiModelConfigs({
+        configs: aiConfigs,
+        activeId: aiActiveId
+      });
+
+      const aiSetActive = (id) => {
+        if (id === aiActiveId) return;
+        aiActiveId = id;
+        renderAiModelList();
+        const cfg = aiConfigs.find((c) => c.id === id);
+        aiSaveConfigs();
+        showToastTransient(aiS.switchedTo.replace('{name}', (cfg && cfg.name) || aiS.unnamed));
+      };
+
+      // 复用页面上的轻量反馈：AI 行内不引入新 toast 样式，临时挂起即撤
+      let aiNoteTimer = null;
+      function showToastTransient (message, isError) {
+        const note = document.getElementById('aiSharedNote');
+        if (!note) return;
+        note.textContent = message;
+        note.style.color = isError ? 'var(--danger)' : 'var(--success)';
+        if (aiNoteTimer) clearTimeout(aiNoteTimer);
+        aiNoteTimer = setTimeout(() => {
+          note.textContent = aiS.note;
+          note.style.color = '';
+        }, 2200);
+      }
+
+      // ── 免费模型活动 ──
+      // 截止时间与主进程 ai-model-configs.js 的 FREE_MODEL_END_AT 一致：
+      // 2026-11-30 12:00:00（UTC+8）＝ 04:00 UTC。过期后灰显且不可选；
+      // 免费配置由主进程动态注入，不提供编辑/删除（避免展示内置密钥）。
+      const AI_FREE_END_AT = Date.UTC(2026, 10, 30, 4, 0, 0);
+      const aiIsFreeConfig = (cfg) =>
+        !!cfg && (cfg.isFree === true || String(cfg.id || '').indexOf('free_') === 0);
+      const aiFreeExpired = (cfg) =>
+        aiIsFreeConfig(cfg) && (cfg.freeExpired === true || Date.now() >= AI_FREE_END_AT);
+
+      function aiGroupHead (title, note) {
+        const head = document.createElement('div');
+        head.className = 'ai-group-head';
+        head.innerHTML = '<span class="ai-group-title">' + aiEscape(title) + '</span>' +
+          (note ? '<span class="ai-group-note">' + aiEscape(note) + '</span>' : '');
+        return head;
+      }
+
+      function aiModelRow (cfg) {
+        const p = AI_PROVIDERS[cfg.provider] || {};
+        const modelLabel = p.isCustom
+          ? (cfg.customModelId || cfg.model)
+          : (((p.models || []).find((m) => m.id === cfg.model) || {}).name || cfg.model);
+        const isActive = cfg.id === aiActiveId;
+        const isFree = aiIsFreeConfig(cfg);
+        const expired = aiFreeExpired(cfg);
+
+        const row = document.createElement('div');
+        row.className = 'setting-row ai-model-row' + (expired ? ' free-expired' : '');
+        row.style.cursor = expired ? 'not-allowed' : 'pointer';
+        row.innerHTML =
+          '<div class="ai-provider-logo" style="background:' + (p.logo || '#888') + ';">' +
+            (AI_LOGO_SVG[cfg.provider] || aiEscape(p.logoText || '?')) + '</div>' +
+          '<div class="setting-info">' +
+            '<div class="setting-label">' + aiEscape(cfg.name || modelLabel || p.name || aiS.unnamed) + '</div>' +
+            '<div class="setting-desc">' + aiEscape(
+              isFree
+                ? (p.name || 'Free') + ' · 1M ' + aiS.ctxSuffix
+                : (p.name || cfg.provider) + (modelLabel ? ' · ' + modelLabel : '')) +
+              (!isFree && !cfg.apiKey ? ' · ' + aiEscape(aiS.noKey) : '') + '</div>' +
+          '</div>' +
+          '<div class="setting-control">' +
+            (expired
+              ? '<span class="ai-free-tag expired">' + aiEscape(aiS.freeEnded) + '</span>'
+              : (isActive
+                  ? '<span class="ai-active-tag">' + aiEscape(aiS.active) + '</span>'
+                  : (isFree ? '<span class="ai-free-tag">' + aiEscape(aiS.freeBadge) + '</span>' : ''))) +
+            (isFree ? '' :
+              '<button type="button" class="ai-row-btn ai-edit-btn">' + aiEscape(aiS.edit) + '</button>' +
+              '<button type="button" class="ai-row-btn danger ai-delete-btn">' + aiEscape(aiS.delete) + '</button>') +
+          '</div>';
+
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('button')) return;
+          if (expired) {
+            showToastTransient(aiS.freeEnded, true);
+            return;
+          }
+          aiSetActive(cfg.id);
+        });
+        if (!isFree) {
+          row.querySelector('.ai-edit-btn').addEventListener('click', () => openAiModelDialog(cfg.id));
+          row.querySelector('.ai-delete-btn').addEventListener('click', () => aiDeleteConfig(cfg.id));
+        }
+        return row;
+      }
+
+      function renderAiModelList () {
+        const list = document.getElementById('aiModelList');
+        if (!list) return;
+        list.innerHTML = '';
+
+        if (!aiConfigs.length) {
+          const empty = document.createElement('div');
+          empty.className = 'ai-empty-row';
+          empty.textContent = aiS.noModels;
+          list.appendChild(empty);
+        }
+
+        // 免费模型在前单独成组（点选即用、无密钥、不可编辑删除），用户自己的配置排后面
+        const freeRows = [];
+        const ownRows = [];
+        aiConfigs.forEach((cfg) => {
+          (aiIsFreeConfig(cfg) ? freeRows : ownRows).push(cfg);
+        });
+        if (freeRows.length) {
+          list.appendChild(aiGroupHead(aiS.freeModelsTitle, aiS.freeGroupNote));
+        }
+        freeRows.forEach((cfg) => list.appendChild(aiModelRow(cfg)));
+        if (ownRows.length) {
+          list.appendChild(aiGroupHead(aiS.myModelsTitle, ''));
+        }
+        ownRows.forEach((cfg) => list.appendChild(aiModelRow(cfg)));
+
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'row-button';
+        addBtn.innerHTML =
+          '<div class="row-icon icon-blue">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>' +
+          '</div><span class="row-text"></span>';
+        addBtn.querySelector('.row-text').textContent = aiS.addModel;
+        addBtn.addEventListener('click', () => openAiModelDialog(null));
+        list.appendChild(addBtn);
+      }
+
+      function aiDeleteConfig (id) {
+        if (aiConfigs.length <= 1) {
+          showToastTransient(aiS.keepOneConfig);
+          return;
+        }
+        const idx = aiConfigs.findIndex((c) => c.id === id);
+        if (idx === -1) return;
+        if (!confirm(aiS.deleteConfirm)) return;
+        const name = aiConfigs[idx].name || aiS.unnamed;
+        aiConfigs.splice(idx, 1);
+        if (aiActiveId === id) {
+          aiActiveId = aiConfigs.length ? aiConfigs[Math.min(idx, aiConfigs.length - 1)].id : null;
+        }
+        renderAiModelList();
+        aiSaveConfigs();
+        showToastTransient(aiS.modelDeleted.replace('{name}', name));
+      }
+
+      // 新增/编辑共用对话框；id 为 null 表示新增
+      function openAiModelDialog (id) {
+        const isEdit = typeof id === 'string';
+        const cfg = isEdit ? aiConfigs.find((c) => c.id === id) : null;
+        const draft = {
+          name: (cfg && cfg.name) || '',
+          provider: (cfg && cfg.provider) || 'openai',
+          model: (cfg && cfg.model) || '',
+          apiFormat: (cfg && cfg.apiFormat) || 'openai',
+          customEndpoint: (cfg && cfg.customEndpoint) || '',
+          customModelId: (cfg && cfg.customModelId) || '',
+          apiKey: (cfg && cfg.apiKey) || '',
+          customContextLimit: (cfg && cfg.customContextLimit) || 32000
+        };
+        if (!draft.model) {
+          const firstModel = ((AI_PROVIDERS[draft.provider] || {}).models || [])[0];
+          draft.model = firstModel ? firstModel.id : '';
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'ai-dialog-overlay open';
+        const panel = document.createElement('div');
+        panel.className = 'ai-dialog';
+
+        const isCustomProvider = () => !!(AI_PROVIDERS[draft.provider] || {}).isCustom;
+
+        const providerGridHtml = () => Object.keys(AI_PROVIDERS)
+          // 免费模型不作为“服务商”参与添加/编辑，只在模型列表中直接选用
+          .filter((k) => !AI_PROVIDERS[k].isFree)
+          .map((k) => {
+          const p = AI_PROVIDERS[k];
+          return '<button type="button" class="provider-option' +
+            (draft.provider === k ? ' selected' : '') + '" data-provider="' + k + '">' +
+            '<span class="provider-option-logo" style="background:' + (p.logo || '#888') + ';">' +
+            (AI_LOGO_SVG[k] || aiEscape(p.logoText || '?')) + '</span>' +
+            '<span class="provider-option-name">' + aiEscape(p.name) + '</span>' +
+            '</button>';
+        }).join('');
+
+        const modelListHtml = () => {
+          const models = (AI_PROVIDERS[draft.provider] || {}).models || [];
+          return models.map((m) => {
+            const meta = [];
+            if (m.contextLimit) meta.push(aiFormatTokenCount(m.contextLimit) + ' ' + aiS.ctxSuffix);
+            if (m.maxOutput) meta.push(aiFormatTokenCount(m.maxOutput) + ' ' + aiS.outSuffix);
+            let tags = '';
+            if (m.supportsReasoning) tags += '<span class="model-cap-tag">' + aiEscape(aiS.capReasoning) + '</span>';
+            if (m.supportsVision !== false && (AI_PROVIDERS[draft.provider] || {}).supportsVision !== false) {
+              tags += '<span class="model-cap-tag">' + aiEscape(aiS.capVision) + '</span>';
+            }
+            return '<button type="button" class="model-option' +
+              (draft.model === m.id ? ' selected' : '') + '" data-model="' + aiEscape(m.id) + '">' +
+              '<span class="model-option-body">' +
+              '<span class="model-option-name">' + aiEscape(m.name) + '</span>' +
+              (meta.length ? '<span class="model-option-meta">' + aiEscape(meta.join(' · ')) + '</span>' : '') +
+              '</span>' +
+              (tags ? '<span>' + tags + '</span>' : '') +
+              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' +
+              '</button>';
+          }).join('');
+        };
+
+        const selectOptions = (map, current) => Object.keys(map).map((k) =>
+          '<option value="' + k + '"' + (current === k ? ' selected' : '') + '>' + aiEscape(map[k].name) + '</option>'
+        ).join('');
+
+        const fieldRow = (rowId, label, inner, hint) =>
+          '<div class="ai-field-row" id="' + rowId + '">' +
+          '<label class="ai-field-label">' + aiEscape(label) + '</label>' +
+          inner +
+          (hint ? '<div class="ai-field-hint">' + aiEscape(hint) + '</div>' : '') +
+          '<div class="ai-field-error"></div>' +
+          '</div>';
+
+        panel.innerHTML =
+          '<div class="ai-dialog-head">' + aiEscape(isEdit ? aiS.editTitle : aiS.addTitle) + '</div>' +
+          '<div class="ai-dialog-body">' +
+          '<div class="form-group"><div class="form-group-label">' + aiEscape(aiS.groupProvider) + '</div>' +
+          '<div class="provider-grid" id="aiProviderGrid">' + providerGridHtml() + '</div></div>' +
+          '<div class="form-group" id="aiModelGroup"><div class="form-group-label">' + aiEscape(aiS.groupModel) + '</div>' +
+          '<div class="model-option-list" id="aiModelListDialog">' + modelListHtml() + '</div></div>' +
+          '<div class="form-group" id="aiEndpointGroup"><div class="form-group-label">' + aiEscape(aiS.groupEndpoint) + '</div>' +
+          fieldRow('aiApiFormatRow', aiS.fieldApiFormat,
+            '<select id="aiApiFormat" class="settings-input">' + selectOptions(AI_API_FORMATS, draft.apiFormat) + '</select>') +
+          fieldRow('aiEndpointRow', aiS.fieldEndpoint,
+            '<input type="text" id="aiEndpoint" class="settings-input settings-input-mono" placeholder="https://api.example.com/v1/chat/completions" value="' + aiEscape(draft.customEndpoint) + '">') +
+          fieldRow('aiModelIdRow', aiS.fieldModelId,
+            '<input type="text" id="aiModelId" class="settings-input settings-input-mono" placeholder="gpt-4o" value="' + aiEscape(draft.customModelId) + '">',
+            aiS.fieldModelIdHint) +
+          fieldRow('aiCtxLimitRow', aiS.fieldContextLimit,
+            '<input type="text" inputmode="numeric" id="aiCtxLimit" class="settings-input" placeholder="32000" value="' + aiEscape(String(draft.customContextLimit)) + '">',
+            aiS.fieldContextLimitHint) +
+          '</div>' +
+          '<div class="form-group"><div class="form-group-label">' + aiEscape(aiS.groupCredentials) + '</div>' +
+          fieldRow('aiApiKeyRow', aiS.fieldApiKey,
+            '<div class="settings-input-group">' +
+            '<input type="password" id="aiApiKey" class="settings-input settings-input-mono" placeholder="sk-..." value="' + aiEscape(draft.apiKey) + '" autocomplete="off" spellcheck="false">' +
+            '<button type="button" class="settings-input-affix" id="aiKeyToggle">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>' +
+            '</button></div>', aiS.fieldApiKeyHint) +
+          fieldRow('aiNameRow', aiS.fieldName,
+            '<input type="text" id="aiName" class="settings-input" placeholder="' + aiEscape((AI_PROVIDERS[draft.provider] || {}).name || '') + '" value="' + aiEscape(draft.name) + '">',
+            aiS.fieldNameHint) +
+          '</div>' +
+          '</div>' +
+          '<div class="ai-dialog-foot">' +
+          '<div class="test-result" id="aiTestResult"></div>' +
+          '<button type="button" class="btn btn-secondary" id="aiTestBtn">' + aiEscape(aiS.testConnection) + '</button>' +
+          '<button type="button" class="btn btn-secondary" id="aiCancelBtn">' + aiEscape(aiS.cancel) + '</button>' +
+          '<button type="button" class="btn" id="aiSaveBtn">' + aiEscape(aiS.save) + '</button>' +
+          '</div>';
+
+        overlay.appendChild(panel);
+        document.body.appendChild(overlay);
+
+        const $ = (sel) => panel.querySelector(sel);
+        const fmtSel = $('#aiApiFormat');
+        const endpointIn = $('#aiEndpoint');
+        const modelIdIn = $('#aiModelId');
+        const keyIn = $('#aiApiKey');
+        const ctxIn = $('#aiCtxLimit');
+        const nameIn = $('#aiName');
+        const testResult = $('#aiTestResult');
+
+        function syncGroups () {
+          const custom = isCustomProvider();
+          $('#aiModelGroup').style.display = custom ? 'none' : '';
+          $('#aiEndpointGroup').style.display = custom ? '' : 'none';
+          nameIn.placeholder = (AI_PROVIDERS[draft.provider] || {}).name || '';
+        }
+        syncGroups();
+
+        $('#aiProviderGrid').addEventListener('click', (e) => {
+          const btn = e.target.closest('.provider-option');
+          if (!btn) return;
+          draft.provider = btn.dataset.provider;
+          const models = (AI_PROVIDERS[draft.provider] || {}).models || [];
+          draft.model = models[0] ? models[0].id : '';
+          panel.querySelectorAll('.provider-option').forEach((b) => {
+            b.classList.toggle('selected', b.dataset.provider === draft.provider);
+          });
+          $('#aiModelListDialog').innerHTML = modelListHtml();
+          syncGroups();
+          clearErrors();
+          setTestResult('', '');
+        });
+
+        $('#aiModelListDialog').addEventListener('click', (e) => {
+          const btn = e.target.closest('.model-option');
+          if (!btn) return;
+          draft.model = btn.dataset.model;
+          panel.querySelectorAll('.model-option').forEach((b) => {
+            b.classList.toggle('selected', b.dataset.model === draft.model);
+          });
+          setTestResult('', '');
+        });
+
+        fmtSel.addEventListener('change', () => {
+          const def = (AI_API_FORMATS[fmtSel.value] || {}).defaultEndpoint;
+          if (def && !endpointIn.value.trim()) endpointIn.value = def;
+        });
+
+        $('#aiKeyToggle').addEventListener('click', function () {
+          const showing = keyIn.type === 'text';
+          keyIn.type = showing ? 'password' : 'text';
+          this.title = showing ? aiS.showKey : aiS.hideKey;
+        });
+
+        function clearErrors () {
+          panel.querySelectorAll('.ai-field-row.has-error').forEach((el) => {
+            el.classList.remove('has-error');
+            const err = el.querySelector('.ai-field-error');
+            if (err) err.textContent = '';
+          });
+        }
+        function setError (rowSel, message) {
+          const row = $(rowSel);
+          row.classList.add('has-error');
+          row.querySelector('.ai-field-error').textContent = message;
+        }
+        const SPINNER_SVG = '<svg class="ai-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>';
+        const OK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        const FAIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+        function setTestResult (state, text) {
+          testResult.className = 'test-result' + (state ? ' ' + state : '');
+          if (!text) {
+            testResult.innerHTML = '';
+            return;
+          }
+          const icon = state === 'ok' ? OK_SVG : (state === 'fail' ? FAIL_SVG : SPINNER_SVG);
+          testResult.innerHTML = icon + '<span>' + aiEscape(text) + '</span>';
+        }
+
+        function collect () {
+          clearErrors();
+          const custom = isCustomProvider();
+          let ok = true;
+          const key = keyIn.value.trim();
+          const endpoint = endpointIn.value.trim();
+          const modelId = modelIdIn.value.trim();
+          const ctx = parseInt(ctxIn.value.replace(/[^\d]/g, ''), 10);
+
+          if (custom) {
+            if (!endpoint) {
+              setError('#aiEndpointRow', aiS.errEndpointRequired);
+              ok = false;
+            } else if (!/^https?:\/\//i.test(endpoint)) {
+              setError('#aiEndpointRow', aiS.errEndpointInvalid);
+              ok = false;
+            }
+            if (!modelId) {
+              setError('#aiModelIdRow', aiS.errModelIdRequired);
+              ok = false;
+            }
+            if (isNaN(ctx) || ctx < 1000) {
+              setError('#aiCtxLimitRow', aiS.errContextLimit);
+              ok = false;
+            }
+          }
+          if (!key) {
+            setError('#aiApiKeyRow', aiS.errKeyRequired);
+            ok = false;
+          }
+          if (!ok) {
+            const firstErr = panel.querySelector('.ai-field-row.has-error .settings-input');
+            if (firstErr) firstErr.focus();
+            return null;
+          }
+          const p = AI_PROVIDERS[draft.provider] || {};
+          return {
+            name: nameIn.value.trim() || p.name || 'Model',
+            provider: draft.provider,
+            model: custom ? 'custom' : draft.model,
+            apiKey: key,
+            apiFormat: custom ? fmtSel.value : 'openai',
+            customEndpoint: custom ? endpoint : '',
+            customModelId: custom ? modelId : '',
+            customContextLimit: custom ? ctx : 32000,
+            thinkingLevel: (cfg && cfg.thinkingLevel) || 'medium'
+          };
+        }
+
+        function close () {
+          overlay.classList.remove('open');
+          document.removeEventListener('keydown', onKey);
+          setTimeout(() => {
+            if (overlay.parentNode) overlay.remove();
+          }, 200);
+        }
+        function onKey (e) {
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            close();
+          }
+        }
+        document.addEventListener('keydown', onKey);
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) close();
+        });
+        $('#aiCancelBtn').addEventListener('click', close);
+
+        // 测试连接：经 tw-ai-proxy 转发（主进程无 CORS 限制），不可用时直连
+        let aiProxyBroken = false;
+        const buildProxyUrl = (endpoint) => 'tw-ai-proxy://request/?u=' + encodeURIComponent(endpoint);
+        $('#aiTestBtn').addEventListener('click', function () {
+          const data = collect();
+          if (!data) return;
+          const p = AI_PROVIDERS[data.provider] || {};
+          const endpoint = p.isCustom ? (data.customEndpoint || p.endpoint) : p.endpoint;
+          if (!endpoint) return;
+          const modelId = p.isCustom ? data.customModelId : data.model;
+          const btn = this;
+          btn.disabled = true;
+          setTestResult('busy', aiS.testing);
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 15000);
+          const doFetch = () => aiProxyBroken
+            ? fetch(endpoint, options)
+            : fetch(buildProxyUrl(endpoint), options).catch((err) => {
+              if (err && err.name === 'AbortError') throw err;
+              aiProxyBroken = true;
+              return fetch(endpoint, options);
+            });
+          const options = {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + data.apiKey},
+            body: JSON.stringify({model: modelId, messages: [{role: 'user', content: 'ping'}], max_tokens: 1, stream: false}),
+            signal: controller.signal
+          };
+          doFetch().then((resp) => {
+            clearTimeout(timer);
+            if (resp.ok) {
+              setTestResult('ok', aiS.testOk);
+              return;
+            }
+            return resp.json().catch(() => ({})).then((j) => {
+              const msg = (j && j.error && (j.error.message || j.error.type)) || ('HTTP ' + resp.status);
+              setTestResult('fail', aiS.testFail + ': ' + String(msg).slice(0, 120));
+            });
+          }).catch((err) => {
+            clearTimeout(timer);
+            const msg = err && err.name === 'AbortError' ? 'timeout' : (err && err.message) || 'network error';
+            setTestResult('fail', aiS.testFail + ': ' + String(msg).slice(0, 120));
+          }).then(() => {
+            btn.disabled = false;
+          });
+        });
+
+        $('#aiSaveBtn').addEventListener('click', () => {
+          const data = collect();
+          if (!data) return;
+          if (isEdit) {
+            Object.assign(cfg, data);
+          } else {
+            data.id = 'cfg_' + Date.now();
+            aiConfigs.push(data);
+            aiActiveId = data.id;
+          }
+          renderAiModelList();
+          aiSaveConfigs();
+          close();
+          showToastTransient(isEdit ? aiS.configSaved : aiS.modelAdded);
+        });
+
+        setTimeout(() => {
+          const body = panel.querySelector('.ai-dialog-body');
+          const target = keyIn.value ? nameIn : keyIn;
+          target.focus({preventScroll: true});
+          if (body) body.scrollTop = 0;
+        }, 60);
+      }
+
+      DesktopSettingsPreload.getAiModelConfigs().then(({configs, activeId}) => {
+        aiConfigs = configs || [];
+        aiActiveId = activeId || null;
+        renderAiModelList();
+      });
+      DesktopSettingsPreload.onAiModelConfigsChanged(({configs, activeId}) => {
+        aiConfigs = configs || [];
+        aiActiveId = activeId || null;
+        // 对话框打开期间不重绘底层列表，避免编辑中的表单被覆盖观感打断
+        if (!document.querySelector('.ai-dialog')) renderAiModelList();
+      });
+    </script>
   </body>
 </html>

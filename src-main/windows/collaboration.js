@@ -92,6 +92,12 @@ class CollaborationWindow extends AbstractWindow {
 
     this.editorWindow = editorWindow;
     this.mode = mode; // 'host' or 'join'
+    // 主页「加入协作」打开的独立窗口：没有关联的编辑器，
+    // 连接成功后才创建编辑器（见 attachDeferredEditor）
+    this.standalone = !editorWindow && mode === 'join';
+    // 编辑器渲染层就绪前，发往编辑器的 IPC 先排队（见 sendToEditor）
+    this.editorReady = true;
+    this.pendingEditorMessages = [];
     this.server = null;
     this.ws = null;
     this.joinUsername = null;
@@ -303,6 +309,10 @@ class CollaborationWindow extends AbstractWindow {
                 this.joinUsername = message.username;
                 this.joinAvatar = message.avatar || this.joinAvatar;
                 this.joinPermissions = message.permissions || null;
+                // 主页「加入协作」：认证通过后才打开编辑器窗口
+                if (this.standalone && !this.editorWindow) {
+                  this.attachDeferredEditor();
+                }
                 this.sendToCollabWindow('collab-join-connected', {
                   success: true,
                   permissions: message.permissions,
@@ -550,8 +560,102 @@ class CollaborationWindow extends AbstractWindow {
   }
 
   sendToEditor (channel, data) {
-    if (this.editorWindow && this.editorWindow.window && !this.editorWindow.window.isDestroyed()) {
-      this.editorWindow.window.webContents.send(channel, data);
+    if (!this.editorWindow || !this.editorWindow.window || this.editorWindow.window.isDestroyed()) {
+      return;
+    }
+    if (!this.editorReady) {
+      // 编辑器渲染层尚未挂载（React 组件还没注册 IPC 监听），
+      // 此时直接 send 会被丢弃；先排队，就绪后按原顺序补发
+      this.pendingEditorMessages.push({ channel, data });
+      return;
+    }
+    this.editorWindow.window.webContents.send(channel, data);
+  }
+
+  /**
+   * 主页「加入协作」：连接成功后创建编辑器窗口并挂到本协作会话上。
+   * 编辑器加载完成前收到的项目同步会在 sendToEditor 里排队。
+   */
+  attachDeferredEditor () {
+    // Imported late due to circular dependencies
+    const EditorWindow = require('./editor');
+    this.editorWindow = new EditorWindow(null, false);
+    this.markEditorPending();
+  }
+
+  /**
+   * 标记关联的编辑器尚未就绪：探测到其渲染层挂载完成后补发排队的消息。
+   * 用于刚从主页创建编辑器、马上又打开协作面板的场景。
+   */
+  markEditorPending () {
+    if (!this.editorWindow || !this.editorWindow.window || this.editorWindow.window.isDestroyed()) {
+      return;
+    }
+    this.editorReady = false;
+    this.waitEditorReady().then(() => {
+      // 探测超时也照常补发：最好情况是编辑器其实早已就绪，
+      // 最坏情况与旧行为一致（消息被渲染层丢弃）
+      this.editorReady = true;
+      this.flushPendingEditorMessages();
+    });
+  }
+
+  // 通过 request-theme → theme-response 往返判断编辑器 React 组件
+  // 是否已挂载（协作的 IPC 监听与主题响应在同一个组件里注册）
+  probeEditorReady () {
+    return new Promise((resolve) => {
+      const editorWindow = this.editorWindow;
+      if (!editorWindow || !editorWindow.window || editorWindow.window.isDestroyed()) {
+        resolve(false);
+        return;
+      }
+      const requestId = `collab-ready-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+      const handler = (event, data) => {
+        if (data && data.requestId === requestId) {
+          ipcMain.removeListener('theme-response', handler);
+          clearTimeout(timeout);
+          resolve(true);
+        }
+      };
+      const timeout = setTimeout(() => {
+        ipcMain.removeListener('theme-response', handler);
+        resolve(false);
+      }, 1500);
+      ipcMain.on('theme-response', handler);
+      editorWindow.window.webContents.send('request-theme', {requestId});
+    });
+  }
+
+  waitEditorReady (maxMs = 30000) {
+    return new Promise((resolve) => {
+      const deadline = Date.now() + maxMs;
+      const attempt = () => {
+        if (!this.editorWindow || !this.editorWindow.window || this.editorWindow.window.isDestroyed()) {
+          resolve(false);
+          return;
+        }
+        this.probeEditorReady().then((ready) => {
+          if (ready || Date.now() >= deadline) {
+            resolve(ready);
+            return;
+          }
+          setTimeout(attempt, 400);
+        });
+      };
+      attempt();
+    });
+  }
+
+  flushPendingEditorMessages () {
+    if (!this.pendingEditorMessages.length) {
+      return;
+    }
+    const pending = this.pendingEditorMessages;
+    this.pendingEditorMessages = [];
+    for (const {channel, data} of pending) {
+      if (this.editorWindow && this.editorWindow.window && !this.editorWindow.window.isDestroyed()) {
+        this.editorWindow.window.webContents.send(channel, data);
+      }
     }
   }
 
@@ -560,7 +664,9 @@ class CollaborationWindow extends AbstractWindow {
   requestEditorTheme () {
     const editorWindow = this.editorWindow;
     if (!editorWindow || !editorWindow.window || editorWindow.window.isDestroyed()) {
-      return 'light';
+      // 没有关联的编辑器（如主页「加入协作」）：退回全局/系统主题
+      const {getEffectiveTheme} = require('../effective-theme');
+      return getEffectiveTheme().catch(() => 'light');
     }
     return new Promise((resolve) => {
       const requestId = `collaboration-${Date.now()}`;
@@ -629,6 +735,31 @@ class CollaborationWindow extends AbstractWindow {
       win.window.close();
     }
     return new CollaborationWindow(editorWindow, 'join');
+  }
+
+  /**
+   * 主页「加入协作」：弹出加入表单（局域网搜索 + 手动填写），
+   * 连接成功后才打开编辑器窗口。不关联已有编辑器。
+   */
+  static showJoinFromHome () {
+    const existing = AbstractWindow.getWindowsByClass(CollaborationWindow);
+    if (existing.length) {
+      const win = existing[0];
+      // 已有活跃会话（主持中或已加入）：直接展示，避免误关他人会话
+      if (win.ws || win.server) {
+        win.show();
+        return win;
+      }
+      // 已有未连接的加入表单窗口：复用
+      if (win.mode === 'join') {
+        win.show();
+        return win;
+      }
+      // 未连接的发起表单：关掉后换成本次加入
+      win.forceClose = true;
+      win.window.close();
+    }
+    return new CollaborationWindow(null, 'join');
   }
 
   static focusChat (editorWindow) {

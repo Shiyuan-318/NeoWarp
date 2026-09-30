@@ -1,4 +1,0 @@
-- [x] getSpriteScripts 中 sensing_keypressed 块输出为 `sensing_keypressed "space"` 而非带 sensing_keyoptions 前缀或重复
-- [x] getSpriteScripts 中 motion_goto 块输出为 `motion_goto "_mouse_"` 而非重复两次
-- [x] getProjectSummary 返回的每个 sprite 包含 scriptCount 和 scripts 字段
-- [x] GetDiagnostics 无错误

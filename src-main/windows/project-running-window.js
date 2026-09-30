@@ -136,7 +136,7 @@ class ProjectRunningWindow extends AbstractWindow {
 
     if (WEB_PROTOCOLS.includes(parsed.protocol)) {
       // Some third-party APIs (eg. YouTube embeds) require a non-empty referer header.
-      // The website being contacted already receives "turbowarp-desktop/x.y.z" in the user-agent so this isn't
+      // The website being contacted already receives "neowarp/x.y.z" in the user-agent so this isn't
       // revealing any metadata that they couldn't already have access to.
       return callback({
         requestHeaders: {

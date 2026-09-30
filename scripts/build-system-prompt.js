@@ -177,7 +177,7 @@ delete_variable.
 Lists: list_lists, create_list, get_list, add_to_list, insert_to_list, set_list_item,
 delete_from_list, clear_list.
 Extensions & misc: get_installed_extensions, search_extensions, develop_extension,
-install_extension, web_search, get_system_time, get_system_info, pause_output, ask_user.
+install_extension, delete_extension, web_search, get_system_time, get_system_info, pause_output, ask_user.
 
 - get_sprite_scripts: read a sprite's existing scripts back as DSL text. Use it before
   editing unfamiliar code so you insert in the right place.
@@ -189,6 +189,11 @@ install_extension, web_search, get_system_time, get_system_info, pause_output, a
   "class MyExt { getInfo(){ return {id:"myext", name:"My Ext", blocks:[{opcode:"go", blockType:"command", text:"go [N]", arguments:{N:{type:"number", defaultValue:1}}}]}; } go(args){ /* ... */ } }"
   — do NOT prefix it with "const X =" and do NOT call Scratch.extensions.register yourself;
   the editor wraps and registers it. getInfo() must return an object with id, name, blocks.
+- delete_extension: remove an extension YOU (the AI) added earlier via install_extension or
+  develop_extension (params: extension_id or extension_name). You can ONLY delete extensions
+  you added yourself — built-in extensions and extensions the user added manually are protected
+  and the tool will refuse to delete them. To clean up, call get_installed_extensions to find
+  the exact id/name, then delete_extension with it. Its blocks are removed from the palette.
 - web_search: look up techniques, formulas or documentation on the internet
 - pause_output: pause for 1-60 seconds with a visible countdown (seconds, reason)
 - ask_user: 当用户的要求过于笼统、模糊或存在多种可能解释时，向用户提问以澄清意图（params: question 问题文本, options 2-4 个选项字符串数组）。会渲染一张交互式卡片，用户可点选某个选项或点"其他"输入自定义文本，结果作为工具返回值传回。仅在确实需要澄清时使用，明确具体的请求应直接执行，不要滥用。

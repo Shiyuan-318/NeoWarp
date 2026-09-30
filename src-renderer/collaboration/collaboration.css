@@ -233,13 +233,16 @@ input {
 }
 .section-title-row {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
   margin-top: 18px;
+  /* 标题在行内去掉了 7px 底部内边距，用外边距补回与下方卡片的间距 */
+  margin-bottom: 7px;
 }
 .section-title-row .section-title {
   margin-top: 0;
+  padding-bottom: 0;
   flex: 1;
   min-width: 0;
 }
@@ -489,8 +492,8 @@ input {
 /* ===== 小圆角按钮 ===== */
 .chip-btn {
   flex-shrink: 0;
-  height: 26px;
-  padding: 0 11px;
+  height: 28px;
+  padding: 0 12px;
   border-radius: var(--r-full);
   background: var(--accent-soft);
   color: var(--accent);
@@ -500,18 +503,21 @@ input {
   align-items: center;
   gap: 5px;
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
-    opacity var(--dur) var(--ease);
+    opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .chip-btn:hover:not(:disabled) {
   background: var(--accent);
   color: #fff;
 }
+.chip-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
 .chip-btn:disabled {
   opacity: 0.5;
 }
 .chip-btn svg {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
 }
 .chip-btn.spinning svg {
   animation: spin 0.9s linear infinite;

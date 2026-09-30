@@ -119,8 +119,12 @@ p {
   animation: neowarpDialogIn var(--nw-dur-slow) var(--nw-ease);
 }
 
-/* 头部：毛玻璃 + 主题色，去掉原 Scratch 蓝色 */
-:global([class*="modal-content"] [class*="header"]) {
+/* 头部：毛玻璃 + 主题色，去掉原 Scratch 蓝色。
+   注意选择器必须是 [class*="header_"]（含编译后哈希的类名形如 modal_header_xxx），
+   不能写成 [class*="header"]：后者会误命中 header 的 flex 子项
+   （modal_header-item_*、modal_header-item-title_*、modal_header-item-close_*），
+   给它们也加上半透明背景与 backdrop-filter。 */
+:global([class*="modal-content"] [class*="header_"]) {
   background: color-mix(in srgb, var(--ui-modal-header-background) 72%, transparent) !important;
   backdrop-filter: saturate(180%) blur(20px) !important;
   -webkit-backdrop-filter: saturate(180%) blur(20px) !important;
@@ -128,6 +132,19 @@ p {
   border-bottom: 0.5px solid var(--ui-black-transparent) !important;
   font-weight: 600 !important;
   letter-spacing: -0.2px !important;
+}
+
+/* scratch-gui 的弹窗标题采用负 margin 居中：header-item-title 借
+   margin: 0 -20rem 0 0 把文本居中到整个标题栏，文本两端会从左右两侧
+   20rem 宽的子项下方穿过（header-item-close 还带 z-index: 1）。
+   原版这些子项背景透明所以文本可见；若按子串匹配把背景/毛玻璃套到
+   子项上，右侧 20rem 宽的关闭区会变成一块磨砂面板，恰好把居中标题
+   盖到只剩第一个字的左边缘（还原点弹窗标题被裁成一条缝即此因）。
+   这里显式把子项重置回透明，毛玻璃只保留在标题栏整条上。 */
+:global([class*="modal-content"] [class*="header-item"]) {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* NeoWarp: 分节标题（位于 .body 内的 .header，如高级设置弹窗的"特色/移除限制/外观"等）

@@ -109,7 +109,7 @@ In addition to publishing builds on our website and GitHub, we also publish Linu
  - snapcraft.io
  - aur.archlinux.org
 
-Due to the variety of package managers needed to publish to this many places, this script only strives to support Arch Linux. It's probably not hard to make most of it work elsewhere, but that's not a priority for us. In addition to everything required to build turbowarp-desktop from source, you also need the following Arch packages:
+Due to the variety of package managers needed to publish to this many places, this script only strives to support Arch Linux. It's probably not hard to make most of it work elsewhere, but that's not a priority for us. In addition to everything required to build neowarp from source, you also need the following Arch packages:
 
  - base-devel
  - git
@@ -176,4 +176,4 @@ Upload dist/mas-universal/... to App Store Connect with [Transporter](https://ap
 Troubleshooting:
 
  * electron-builder error `  ⨯ Cannot find valid "3rd Party Mac Developer Installer" identity to sign MAS installer, please see https://electron.build/code-signing` - see if that exists in Keychain Access AND is trusted. If not trusted, get PKI roots.
- * Transporter error `Validation failed (409) Invalid Code Signing. The executable 'org.turbowarp.desktop.pkg/Payload/TurboWarp.app/Contents/MacOS/TurboWarp' must be signed with the certificate that is contained in the provisioning profile.` - adjust the distribution provisioning profile to use whatever certificate the executable got signed with
+ * Transporter error `Validation failed (409) Invalid Code Signing. The executable 'org.neowarp.desktop.pkg/Payload/NeoWarp.app/Contents/MacOS/NeoWarp' must be signed with the certificate that is contained in the provisioning profile.` - adjust the distribution provisioning profile to use whatever certificate the executable got signed with

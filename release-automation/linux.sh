@@ -49,18 +49,18 @@ prepare_source() {
 
 update_flatpak() {
 	echo "Updating flatpak"
-	cd "$src/../org.turbowarp.TurboWarp"
+	cd "$src/../org.neowarp.NeoWarp"
 	git checkout master
 	git pull
 	git branch -D "$version" || true
 	git branch "$version"
 	git checkout "$version"
-	sed -E -i "s/commit: [a-f0-9]{40}/commit: $commit/" org.turbowarp.TurboWarp.yaml
+	sed -E -i "s/commit: [a-f0-9]{40}/commit: $commit/" org.neowarp.NeoWarp.yaml
 	python3 update-library.py
 	python3 update-packager.py
-	flatpak-node-generator npm ../turbowarp-desktop/package-lock.json
-	flatpak-builder build org.turbowarp.TurboWarp.yaml --force-clean --install --user
-	flatpak run org.turbowarp.TurboWarp
+	flatpak-node-generator npm ../neowarp/package-lock.json
+	flatpak-builder build org.neowarp.NeoWarp.yaml --force-clean --install --user
+	flatpak run org.neowarp.NeoWarp
 	await_confirmation
 	git stage .
 	git commit -m "Update to $version" -m "Automated"
@@ -69,7 +69,7 @@ update_flatpak() {
 
 update_aur() {
 	echo "Updating AUR"
-	cd "$src/../turbowarp-desktop-bin"
+	cd "$src/../neowarp-bin"
 	git checkout master
 	git pull
 	sed -E -i "s/pkgver=.*/pkgver=$version/" PKGBUILD
@@ -79,7 +79,7 @@ update_aur() {
 	updpkgsums
 	makepkg --printsrcinfo > .SRCINFO
 	makepkg -si
-	turbowarp-desktop
+	neowarp
 	await_confirmation
 	git stage .
 	git commit -m "Update to $version" -m "Automated"
@@ -92,10 +92,10 @@ update_snap() {
 	rm dist/*.snap || true
 	npm run webpack:prod
 	npx electron-builder --linux snap --publish never --config.extraMetadata.tw_dist="release-snap-$(uname -m)"
-	snap install --dangerous dist/TurboWarp-*.snap
-	snap run turbowarp-desktop
+	snap install --dangerous dist/NeoWarp-*.snap
+	snap run neowarp
 	await_confirmation
-	snapcraft upload --release=stable dist/TurboWarp-*.snap
+	snapcraft upload --release=stable dist/NeoWarp-*.snap
 }
 
 update_debian() {
@@ -111,7 +111,7 @@ update_snap
 update_debian
 
 echo "THINGS YOU STILL NEED TO DO:"
-echo " - Merge flatpak/org.turbowarp.TurboWarp PR"
+echo " - Merge flatpak/org.neowarp.NeoWarp PR"
 echo " - Delete old binaries from Debian repository"
 echo " - Upload to Microsoft Store"
 echo " - Announcements"

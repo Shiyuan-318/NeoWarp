@@ -1198,3 +1198,21 @@ index 0000000..48cb377
 +    }
 +    return 'png';
 +};
+
+diff --git a/node_modules/scratch-gui/src/lib/vm-listener-hoc.jsx b/node_modules/scratch-gui/src/lib/vm-listener-hoc.jsx
+index 6339518..0960271 100644
+--- a/node_modules/scratch-gui/src/lib/vm-listener-hoc.jsx
++++ b/node_modules/scratch-gui/src/lib/vm-listener-hoc.jsx
+@@ -340,6 +340,12 @@ const vmListenerHOC = function (WrappedComponent) {
+         onInterpolationChanged: interpolation => dispatch(setInterpolationState(interpolation)),
+         onCompilerOptionsChanged: options => dispatch(setCompilerOptionsState(options)),
+         onPlatformMismatch: (platform, callback) => {
++            // NeoWarp is a fork of TurboWarp Desktop, so projects still declaring
++            // TurboWarp as their platform are fully compatible; don't warn.
++            if (platform && platform.name === 'TurboWarp') {
++                callback();
++                return;
++            }
+             dispatch(setPlatformMismatchDetails(platform, callback));
+             dispatch(openUnknownPlatformModal());
+         },

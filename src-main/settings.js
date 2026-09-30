@@ -101,6 +101,14 @@ class Settings {
     this.data.updateChecker = updateChecker;
   }
 
+  // 全局 UI 主题：system（跟随系统/编辑器自身设置）、light、dark
+  get uiTheme () {
+    return this.data.uiTheme || 'system';
+  }
+  set uiTheme (uiTheme) {
+    this.data.uiTheme = uiTheme;
+  }
+
   get ignoredUpdate () {
     return this.data.ignoredUpdate || null;
   }
@@ -199,6 +207,29 @@ class Settings {
     this.data.aiProviders = aiProviders;
   }
 
+  /**
+   * 统一的 AI 模型配置列表（AI 助手 / SOLO / 扩展编辑器 / 桌面设置共用）。
+   * 每项形状：{id, name, provider, model, apiKey, apiFormat, customEndpoint,
+   * customModelId, customContextLimit, thinkingLevel}，与 AI 助手原有
+   * savedConfigs 一致。
+   */
+  get aiModelConfigs () {
+    return Array.isArray(this.data.aiModelConfigs) ? this.data.aiModelConfigs : [];
+  }
+  set aiModelConfigs (aiModelConfigs) {
+    this.data.aiModelConfigs = Array.isArray(aiModelConfigs) ? aiModelConfigs : [];
+  }
+
+  /**
+   * 当前激活的 AI 模型配置 id（所有 AI 界面共用同一激活项）。
+   */
+  get activeAiModelConfigId () {
+    return this.data.activeAiModelConfigId || null;
+  }
+  set activeAiModelConfigId (activeAiModelConfigId) {
+    this.data.activeAiModelConfigId = activeAiModelConfigId || null;
+  }
+
   get topBarDeviceStats () {
     return this.data.topBarDeviceStats === true;
   }
@@ -211,6 +242,58 @@ class Settings {
   }
   set lastUpdateCheckDate (lastUpdateCheckDate) {
     this.data.lastUpdateCheckDate = lastUpdateCheckDate;
+  }
+
+  /**
+   * 主页自定义 Logo：null 表示默认；以 data:image 开头时视为图片，
+   * 否则视为自定义 HTML 片段。
+   */
+  get homeLogo () {
+    return this.data.homeLogo || null;
+  }
+  set homeLogo (homeLogo) {
+    this.data.homeLogo = homeLogo;
+  }
+
+  /**
+   * 主页标题文字：null 表示默认的 "NeoWarp"。
+   */
+  get homeLogoText () {
+    return this.data.homeLogoText || null;
+  }
+  set homeLogoText (homeLogoText) {
+    this.data.homeLogoText = homeLogoText;
+  }
+
+  /**
+   * 主页自定义背景图：null 表示默认的环境光背景；
+   * 以 data:image 开头时视为图片，主页按钮随之切换为液态玻璃效果。
+   */
+  get homeBackground () {
+    return this.data.homeBackground || null;
+  }
+  set homeBackground (homeBackground) {
+    this.data.homeBackground = homeBackground;
+  }
+
+  /**
+   * 最近打开的本地项目（Scratch 工程与 .js 扩展工程）。
+   */
+  get recentProjects () {
+    return Array.isArray(this.data.recentProjects) ? this.data.recentProjects : [];
+  }
+  set recentProjects (recentProjects) {
+    this.data.recentProjects = recentProjects;
+  }
+
+  /**
+   * 是否在主页显示"最近项目"。
+   */
+  get showRecentProjects () {
+    return this.data.showRecentProjects !== false;
+  }
+  set showRecentProjects (showRecentProjects) {
+    this.data.showRecentProjects = showRecentProjects === true;
   }
 }
 

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0d0d0f;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            user-select: none;
+        }
+        .stage-wrap {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 舞台区：占满窗口，画布在其中等比居中。画布必须绝对定位于这个
+           容器内（容器自身保持 in-flow），否则窗口里会出现黑边 */
+        .stage-area {
+            flex: 1;
+            min-height: 0;
+            position: relative;
+            overflow: hidden;
+            background: #0d0d0f;
+        }
+        #stage-canvas {
+            position: absolute;
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            cursor: pointer;
+        }
+        #hint {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.28);
+            font-size: 13px;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #hint.hidden { opacity: 0; }
+        /* 覆盖层容器：与画布显示区域完全重合，变量监视器渲染在里面 */
+        #overlayLayer {
+            position: absolute;
+            pointer-events: none;
+            z-index: 3;
+        }
+        /* 变量/列表监视器：观感对齐 scratch-gui（浅紫蓝底 + 白色圆角值框） */
+        .monitor {
+            position: absolute;
+            background: #e5f0ff;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.35;
+            overflow: hidden;
+            color: #575e75;
+        }
+        .monitor .m-label {
+            font-weight: bold;
+            text-align: center;
+            padding: 2px 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .monitor .m-value {
+            margin: 0 4px 3px;
+            padding: 1px 4px;
+            background: #ff8c1a;
+            color: #fff;
+            border-radius: 4px;
+            text-align: center;
+            min-width: 34px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .monitor.large .m-label { display: none; }
+        .monitor.large .m-value { margin: 2px 4px; }
+        .monitor.list .m-value {
+            margin: 0 3px 3px;
+            padding: 0;
+            background: #ff8c1a;
+            max-height: 240px;
+            overflow-y: auto;
+            text-align: left;
+        }
+        .monitor.list .m-row {
+            display: flex;
+            gap: 4px;
+            padding: 2px 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+        }
+        .monitor.list .m-row:last-child { border-bottom: none; }
+        .monitor.list .m-row-index {
+            opacity: 0.75;
+            min-width: 16px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .monitor.list .m-row-text { word-break: break-all; }
+        .monitor.list .m-more { padding: 2px 4px; opacity: 0.85; font-size: 11px; }
+        /* 提问框：ask and wait 的"回答"输入条，浮在舞台底部 */
+        #promptBar {
+            position: absolute;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
+            z-index: 6;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+            pointer-events: all;
+            user-select: text;
+        }
+        #promptBar.visible { display: flex; }
+        #promptQuestion {
+            flex-shrink: 0;
+            max-width: 55%;
+            font-size: 13px;
+            color: #575e75;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #answerInput {
+            flex: 1;
+            min-width: 60px;
+            font: inherit;
+            font-size: 13px;
+            color: #575e75;
+            padding: 5px 8px;
+            border: 1.5px solid #4c97ff;
+            border-radius: 6px;
+            outline: none;
+            background: #fff;
+        }
+        #answerInput:focus { border-color: #0f8dff; box-shadow: 0 0 0 2px rgba(76, 151, 255, 0.25); }
+        #answerSubmit {
+            flex-shrink: 0;
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 50%;
+            background: #4c97ff;
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #answerSubmit:hover { background: #0f8dff; }
+        /* 底部控制条：固定在舞台画面下方，不悬浮、不遮挡画面 */
+        .controls {
+            flex-shrink: 0;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: #17171c;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .ctrl-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+            transition: transform 0.12s ease, background 0.12s ease,
+                box-shadow 0.12s ease, opacity 0.12s ease;
+        }
+        .ctrl-btn:hover { transform: translateY(-1px); }
+        .ctrl-btn:active { transform: scale(0.88); }
+        .ctrl-btn:focus-visible {
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+                0 0 0 2px rgba(76, 151, 255, 0.55);
+        }
+        .ctrl-btn:disabled {
+            opacity: 0.3;
+            cursor: default;
+            transform: none;
+        }
+        /* 绿旗：Scratch 标志性的绿旗形状，运行中带呼吸光晕 */
+        .ctrl-btn.flag {
+            background: rgba(76, 191, 86, 0.15);
+            color: #4cbf56;
+        }
+        .ctrl-btn.flag:hover { background: rgba(76, 191, 86, 0.3); }
+        .ctrl-btn.flag.running { animation: glow 1.6s ease-in-out infinite; }
+        /* 暂停/继续：一个按钮两态，图标表示点击后发生的动作；
+           暂停期间按钮填充为实心琥珀色，一眼能看出当前停着 */
+        .ctrl-btn.pause {
+            background: rgba(255, 179, 64, 0.14);
+            color: #ffb340;
+        }
+        .ctrl-btn.pause:hover { background: rgba(255, 179, 64, 0.28); }
+        .ctrl-btn.pause.paused {
+            background: #ffb340;
+            color: #202024;
+        }
+        .ctrl-btn.stop {
+            background: rgba(255, 85, 79, 0.14);
+            color: #ff554f;
+        }
+        .ctrl-btn.stop:hover { background: rgba(255, 85, 79, 0.28); }
+        .ctrl-btn svg { width: 15px; height: 15px; }
+        .ctrl-btn .icon-pause, .ctrl-btn .icon-play { display: none; }
+        .ctrl-btn:not(.paused) .icon-pause { display: block; }
+        .ctrl-btn.paused .icon-play { display: block; }
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+                    0 0 0 0 rgba(76, 191, 86, 0);
+            }
+            50% {
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+                    0 0 12px 2px rgba(76, 191, 86, 0.4);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="stage-wrap">
+        <div class="stage-area" id="stageArea">
+            <canvas id="stage-canvas"></canvas>
+            <div id="overlayLayer"></div>
+            <div id="hint">Waiting for stage…</div>
+            <div id="promptBar">
+                <span id="promptQuestion"></span>
+                <input id="answerInput" type="text" autocomplete="off">
+                <button id="answerSubmit" title="Submit" aria-label="Submit">✓</button>
+            </div>
+        </div>
+        <div class="controls" id="controls">
+            <button class="ctrl-btn flag" id="flagBtn" title="Go" aria-label="Go">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 3.5a1 1 0 0 1 1.38-.92l.9.36A1 1 0 0 0 9 2.94c.62.24 1.07.8 1.07 1.46v13.05a1 1 0 0 1-.36.77l-.33.28a1 1 0 0 1-1.3-.02L6 16.6a1 1 0 0 1-.36-.77V3.5z"/>
+                    <path d="M10.5 6.2c1.9-1.28 4.15-1.28 6.75 0 1.17.58 2.34.58 3.5 0 .37-.18.75.11.75.52v8.7c0 .23-.11.44-.3.55-1.55.93-3.1.93-4.65 0-2.03-1.07-4.06-1.07-6.05 0z"/>
+                </svg>
+            </button>
+            <button class="ctrl-btn pause" id="pauseBtn" title="Pause" aria-label="Pause" disabled>
+                <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16" rx="1"/>
+                    <rect x="14" y="4" width="4" height="16" rx="1"/>
+                </svg>
+                <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7 4.8c0-1.03 1.13-1.66 2-1.12l11.2 6.87c.85.52.85 1.73 0 2.25L9 19.68c-.87.54-2-.09-2-1.12V4.8z"/>
+                </svg>
+            </button>
+            <button class="ctrl-btn stop" id="stopBtn" title="Stop" aria-label="Stop">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="5" y="5" width="14" height="14" rx="2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var stageArea = document.getElementById('stageArea');
+            var canvas = document.getElementById('stage-canvas');
+            var overlayLayer = document.getElementById('overlayLayer');
+            var promptBar = document.getElementById('promptBar');
+            var promptQuestion = document.getElementById('promptQuestion');
+            var answerInput = document.getElementById('answerInput');
+            var answerSubmit = document.getElementById('answerSubmit');
+            var ctx = canvas.getContext('2d');
+            var hint = document.getElementById('hint');
+            var flagBtn = document.getElementById('flagBtn');
+            var pauseBtn = document.getElementById('pauseBtn');
+            var stopBtn = document.getElementById('stopBtn');
+            var STAGE_WIDTH = 480;
+            var STAGE_HEIGHT = 360;
+            var pausedByUser = false;
+            // 画布在窗口内的显示矩形（含 stageArea 内偏移），覆盖层按它对位
+            var canvasRect = { x: 0, y: 0, width: 480, height: 360 };
+            // 监视器 id → DOM 元素，避免整层重建导致列表滚动位置丢失
+            var monitorEls = new Map();
+
+            function resizeCanvas() {
+                // 以舞台区容器为基准等比缩放并居中；容器本身保持在文档流里，
+                // 画布绝对定位不会把它挤走
+                var rect = stageArea.getBoundingClientRect();
+                var scale = Math.min(rect.width / STAGE_WIDTH, rect.height / STAGE_HEIGHT);
+                var displayWidth = Math.max(1, Math.round(STAGE_WIDTH * scale));
+                var displayHeight = Math.max(1, Math.round(STAGE_HEIGHT * scale));
+                canvas.style.width = displayWidth + 'px';
+                canvas.style.height = displayHeight + 'px';
+                canvas.style.left = Math.round((rect.width - displayWidth) / 2) + 'px';
+                canvas.style.top = Math.round((rect.height - displayHeight) / 2) + 'px';
+                canvasRect = {
+                    x: Math.round((rect.width - displayWidth) / 2),
+                    y: Math.round((rect.height - displayHeight) / 2),
+                    width: displayWidth,
+                    height: displayHeight
+                };
+                overlayLayer.style.left = canvasRect.x + 'px';
+                overlayLayer.style.top = canvasRect.y + 'px';
+                overlayLayer.style.width = canvasRect.width + 'px';
+                overlayLayer.style.height = canvasRect.height + 'px';
+                renderOverlays();
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            function setStageDimensions(width, height) {
+                width = Math.max(1, Math.round(width));
+                height = Math.max(1, Math.round(height));
+                // 位图尺寸必须始终对齐舞台尺寸：canvas 初始是 HTML 默认的 300×150，
+                // 若首帧恰好是 480×360，“尺寸没变”分支会跳过赋值，画面被裁切变形
+                if (canvas.width !== width || canvas.height !== height) {
+                    canvas.width = width;
+                    canvas.height = height;
+                }
+                if (STAGE_WIDTH !== width || STAGE_HEIGHT !== height) {
+                    STAGE_WIDTH = width;
+                    STAGE_HEIGHT = height;
+                    resizeCanvas();
+                }
+            }
+
+            SoloStagePreload.onFrame(function (dataURL) {
+                var img = new Image();
+                img.onload = function () {
+                    if (img.naturalWidth && img.naturalHeight) {
+                        setStageDimensions(img.naturalWidth, img.naturalHeight);
+                    }
+                    ctx.drawImage(img, 0, 0, STAGE_WIDTH, STAGE_HEIGHT);
+                    if (hint) hint.classList.add('hidden');
+                };
+                img.src = dataURL;
+            });
+
+            /* ── 覆盖层：变量/列表监视器 + 提问框 ──
+               这些是 scratch-gui 的 DOM 元素，canvas 快照拍不到，由编辑器随帧推送 */
+
+            function escText(text) {
+                var div = document.createElement('div');
+                div.textContent = String(text);
+                return div.innerHTML;
+            }
+
+            function buildListRows(monitor) {
+                var html = '';
+                var items = Array.isArray(monitor.value) ? monitor.value : [];
+                for (var i = 0; i < items.length; i++) {
+                    html += '<div class="m-row"><span class="m-row-index">' + (i + 1) +
+                        '</span><span class="m-row-text">' + escText(items[i]) + '</span></div>';
+                }
+                if (monitor.listTotal > items.length) {
+                    html += '<div class="m-more">… +' + (monitor.listTotal - items.length) + '</div>';
+                }
+                return html;
+            }
+
+            function renderMonitors(monitors) {
+                var scale = canvasRect.width / STAGE_WIDTH;
+                var seen = new Set();
+                var autoIndex = 0;
+                for (var i = 0; i < monitors.length; i++) {
+                    var m = monitors[i];
+                    seen.add(m.id);
+                    var el = monitorEls.get(m.id);
+                    var isList = m.mode === 'list';
+                    if (!el) {
+                        el = document.createElement('div');
+                        el.className = 'monitor';
+                        el.innerHTML = '<div class="m-label"></div><div class="m-value"></div>';
+                        overlayLayer.appendChild(el);
+                        monitorEls.set(m.id, el);
+                        if (isList) el.__listKey = null;
+                    }
+                    el.className = 'monitor' + (isList ? ' list' : (m.mode === 'large' ? ' large' : ''));
+                    // x/y 为空 = VM 让界面自动排位：在左上角纵向堆叠
+                    var mx = (typeof m.x === 'number' ? m.x : 5);
+                    var my = (typeof m.y === 'number' ? m.y : 5 + autoIndex * 34);
+                    autoIndex++;
+                    el.style.left = Math.round(mx * scale) + 'px';
+                    el.style.top = Math.round(my * scale) + 'px';
+                    if (isList && m.width) {
+                        el.style.width = Math.max(60, Math.round(m.width * scale)) + 'px';
+                    } else {
+                        el.style.width = '';
+                    }
+                    el.querySelector('.m-label').textContent = m.label;
+                    var valueEl = el.querySelector('.m-value');
+                    if (isList) {
+                        var key = JSON.stringify(m.value);
+                        if (el.__listKey !== key) {
+                            el.__listKey = key;
+                            valueEl.innerHTML = buildListRows(m);
+                        }
+                    } else {
+                        valueEl.textContent = String(m.value);
+                    }
+                }
+                // 移除本轮没有的监视器
+                monitorEls.forEach(function (el, id) {
+                    if (!seen.has(id)) {
+                        el.remove();
+                        monitorEls.delete(id);
+                    }
+                });
+            }
+
+            function renderPrompt(prompt) {
+                if (prompt && typeof prompt.question === 'string') {
+                    promptQuestion.textContent = prompt.question || '…';
+                    promptBar.classList.add('visible');
+                } else {
+                    promptBar.classList.remove('visible');
+                    answerInput.blur();
+                }
+            }
+
+            function renderOverlays() {
+                // 尺寸变化时按新刻度重排已渲染的监视器（缓存值在缓存表里，直接重画列表）
+                overlayLayer.style.fontSize = Math.max(10, Math.round(12 * (canvasRect.width / STAGE_WIDTH))) + 'px';
+            }
+
+            function submitAnswer() {
+                var text = answerInput.value;
+                SoloStagePreload.sendAnswer(text);
+                answerInput.value = '';
+                // 不主动隐藏提问条：VM 会立刻推送下一个 QUESTION（或 null 收尾）
+                answerInput.focus();
+            }
+            answerSubmit.addEventListener('click', submitAnswer);
+            answerInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitAnswer();
+                }
+            });
+
+            SoloStagePreload.onOverlays(function (data) {
+                if (!data) return;
+                try {
+                    renderMonitors(data.monitors || []);
+                    renderPrompt(data.prompt);
+                } catch (e) {
+                    // ignore - 覆盖层渲染失败不影响画面
+                }
+            });
+
+            // 运行状态：绿旗按钮呼吸、暂停按钮的暂停/继续两态切换
+            function syncPauseBtn() {
+                if (!pauseBtn) return;
+                pauseBtn.classList.toggle('paused', pausedByUser);
+                var label = pausedByUser ? 'Resume' : 'Pause';
+                pauseBtn.title = label;
+                pauseBtn.setAttribute('aria-label', label);
+            }
+            SoloStagePreload.onRunStatus(function (status) {
+                var running = !!(status && status.running);
+                if (flagBtn) flagBtn.classList.toggle('running', running);
+                if (pauseBtn) pauseBtn.disabled = !running && !pausedByUser;
+                syncPauseBtn();
+            });
+            // 轮到本窗口渲染时主进程会同步一次当前状态，以修正 pausedByUser
+            SoloStagePreload.onState(function (state) {
+                if (state && typeof state.paused === 'boolean') {
+                    pausedByUser = state.paused;
+                    if (pauseBtn) {
+                        pauseBtn.disabled = !state.running && !pausedByUser;
+                    }
+                    syncPauseBtn();
+                }
+                if (state && state.running !== undefined && flagBtn) {
+                    flagBtn.classList.toggle('running', !!state.running);
+                }
+            });
+
+            if (flagBtn) flagBtn.addEventListener('click', function () {
+                pausedByUser = false;
+                SoloStagePreload.sendControl('greenFlag');
+                if (pauseBtn) pauseBtn.disabled = false;
+                syncPauseBtn();
+            });
+            if (pauseBtn) pauseBtn.addEventListener('click', function () {
+                if (pauseBtn.disabled) return;
+                pausedByUser = !pausedByUser;
+                SoloStagePreload.sendControl(pausedByUser ? 'pause' : 'resume');
+                syncPauseBtn();
+            });
+            if (stopBtn) stopBtn.addEventListener('click', function () {
+                pausedByUser = false;
+                SoloStagePreload.sendControl('stop');
+                syncPauseBtn();
+            });
+
+            SoloStagePreload.ready();
+        })();
+    </script>
+</body>
+</html>

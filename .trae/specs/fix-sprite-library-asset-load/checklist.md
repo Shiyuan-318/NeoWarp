@@ -1,6 +1,0 @@
-- [x] addSpriteFromLibrary 在 storage.load 失败时通过 fetchImage 下载资源并本地存储
-- [x] addSpriteFromLibrary 两种加载都失败时返回错误，不创建空 asset 角色
-- [x] addCostumeFromLibrary 在 storage.load 失败时通过 fetchImage 下载资源并本地存储
-- [x] addCostumeFromLibrary 失败时返回错误，不添加空 asset 造型
-- [x] addSprite 工具描述明确禁止用于具名角色
-- [x] GetDiagnostics 无错误
