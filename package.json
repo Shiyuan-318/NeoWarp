@@ -222,6 +222,13 @@
         "mimeType": "application/x.neowarp.npnp"
       },
       {
+        "ext": "viewsb3",
+        "name": "NeoWarp View-only Project",
+        "description": "NeoWarp View-only Project (Encrypted)",
+        "role": "Editor",
+        "mimeType": "application/x.neowarp.viewsb3"
+      },
+      {
         "ext": "sb3",
         "name": "Scratch 3 Project",
         "description": "Scratch 3 Project",

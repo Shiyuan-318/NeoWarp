@@ -19,7 +19,7 @@ While keeping TurboWarp's high-performance compiler and extension ecosystem, Neo
 
 ---
 
-## 📖 Introduction
+## Introduction
 
 **NeoWarp** is an offline Scratch 3 editor built with Electron, based on [TurboWarp/desktop](https://github.com/TurboWarp/desktop).
 It fully inherits TurboWarp's core capabilities — the JS / Wasm compiler, hundreds of extensions, the Addon system, the Packager, dark mode, and more — and builds on top of them with major enhancements for **AI-assisted creation**, **multiplayer collaboration**, **workflow**, and **visual experience**.
@@ -33,9 +33,9 @@ Great for:
 
 ---
 
-## ✨ Feature Overview
+## Feature Overview
 
-### 🤖 AI Assistant (NeoWarp AI)
+### AI Assistant (NeoWarp AI)
 
 An AI programming assistant deeply integrated with the editor through a dedicated window:
 
@@ -48,7 +48,7 @@ An AI programming assistant deeply integrated with the editor through a dedicate
 - **Todo integration**: complex tasks are automatically broken into step cards whose progress updates in real time
 - Multi-conversation management, reasoning display, streaming output, one-click "Apply" for JSON blocks, usage statistics, and a thinking-effort slider
 
-### 🎤 NeoWarp SOLO
+### NeoWarp SOLO
 
 A "pure AI" workspace with no traditional editor UI:
 
@@ -56,7 +56,7 @@ A "pure AI" workspace with no traditional editor UI:
 - A standalone stage popup with green flag / pause / stop controls, variable monitors, and the project's "ask and wait" prompt box
 - Changes are saved straight back to the original file
 
-### 🤝 Collaboration
+### Collaboration
 
 - **Host / Join**: one side opens a room (default port 8080, room password required); other devices join by address, or **automatically discover** rooms on the same LAN
 - **Permission control**: the host configures guest permissions such as "add extensions / delete extensions / delete sprites"
@@ -64,13 +64,13 @@ A "pure AI" workspace with no traditional editor UI:
 - **Real-time project sync**: changes from any participant sync to everyone instantly
 - **Stable connection**: SHA-256 password check, heartbeat detection, auth timeouts, and oversize-frame protection
 
-### 📱 Mobile Programming
+### Mobile Programming
 
 - **Connect by QR code**: the AI assistant generates a QR code; scan it and your phone's browser gets **exactly the same** AI chat interface as the desktop
 - **Desktop as the single source of truth**: conversations, streaming output and command execution on the phone sync to the desktop editor in real time — send block commands to your project without leaving the couch
 - **Mobile preview**: the current project is served over LAN (default port 8601) as a standalone player; scan the code to try it on your phone
 
-### 🏠 Home
+### Home
 
 The app's landing page and launcher:
 
@@ -78,7 +78,7 @@ The app's landing page and launcher:
 - Recent projects list and a time-of-day greeting
 - Customizable home logo, text and background image (in Desktop Settings)
 
-### 🧩 Extension Editor
+### Extension Editor
 
 A built-in IDE for extension developers:
 
@@ -86,11 +86,11 @@ A built-in IDE for extension developers:
 - One-click "Add to Project" (injects into any open editor window) or save to the "My Extensions" library
 - A dockable **AI panel** that can pop out, helping you write and debug TurboWarp extensions
 
-### 🖼 Image Editor
+### Image Editor
 
 A standalone image editing window: shape drawing, cropping, rotation and flips, layer management, brightness / contrast / hue / saturation adjustments and filter presets — plus exclusive **frosted-glass / liquid-glass** shape effects (SVG displacement filters).
 
-### 🧰 Productivity Tool Windows
+### Productivity Tool Windows
 
 - **Todo List**: lightweight todos with OS notification reminders
 - **Project Analysis**: a donut chart of block-category usage, complexity / code-quality / health scores, exportable as an image
@@ -98,7 +98,7 @@ A standalone image editing window: shape drawing, cropping, rotation and flips, 
 - **Detached Stage**: pop the stage out into its own window (2x scaling, input forwarded) for dual-screen demos and debugging
 - **Data Preview**: preview `data:` URLs produced by running projects in a small popup window
 
-### 🎨 Editor Visuals & Personalization (deep customizations over upstream)
+### Editor Visuals & Personalization (deep customizations over upstream)
 
 - **Adjustable block corner radius**, applied live at runtime; round extension checkboxes
 - **Custom background images for the code area and the stage area**
@@ -108,19 +108,19 @@ A standalone image editing window: shape drawing, cropping, rotation and flips, 
 - Paint editor enhancements: **smart alignment guides**, new shape tools (arrow, double arrow, heart, trapezoid, triangle), and an adjustable rounded-rectangle corner radius & curvature
 - A full **"liquid glass" UI**: the Home, AI Assistant, Todo List, Task Manager and other windows use frosted-glass surfaces with transition animations
 
-### 🧠 AI Model Support
+### AI Model Support
 
 - Supports **OpenAI / Anthropic / Ollama / custom** API formats, with presets for DeepSeek, Zhipu GLM, Kimi, Xiaomi MiMo, Huawei Pangu, Qwen, SenseNova and more
 - API keys are stored only in the local `tw_config.json`; AI requests are proxied through the main process and never touch a third-party server
 - The AI Assistant / SOLO / Extension Editor **share one model configuration**, managed centrally in Desktop Settings
 
-### 🧱 Compatibility & Ecosystem
+### Compatibility & Ecosystem
 
 - Everything from TurboWarp is preserved: the **JS / Wasm compiler**, dark mode, the **Addon system**, the **Packager** (bundled offline; packages projects to HTML / ZIP / EXE and more), and all official extensions
 - Extension documentation, asset libraries and the packager are all **localized offline**
 - **NeoWarp Expands local extension library**: custom extensions placed in the `Expands/` directory are served via the `nw-expands://` protocol and appear under the "NeoWarp" tab of the extension library (a Punycode conversion extension is included as an example)
 
-### 🖥 Desktop Integration
+### Desktop Integration
 
 - Daily update check (GitHub Releases, can be disabled); the update dialog includes release notes
 - **Discord Rich Presence**: show the current project name and session time in Discord
@@ -129,7 +129,7 @@ A standalone image editing window: shape drawing, cropping, rotation and flips, 
 
 ---
 
-## 📁 File Formats
+## File Formats
 
 Natively opens / associates with the following formats:
 
@@ -137,17 +137,15 @@ Natively opens / associates with the following formats:
 | --- | --- |
 | `.np1` | NeoWarp Project (uncompressed, **default save format**) |
 | `.npnp` | NeoWarp Encrypted Project (AES-256-GCM + PBKDF2 password encryption) |
-| `.viewsb3` | NeoWarp View-only Project (for sharing and showcase) |
+| `.viewsb3` | NeoWarp View-only Project (encrypted, view-only, for sharing and showcase) |
 | `.sb3` | Scratch 3 Project |
 | `.sb2` | Scratch 2 Project |
 | `.sb` | Scratch 1 Project |
 | `.js` | NeoWarp Extension (opened by the Extension Editor) |
 
-> `.viewsb3` is currently only supported in the app's open dialogs; it is not registered as a system-level file association.
-
 ---
 
-## 🏗 Architecture & Security
+## Architecture & Security
 
 - The editor, Home, AI Assistant, Collaboration, SOLO and **20+ other windows** are all loaded through `tw-*` custom protocols, decoupled from the main process; the local asset library (`tw-library`) and extension gallery (`tw-extensions`) are bundled Brotli-compressed and work offline
 - The **Electron sandbox** is enabled process-wide, webviews are disabled, and sensitive permissions (clipboard / notifications, etc.) are approved per window
@@ -155,7 +153,7 @@ Natively opens / associates with the following formats:
 
 ---
 
-## 🚀 Download & Installation
+## Download & Installation
 
 Please visit the project's [Releases](https://github.com/Shiyuan-318/NeoWarp/releases) page to download the package matching your system:
 
@@ -169,7 +167,7 @@ Please visit the project's [Releases](https://github.com/Shiyuan-318/NeoWarp/rel
 
 ---
 
-## 🧑‍💻 Building from Source
+## Building from Source
 
 ```bash
 git clone --recursive https://github.com/Shiyuan-318/NeoWarp.git
@@ -194,7 +192,7 @@ AI assistant toolchain scripts:
 
 ---
 
-## 🗂 Project Structure
+## Project Structure
 
 ```
 ├── src-main/              # Electron main process: windows, protocols, collaboration server, phone sync, AI model configs
@@ -211,7 +209,7 @@ AI assistant toolchain scripts:
 
 ---
 
-## 🤝 Acknowledgments
+## Acknowledgments
 
 - [TurboWarp / desktop](https://github.com/TurboWarp/desktop) — provides most of the base capabilities of this project
 - [TurboWarp / scratch-gui](https://github.com/TurboWarp/scratch-gui) — the editor interface
@@ -221,13 +219,13 @@ AI assistant toolchain scripts:
 
 ---
 
-## 📜 License
+## License
 
 This project is released under the **GNU General Public License v3.0** — see the [LICENSE](./LICENSE) file for details.
 
 ---
 
-## 📬 Contact
+## Contact
 
 - Author: Shiyuan
 - GitHub: [Shiyuan-318/NeoWarp](https://github.com/Shiyuan-318/NeoWarp)

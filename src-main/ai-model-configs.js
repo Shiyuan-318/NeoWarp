@@ -25,6 +25,10 @@ const FREE_MODEL_ENDPOINT = 'https://api.sy1.top/v1/chat/completions';
 const FREE_MODEL_API_KEY = 'sk-5oRtURJhbXZ1FyqFq0apMQEnwTSCNTqOGXp3HNZb0Ip7R6Lm';
 // 全部免费模型统一 1M 上下文 / 65K 最大输出
 const FREE_MODEL_CONTEXT_LIMIT = 1000000;
+// 免费模型展示总开关：false 时主进程不再注入免费配置，所有界面
+// （AI 助手 / SOLO / 扩展编辑器 / 桌面设置 / 手机远程端）都不再展示与可选。
+// 指向免费模型的历史激活项由 resolveActiveConfigId 自动回落到用户配置。
+const FREE_MODELS_ENABLED = false;
 // 免费活动截止：2026-11-30 12:00:00（UTC+8）＝ 04:00 UTC
 const FREE_MODEL_END_AT = Date.UTC(2026, 10, 30, 4, 0, 0);
 // id 必须带 free_ 前缀且跨版本稳定：持久化的 activeAiModelConfigId 会引用它
@@ -45,6 +49,9 @@ const isFreeActivityOver = () => Date.now() >= FREE_MODEL_END_AT;
  * @returns {Array<object>}
  */
 function freeModelConfigs () {
+  // 总开关关闭时不注入：各界面拿到的列表里没有免费模型，
+  // 分组标题、卡片、下拉项都因空数组保护而不再渲染
+  if (!FREE_MODELS_ENABLED) return [];
   const expired = isFreeActivityOver();
   return FREE_MODELS.map((m) => ({
     id: m.id,
@@ -83,6 +90,9 @@ function resolveActiveConfigId (activeId, own, combined) {
  * @returns {{models: Array<object>, endAt: number, expired: boolean}}
  */
 function getFreeModelActivity () {
+  if (!FREE_MODELS_ENABLED) {
+    return {models: [], endAt: FREE_MODEL_END_AT, endpoint: FREE_MODEL_ENDPOINT, expired: true};
+  }
   return {
     models: FREE_MODELS.map(({id, model, name}) => ({id, model, name})),
     endAt: FREE_MODEL_END_AT,

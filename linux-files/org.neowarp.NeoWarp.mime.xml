@@ -27,4 +27,16 @@
     <acronym>SB</acronym>
     <generic-icon name="org.neowarp.NeoWarp" />
   </mime-type>
+  <mime-type type="application/x.neowarp.npnp">
+    <glob pattern="*.npnp" />
+    <comment>NeoWarp Encrypted Project</comment>
+    <acronym>NPNP</acronym>
+    <generic-icon name="org.neowarp.NeoWarp" />
+  </mime-type>
+  <mime-type type="application/x.neowarp.viewsb3">
+    <glob pattern="*.viewsb3" />
+    <comment>NeoWarp View-only Project (Encrypted)</comment>
+    <acronym>VSB3</acronym>
+    <generic-icon name="org.neowarp.NeoWarp" />
+  </mime-type>
 </mime-info>

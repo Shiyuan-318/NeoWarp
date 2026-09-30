@@ -63,7 +63,7 @@ class HomeWindow extends AbstractWindow {
         filters: [
           {
             name: 'NeoWarp',
-            extensions: ['sb3', 'js', 'np1', 'npnp']
+            extensions: ['sb3', 'js', 'np1', 'npnp', 'viewsb3']
           },
           {
             name: 'Scratch Project',
