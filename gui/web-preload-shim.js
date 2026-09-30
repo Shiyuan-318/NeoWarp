@@ -6,6 +6,27 @@
 (function () {
   'use strict';
 
+  // ============ 环境补丁：确保 navigator.mediaDevices 存在 ============
+  // 渲染层在模块初始化时会直接执行 navigator.mediaDevices.getUserMedia.bind(...)，
+  // 在非安全上下文（http://）或部分浏览器中 navigator.mediaDevices 为 undefined，
+  // 会抛出 TypeError 导致整个 bundle 初始化中断，这里补一个最小实现兜底。
+  if (!navigator.mediaDevices) {
+    try {
+      Object.defineProperty(navigator, 'mediaDevices', {
+        configurable: true,
+        value: {
+          getUserMedia: () => Promise.reject(new Error('当前环境不支持媒体设备（需要 HTTPS 安全上下文）')),
+          enumerateDevices: () => Promise.resolve([]),
+          getSupportedConstraints: () => ({}),
+          addEventListener: () => {},
+          removeEventListener: () => {}
+        }
+      });
+    } catch (e) {
+      // 忽略：无法定义时保持原状
+    }
+  }
+
   // ============ 内部状态 ============
   let fileIdCounter = 0;
   // file id -> File 对象 的映射（用于打开的文件）
@@ -213,12 +234,11 @@
     getPreferredMediaDevices: async () => {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
-        return {
-          audioInputId: devices.find(d => d.kind === 'audioinput')?.deviceId || '',
-          videoInputId: devices.find(d => d.kind === 'videoinput')?.deviceId || ''
-        };
+        const microphone = (devices.find(d => d.kind === 'audioinput') || {}).deviceId || null;
+        const camera = (devices.find(d => d.kind === 'videoinput') || {}).deviceId || null;
+        return { microphone, camera, audioInputId: microphone || '', videoInputId: camera || '' };
       } catch (e) {
-        return { audioInputId: '', videoInputId: '' };
+        return { microphone: null, camera: null, audioInputId: '', videoInputId: '' };
       }
     },
 
