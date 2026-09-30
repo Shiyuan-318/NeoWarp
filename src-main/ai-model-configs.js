@@ -23,7 +23,7 @@ const CONFIG_FIELDS = [
 // tw_config.json，也不落任何渲染端存储。
 const FREE_MODEL_ENDPOINT = 'https://api.sy1.top/v1/chat/completions';
 const FREE_MODEL_API_KEY = 'sk-5oRtURJhbXZ1FyqFq0apMQEnwTSCNTqOGXp3HNZb0Ip7R6Lm';
-// 全部免费模型统一 1M 上下文 / 100K 最大输出
+// 全部免费模型统一 1M 上下文 / 65K 最大输出
 const FREE_MODEL_CONTEXT_LIMIT = 1000000;
 // 免费活动截止：2026-11-30 12:00:00（UTC+8）＝ 04:00 UTC
 const FREE_MODEL_END_AT = Date.UTC(2026, 10, 30, 4, 0, 0);
