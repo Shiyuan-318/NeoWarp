@@ -48,7 +48,7 @@
     "postcss": "^8.4.13",
     "postcss-import": "^14.0.0",
     "postcss-loader": "^4.2.0",
-    "postcss-simple-vars": "^6.0.3",
+    "postcss-simple-vars": "^7.0.1",
     "scratch-gui": "github:TurboWarp/scratch-gui#develop",
     "sharp": "^0.35.1",
     "style-loader": "^0.23.0",
