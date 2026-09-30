@@ -110,7 +110,6 @@ A standalone image editing window: shape drawing, cropping, rotation and flips, 
 
 ### 🧠 AI Model Support
 
-- **Built-in free models** (no API key needed): DeepSeek V4.1 Flash, GLM-5.3 Flash, SenseNova 6.8 Flash Lite, GLM-5.2 (free promotion ends 2026-11-30)
 - Supports **OpenAI / Anthropic / Ollama / custom** API formats, with presets for DeepSeek, Zhipu GLM, Kimi, Xiaomi MiMo, Huawei Pangu, Qwen, SenseNova and more
 - API keys are stored only in the local `tw_config.json`; AI requests are proxied through the main process and never touch a third-party server
 - The AI Assistant / SOLO / Extension Editor **share one model configuration**, managed centrally in Desktop Settings
