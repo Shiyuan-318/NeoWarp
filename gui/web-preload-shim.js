@@ -6,6 +6,38 @@
 (function () {
   'use strict';
 
+  // ============ 原生对话框（prompt.js 会把 window.alert/confirm 改写为
+  // PromptsPreload.alert/confirm，这里先保存原生实现，避免互相调用造成无限递归）
+  var nativeAlert = typeof window.alert === 'function' ? window.alert.bind(window) : function () {};
+  var nativeConfirm = typeof window.confirm === 'function' ? window.confirm.bind(window) : function () { return false; };
+
+  // ============ 轻量提示条（不依赖编辑器内部实现）============
+  var toastEl = null;
+  var toastTimer = null;
+  function showWebToast (message) {
+    if (!toastEl) {
+      toastEl = document.createElement('div');
+      toastEl.id = 'neowarp-web-toast';
+      toastEl.style.cssText =
+        'position:fixed;left:50%;bottom:32px;transform:translateX(-50%) translateY(8px);' +
+        'z-index:2147483647;padding:10px 18px;border-radius:10px;max-width:70vw;' +
+        'background:rgba(20,20,24,0.9);color:#fff;font-size:13px;line-height:1.5;' +
+        'box-shadow:0 8px 28px rgba(0,0,0,0.35);opacity:0;transition:opacity .2s,transform .2s;' +
+        'pointer-events:none;text-align:center;';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = message;
+    toastEl.style.opacity = '1';
+    toastEl.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      if (toastEl) {
+        toastEl.style.opacity = '0';
+        toastEl.style.transform = 'translateX(-50%) translateY(8px)';
+      }
+    }, 2800);
+  }
+
   // ============ 环境补丁：确保 navigator.mediaDevices 存在 ============
   // 渲染层在模块初始化时会直接执行 navigator.mediaDevices.getUserMedia.bind(...)，
   // 在非安全上下文（http://）或部分浏览器中 navigator.mediaDevices 为 undefined，
@@ -35,6 +67,8 @@
   const handleStore = new Map();
   // file id -> 可写流
   const writableStore = new Map();
+  // 主页「从文件中打开」预先存放的文件（IndexedDB 跨页面传递）
+  const pendingFileStore = new Map();
   // 监听 write stream 消息（兼容 WrappedFileWritable 的 postMessage 协议）
   window.addEventListener('message', (e) => {
     if (e.source === window) {
@@ -72,6 +106,51 @@
       }
     }
   });
+
+  // ============ IndexedDB：主页选中的文件跨页面传递 ============
+  const PENDING_DB = 'neowarp-web';
+  const PENDING_STORE = 'pending-files';
+
+  function openPendingDB () {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) return reject(new Error('IndexedDB unavailable'));
+      const req = indexedDB.open(PENDING_DB, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(PENDING_STORE)) {
+          db.createObjectStore(PENDING_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // 取出并删除主页暂存的项目文件
+  function takePendingFile () {
+    return openPendingDB().then((db) => new Promise((resolve) => {
+      let value = null;
+      const tx = db.transaction(PENDING_STORE, 'readwrite');
+      const store = tx.objectStore(PENDING_STORE);
+      const getReq = store.get('pending');
+      getReq.onsuccess = () => {
+        value = getReq.result || null;
+        store.delete('pending');
+      };
+      tx.oncomplete = () => {
+        db.close();
+        resolve(value);
+      };
+      tx.onerror = () => {
+        db.close();
+        resolve(null);
+      };
+      tx.onabort = () => {
+        db.close();
+        resolve(null);
+      };
+    }));
+  }
 
   // ============ 文件操作（用浏览器原生 File System Access API）============
   const FILE_OPEN_ACCEPTS = [
@@ -132,10 +211,21 @@
   };
 
   const getFile = async (id) => {
+    if (pendingFileStore.has(id)) {
+      const pending = pendingFileStore.get(id);
+      pendingFileStore.delete(id);
+      return {
+        data: new Uint8Array(pending.buffer),
+        name: pending.name,
+        type: 'file',
+        isEncrypted: false,
+        isViewOnly: false
+      };
+    }
     const file = fileStore.get(id);
     if (!file) throw new Error('文件未找到');
     const data = await file.arrayBuffer();
-    return { data: new Uint8Array(data), isEncrypted: false, isViewOnly: false };
+    return { data: new Uint8Array(data), name: file.name, type: 'file', isEncrypted: false, isViewOnly: false };
   };
 
   const startWriteStream = (id) => {
@@ -180,6 +270,7 @@
     applyProject: [],
     applySprite: [],
     aiToolCall: [],
+    spriteStats: [],
     requestTheme: [],
     collaborationStateChange: [],
     collaborationChatMessage: [],
@@ -188,11 +279,139 @@
     collabProjectUpdate: []
   };
 
+  // ============ 系统占用（浏览器可获取的近似值）============
+  // 浏览器没有系统级 CPU 接口，这里用主线程事件循环的阻塞比例做近似估计：
+  // 低负载时 setTimeout 基本准时，负载越高实际耗时相对预期越久。
+  let cpuEstimate = 0;
+  (function sampleCpu () {
+    const INTERVAL = 250;
+    const startedAt = performance.now();
+    setTimeout(() => {
+      if (!document.hidden) {
+        const actual = performance.now() - startedAt;
+        let busy = (actual - INTERVAL) / INTERVAL;
+        if (!isFinite(busy) || busy < 0) busy = 0;
+        if (busy > 1) busy = 1;
+        cpuEstimate = cpuEstimate * 0.6 + busy * 100 * 0.4;
+      }
+      sampleCpu();
+    }, INTERVAL);
+  })();
+
+  // ============ AI 助手窗口桥接 ============
+  // 编辑器窗口打开 AI 助手（同源新窗口），两边用 postMessage 通信，
+  // AI 窗口通过 AIAssistantPreload 请求工程内容 / 工具调用 / 应用改动。
+  let aiWindow = null;
+  const aiPending = new Map();
+
+  function postToSource (source, message) {
+    if (!source) return;
+    try {
+      source.postMessage(Object.assign({ __neowarpAIResponse: true }, message), location.origin);
+    } catch (e) {
+      // 窗口已关闭等情况忽略
+    }
+  }
+
+  function respondAI (source, requestId, result) {
+    postToSource(source, { requestId, ok: true, result });
+  }
+
+  function handleAIRequest (event, msg) {
+    const source = event.source;
+    const requestId = msg.id;
+    const args = msg.args || [];
+    switch (msg.method) {
+      case 'getProjectCode': {
+        if (!callbacks.requestProjectJSON.length) {
+          respondAI(source, requestId, null);
+          return;
+        }
+        aiPending.set(requestId, { source, kind: 'projectJSON' });
+        callbacks.requestProjectJSON.forEach((cb) => {
+          try { cb({ requestId }); } catch (e) { aiPending.delete(requestId); respondAI(source, requestId, null); }
+        });
+        break;
+      }
+      case 'applyProject': {
+        callbacks.applyProject.forEach((cb) => {
+          try { cb({ projectJSON: args[0] }); } catch (e) { /* ignore */ }
+        });
+        respondAI(source, requestId, { success: true });
+        break;
+      }
+      case 'applySprite': {
+        callbacks.applySprite.forEach((cb) => {
+          try { cb({ spriteJSON: args[0], targetId: args[1] }); } catch (e) { /* ignore */ }
+        });
+        respondAI(source, requestId, { success: true });
+        break;
+      }
+      case 'callTool': {
+        if (!callbacks.aiToolCall.length) {
+          respondAI(source, requestId, { success: false, error: '编辑器尚未就绪' });
+          return;
+        }
+        aiPending.set(requestId, { source, kind: 'toolResponse' });
+        callbacks.aiToolCall.forEach((cb) => {
+          try { cb({ requestId, toolName: args[0], params: args[1] }); } catch (e) {
+            aiPending.delete(requestId);
+            respondAI(source, requestId, { success: false, error: e.message });
+          }
+        });
+        break;
+      }
+      case 'getSpriteStats': {
+        if (!callbacks.spriteStats.length) {
+          respondAI(source, requestId, { sprites: [], totalThreads: 0 });
+          return;
+        }
+        aiPending.set(requestId, { source, kind: 'spriteStats' });
+        callbacks.spriteStats.forEach((cb) => {
+          try { cb({ requestId }); } catch (e) { aiPending.delete(requestId); respondAI(source, requestId, null); }
+        });
+        break;
+      }
+      case 'getTheme': {
+        // 与编辑器同源，直接读编辑器的主题设置
+        let theme = '';
+        try {
+          const setting = localStorage.getItem('tw:theme');
+          if (setting === 'light' || setting === 'dark') {
+            theme = setting;
+          } else if (setting) {
+            const parsed = JSON.parse(setting);
+            if (parsed && (parsed.gui === 'dark' || parsed.gui === 'light')) theme = parsed.gui;
+          }
+        } catch (e) { /* ignore */ }
+        if (!theme) {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        respondAI(source, requestId, theme);
+        break;
+      }
+      default:
+        respondAI(source, requestId, null);
+    }
+  }
+
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || data.__neowarpAI !== true) return;
+    if (event.origin !== location.origin) return;
+    handleAIRequest(event, data);
+  });
+
   // ============ EditorPreload 浏览器版实现 ============
   window.EditorPreload = {
     // 基础
     isInitiallyFullscreen: () => false,
-    getInitialFile: () => Promise.resolve(null),
+    getInitialFile: () => takePendingFile().then((pending) => {
+      if (!pending || !pending.buffer) return null;
+      const id = `pending-${++fileIdCounter}`;
+      pendingFileStore.set(id, pending);
+      return id;
+    }).catch(() => null),
 
     // 文件操作
     getFile,
@@ -223,11 +442,11 @@
 
     // 打开子窗口（网页版改为跳转或提示）
     openNewWindow: () => window.open(location.href, '_blank'),
-    openAddonSettings: () => { window.open('addons.html', '_blank'); },
+    openAddonSettings: () => { window.open('../addons/addons.html', '_blank'); },
     openPackager: () => { window.open('https://packager.turbowarp.org', '_blank'); },
-    openDesktopSettings: () => alert('网页版暂不支持桌面设置'),
-    openPrivacy: () => alert('网页版暂不支持隐私设置页面'),
-    openAbout: () => alert('NeoWarp 网页版\n基于 TurboWarp 二次开发'),
+    openDesktopSettings: () => showWebToast('网页版暂不支持桌面设置，可使用附加组件设置页面'),
+    openPrivacy: () => showWebToast('网页版暂不支持隐私设置页面'),
+    openAbout: () => showWebToast('NeoWarp 网页版\n基于 TurboWarp 二次开发'),
     openContact: () => { window.open('https://github.com/Shiyuan-318/NeoWarp', '_blank'); },
 
     // 媒体设备
@@ -258,8 +477,31 @@
       window._neowarpExportForPackager = callback;
     },
 
-    // 系统状态（浏览器拿不到真实 CPU/内存，返回空）
-    getSystemStats: async () => ({ cpuUsage: 0, memory: { used: 0, total: 0 } }),
+    // 系统状态：菜单栏需要 cpuPercent / ramUsedMB，
+    // 顶部悬浮统计需要 usedMemory / totalMemory，这里一并给出
+    getSystemStats: async () => {
+      let usedMemory = 0;
+      let totalMemory = 0;
+      const perfMemory = (typeof performance !== 'undefined') && performance.memory;
+      if (perfMemory) {
+        usedMemory = perfMemory.usedJSHeapSize || 0;
+        totalMemory = perfMemory.jsHeapSizeLimit || 0;
+      } else if (navigator.deviceMemory) {
+        // 浏览器不提供精确的已用内存，退化为设备内存上限
+        totalMemory = navigator.deviceMemory * 1024 * 1024 * 1024;
+      }
+      const ramUsedMB = Math.max(0, Math.round(usedMemory / 1024 / 1024));
+      const cpuPercent = Math.round(cpuEstimate * 10) / 10;
+      return {
+        cpuPercent,
+        ramUsedMB,
+        usedMemory,
+        totalMemory,
+        // 兼容旧字段命名
+        cpuUsage: cpuPercent,
+        memory: { used: usedMemory, total: totalMemory }
+      };
+    },
     getTopBarDeviceStats: () => false,
 
     // 分离舞台（网页版不支持，给空实现避免报错）
@@ -290,15 +532,40 @@
       } catch (e) {}
     },
 
-    // AI 助手（网页版暂不支持，给空实现）
-    openAI: () => alert('网页版暂不支持 AI 助手，请使用桌面版'),
-    openTodoList: () => alert('网页版暂不支持待办清单，请使用桌面版'),
-    openProjectAnalysis: () => alert('网页版暂不支持项目分析，请使用桌面版'),
-    openTaskManager: () => {},
+    // AI 助手：网页版打开同源的 AI 助手窗口，通过 postMessage 与编辑器通信
+    openAI: () => {
+      const url = new URL('../ai/ai-assistant.html', location.href).href;
+      const width = 480;
+      const height = 820;
+      const left = Math.max(0, (window.screenX || 0) + (window.outerWidth || width) - width - 24);
+      const top = Math.max(0, (window.screenY || 0) + 60);
+      const features = `width=${width},height=${height},left=${left},top=${top},` +
+        'menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+      aiWindow = window.open(url, 'neowarp-ai-assistant', features);
+      if (!aiWindow || aiWindow.closed) {
+        showWebToast('浏览器拦截了 AI 助手窗口，请允许本站弹出窗口后重试');
+        return false;
+      }
+      try { aiWindow.focus(); } catch (e) {}
+      return true;
+    },
+    openTodoList: () => showWebToast('网页版暂不支持待办清单，请使用桌面版'),
+    openProjectAnalysis: () => showWebToast('网页版暂不支持项目分析，请使用桌面版'),
+    openTaskManager: () => showWebToast('网页版暂不支持任务管理器，请使用桌面版'),
+    openMobilePreview: () => showWebToast('网页版暂不支持手机预览，请使用桌面版'),
 
-    // AI 相关回调（空实现）
+    // AI 相关回调（网页版由 AI 助手窗口通过 postMessage 触发）
     onRequestProjectJSON: (cb) => { callbacks.requestProjectJSON.push(cb); },
-    sendProjectJSON: () => {},
+    sendProjectJSON: (data) => {
+      if (!data) return;
+      const pending = aiPending.get(data.requestId);
+      if (!pending) return;
+      aiPending.delete(data.requestId);
+      postToSource(pending.source, {
+        requestId: data.requestId,
+        result: { projectJSON: data.projectJSON || null, assetSize: data.assetSize || 0 }
+      });
+    },
     onApplyProject: (cb) => { callbacks.applyProject.push(cb); },
     onApplySprite: (cb) => { callbacks.applySprite.push(cb); },
     onRequestSpriteLibrary: (cb) => {},
@@ -313,23 +580,36 @@
       }
     },
     onAIToolCall: (cb) => { callbacks.aiToolCall.push(cb); },
-    sendAIToolResponse: () => {},
+    sendAIToolResponse: (data) => {
+      if (!data) return;
+      const pending = aiPending.get(data.requestId);
+      if (!pending) return;
+      aiPending.delete(data.requestId);
+      postToSource(pending.source, { requestId: data.requestId, result: data.result });
+    },
     onRequestTheme: (cb) => { callbacks.requestTheme.push(cb); },
     sendTheme: () => {},
     notifyThemeChanged: () => {},
-    onRequestSpriteStats: (cb) => {},
-    sendSpriteStats: () => {},
+    onRequestSpriteStats: (cb) => { callbacks.spriteStats.push(cb); },
+    sendSpriteStats: (data) => {
+      if (!data) return;
+      const pending = aiPending.get(data.requestId);
+      if (!pending) return;
+      aiPending.delete(data.requestId);
+      postToSource(pending.source, { requestId: data.requestId, result: data });
+    },
     removeAllAIListeners: () => {
       callbacks.requestProjectJSON.length = 0;
       callbacks.applyProject.length = 0;
       callbacks.applySprite.length = 0;
       callbacks.aiToolCall.length = 0;
+      callbacks.spriteStats.length = 0;
       callbacks.requestTheme.length = 0;
     },
 
     // 协作（网页版暂不支持）
-    openCollaborationHost: () => alert('网页版暂不支持协作功能'),
-    openCollaborationJoin: () => alert('网页版暂不支持协作功能'),
+    openCollaborationHost: () => showWebToast('网页版暂不支持协作功能'),
+    openCollaborationJoin: () => showWebToast('网页版暂不支持协作功能'),
     endCollaboration: () => {},
     leaveCollaboration: () => {},
     openCollaborationChat: () => {},
@@ -351,9 +631,11 @@
   };
 
   // ============ PromptsPreload 浏览器版 ============
+  // 必须调用原生 alert/confirm：prompt.js 已把 window.alert 指向本对象，
+  // 直接调用 window.alert 会造成无限递归（栈溢出）
   window.PromptsPreload = {
-    alert: (message) => { alert(message); return true; },
-    confirm: (message) => confirm(message)
+    alert: (message) => { nativeAlert(message); return true; },
+    confirm: (message) => nativeConfirm(message)
   };
 
   // ============ AddonsPreload 浏览器版 ============

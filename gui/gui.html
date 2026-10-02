@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <meta name="theme-color" content="#ff4c4c">
     <!-- Unfortunately can't really enforce a CSP due to custom extensions -->
     <style>
       .splash-screen {
@@ -12,9 +14,13 @@
         top: 0;
         left: 0;
         display: flex;
+        flex-direction: column;
+        gap: 1rem;
         align-items: center;
         justify-content: center;
         text-align: center;
+        padding: 24px;
+        box-sizing: border-box;
         font-family: "HarmonyOS Sans SC Medium", "HarmonyOS Sans SC Black", "Helvetica Neue", Helvetica, Arial, sans-serif;
         color: white;
       }
@@ -40,11 +46,26 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+      .splash-reset {
+        color: inherit;
+        background: none;
+        padding: 0;
+        margin: 0;
+        border: none;
+        font-family: inherit;
+        font-size: inherit;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      .splash-reset[hidden] {
+        display: none;
+      }
     </style>
   </head>
   <body>
     <div class="splash-screen" id="splash-waiting-for-js" hidden>
       <div class="splash-spinner"></div>
+      <button class="splash-reset" id="splash-reset" type="button" hidden>加载有问题？点此清除缓存并重试</button>
     </div>
 
     <script>
@@ -97,7 +118,23 @@
         alert(`Error loading webpack script: ${event.target.src}`);
       }
     </script>
-    <script src="web-preload-shim.js"></script>
-    <script src="index.js" onerror="webpackScriptError(event)"></script>
+    <script src="../pwa.js?v=e2"></script>
+    <script src="web-preload-shim.js?v=e2"></script>
+    <script src="index.js?v=e2" onerror="webpackScriptError(event)"></script>
+    <script>
+      // 启动超过 8 秒仍未就绪（未加上 .tw-loaded）时，显示“清除缓存”入口。
+      (function () {
+        var resetButton = document.getElementById('splash-reset');
+        if (!resetButton) return;
+        resetButton.addEventListener('click', function () {
+          if (window.NeoWarpPWA) window.NeoWarpPWA.reset();
+        });
+        setTimeout(function () {
+          if (!document.documentElement.classList.contains('tw-loaded')) {
+            resetButton.hidden = false;
+          }
+        }, 8000);
+      })();
+    </script>
   </body>
 </html>
