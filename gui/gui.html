@@ -118,9 +118,10 @@
         alert(`Error loading webpack script: ${event.target.src}`);
       }
     </script>
-    <script src="../pwa.js?v=e2"></script>
-    <script src="web-preload-shim.js?v=e2"></script>
-    <script src="index.js?v=e2" onerror="webpackScriptError(event)"></script>
+    <script src="../pwa.js?v=e3"></script>
+    <script src="inapp-window.js?v=e3"></script>
+    <script src="web-preload-shim.js?v=e3"></script>
+    <script src="index.js?v=e3" onerror="webpackScriptError(event)"></script>
     <script>
       // 启动超过 8 秒仍未就绪（未加上 .tw-loaded）时，显示“清除缓存”入口。
       (function () {

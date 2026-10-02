@@ -12,7 +12,7 @@
  *   即可让全部旧缓存整体失效，无需改动任何文件名。
  */
 
-const CACHE_EPOCH = 'e2';
+const CACHE_EPOCH = 'e3';
 
 const PRECACHE = 'neowarp-precache-' + CACHE_EPOCH;
 const RUNTIME = 'neowarp-runtime-' + CACHE_EPOCH;

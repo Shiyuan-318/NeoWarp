@@ -10,10 +10,14 @@
   var pending = new Map();
   var seq = 0;
 
-  // 编辑器窗口（由编辑器 window.open 打开，因此是 window.opener）
+  // 编辑器窗口：可能是 window.opener（独立窗口打开），
+  // 也可能是 window.parent（被编辑器用内置窗口 iframe 嵌入）
   function editorWindow () {
     try {
       if (window.opener && !window.opener.closed) return window.opener;
+    } catch (e) { /* 跨源等情况 */ }
+    try {
+      if (window.parent && window.parent !== window) return window.parent;
     } catch (e) { /* 跨源等情况 */ }
     return null;
   }
@@ -111,7 +115,22 @@
     phoneSyncBroadcast: noop,
     onPhoneClientsChanged: noop,
     openDesktopSettings: function () {
-      try { window.open('../addons/addons.html', '_blank'); } catch (e) { /* ignore */ }
+      var url = new URL('../addons/addons.html', window.location.href).href;
+      // 被编辑器嵌入时，让编辑器用内置窗口打开附加组件设置
+      try {
+        if (window.parent && window.parent !== window && window.parent.NeoWarpWindow) {
+          window.parent.NeoWarpWindow.open(url, {
+            key: 'addons',
+            title: '附加组件设置',
+            modal: true,
+            draggable: false,
+            width: Math.min(1100, window.parent.innerWidth - 48),
+            height: Math.min(760, window.parent.innerHeight - 48)
+          });
+          return Promise.resolve(true);
+        }
+      } catch (e) { /* 跨源等情况 */ }
+      try { window.open(url, '_blank'); } catch (e) { /* ignore */ }
       return Promise.resolve(true);
     },
 
@@ -126,6 +145,12 @@
 
     // ── 窗口 ──
     closeWindow: function () {
+      // 被编辑器嵌入时，通知编辑器关闭所在的浮层
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ __neowarpCloseWindow: true }, ORIGIN);
+        }
+      } catch (e) { /* 跨源等情况 */ }
       try { window.close(); } catch (e) { /* ignore */ }
       return Promise.resolve(true);
     }

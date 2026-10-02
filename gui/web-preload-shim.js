@@ -442,7 +442,21 @@
 
     // 打开子窗口（网页版改为跳转或提示）
     openNewWindow: () => window.open(location.href, '_blank'),
-    openAddonSettings: () => { window.open('../addons/addons.html', '_blank'); },
+    openAddonSettings: () => {
+      const url = new URL('../addons/addons.html', location.href).href;
+      if (window.NeoWarpWindow) {
+        window.NeoWarpWindow.open(url, {
+          key: 'addons',
+          title: '附加组件设置',
+          modal: true,
+          draggable: false,
+          width: Math.min(1100, window.innerWidth - 48),
+          height: Math.min(760, window.innerHeight - 48)
+        });
+        return;
+      }
+      window.open(url, '_blank');
+    },
     openPackager: () => { window.open('https://packager.turbowarp.org', '_blank'); },
     openDesktopSettings: () => showWebToast('网页版暂不支持桌面设置，可使用附加组件设置页面'),
     openPrivacy: () => showWebToast('网页版暂不支持隐私设置页面'),
@@ -532,16 +546,22 @@
       } catch (e) {}
     },
 
-    // AI 助手：网页版打开同源的 AI 助手窗口，通过 postMessage 与编辑器通信
+    // AI 助手：网页版在编辑器内弹出内置窗口（同源 iframe），通过 postMessage 与编辑器通信
     openAI: () => {
       const url = new URL('../ai/ai-assistant.html', location.href).href;
-      const width = 480;
-      const height = 820;
-      const left = Math.max(0, (window.screenX || 0) + (window.outerWidth || width) - width - 24);
-      const top = Math.max(0, (window.screenY || 0) + 60);
-      const features = `width=${width},height=${height},left=${left},top=${top},` +
-        'menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
-      aiWindow = window.open(url, 'neowarp-ai-assistant', features);
+      if (window.NeoWarpWindow) {
+        aiWindow = window.NeoWarpWindow.open(url, {
+          key: 'ai-assistant',
+          title: 'AI 助手',
+          width: 480,
+          height: 820,
+          anchor: 'right'
+        });
+        return true;
+      }
+      // 回退：内置窗口不可用时仍以独立窗口打开
+      aiWindow = window.open(url, 'neowarp-ai-assistant',
+        'width=480,height=820,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
       if (!aiWindow || aiWindow.closed) {
         showWebToast('浏览器拦截了 AI 助手窗口，请允许本站弹出窗口后重试');
         return false;
