@@ -1,0 +1,26 @@
+{
+  "short_name": "NeoWarp",
+  "name": "NeoWarp",
+  "description": "NeoWarp —— 基于 Scratch 的创作环境（网页版）",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0a0d",
+  "theme_color": "#0a0a0d",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "720x720",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "720x720",
+      "purpose": "maskable"
+    }
+  ]
+}
