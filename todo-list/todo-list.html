@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>待办清单</title>
+    <style>
+        :root {
+            --bg: #f2f2f7;
+            --surface: #ffffff;
+            --surface-secondary: #f2f2f7;
+            --text: #1c1c1e;
+            --text-secondary: #6e6e73;
+            --text-tertiary: #aeaeb2;
+            --border: #e5e5ea;
+            --accent: #007aff;
+            --accent-light: #e6f2ff;
+            --accent-hover: #0058d0;
+            --accent-ghost: rgba(0, 122, 255, 0.08);
+            --accent-ring: rgba(0, 122, 255, 0.16);
+            --danger: #ff3b30;
+            --danger-light: #ffeceb;
+            --success: #34c759;
+            --success-light: #e8f8ed;
+            --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.09), 0 2px 6px rgba(0,0,0,0.05);
+            --glass-bg: rgba(255, 255, 255, 0.78);
+            --glass-border: rgba(0, 0, 0, 0.06);
+            --radius: 14px;
+            --radius-sm: 10px;
+            --radius-full: 9999px;
+            --transition: 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+            --spring: 0.4s cubic-bezier(0.34, 1.4, 0.44, 1);
+        }
+
+        [data-theme="dark"] {
+            --bg: #000000;
+            --surface: #1c1c1e;
+            --surface-secondary: #2c2c2e;
+            --text: #f2f2f7;
+            --text-secondary: #aeaeb2;
+            --text-tertiary: #636366;
+            --border: #38383a;
+            --accent: #0a84ff;
+            --accent-light: #1c2f45;
+            --accent-hover: #409cff;
+            --accent-ghost: rgba(10, 132, 255, 0.12);
+            --accent-ring: rgba(10, 132, 255, 0.28);
+            --danger: #ff453a;
+            --danger-light: #3a1d1c;
+            --success: #30d158;
+            --success-light: #17351d;
+            --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.25);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.3);
+            --glass-bg: rgba(28, 28, 30, 0.78);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+            transition: background var(--transition), color var(--transition);
+        }
+
+        /* ---------- 顶栏（毛玻璃） ---------- */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px clamp(14px, 4vw, 22px);
+            padding-top: max(14px, env(safe-area-inset-top));
+            background: var(--glass-bg);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 0.5px solid var(--glass-border);
+            flex-shrink: 0;
+            z-index: 10;
+            -webkit-app-region: drag;
+            transition: background var(--transition);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-icon-badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, var(--accent) 0%, #5ac8fa 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 8px rgba(0, 122, 255, 0.32);
+            flex-shrink: 0;
+        }
+        [data-theme="dark"] .header-icon-badge {
+            box-shadow: 0 3px 8px rgba(10, 132, 255, 0.4);
+        }
+
+        .header-icon {
+            width: 17px;
+            height: 17px;
+            color: #ffffff;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        /* ---------- 统计与进度 ---------- */
+        .stats-bar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px clamp(18px, 4vw, 24px) 10px;
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .stat {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .stat-value {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+        .stat-value.accent {
+            color: var(--accent);
+        }
+
+        .progress-track {
+            flex: 1;
+            height: 5px;
+            border-radius: var(--radius-full);
+            background: var(--border);
+            overflow: hidden;
+            min-width: 60px;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: var(--radius-full);
+            background: linear-gradient(90deg, var(--accent) 0%, #5ac8fa 100%);
+            transition: width 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 clamp(12px, 3vw, 18px) 16px;
+            scroll-behavior: smooth;
+        }
+
+        .main-content::-webkit-scrollbar {
+            width: 5px;
+        }
+        .main-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .main-content::-webkit-scrollbar-thumb {
+            background: var(--text-tertiary);
+            border-radius: 3px;
+        }
+
+        /* ---------- 添加栏（吸顶毛玻璃） ---------- */
+        .add-bar {
+            display: flex;
+            gap: 8px;
+            padding: 10px 2px 14px;
+            position: sticky;
+            top: 0;
+            background: var(--glass-bg);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            z-index: 5;
+            transition: background var(--transition);
+        }
+
+        .add-input {
+            flex: 1;
+            height: 42px;
+            border: 1.5px solid transparent;
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            box-shadow: var(--shadow);
+            color: var(--text);
+            font-size: 14px;
+            padding: 0 14px;
+            outline: none;
+            transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+            font-family: inherit;
+        }
+        .add-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3.5px var(--accent-ring);
+        }
+        .add-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .add-btn {
+            height: 42px;
+            padding: 0 18px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: var(--accent);
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background var(--transition), transform var(--transition), opacity var(--transition);
+            flex-shrink: 0;
+            outline: none;
+            font-family: inherit;
+            white-space: nowrap;
+            box-shadow: 0 3px 10px rgba(0, 122, 255, 0.28);
+        }
+        [data-theme="dark"] .add-btn {
+            box-shadow: 0 3px 10px rgba(10, 132, 255, 0.35);
+        }
+        .add-btn:hover { background: var(--accent-hover); }
+        .add-btn:active { transform: scale(0.95); }
+        .add-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ---------- 空状态 ---------- */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 64px 20px;
+            color: var(--text-tertiary);
+            text-align: center;
+            gap: 14px;
+            animation: fadeIn 0.4s ease;
+        }
+        .empty-state-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: var(--surface);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .empty-state-icon svg {
+            width: 30px;
+            height: 30px;
+            opacity: 0.45;
+        }
+        .empty-state-text {
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        /* ---------- 待办列表 ---------- */
+        .todo-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @keyframes itemIn {
+            from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes checkPop {
+            0% { transform: scale(0.6); }
+            55% { transform: scale(1.18); }
+            100% { transform: scale(1); }
+        }
+        @keyframes springIn {
+            0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 12px 14px;
+            border-radius: var(--radius);
+            background: var(--surface);
+            border: 0.5px solid var(--border);
+            transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition), background var(--transition), opacity var(--transition);
+            box-shadow: var(--shadow);
+            position: relative;
+            animation: itemIn 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+        .todo-item:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-1px);
+        }
+        .todo-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+        .todo-item.completed {
+            background: var(--surface-secondary);
+            box-shadow: none;
+        }
+
+        .todo-checkbox {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 1.8px solid var(--text-tertiary);
+            background: transparent;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color var(--transition), background var(--transition), transform var(--transition);
+            position: relative;
+        }
+        .todo-checkbox:hover {
+            border-color: var(--accent);
+            background: var(--accent-ghost);
+            transform: scale(1.08);
+        }
+        .todo-checkbox:active { transform: scale(0.92); }
+        .todo-checkbox.checked {
+            background: var(--success);
+            border-color: var(--success);
+            animation: checkPop var(--spring);
+        }
+        .todo-checkbox.checked::after {
+            content: '';
+            width: 6px;
+            height: 10px;
+            border: solid #ffffff;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg) translateY(-1px);
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text);
+            word-break: break-word;
+            transition: color var(--transition), opacity var(--transition);
+        }
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            text-decoration-color: var(--text-tertiary);
+            opacity: 0.55;
+            color: var(--text-secondary);
+        }
+
+        .todo-edit-input {
+            flex: 1;
+            height: 32px;
+            border: 1.5px solid var(--accent);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--text);
+            font-size: 14px;
+            padding: 0 10px;
+            outline: none;
+            font-family: inherit;
+            box-shadow: 0 0 0 3px var(--accent-ring);
+        }
+
+        .todo-actions {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            opacity: 0;
+            transition: opacity var(--transition);
+        }
+        .todo-item:hover .todo-actions,
+        .todo-item.editing .todo-actions {
+            opacity: 1;
+        }
+
+        .todo-action-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background var(--transition), color var(--transition), transform var(--transition);
+            flex-shrink: 0;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .todo-action-btn:hover {
+            background: var(--surface-secondary);
+            color: var(--text);
+        }
+        .todo-item.completed .todo-action-btn:hover {
+            background: var(--border);
+        }
+        .todo-action-btn:active { transform: scale(0.9); }
+        .todo-action-btn.delete-btn:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        .todo-action-btn svg {
+            width: 15px;
+            height: 15px;
+            pointer-events: none;
+        }
+
+        .clear-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 4px 4px;
+        }
+        .clear-btn {
+            height: 32px;
+            padding: 0 16px;
+            border: none;
+            border-radius: var(--radius-full);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 12.5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background var(--transition), color var(--transition), transform var(--transition);
+            outline: none;
+            font-family: inherit;
+        }
+        .clear-btn:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        .clear-btn:active { transform: scale(0.96); }
+
+        /* ---------- Toast ---------- */
+        .toast {
+            position: fixed;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: rgba(28, 28, 30, 0.92);
+            color: #f2f2f7;
+            border-radius: var(--radius-full);
+            padding: 9px 18px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            z-index: 100;
+            opacity: 0;
+            transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+            pointer-events: none;
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        [data-theme="dark"] .toast {
+            background: rgba(44, 44, 46, 0.95);
+            border: 0.5px solid var(--border);
+        }
+        .toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ---------- 提醒相关 ---------- */
+        .reminder-btn {
+            position: relative;
+        }
+        .reminder-btn.has-reminder {
+            color: var(--accent);
+        }
+        .reminder-btn.has-reminder::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+
+        .reminder-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.36);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+        .reminder-dialog-overlay.visible {
+            display: flex;
+            animation: fadeIn 0.22s ease;
+        }
+        .reminder-dialog-overlay.visible .reminder-dialog {
+            animation: springIn 0.32s cubic-bezier(0.34, 1.3, 0.44, 1);
+        }
+
+        .reminder-dialog {
+            background: var(--surface);
+            border-radius: 18px;
+            padding: 22px;
+            width: 330px;
+            max-width: 90vw;
+            box-shadow: var(--shadow-lg);
+            border: 0.5px solid var(--border);
+        }
+
+        .reminder-dialog-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text);
+            letter-spacing: -0.2px;
+        }
+
+        .reminder-dialog-content {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .reminder-preset-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .reminder-preset-btn {
+            flex: 1;
+            min-width: 62px;
+            height: 36px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all var(--transition);
+            outline: none;
+            font-family: inherit;
+        }
+        .reminder-preset-btn:hover {
+            background: var(--accent-ghost);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .reminder-preset-btn.selected {
+            background: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
+        }
+
+        .reminder-custom-input {
+            height: 40px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 13.5px;
+            padding: 0 12px;
+            outline: none;
+            transition: border-color var(--transition), box-shadow var(--transition);
+            font-family: inherit;
+            color-scheme: light;
+        }
+        [data-theme="dark"] .reminder-custom-input {
+            color-scheme: dark;
+        }
+        .reminder-custom-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-ring);
+        }
+
+        .reminder-dialog-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .reminder-dialog-btn {
+            flex: 1;
+            height: 40px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background var(--transition), color var(--transition), transform var(--transition);
+            outline: none;
+            font-family: inherit;
+        }
+        .reminder-dialog-btn:active { transform: scale(0.96); }
+        .reminder-dialog-btn.cancel {
+            background: var(--surface-secondary);
+            color: var(--text);
+        }
+        .reminder-dialog-btn.cancel:hover {
+            background: var(--border);
+        }
+        .reminder-dialog-btn.confirm {
+            background: var(--accent);
+            color: #ffffff;
+        }
+        .reminder-dialog-btn.confirm:hover {
+            background: var(--accent-hover);
+        }
+        .reminder-dialog-btn.remove {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+        .reminder-dialog-btn.remove:hover {
+            background: var(--danger);
+            color: #ffffff;
+        }
+
+        /* 提醒时间徽标 */
+        .reminder-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--accent);
+            background: var(--accent-ghost);
+            border-radius: var(--radius-full);
+            padding: 2px 8px;
+            margin-left: 8px;
+            vertical-align: 1px;
+            white-space: nowrap;
+        }
+        .reminder-indicator svg {
+            width: 11px;
+            height: 11px;
+        }
+        .todo-item.completed .reminder-indicator {
+            display: none;
+        }
+    </style>
+    <script src="../assets/nw-core.js"></script>
+    <script src="../assets/shims/misc.js"></script>
+  </head>
+<body>
+
+    <div class="header">
+        <div class="header-left">
+            <div class="header-icon-badge">
+                <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 11l3 3L22 4"></path>
+                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                </svg>
+            </div>
+            <span class="header-title">待办清单</span>
+        </div>
+
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat">
+            <span>共</span>
+            <span class="stat-value" id="totalCount">0</span>
+            <span>项</span>
+        </div>
+        <div class="stat">
+            <span>已完成</span>
+            <span class="stat-value accent" id="doneCount">0</span>
+            <span>项</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <div class="add-bar">
+            <input
+                class="add-input"
+                id="addInput"
+                type="text"
+                placeholder="输入新待办事项..."
+                maxlength="200"
+                autocomplete="off"
+            >
+            <button class="add-btn" id="addBtn">添加</button>
+        </div>
+
+        <div class="todo-list" id="todoList"></div>
+        <div class="empty-state" id="emptyState">
+            <div class="empty-state-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2" ry="2"></rect>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+            </div>
+            <div class="empty-state-text">暂无待办事项<br>在上方输入框添加新的任务吧</div>
+        </div>
+
+        <div class="clear-bar" id="clearBar" style="display:none;">
+            <button class="clear-btn" id="clearDoneBtn">清除已完成项</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- 提醒设置对话框 -->
+    <div class="reminder-dialog-overlay" id="reminderDialogOverlay">
+        <div class="reminder-dialog">
+            <div class="reminder-dialog-title">设置提醒时间</div>
+            <div class="reminder-dialog-content">
+                <div class="reminder-preset-group" id="reminderPresetGroup">
+                    <button class="reminder-preset-btn" data-minutes="10">10分钟</button>
+                    <button class="reminder-preset-btn" data-minutes="30">30分钟</button>
+                    <button class="reminder-preset-btn" data-minutes="60">1小时</button>
+                    <button class="reminder-preset-btn" data-minutes="120">2小时</button>
+                    <button class="reminder-preset-btn" data-minutes="1440">明天</button>
+                </div>
+                <input type="datetime-local" class="reminder-custom-input" id="reminderCustomTime">
+                <div class="reminder-dialog-actions">
+                    <button class="reminder-dialog-btn cancel" id="reminderCancelBtn">取消</button>
+                    <button class="reminder-dialog-btn remove" id="reminderRemoveBtn" style="display:none;">移除提醒</button>
+                    <button class="reminder-dialog-btn confirm" id="reminderConfirmBtn">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var STORAGE_KEY = 'neowarp_todo_list';
+
+        var todos = [];
+        var editingId = null;
+        var theme = 'light';
+        var toastTimer = null;
+        var reminders = {};
+        var currentReminderTodoId = null;
+
+        var addInput = document.getElementById('addInput');
+        var addBtn = document.getElementById('addBtn');
+        var todoList = document.getElementById('todoList');
+        var emptyState = document.getElementById('emptyState');
+        var clearBar = document.getElementById('clearBar');
+        var clearDoneBtn = document.getElementById('clearDoneBtn');
+        var totalCount = document.getElementById('totalCount');
+        var doneCount = document.getElementById('doneCount');
+        var toast = document.getElementById('toast');
+        var mainContent = document.getElementById('mainContent');
+        var progressFill = document.getElementById('progressFill');
+
+        var reminderDialogOverlay = document.getElementById('reminderDialogOverlay');
+        var reminderPresetGroup = document.getElementById('reminderPresetGroup');
+        var reminderCustomTime = document.getElementById('reminderCustomTime');
+        var reminderCancelBtn = document.getElementById('reminderCancelBtn');
+        var reminderRemoveBtn = document.getElementById('reminderRemoveBtn');
+        var reminderConfirmBtn = document.getElementById('reminderConfirmBtn');
+
+        function loadTodos() {
+            try {
+                var raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    todos = JSON.parse(raw);
+                    if (!Array.isArray(todos)) todos = [];
+                }
+            } catch(e) {
+                todos = [];
+            }
+        }
+
+        function saveTodos() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+            } catch(e) {}
+        }
+
+        function generateId() {
+            return 'todo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        }
+
+        function formatTime(date) {
+            var now = new Date();
+            var d = new Date(date);
+            var month = d.getMonth() + 1;
+            var day = d.getDate();
+            var hours = d.getHours();
+            var minutes = d.getMinutes();
+            var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+            var timeStr = pad(hours) + ':' + pad(minutes);
+
+            if (d.toDateString() === now.toDateString()) {
+                return '今天 ' + timeStr;
+            }
+            var yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            if (d.toDateString() === yesterday.toDateString()) {
+                return '昨天 ' + timeStr;
+            }
+            return month + '/' + day + ' ' + timeStr;
+        }
+
+        function formatReminderTime(reminderTime) {
+            var d = new Date(reminderTime);
+            var month = d.getMonth() + 1;
+            var day = d.getDate();
+            var hours = d.getHours();
+            var minutes = d.getMinutes();
+            var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+            return month + '/' + day + ' ' + pad(hours) + ':' + pad(minutes);
+        }
+
+        function getReminderIndicatorHTML(todoId) {
+            if (!reminders[todoId]) return '';
+            var timeStr = formatReminderTime(reminders[todoId].reminderTime);
+            return '<span class="reminder-indicator" title="提醒时间: ' + timeStr + '">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>' +
+                '<path d="M13.73 21a2 2 0 0 1-3.46 0"></path>' +
+                '</svg>' +
+                timeStr +
+                '</span>';
+        }
+
+        function showToast(msg) {
+            if (toastTimer) clearTimeout(toastTimer);
+            toast.textContent = msg;
+            toast.classList.add('visible');
+            toastTimer = setTimeout(function() {
+                toast.classList.remove('visible');
+                toastTimer = null;
+            }, 2000);
+        }
+
+        function updateStats() {
+            totalCount.textContent = todos.length;
+            var done = 0;
+            todos.forEach(function(t) { if (t.completed) done++; });
+            doneCount.textContent = done;
+            emptyState.style.display = todos.length === 0 ? '' : 'none';
+            clearBar.style.display = done > 0 ? '' : 'none';
+            var percent = todos.length > 0 ? Math.round(done / todos.length * 100) : 0;
+            progressFill.style.width = percent + '%';
+        }
+
+        function renderTodos() {
+            todoList.innerHTML = '';
+
+            todos.forEach(function(todo) {
+                var isEditing = editingId === todo.id;
+
+                var item = document.createElement('div');
+                item.className = 'todo-item' + (todo.completed ? ' completed' : '') + (isEditing ? ' editing' : '');
+                item.setAttribute('data-id', todo.id);
+
+                var checkbox = document.createElement('div');
+                checkbox.className = 'todo-checkbox' + (todo.completed ? ' checked' : '');
+                checkbox.addEventListener('click', function() {
+                    toggleTodo(todo.id);
+                });
+
+                var textEl;
+                if (isEditing) {
+                    textEl = document.createElement('input');
+                    textEl.className = 'todo-edit-input';
+                    textEl.type = 'text';
+                    textEl.value = todo.text;
+                    textEl.maxLength = 200;
+                    textEl.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            finishEdit(todo.id, textEl.value.trim());
+                        } else if (e.key === 'Escape') {
+                            cancelEdit();
+                        }
+                    });
+                    textEl.addEventListener('blur', function() {
+                        finishEdit(todo.id, textEl.value.trim());
+                    });
+                } else {
+                    textEl = document.createElement('span');
+                    textEl.className = 'todo-text';
+                    textEl.innerHTML = todo.text + getReminderIndicatorHTML(todo.id);
+                    textEl.title = formatTime(todo.createdAt);
+                    textEl.addEventListener('dblclick', function() {
+                        startEdit(todo.id);
+                    });
+                }
+
+                var actions = document.createElement('div');
+                actions.className = 'todo-actions';
+
+                if (!isEditing) {
+                    var reminderBtn = document.createElement('button');
+                    reminderBtn.className = 'todo-action-btn reminder-btn' + (reminders[todo.id] ? ' has-reminder' : '');
+                    reminderBtn.title = reminders[todo.id] ? '修改提醒' : '设置提醒';
+                    reminderBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>';
+                    reminderBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        openReminderDialog(todo.id);
+                    });
+                    actions.appendChild(reminderBtn);
+
+                    var editBtn = document.createElement('button');
+                    editBtn.className = 'todo-action-btn';
+                    editBtn.title = '编辑';
+                    editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+                    editBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        startEdit(todo.id);
+                    });
+                    actions.appendChild(editBtn);
+
+                    var deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'todo-action-btn delete-btn';
+                    deleteBtn.title = '删除';
+                    deleteBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path></svg>';
+                    deleteBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        deleteTodo(todo.id);
+                    });
+                    actions.appendChild(deleteBtn);
+                }
+
+                item.appendChild(checkbox);
+                item.appendChild(textEl);
+                item.appendChild(actions);
+                todoList.appendChild(item);
+
+                if (isEditing) {
+                    setTimeout(function() { textEl.focus(); textEl.select(); }, 50);
+                }
+            });
+
+            updateStats();
+        }
+
+        function addTodo() {
+            var text = addInput.value.trim();
+            if (!text) {
+                showToast('请输入待办内容');
+                return;
+            }
+
+            todos.unshift({
+                id: generateId(),
+                text: text,
+                completed: false,
+                createdAt: new Date().toISOString()
+            });
+
+            saveTodos();
+            renderTodos();
+            addInput.value = '';
+            addInput.focus();
+        }
+
+        function toggleTodo(id) {
+            var todo = null;
+            for (var i = 0; i < todos.length; i++) {
+                if (todos[i].id === id) { todo = todos[i]; break; }
+            }
+            if (!todo) return;
+            todo.completed = !todo.completed;
+            if (todo.completed) {
+                todo.completedAt = new Date().toISOString();
+                if (reminders[id]) {
+                    cancelReminder(id);
+                }
+            } else {
+                delete todo.completedAt;
+            }
+            saveTodos();
+            renderTodos();
+        }
+
+        function startEdit(id) {
+            editingId = id;
+            renderTodos();
+        }
+
+        function finishEdit(id, newText) {
+            if (editingId === id && !newText) {
+                deleteTodo(id);
+                return;
+            }
+            var todo = null;
+            for (var i = 0; i < todos.length; i++) {
+                if (todos[i].id === id) { todo = todos[i]; break; }
+            }
+            if (todo && newText) {
+                todo.text = newText;
+                saveTodos();
+            }
+            editingId = null;
+            renderTodos();
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            renderTodos();
+        }
+
+        function deleteTodo(id) {
+            todos = todos.filter(function(t) { return t.id !== id; });
+            if (editingId === id) editingId = null;
+            if (reminders[id]) {
+                cancelReminder(id);
+            }
+            saveTodos();
+            renderTodos();
+            showToast('已删除');
+        }
+
+        function clearCompleted() {
+            var doneCount = 0;
+            todos.forEach(function(t) {
+                if (t.completed) {
+                    doneCount++;
+                    if (reminders[t.id]) {
+                        cancelReminder(t.id);
+                    }
+                }
+            });
+            if (doneCount === 0) return;
+            todos = todos.filter(function(t) { return !t.completed; });
+            saveTodos();
+            renderTodos();
+            showToast('已清除 ' + doneCount + ' 项已完成待办');
+        }
+
+        // 提醒相关函数
+        function openReminderDialog(todoId) {
+            currentReminderTodoId = todoId;
+            var hasReminder = !!reminders[todoId];
+
+            reminderRemoveBtn.style.display = hasReminder ? '' : 'none';
+
+            if (hasReminder) {
+                var reminderTime = reminders[todoId].reminderTime;
+                var date = new Date(reminderTime);
+                var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+                reminderCustomTime.value = date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+            } else {
+                reminderCustomTime.value = '';
+            }
+
+            reminderDialogOverlay.classList.add('visible');
+        }
+
+        function closeReminderDialog() {
+            reminderDialogOverlay.classList.remove('visible');
+            currentReminderTodoId = null;
+        }
+
+        function setReminder(todoId, reminderTime) {
+            var todo = null;
+            for (var i = 0; i < todos.length; i++) {
+                if (todos[i].id === todoId) { todo = todos[i]; break; }
+            }
+            if (!todo) return;
+
+            reminders[todoId] = { reminderTime: reminderTime };
+            saveReminders();
+
+            if (window.TodoListPreload) {
+                window.TodoListPreload.setReminder(todoId, todo.text, reminderTime);
+            }
+
+            renderTodos();
+            showToast('已设置提醒');
+        }
+
+        function cancelReminder(todoId) {
+            delete reminders[todoId];
+            saveReminders();
+
+            if (window.TodoListPreload) {
+                window.TodoListPreload.cancelReminder(todoId);
+            }
+
+            renderTodos();
+        }
+
+        function saveReminders() {
+            try {
+                localStorage.setItem('neowarp_todo_reminders', JSON.stringify(reminders));
+            } catch(e) {}
+        }
+
+        function loadReminders() {
+            try {
+                var raw = localStorage.getItem('neowarp_todo_reminders');
+                if (raw) {
+                    reminders = JSON.parse(raw);
+                    if (typeof reminders !== 'object' || reminders === null) reminders = {};
+                }
+            } catch(e) {
+                reminders = {};
+            }
+        }
+
+        function restoreReminders() {
+            if (!window.TodoListPreload) return;
+
+            for (var todoId in reminders) {
+                var todo = null;
+                for (var i = 0; i < todos.length; i++) {
+                    if (todos[i].id === todoId) { todo = todos[i]; break; }
+                }
+                if (todo) {
+                    window.TodoListPreload.setReminder(todoId, todo.text, reminders[todoId].reminderTime);
+                }
+            }
+
+            window.TodoListPreload.onReminderTriggered(function(data) {
+                var todoId = data.todoId;
+                delete reminders[todoId];
+                saveReminders();
+                renderTodos();
+            });
+        }
+
+        function applyTheme(t) {
+            theme = t;
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+
+        function initTheme() {
+            if (window.TodoListPreload) {
+                window.TodoListPreload.getTheme().then(function(t) {
+                    applyTheme(t);
+                });
+                window.TodoListPreload.onThemeChanged(function(data) {
+                    applyTheme(data.theme || 'light');
+                });
+            }
+        }
+
+        loadTodos();
+        loadReminders();
+
+        addBtn.addEventListener('click', addTodo);
+        addInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                addTodo();
+            }
+        });
+        clearDoneBtn.addEventListener('click', clearCompleted);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (editingId) {
+                    cancelEdit();
+                    e.preventDefault();
+                } else if (reminderDialogOverlay.classList.contains('visible')) {
+                    closeReminderDialog();
+                    e.preventDefault();
+                }
+            }
+        });
+
+        // 提醒对话框事件
+        reminderPresetGroup.addEventListener('click', function(e) {
+            if (e.target.classList.contains('reminder-preset-btn')) {
+                var minutes = parseInt(e.target.getAttribute('data-minutes'));
+                var now = new Date();
+                var targetTime = new Date(now.getTime() + minutes * 60000);
+                var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+                reminderCustomTime.value = targetTime.getFullYear() + '-' + pad(targetTime.getMonth() + 1) + '-' + pad(targetTime.getDate()) + 'T' + pad(targetTime.getHours()) + ':' + pad(targetTime.getMinutes());
+            }
+        });
+
+        reminderCancelBtn.addEventListener('click', function() {
+            closeReminderDialog();
+        });
+
+        reminderRemoveBtn.addEventListener('click', function() {
+            if (currentReminderTodoId && reminders[currentReminderTodoId]) {
+                cancelReminder(currentReminderTodoId);
+                closeReminderDialog();
+                showToast('已取消提醒');
+            }
+        });
+
+        reminderConfirmBtn.addEventListener('click', function() {
+            if (!currentReminderTodoId) return;
+
+            var reminderTime = reminderCustomTime.value;
+            if (!reminderTime) {
+                showToast('请选择提醒时间');
+                return;
+            }
+
+            setReminder(currentReminderTodoId, reminderTime);
+            closeReminderDialog();
+        });
+
+        reminderDialogOverlay.addEventListener('click', function(e) {
+            if (e.target === reminderDialogOverlay) {
+                closeReminderDialog();
+            }
+        });
+
+        initTheme();
+        renderTodos();
+        restoreReminders();
+
+        setTimeout(function() {
+            addInput.focus();
+        }, 200);
+    })();
+    </script>
+</body>
+</html>

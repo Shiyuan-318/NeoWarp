@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>NeoWarp 舞台</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: #000;
+    color: #f5f5f7;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+  }
+  #stage-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    position: relative;
+    overflow: hidden;
+  }
+  #stage {
+    max-width: 100%;
+    max-height: 100%;
+    display: none;
+    background: #fff;
+  }
+  #monitors {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 62%;
+    max-height: 70%;
+    overflow: auto;
+    pointer-events: none;
+  }
+  .monitor {
+    background: rgba(255, 255, 255, 0.92);
+    color: #1d1d1f;
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    line-height: 1.5;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    width: fit-content;
+    max-width: 100%;
+    word-break: break-all;
+  }
+  .monitor b { font-weight: 600; margin-right: 6px; }
+  .monitor.list { white-space: pre-wrap; }
+  #placeholder {
+    color: #6e6e73;
+    font-size: 14px;
+    text-align: center;
+    padding: 0 28px;
+    line-height: 1.8;
+  }
+  #placeholder .spin {
+    width: 26px; height: 26px;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: #0a84ff;
+    border-radius: 50%;
+    margin: 0 auto 14px;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #controls {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: rgba(20, 20, 22, 0.96);
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  #controls button {
+    flex: 1;
+    height: 52px;
+    border: none;
+    border-radius: 14px;
+    font-size: 21px;
+    background: rgba(255,255,255,0.08);
+    color: #f5f5f7;
+    cursor: pointer;
+    transition: transform 0.08s ease, opacity 0.2s ease;
+  }
+  #controls button:active { transform: scale(0.93); }
+  #controls button.flag { background: rgba(52, 199, 89, 0.22); }
+  #controls button.stop { background: rgba(255, 69, 58, 0.2); }
+  #controls button:disabled { opacity: 0.35; }
+  #status-bar {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    z-index: 50;
+    padding: 7px 16px;
+    border-radius: 9999px;
+    background: rgba(255, 59, 48, 0.94);
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    max-width: calc(100% - 32px);
+    text-align: center;
+  }
+  #status-bar.show { opacity: 1; }
+  #status-bar.ok { background: rgba(52, 199, 89, 0.94); }
+  #ask-box {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    display: none;
+    gap: 8px;
+    z-index: 40;
+  }
+  #ask-box.show { display: flex; }
+  #ask-input {
+    flex: 1;
+    border: none;
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-size: 14px;
+    background: rgba(255,255,255,0.96);
+    color: #1d1d1f;
+    outline: none;
+  }
+  #ask-send {
+    border: none;
+    border-radius: 12px;
+    padding: 0 18px;
+    font-size: 14px;
+    font-weight: 600;
+    background: #0a84ff;
+    color: #fff;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div id="stage-wrap">
+    <div id="placeholder"><div class="spin"></div><span id="placeholder-text">正在连接电脑端…</span></div>
+    <img id="stage" alt="舞台画面" draggable="false">
+    <div id="monitors"></div>
+    <div id="ask-box">
+      <input id="ask-input" type="text" placeholder="输入回答…">
+      <button id="ask-send" type="button">发送</button>
+    </div>
+  </div>
+  <div id="controls">
+    <button id="btn-flag" class="flag" type="button" title="绿旗" disabled>🚩</button>
+    <button id="btn-pause" type="button" title="暂停" disabled>⏸</button>
+    <button id="btn-resume" type="button" title="继续" disabled>▶️</button>
+    <button id="btn-stop" class="stop" type="button" title="停止" disabled>⏹</button>
+  </div>
+  <div id="status-bar"></div>
+
+  <script src="../assets/vendor/mqtt.min.js"></script>
+  <script src="../assets/nw-core.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var stageEl = document.getElementById('stage');
+    var monitorsEl = document.getElementById('monitors');
+    var placeholderEl = document.getElementById('placeholder');
+    var placeholderText = document.getElementById('placeholder-text');
+    var statusBar = document.getElementById('status-bar');
+    var askBox = document.getElementById('ask-box');
+    var askInput = document.getElementById('ask-input');
+    var buttons = ['btn-flag', 'btn-pause', 'btn-resume', 'btn-stop'].map(function (id) {
+      return document.getElementById(id);
+    });
+
+    var session = null;
+    var connected = false;
+    var cmdId = 0;
+    var lastFrameAt = 0;
+    var statusTimer = 0;
+
+    function setStatus (text, kind, holdMs) {
+      statusBar.textContent = text;
+      statusBar.className = 'show' + (kind === 'ok' ? ' ok' : '');
+      if (statusTimer) clearTimeout(statusTimer);
+      if (holdMs) {
+        statusTimer = setTimeout(function () { statusBar.className = ''; }, holdMs);
+      }
+    }
+
+    function setButtonsEnabled (enabled) {
+      buttons.forEach(function (b) { b.disabled = !enabled; });
+    }
+
+    function sendCmd (action) {
+      if (!session || !connected) return;
+      var id = 'c' + (++cmdId);
+      var orig = session.link.onData;
+      session.link.onData = function (obj) {
+        if (orig) orig.apply(session.link, arguments);
+        if (obj && obj.t === 'stage-cmd-res' && obj.id === id) {
+          session.link.onData = orig;
+        }
+      };
+      session.send({t: 'stage-cmd', id: id, action: action});
+    }
+
+    function renderMonitors (data) {
+      if (!data) return;
+      var question = data.question;
+      if (question) {
+        askBox.classList.add('show');
+        askInput.placeholder = question;
+      } else {
+        askBox.classList.remove('show');
+      }
+      var monitors = data.monitors || [];
+      var byId = {};
+      Array.prototype.forEach.call(monitorsEl.children, function (el) {
+        byId[el.getAttribute('data-id')] = el;
+      });
+      monitorsEl.innerHTML = '';
+      monitors.forEach(function (m) {
+        var el = document.createElement('div');
+        el.className = 'monitor' + (m.mode === 'list' ? ' list' : '');
+        el.setAttribute('data-id', m.id);
+        var label = document.createElement('b');
+        label.textContent = m.label || '';
+        el.appendChild(label);
+        var value = m.value;
+        if (m.mode === 'list') {
+          var lines = (Array.isArray(value) ? value : []).map(function (v) { return String(v); });
+          if (m.listTotal > lines.length) lines.push('… 共 ' + m.listTotal + ' 项');
+          el.appendChild(document.createTextNode(lines.join('\n')));
+        } else {
+          el.appendChild(document.createTextNode(String(value == null ? '' : value)));
+        }
+        monitorsEl.appendChild(el);
+      });
+    }
+
+    function handleData (obj) {
+      if (!obj) return;
+      if (obj.t === 'frame') {
+        if (!connected) {
+          connected = true;
+          placeholderEl.style.display = 'none';
+          stageEl.style.display = 'block';
+          setButtonsEnabled(true);
+          setStatus('已连接，实时画面传输中', 'ok', 2000);
+        }
+        lastFrameAt = Date.now();
+        // 跳过与当前显示完全相同的帧，减少重绘
+        if (stageEl.getAttribute('src') !== obj.data) {
+          stageEl.setAttribute('src', obj.data);
+        }
+      } else if (obj.t === 'overlays') {
+        renderMonitors(obj.data);
+      } else if (obj.t === 'bye' || obj.t === 'phone-closed') {
+        setStatus('电脑端已关闭分享', null);
+        connected = false;
+        setButtonsEnabled(false);
+      }
+    }
+
+    function start () {
+      var params = new URLSearchParams(location.search);
+      var room = params.get('r');
+      if (!room) {
+        placeholderText.textContent = '链接缺少房间号（?r=…），请从电脑端重新扫码';
+        placeholderEl.querySelector('.spin').style.display = 'none';
+        return;
+      }
+      if (!window.NW || !NW.remote || !NW.remote.isAvailable()) {
+        placeholderText.textContent = '当前浏览器不支持 WebRTC，请使用较新的 Chrome / Safari';
+        placeholderEl.querySelector('.spin').style.display = 'none';
+        return;
+      }
+      session = NW.remote.join(room, {
+        onOpen: function () {
+          setStatus('已建立点对点连接，等待画面…', 'ok', 2500);
+        },
+        onData: function (link, obj) { handleData(obj); },
+        onClose: function () {
+          setStatus('与电脑的连接已断开', null);
+          connected = false;
+          setButtonsEnabled(false);
+          placeholderEl.style.display = 'flex';
+          placeholderText.textContent = '连接已断开，请刷新页面重试';
+          stageEl.style.display = 'none';
+        },
+        onFail: function (error) {
+          placeholderText.textContent = '连接失败：' + ((error && error.message) || '请确认电脑端预览已开启');
+          placeholderEl.querySelector('.spin').style.display = 'none';
+        }
+      });
+    }
+
+    document.getElementById('btn-flag').addEventListener('click', function () { sendCmd('greenFlag'); });
+    document.getElementById('btn-pause').addEventListener('click', function () { sendCmd('pause'); });
+    document.getElementById('btn-resume').addEventListener('click', function () { sendCmd('resume'); });
+    document.getElementById('btn-stop').addEventListener('click', function () { sendCmd('stop'); });
+    document.getElementById('ask-send').addEventListener('click', function () {
+      var text = askInput.value.trim();
+      if (!text || !session || !connected) return;
+      session.send({t: 'answer', text: text});
+      askInput.value = '';
+      askBox.classList.remove('show');
+    });
+    askInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') document.getElementById('ask-send').click();
+    });
+
+    start();
+  })();
+  </script>
+</body>
+</html>
