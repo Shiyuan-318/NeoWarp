@@ -2,7 +2,7 @@ const {app, shell, ipcMain} = require('electron');
 const fs = require('fs');
 const path = require('path');
 const AbstractWindow = require('./abstract');
-const {translate, getStrings, getLocale} = require('../l10n');
+const {translate, getStrings, getLocale, updateLocale} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const settings = require('../settings');
 const {registerAiModelConfigIpc} = require('../ai-model-configs');
@@ -28,8 +28,13 @@ class DesktopSettingsWindow extends AbstractWindow {
     registerAiModelConfigIpc(this.ipc);
 
     this.ipc.on('init', (event) => {
+      // 以持久化配置为准：l10n 当前语言与配置不一致时先纠正，
+      // 保证设置页渲染语言与配置同步（自愈历史遗留的不同步状态）
+      if (getLocale() !== settings.locale) {
+        updateLocale(settings.locale);
+      }
       event.returnValue = {
-        locale: getLocale(),
+        locale: settings.locale,
         strings: getStrings(),
         version: APP_VERSION,
         settings: {
@@ -106,6 +111,36 @@ class DesktopSettingsWindow extends AbstractWindow {
           AIAssistantWindow.broadcastTheme(nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
         }
       }
+    });
+
+    this.ipc.handle('set-locale', async (event, locale) => {
+      if (typeof locale !== 'string' || !locale) return;
+      if (settings.locale !== locale) {
+        settings.locale = locale;
+        updateLocale(locale);
+        try {
+          const rebuildMenuBar = require('../menu-bar');
+          rebuildMenuBar();
+        } catch (e) {
+          // menu-bar 不可用时忽略
+        }
+        await settings.save();
+        // 广播给已打开的 AI 助手 / SOLO 窗口，让其切换界面语言
+        const AIAssistantWindow = require('./ai-assistant');
+        for (const w of AbstractWindow.getWindowsByClass(AIAssistantWindow)) {
+          if (!w.window.isDestroyed()) {
+            w.window.webContents.send('ai-locale-changed', { locale });
+          }
+        }
+        // 主页界面文案随语言变化：重载主页窗口使其以新 locale 重新渲染
+        const HomeWindow = require('./home');
+        for (const w of AbstractWindow.getWindowsByClass(HomeWindow)) {
+          if (!w.window.isDestroyed()) {
+            w.reload();
+          }
+        }
+      }
+      return { locale };
     });
 
     this.ipc.handle('check-for-updates', async () => {
@@ -281,6 +316,18 @@ class DesktopSettingsWindow extends AbstractWindow {
   static show () {
     const window = AbstractWindow.singleton(DesktopSettingsWindow);
     window.show();
+  }
+
+  /**
+   * 重载所有桌面设置窗口。设置窗口是单例且不会自动感知别处发生的
+   * 语言切换（编辑器 / 引导页），重载使其渲染语言与配置保持同步。
+   */
+  static reloadAll () {
+    for (const w of AbstractWindow.getWindowsByClass(DesktopSettingsWindow)) {
+      if (!w.window.isDestroyed()) {
+        w.reload();
+      }
+    }
   }
 }
 

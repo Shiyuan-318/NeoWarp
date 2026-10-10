@@ -552,6 +552,16 @@ class EditorWindow extends ProjectRunningWindow {
             win.window.webContents.send('ai-locale-changed', { locale });
           }
         });
+
+        // 桌面设置与主页不会自动感知这次切换，重载保持语言同步
+        const DesktopSettingsWindow = require('./desktop-settings');
+        DesktopSettingsWindow.reloadAll();
+        const HomeWindow = require('./home');
+        for (const win of AbstractWindow.getWindowsByClass(HomeWindow)) {
+          if (!win.window.isDestroyed()) {
+            win.reload();
+          }
+        }
       }
       event.returnValue = {
         strings: getStrings()

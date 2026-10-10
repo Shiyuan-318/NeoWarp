@@ -11,6 +11,7 @@ const AbstractWindow = require('./windows/abstract');
 const EditorWindow = require('./windows/editor');
 const HomeWindow = require('./windows/home');
 const ExtensionEditorWindow = require('./windows/extension-editor');
+const OnboardingWindow = require('./windows/onboarding');
 const {checkForUpdatesOnStartup} = require('./update-checker');
 const {tranlateOrNull} = require('./l10n');
 const migrate = require('./migrate');
@@ -273,6 +274,18 @@ app.whenReady().then(() => {
       // If we use exit() instead of quit() then openExternal() calls made before the app quits
       // won't work on Windows.
       app.quit();
+      return false;
+    }
+
+    // 引导页（语言 / 深浅色 / API Key）：新安装与升级到当前版本的用户首次打开时展示。
+    // 期间保持 isMigrating=true，避免 window-all-closed 提前退出应用。
+    if (OnboardingWindow.shouldShowOnboarding()) {
+      return OnboardingWindow.run().then(() => true);
+    }
+    return true;
+  }).then((proceed) => {
+    // migrate() 决定退出时跳过后续启动逻辑（app.quit 已发出）
+    if (proceed === false) {
       return;
     }
 

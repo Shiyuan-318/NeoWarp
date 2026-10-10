@@ -88,10 +88,13 @@ class Settings {
   }
 
   get locale () {
-    return this.data.locale || 'en';
+    const locale = this.data.locale || 'en';
+    // 引导页旧版本曾写入基础码 "zh"：l10n 与 scratch-gui 都只认 zh-cn/zh-tw，
+    // 读取时统一归一化，保证已存在的 "zh" 配置也能加载到中文翻译
+    return locale === 'zh' ? 'zh-cn' : locale;
   }
   set locale (locale) {
-    this.data.locale = locale;
+    this.data.locale = locale === 'zh' ? 'zh-cn' : (locale || 'en');
   }
 
   get updateChecker () {
@@ -294,6 +297,17 @@ class Settings {
   }
   set showRecentProjects (showRecentProjects) {
     this.data.showRecentProjects = showRecentProjects === true;
+  }
+
+  /**
+   * 已完成安装引导的版本（用于判断是否需要展示引导页）。
+   * 未设置或低于当前目标版本时，启动时展示引导；完成后写入当前版本。
+   */
+  get onboardingCompletedVersion () {
+    return this.data.onboardingCompletedVersion || '';
+  }
+  set onboardingCompletedVersion (version) {
+    this.data.onboardingCompletedVersion = version || '';
   }
 }
 

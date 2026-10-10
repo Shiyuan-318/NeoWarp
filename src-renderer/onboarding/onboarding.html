@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NeoWarp</title>
+    <style>
+      /* ===== 设计令牌（深色默认，浅色整体覆盖，与主页一致） ===== */
+      :root {
+        color-scheme: dark;
+        --bg: #0a0a0d;
+        --text: #f5f5f7;
+        --text-dim: rgba(245, 245, 247, 0.55);
+        --text-faint: rgba(245, 245, 247, 0.34);
+        --surface: rgba(255, 255, 255, 0.045);
+        --surface-hover: rgba(255, 255, 255, 0.085);
+        --border: rgba(255, 255, 255, 0.08);
+        --border-hover: rgba(255, 255, 255, 0.2);
+        --selected-bg: rgba(91, 140, 255, 0.14);
+        --selected-border: rgba(120, 160, 255, 0.6);
+        --accent: #5b8cff;
+        --accent-soft: rgba(91, 140, 255, 0.16);
+        --accent-fg: #7aa7ff;
+        --orb-1: rgba(59, 123, 255, 0.55);
+        --orb-2: rgba(255, 138, 60, 0.5);
+        --orb-opacity: 0.18;
+        --brand-grad: linear-gradient(100deg, #e8ecff 20%, #9db8ff 55%, #ffb37a 90%);
+        --logo-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+        --divider: rgba(255, 255, 255, 0.07);
+        --side-bg: rgba(255, 255, 255, 0.02);
+        --focus-ring: rgba(120, 160, 255, 0.6);
+        --field-bg: rgba(255, 255, 255, 0.05);
+        --field-border: rgba(255, 255, 255, 0.12);
+        --field-border-focus: rgba(120, 160, 255, 0.65);
+        --menu-bg: rgba(24, 24, 28, 0.98);
+        --menu-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+      }
+      html[data-theme="light"] {
+        color-scheme: light;
+        --bg: #f2f2f7;
+        --text: #1d1d1f;
+        --text-dim: rgba(29, 29, 31, 0.6);
+        --text-faint: rgba(29, 29, 31, 0.38);
+        --surface: rgba(255, 255, 255, 0.7);
+        --surface-hover: rgba(255, 255, 255, 0.95);
+        --border: rgba(0, 0, 0, 0.08);
+        --border-hover: rgba(0, 0, 0, 0.18);
+        --selected-bg: rgba(66, 133, 244, 0.12);
+        --selected-border: rgba(66, 133, 244, 0.6);
+        --accent: #2f6ae0;
+        --accent-soft: rgba(47, 106, 224, 0.14);
+        --accent-fg: #3b6fe0;
+        --orb-1: rgba(90, 140, 255, 0.5);
+        --orb-2: rgba(255, 160, 90, 0.45);
+        --orb-opacity: 0.15;
+        --brand-grad: linear-gradient(100deg, #1d1d1f 20%, #3b5bdb 55%, #d97427 90%);
+        --logo-shadow: 0 14px 36px rgba(30, 40, 80, 0.18);
+        --divider: rgba(0, 0, 0, 0.08);
+        --side-bg: rgba(255, 255, 255, 0.4);
+        --focus-ring: rgba(60, 110, 240, 0.55);
+        --field-bg: rgba(255, 255, 255, 0.7);
+        --field-border: rgba(0, 0, 0, 0.12);
+        --field-border-focus: rgba(60, 110, 240, 0.65);
+        --menu-bg: rgba(255, 255, 255, 0.99);
+        --menu-shadow: 0 18px 44px rgba(30, 30, 60, 0.18);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; }
+      body {
+        font-family: "HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+        cursor: default;
+        transition: background 0.3s ease, color 0.3s ease;
+      }
+
+      /* ===== 环境光背景 ===== */
+      .ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+      .ambient::before, .ambient::after {
+        content: ""; position: absolute; width: 60vmax; height: 60vmax;
+        border-radius: 50%; filter: blur(90px); opacity: var(--orb-opacity);
+      }
+      .ambient::before {
+        top: -25vmax; left: -18vmax;
+        background: radial-gradient(circle, var(--orb-1) 0%, transparent 65%);
+        animation: orb-drift 18s ease-in-out infinite alternate;
+      }
+      .ambient::after {
+        bottom: -28vmax; right: -15vmax;
+        background: radial-gradient(circle, var(--orb-2) 0%, transparent 65%);
+        animation: orb-drift 22s ease-in-out infinite alternate-reverse;
+      }
+      @keyframes orb-drift {
+        from { transform: translate(0, 0) scale(1); }
+        to   { transform: translate(4vmax, 3vmax) scale(1.08); }
+      }
+
+      /* ===== 布局：左侧品牌/步骤，右侧内容 ===== */
+      .layout {
+        position: relative; z-index: 1;
+        height: 100%;
+        display: flex;
+      }
+
+      /* --- 左侧 --- */
+      .side {
+        width: 348px; flex-shrink: 0;
+        display: flex; flex-direction: column;
+        padding: 44px 40px 36px;
+        border-right: 1px solid var(--divider);
+        background: var(--side-bg);
+        backdrop-filter: blur(8px);
+      }
+      .brand { display: flex; align-items: center; gap: 15px; }
+      .brand .logo {
+        width: 58px; height: 58px; border-radius: 50%;
+        object-fit: cover; flex-shrink: 0;
+        box-shadow: var(--logo-shadow);
+      }
+      .brand-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+      .brand-name {
+        font-size: 22px; font-weight: 700; letter-spacing: 0.8px;
+        background: var(--brand-grad);
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .brand-version { font-size: 12px; color: var(--text-faint); letter-spacing: 0.5px; }
+      .side-lead {
+        margin: 40px 0 0;
+        font-size: 13px; line-height: 1.7;
+        color: var(--text-dim); letter-spacing: 0.3px;
+      }
+
+      .step-list {
+        list-style: none; margin: 26px 0 0; padding: 0;
+        display: flex; flex-direction: column; gap: 6px;
+      }
+      .step-item {
+        display: flex; align-items: center; gap: 14px;
+        padding: 12px 14px; border-radius: 14px;
+        color: var(--text-faint); font-size: 15px; font-weight: 500; letter-spacing: 0.3px;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+      .step-item .badge {
+        position: relative;
+        width: 27px; height: 27px; border-radius: 50%; flex-shrink: 0;
+        border: 1.5px solid currentColor;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px; font-weight: 600;
+        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      }
+      .step-item .badge .check { display: none; width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .step-item.done { color: var(--text-dim); }
+      .step-item.done .badge { border-color: transparent; background: var(--accent-soft); color: var(--accent-fg); }
+      .step-item.done .badge .num { display: none; }
+      .step-item.done .badge .check { display: block; }
+      .step-item.active { color: var(--text); background: var(--surface); }
+      .step-item.active .badge { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .side-spacer { flex: 1; }
+      .side-foot { font-size: 12px; color: var(--text-faint); letter-spacing: 0.4px; }
+
+      /* --- 右侧 --- */
+      .main {
+        flex: 1; min-width: 0;
+        display: flex; flex-direction: column;
+        padding: 56px 76px 40px;
+      }
+      .step-title { margin: 0; font-size: 33px; font-weight: 700; letter-spacing: 0.5px; }
+      .step-sub { margin: 10px 0 0; font-size: 15px; color: var(--text-dim); letter-spacing: 0.3px; }
+
+      .step-body { flex: 1; min-height: 0; display: flex; align-items: center; }
+      .pane-wrap { width: 100%; }
+      .step-pane { display: none; }
+      .step-pane.active { display: block; animation: pane-fwd 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+      .pane-wrap[data-dir="back"] .step-pane.active { animation-name: pane-back; }
+      @keyframes pane-fwd {
+        from { opacity: 0; transform: translateX(28px); }
+        to   { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes pane-back {
+        from { opacity: 0; transform: translateX(-28px); }
+        to   { opacity: 1; transform: translateX(0); }
+      }
+
+      /* ===== 语言卡片 ===== */
+      .options { display: grid; gap: 20px; }
+      .options.two { grid-template-columns: 1fr 1fr; }
+      .options.three { grid-template-columns: 1fr 1fr 1fr; }
+      .option {
+        appearance: none; text-align: left;
+        border: 1px solid var(--border); outline: none;
+        background: var(--surface); color: var(--text);
+        font-family: inherit; cursor: pointer;
+        border-radius: 20px; padding: 24px;
+        display: flex; flex-direction: column; gap: 14px;
+        position: relative;
+        transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+      }
+      .option:hover { background: var(--surface-hover); border-color: var(--border-hover); transform: translateY(-2px); }
+      .option:focus-visible { border-color: var(--focus-ring); outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+      .option.selected { background: var(--selected-bg); border-color: var(--selected-border); }
+      .option-lang-name { font-size: 23px; font-weight: 700; letter-spacing: 0.4px; }
+      .option-lang-sample { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+      .option-label { font-size: 17px; font-weight: 600; letter-spacing: 0.2px; }
+      .option-hint { font-size: 13px; color: var(--text-dim); }
+      .option-check {
+        position: absolute; top: 16px; right: 16px;
+        width: 24px; height: 24px; border-radius: 50%;
+        background: var(--accent); display: none;
+        align-items: center; justify-content: center;
+      }
+      .option-check svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .option.selected .option-check { display: flex; }
+
+      /* ===== 主题卡片：迷你窗口预览（固定配色，展示目标外观） ===== */
+      .mock {
+        height: 108px; border-radius: 13px; overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        display: flex; flex-direction: column;
+        flex-shrink: 0;
+      }
+      .mock-bar { height: 22px; flex-shrink: 0; display: flex; align-items: center; gap: 4px; padding: 0 9px; }
+      .mock-bar i { width: 6px; height: 6px; border-radius: 50%; }
+      .mock-body { flex: 1; padding: 11px 12px; display: flex; flex-direction: column; gap: 7px; }
+      .mock-line { height: 7px; border-radius: 4px; }
+      .mock-line.w70 { width: 70%; }
+      .mock-line.w45 { width: 45%; }
+      .mock-chip { margin-top: auto; width: 38px; height: 17px; border-radius: 6px; }
+      .mock-light { background: #f2f2f7; }
+      .mock-light .mock-bar { background: #e3e3e9; }
+      .mock-light .mock-bar i { background: #c8c8d0; }
+      .mock-light .mock-line { background: #d7d7de; }
+      .mock-light .mock-chip { background: rgba(76, 141, 255, 0.4); }
+      .mock-dark { background: #0a0a0d; border-color: rgba(255, 255, 255, 0.1); }
+      .mock-dark .mock-bar { background: #17171c; }
+      .mock-dark .mock-bar i { background: #3a3a42; }
+      .mock-dark .mock-line { background: #2b2b32; }
+      .mock-dark .mock-chip { background: rgba(91, 140, 255, 0.55); }
+      .mock-split .mock-bar { background: linear-gradient(90deg, #e3e3e9 50%, #17171c 50%); }
+      .mock-split .mock-bar i { background: #909098; }
+      .mock-split .mock-body { padding: 0; flex-direction: row; gap: 0; }
+      .mock-half { flex: 1; padding: 11px 12px; display: flex; flex-direction: column; gap: 7px; }
+      .mock-half.light { background: #f2f2f7; }
+      .mock-half.light .mock-line { background: #d7d7de; }
+      .mock-half.dark { background: #0a0a0d; }
+      .mock-half.dark .mock-line { background: #2b2b32; }
+
+      /* ===== API 表单 ===== */
+      .form { display: flex; flex-direction: column; gap: 16px; max-width: 660px; }
+      .field { display: flex; flex-direction: column; }
+      .field[hidden] { display: none; }
+      .field-label { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; color: var(--text-dim); margin-bottom: 7px; }
+      .field-control {
+        width: 100%; appearance: none; outline: none;
+        background: var(--field-bg); color: var(--text);
+        border: 1px solid var(--field-border); border-radius: 12px;
+        padding: 13px 15px; font-family: inherit; font-size: 15px;
+        transition: border-color 0.15s ease, background 0.15s ease;
+      }
+      .field-control:focus { border-color: var(--field-border-focus); }
+      .field-control::placeholder { color: var(--text-faint); }
+      /* 自定义下拉框：原生 select 的弹层配色在深色系统下不可控 */
+      .select { position: relative; }
+      .select-trigger {
+        width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        appearance: none; outline: none; cursor: pointer;
+        background: var(--field-bg); color: var(--text);
+        border: 1px solid var(--field-border); border-radius: 12px;
+        padding: 13px 15px; font-family: inherit; font-size: 15px;
+        transition: border-color 0.15s ease, background 0.15s ease;
+      }
+      .select-trigger:hover { border-color: var(--field-border-focus); }
+      .select-trigger:focus-visible { border-color: var(--field-border-focus); }
+      .select.open .select-trigger { border-color: var(--field-border-focus); }
+      .select-value { flex: 1; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .select-chevron { width: 15px; height: 15px; flex-shrink: 0; fill: none; stroke: var(--text-faint); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.18s ease, stroke 0.15s ease; }
+      .select.open .select-chevron { transform: rotate(180deg); stroke: var(--text-dim); }
+      .select-menu {
+        position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 30;
+        background: var(--menu-bg);
+        border: 1px solid var(--border); border-radius: 14px;
+        padding: 6px; display: flex; flex-direction: column; gap: 2px;
+        box-shadow: var(--menu-shadow);
+        animation: menu-in 0.16s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .select-menu[hidden] { display: none; }
+      @keyframes menu-in {
+        from { opacity: 0; transform: translateY(-5px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .select-option {
+        appearance: none; border: none; outline: none; text-align: left;
+        background: transparent; color: var(--text); font-family: inherit;
+        font-size: 14.5px; padding: 10px 12px; border-radius: 9px; cursor: pointer;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        transition: background 0.12s ease;
+      }
+      .select-option:hover, .select-option.highlighted { background: var(--surface-hover); }
+      .select-option.selected { background: var(--accent-soft); color: var(--accent-fg); font-weight: 600; }
+      .select-option:focus-visible { border-color: var(--focus-ring); outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+      .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .field-help { font-size: 12.5px; color: var(--text-faint); margin-top: 6px; letter-spacing: 0.2px; }
+      .field[hidden] { display: none; }
+      .pwd { position: relative; }
+      .pwd .field-control { padding-right: 68px; }
+      .pwd .toggle {
+        position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+        appearance: none; border: none; background: transparent; cursor: pointer;
+        color: var(--text-faint); font-family: inherit; font-size: 13px; padding: 4px 8px; border-radius: 6px;
+      }
+      .pwd .toggle:hover { color: var(--text-dim); }
+
+      /* ===== 底栏 ===== */
+      .footer {
+        display: flex; align-items: center; justify-content: space-between;
+        padding-top: 26px;
+        border-top: 1px solid var(--divider);
+      }
+      .footer-hint { font-size: 12.5px; color: var(--text-faint); letter-spacing: 0.3px; }
+      .footer-actions { display: flex; align-items: center; gap: 12px; }
+      .btn {
+        appearance: none; outline: none; cursor: pointer;
+        font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: 0.3px;
+        border-radius: 13px; padding: 13px 30px;
+        border: 1px solid transparent; background: transparent; color: var(--text-dim);
+        transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+      }
+      .btn:hover { background: var(--surface-hover); color: var(--text); }
+      .btn:focus-visible { border-color: var(--focus-ring); outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+      .btn:active { transform: scale(0.98); }
+      .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; min-width: 128px; }
+      .btn-primary:hover { filter: brightness(1.08); color: #fff; background: var(--accent); }
+
+      /* ===== 窄窗口回退 ===== */
+      @media (max-width: 960px) {
+        .layout { flex-direction: column; }
+        .side {
+          width: 100%; flex-direction: row; align-items: center;
+          padding: 18px 24px;
+          border-right: none; border-bottom: 1px solid var(--divider);
+        }
+        .side-lead, .side-foot, .side-spacer { display: none; }
+        .step-list { margin: 0 0 0 auto; flex-direction: row; gap: 4px; }
+        .step-item { padding: 6px 8px; border-radius: 10px; }
+        .step-item .step-name { display: none; }
+        .main { padding: 32px 28px 24px; }
+        .step-title { font-size: 25px; }
+        .options.two, .options.three { grid-template-columns: 1fr; }
+        .field-row { grid-template-columns: 1fr; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+    <main class="layout">
+      <!-- 左侧：品牌 + 步骤 -->
+      <aside class="side">
+        <div class="brand">
+          <img class="logo" id="logo" alt="NeoWarp" draggable="false">
+          <div class="brand-text">
+            <span class="brand-name">NeoWarp</span>
+            <span class="brand-version" id="brand-version"></span>
+          </div>
+        </div>
+        <p class="side-lead" id="side-lead"></p>
+        <ol class="step-list" id="step-list">
+          <li class="step-item active" data-step="0" aria-current="step">
+            <span class="badge"><span class="num">1</span><svg class="check" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+            <span class="step-name"></span>
+          </li>
+          <li class="step-item" data-step="1">
+            <span class="badge"><span class="num">2</span><svg class="check" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+            <span class="step-name"></span>
+          </li>
+          <li class="step-item" data-step="2">
+            <span class="badge"><span class="num">3</span><svg class="check" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+            <span class="step-name"></span>
+          </li>
+        </ol>
+        <div class="side-spacer"></div>
+        <div class="side-foot" id="side-foot"></div>
+      </aside>
+
+      <!-- 右侧：内容 -->
+      <section class="main" role="dialog" aria-modal="true">
+        <header>
+          <h1 class="step-title" id="step-title"></h1>
+          <p class="step-sub" id="step-sub"></p>
+        </header>
+
+        <div class="step-body">
+          <div class="pane-wrap" id="pane-wrap">
+            <!-- 步骤 1：语言 -->
+            <div class="step-pane active" id="pane-lang">
+              <div class="options two" id="lang-options">
+                <button class="option" data-locale="zh-cn" type="button">
+                  <span class="option-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+                  <span class="option-lang-name">简体中文</span>
+                  <span class="option-lang-sample">你好，欢迎使用 NeoWarp</span>
+                </button>
+                <button class="option" data-locale="en" type="button">
+                  <span class="option-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+                  <span class="option-lang-name">English</span>
+                  <span class="option-lang-sample">Hello, welcome to NeoWarp</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 步骤 2：深色/浅色 -->
+            <div class="step-pane" id="pane-theme">
+              <div class="options three" id="theme-options">
+                <button class="option" data-theme="system" type="button">
+                  <span class="option-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+                  <div class="mock mock-split" aria-hidden="true">
+                    <div class="mock-bar"><i></i><i></i><i></i></div>
+                    <div class="mock-body">
+                      <div class="mock-half light"><div class="mock-line w70"></div><div class="mock-line w45"></div><div class="mock-chip"></div></div>
+                      <div class="mock-half dark"><div class="mock-line w70"></div><div class="mock-line w45"></div><div class="mock-chip"></div></div>
+                    </div>
+                  </div>
+                  <span class="option-label" id="lbl-theme-system"></span>
+                  <span class="option-hint" id="hint-theme-system"></span>
+                </button>
+                <button class="option" data-theme="light" type="button">
+                  <span class="option-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+                  <div class="mock mock-light" aria-hidden="true">
+                    <div class="mock-bar"><i></i><i></i><i></i></div>
+                    <div class="mock-body"><div class="mock-line w70"></div><div class="mock-line w45"></div><div class="mock-chip"></div></div>
+                  </div>
+                  <span class="option-label" id="lbl-theme-light"></span>
+                  <span class="option-hint" id="hint-theme-light"></span>
+                </button>
+                <button class="option" data-theme="dark" type="button">
+                  <span class="option-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+                  <div class="mock mock-dark" aria-hidden="true">
+                    <div class="mock-bar"><i></i><i></i><i></i></div>
+                    <div class="mock-body"><div class="mock-line w70"></div><div class="mock-line w45"></div><div class="mock-chip"></div></div>
+                  </div>
+                  <span class="option-label" id="lbl-theme-dark"></span>
+                  <span class="option-hint" id="hint-theme-dark"></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 步骤 3：API Key -->
+            <div class="step-pane" id="pane-api">
+              <div class="form">
+                <div class="field-row">
+                  <div class="field">
+                    <label class="field-label" id="lbl-provider">服务商</label>
+                    <div class="select" id="provider-select">
+                      <button type="button" class="select-trigger" id="provider-trigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="select-value" id="provider-value">OpenAI</span>
+                        <svg class="select-chevron" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                      <div class="select-menu" id="provider-menu" role="listbox" aria-labelledby="lbl-provider" hidden>
+                        <button type="button" class="select-option" role="option" data-value="openai" aria-selected="true">OpenAI</button>
+                        <button type="button" class="select-option" role="option" data-value="anthropic" aria-selected="false">Anthropic</button>
+                        <button type="button" class="select-option" role="option" data-value="ollama" aria-selected="false">Ollama</button>
+                        <button type="button" class="select-option" role="option" data-value="custom" id="opt-custom" aria-selected="false">自定义（OpenAI 兼容）</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="field" id="field-key">
+                    <label class="field-label" id="lbl-key" for="apikey">API Key</label>
+                    <div class="pwd">
+                      <input class="field-control" id="apikey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-...">
+                      <button class="toggle" id="toggle-key" type="button" tabindex="-1"></button>
+                    </div>
+                    <div class="field-help" id="help-key"></div>
+                  </div>
+                </div>
+                <div class="field" id="field-endpoint">
+                  <label class="field-label" id="lbl-endpoint" for="endpoint">接口地址</label>
+                  <input class="field-control" id="endpoint" type="text" autocomplete="off" spellcheck="false" placeholder="https://api.example.com/v1">
+                  <div class="field-help" id="help-endpoint"></div>
+                </div>
+                <div class="field">
+                  <label class="field-label" id="lbl-model" for="model">模型</label>
+                  <input class="field-control" id="model" type="text" autocomplete="off" spellcheck="false" placeholder="gpt-4o-mini">
+                  <div class="field-help" id="help-model"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <span class="footer-hint" id="footer-hint"></span>
+          <div class="footer-actions">
+            <button class="btn" id="btn-skip" type="button"></button>
+            <button class="btn btn-primary" id="btn-confirm" type="button"></button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      // ============================================================
+      // 界面文字（可替换，无 emoji）
+      // ============================================================
+      const STRINGS = {
+        zh: {
+          steps: ['选择语言', '选择外观', '配置 API Key'],
+          title: ['选择语言', '选择外观', '配置 API Key'],
+          sub: [
+            '选择界面显示语言，稍后可在设置中更改',
+            '选择浅色或深色界面，此页会即时预览效果',
+            '为 AI 助手 / SOLO / 扩展编辑器配置模型，可稍后在设置中完成'
+          ],
+          sideLead: '只需三步，完成基础设置。',
+          sideFoot: '安装引导',
+          footerHint: ['第 1 步，共 3 步', '第 2 步，共 3 步', '第 3 步，共 3 步'],
+          langZh: '简体中文',
+          langZhHint: '使用简体中文界面',
+          langEn: 'English',
+          langEnHint: 'Use English interface',
+          themeSystem: '跟随系统',
+          themeSystemHint: '按系统外观自动切换',
+          themeLight: '浅色',
+          themeLightHint: '明亮护眼的浅色界面',
+          themeDark: '深色',
+          themeDarkHint: '沉浸低调的深色界面',
+          provider: '服务商',
+          endpoint: '接口地址',
+          endpointHelp: 'Ollama 默认 http://localhost:11434；自定义填完整 base URL',
+          key: 'API Key',
+          keyHelp: '仅保存在本地，不会上传',
+          keyShow: '显示',
+          keyHide: '隐藏',
+          model: '模型',
+          modelHelp: '模型 ID，如 gpt-4o-mini / claude-3-5-sonnet / qwen2.5',
+          skip: '跳过',
+          confirm: '确认',
+          finish: '完成'
+        },
+        en: {
+          steps: ['Choose Language', 'Choose Appearance', 'Configure API Key'],
+          title: ['Choose Language', 'Choose Appearance', 'Configure API Key'],
+          sub: [
+            'Pick the interface language. You can change it later in Settings',
+            'Pick light or dark. This page previews your choice instantly',
+            'Set up a model for AI assistant / SOLO / extension editor (can be done later)'
+          ],
+          sideLead: 'Three quick steps to finish setup.',
+          sideFoot: 'Setup Guide',
+          footerHint: ['Step 1 of 3', 'Step 2 of 3', 'Step 3 of 3'],
+          langZh: '简体中文',
+          langZhHint: 'Use Simplified Chinese',
+          langEn: 'English',
+          langEnHint: 'Use the English interface',
+          themeSystem: 'System',
+          themeSystemHint: 'Follow system appearance',
+          themeLight: 'Light',
+          themeLightHint: 'Bright, eye-friendly light UI',
+          themeDark: 'Dark',
+          themeDarkHint: 'Immersive low-key dark UI',
+          provider: 'Provider',
+          endpoint: 'Endpoint',
+          endpointHelp: 'Ollama defaults to http://localhost:11434; custom = full base URL',
+          key: 'API Key',
+          keyHelp: 'Stored locally only, never uploaded',
+          keyShow: 'Show',
+          keyHide: 'Hide',
+          model: 'Model',
+          modelHelp: 'Model ID, e.g. gpt-4o-mini / claude-3-5-sonnet / qwen2.5',
+          skip: 'Skip',
+          confirm: 'Confirm',
+          finish: 'Done'
+        }
+      };
+
+      const TOTAL_STEPS = 3;
+      const info = OnboardingPreload.getInfo();
+      // 持久化值用规范代码（zh-cn / en，与 scratch-gui、l10n 一致）；
+      // 界面文案内部用 zh / en 两套
+      const normalizeLocale = (value) => ((value || 'en').toLowerCase().indexOf('zh') === 0 ? 'zh-cn' : 'en');
+      let lang = normalizeLocale(info.locale) === 'zh-cn' ? 'zh' : 'en';
+      let currentStep = 0;
+      let selectedLocale = normalizeLocale(info.locale);
+      let selectedTheme = info.uiTheme || 'system';
+
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+
+      // 真实 NeoWarp Logo（来自主页同一份 logo.png）
+      const logoImg = document.getElementById('logo');
+      if (info.logo) {
+        logoImg.src = info.logo;
+      }
+      if (info.version) {
+        document.getElementById('brand-version').textContent = 'v' + info.version;
+      }
+
+      // ===== 主题 =====
+      const applyTheme = (theme) => {
+        document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+        OnboardingPreload.themeApplied(theme === 'light' ? 'light' : 'dark');
+      };
+      OnboardingPreload.getTheme().then(applyTheme);
+      OnboardingPreload.onThemeChanged((data) => {
+        if (data && data.theme) applyTheme(data.theme);
+      });
+
+      // ===== 文案 =====
+      const strings = () => STRINGS[lang];
+      function renderText () {
+        const s = strings();
+        document.getElementById('step-title').textContent = s.title[currentStep];
+        document.getElementById('step-sub').textContent = s.sub[currentStep];
+        document.getElementById('side-lead').textContent = s.sideLead;
+        document.getElementById('side-foot').textContent = s.sideFoot;
+        document.getElementById('footer-hint').textContent = s.footerHint[currentStep];
+        // 步骤列表名称
+        document.querySelectorAll('.step-item').forEach((item) => {
+          item.querySelector('.step-name').textContent = s.steps[+item.dataset.step];
+        });
+        // 语言卡片
+        document.querySelectorAll('#lang-options .option').forEach((opt) => {
+          const isZh = opt.dataset.locale === 'zh-cn';
+          opt.querySelector('.option-lang-name').textContent = isZh ? s.langZh : s.langEn;
+        });
+        // 主题卡片
+        document.getElementById('lbl-theme-system').textContent = s.themeSystem;
+        document.getElementById('hint-theme-system').textContent = s.themeSystemHint;
+        document.getElementById('lbl-theme-light').textContent = s.themeLight;
+        document.getElementById('hint-theme-light').textContent = s.themeLightHint;
+        document.getElementById('lbl-theme-dark').textContent = s.themeDark;
+        document.getElementById('hint-theme-dark').textContent = s.themeDarkHint;
+        // API 表单
+        document.getElementById('lbl-provider').textContent = s.provider;
+        document.getElementById('lbl-endpoint').textContent = s.endpoint;
+        document.getElementById('help-endpoint').textContent = s.endpointHelp;
+        document.getElementById('lbl-key').textContent = s.key;
+        document.getElementById('help-key').textContent = s.keyHelp;
+        document.getElementById('lbl-model').textContent = s.model;
+        document.getElementById('help-model').textContent = s.modelHelp;
+        document.getElementById('opt-custom').textContent = lang === 'zh' ? '自定义（OpenAI 兼容）' : 'Custom (OpenAI-compatible)';
+        if (typeof renderProviderUI === 'function') renderProviderUI();
+        document.getElementById('toggle-key').textContent = document.getElementById('apikey').type === 'password' ? s.keyShow : s.keyHide;
+        // 底栏
+        document.getElementById('btn-skip').textContent = s.skip;
+        document.getElementById('btn-confirm').textContent = currentStep === TOTAL_STEPS - 1 ? s.finish : s.confirm;
+      }
+
+      // ===== 步骤切换（方向感知的过渡动画） =====
+      const panes = ['pane-lang', 'pane-theme', 'pane-api'].map((id) => document.getElementById(id));
+      const paneWrap = document.getElementById('pane-wrap');
+      const stepItems = document.querySelectorAll('.step-item');
+      function renderStep () {
+        panes.forEach((pane, i) => pane.classList.toggle('active', i === currentStep));
+        stepItems.forEach((item, i) => {
+          item.classList.toggle('active', i === currentStep);
+          item.classList.toggle('done', i < currentStep);
+          if (i === currentStep) {
+            item.setAttribute('aria-current', 'step');
+          } else {
+            item.removeAttribute('aria-current');
+          }
+        });
+        renderText();
+      }
+
+      function setStep (index) {
+        const next = Math.max(0, Math.min(TOTAL_STEPS - 1, index));
+        paneWrap.dataset.dir = next >= currentStep ? 'fwd' : 'back';
+        currentStep = next;
+        renderStep();
+      }
+
+      // ===== 语言选择：立即持久化（规范代码）并切换界面语言 =====
+      function selectLocale (locale) {
+        selectedLocale = locale;
+        document.querySelectorAll('#lang-options .option').forEach((opt) => {
+          opt.classList.toggle('selected', opt.dataset.locale === locale);
+        });
+        if (normalizeLocale(locale) !== lang) {
+          lang = normalizeLocale(locale);
+          document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+          renderText();
+          OnboardingPreload.setLocale(locale);
+        }
+      }
+      document.querySelectorAll('#lang-options .option').forEach((opt) => {
+        opt.addEventListener('click', () => selectLocale(opt.dataset.locale));
+      });
+
+      // ===== 主题选择：立即持久化并应用到引导页（本页即时预览） =====
+      function selectTheme (theme) {
+        selectedTheme = theme;
+        document.querySelectorAll('#theme-options .option').forEach((opt) => {
+          opt.classList.toggle('selected', opt.dataset.theme === theme);
+        });
+        OnboardingPreload.setUiTheme(theme);
+      }
+      document.querySelectorAll('#theme-options .option').forEach((opt) => {
+        opt.addEventListener('click', () => selectTheme(opt.dataset.theme));
+      });
+
+      // ===== API 表单：按服务商显隐字段、预填默认值 =====
+      // 服务商用自绘下拉框：原生 select 的弹出层配色在深色系统下不可控
+      const fieldEndpoint = document.getElementById('field-endpoint');
+      const fieldKey = document.getElementById('field-key');
+      const endpointInput = document.getElementById('endpoint');
+      const keyInput = document.getElementById('apikey');
+      const modelInput = document.getElementById('model');
+      const toggleKey = document.getElementById('toggle-key');
+
+      const providerSelect = document.getElementById('provider-select');
+      const providerTrigger = document.getElementById('provider-trigger');
+      const providerValueEl = document.getElementById('provider-value');
+      const providerMenu = document.getElementById('provider-menu');
+      const providerOptions = Array.from(providerMenu.querySelectorAll('.select-option'));
+      let providerValue = 'openai';
+      let providerHighlighted = -1;
+
+      const providerLabel = (value) => {
+        if (value === 'custom') return lang === 'zh' ? '自定义（OpenAI 兼容）' : 'Custom (OpenAI-compatible)';
+        const opt = providerOptions.find((o) => o.dataset.value === value);
+        return opt ? opt.textContent : value;
+      };
+
+      function renderProviderUI () {
+        providerValueEl.textContent = providerLabel(providerValue);
+        providerOptions.forEach((opt) => {
+          const selected = opt.dataset.value === providerValue;
+          opt.classList.toggle('selected', selected);
+          opt.setAttribute('aria-selected', String(selected));
+        });
+      }
+
+      function syncProviderFields () {
+        const p = providerValue;
+        fieldEndpoint.hidden = !(p === 'ollama' || p === 'custom');
+        fieldKey.hidden = (p === 'ollama');
+        if (p === 'ollama' && !endpointInput.value) endpointInput.value = 'http://localhost:11434';
+      }
+
+      function setProvider (value) {
+        if (!providerOptions.some((o) => o.dataset.value === value)) return;
+        providerValue = value;
+        renderProviderUI();
+        syncProviderFields();
+      }
+
+      function closeProviderMenu () {
+        providerMenu.hidden = true;
+        providerSelect.classList.remove('open');
+        providerTrigger.setAttribute('aria-expanded', 'false');
+        providerHighlighted = -1;
+      }
+
+      function highlightProvider (index) {
+        providerHighlighted = index;
+        providerOptions.forEach((opt, i) => opt.classList.toggle('highlighted', i === index));
+        const el = providerOptions[index];
+        if (el && !providerMenu.hidden) el.scrollIntoView({block: 'nearest'});
+      }
+
+      function openProviderMenu () {
+        providerMenu.hidden = false;
+        providerSelect.classList.add('open');
+        providerTrigger.setAttribute('aria-expanded', 'true');
+        highlightProvider(providerOptions.findIndex((o) => o.dataset.value === providerValue));
+      }
+
+      providerTrigger.addEventListener('click', () => {
+        if (providerMenu.hidden) openProviderMenu(); else closeProviderMenu();
+      });
+      providerOptions.forEach((opt, i) => {
+        opt.addEventListener('click', () => {
+          setProvider(opt.dataset.value);
+          closeProviderMenu();
+          providerTrigger.focus();
+        });
+        opt.addEventListener('mousemove', () => highlightProvider(i));
+      });
+      document.addEventListener('click', (event) => {
+        if (!providerSelect.contains(event.target)) closeProviderMenu();
+      });
+      providerTrigger.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          if (providerMenu.hidden) {
+            openProviderMenu();
+            return;
+          }
+          const delta = event.key === 'ArrowDown' ? 1 : -1;
+          const count = providerOptions.length;
+          highlightProvider((providerHighlighted + delta + count) % count);
+        } else if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          if (providerMenu.hidden) {
+            openProviderMenu();
+          } else if (providerHighlighted >= 0) {
+            setProvider(providerOptions[providerHighlighted].dataset.value);
+            closeProviderMenu();
+          }
+        } else if (event.key === 'Escape' && !providerMenu.hidden) {
+          closeProviderMenu();
+        }
+      });
+      providerSelect.addEventListener('focusout', (event) => {
+        if (!providerSelect.contains(event.relatedTarget)) closeProviderMenu();
+      });
+
+      toggleKey.addEventListener('click', () => {
+        const next = keyInput.type === 'password' ? 'text' : 'password';
+        keyInput.type = next;
+        toggleKey.textContent = next === 'password' ? strings().keyShow : strings().keyHide;
+      });
+
+      // 预填已有配置（第一条用户配置）
+      OnboardingPreload.getModelConfigs().then((data) => {
+        const own = (data && data.configs || []).filter((c) => !c.isFree);
+        const active = own.find((c) => c.id === data.activeId) || own[0];
+        if (active) {
+          // 将存储形状反解到表单
+          let p = 'openai';
+          if (active.provider === 'custom') {
+            p = 'custom';
+            endpointInput.value = active.customEndpoint || '';
+            modelInput.value = active.customModelId || active.model || '';
+          } else if (active.provider === 'ollama') {
+            p = 'ollama';
+            endpointInput.value = active.customEndpoint || 'http://localhost:11434';
+            modelInput.value = active.customModelId || active.model || '';
+          } else if (active.provider === 'anthropic') {
+            p = 'anthropic';
+            modelInput.value = active.model || '';
+          } else {
+            modelInput.value = active.model || '';
+          }
+          keyInput.value = active.apiKey || '';
+          setProvider(p);
+        }
+      });
+
+      // ===== 确认：保存当前步并前进；最后一步保存并完成 =====
+      async function confirmStep () {
+        if (currentStep === TOTAL_STEPS - 1) {
+          await saveApiConfig();
+          await OnboardingPreload.done();
+          return;
+        }
+        setStep(currentStep + 1);
+      }
+
+      async function saveApiConfig () {
+        const p = providerValue;
+        const id = 'cfg_' + Date.now() + '_' + Math.random().toString(16).slice(2, 6);
+        const cfg = {
+          id,
+          name: '',
+          provider: p,
+          apiFormat: p === 'anthropic' ? 'anthropic' : (p === 'ollama' ? 'ollama' : 'openai'),
+          apiKey: keyInput.value.trim(),
+          customEndpoint: '',
+          customModelId: '',
+          model: '',
+          customContextLimit: 32000,
+          thinkingLevel: 'medium'
+        };
+        if (p === 'custom') {
+          cfg.customEndpoint = endpointInput.value.trim();
+          cfg.customModelId = modelInput.value.trim();
+          cfg.model = 'custom';
+        } else if (p === 'ollama') {
+          cfg.customEndpoint = endpointInput.value.trim() || 'http://localhost:11434';
+          cfg.customModelId = modelInput.value.trim();
+          cfg.model = '';
+        } else {
+          cfg.model = modelInput.value.trim();
+        }
+        // 追加到已有用户配置（剥离免费模型），并将新配置设为激活
+        const existing = await OnboardingPreload.getModelConfigs();
+        const own = (existing && existing.configs || []).filter((c) => !c.isFree);
+        const merged = own.filter((c) => c.id !== id);
+        merged.push(cfg);
+        await OnboardingPreload.saveModelConfigs({configs: merged, activeId: id});
+      }
+
+      // ===== 跳过：仅前进；最后一步直接完成 =====
+      function skipStep () {
+        if (currentStep === TOTAL_STEPS - 1) {
+          OnboardingPreload.done();
+          return;
+        }
+        setStep(currentStep + 1);
+      }
+
+      document.getElementById('btn-confirm').addEventListener('click', confirmStep);
+      document.getElementById('btn-skip').addEventListener('click', skipStep);
+
+      // 回车前进
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT')) {
+          event.preventDefault();
+          confirmStep();
+        }
+      });
+
+      // ===== 初始化 =====
+      function init () {
+        // 默认选中当前语言与主题
+        document.querySelectorAll('#lang-options .option').forEach((opt) => {
+          opt.classList.toggle('selected', opt.dataset.locale === selectedLocale);
+        });
+        document.querySelectorAll('#theme-options .option').forEach((opt) => {
+          opt.classList.toggle('selected', opt.dataset.theme === selectedTheme);
+        });
+        syncProviderFields();
+        renderStep();
+      }
+      init();
+    </script>
+  </body>
+</html>

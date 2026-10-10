@@ -363,6 +363,18 @@
     "string": "UI Settings",
     "developer_comment": "Name of the UI settings section in desktop settings sidebar"
   },
+  "desktop-settings.section-language": {
+    "string": "Language",
+    "developer_comment": "Name of the language section in desktop settings sidebar"
+  },
+  "desktop-settings.language-label": {
+    "string": "Interface Language",
+    "developer_comment": "Label of the interface language option in desktop settings"
+  },
+  "desktop-settings.language-desc": {
+    "string": "Choose the language used by the NeoWarp interface. Takes effect immediately.",
+    "developer_comment": "Description of the interface language option in desktop settings"
+  },
   "desktop-settings.section-privacy": {
     "string": "Privacy & Security",
     "developer_comment": "Name of the privacy and security section in desktop settings sidebar"

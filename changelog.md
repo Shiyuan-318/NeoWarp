@@ -2,6 +2,10 @@ This document is the authoritative source for NeoWarp's changelogs. Everything e
 
 Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **formatting** or [links](https://desktop.turbowarp.org/).
 
+# 2.0.1 (2026-10-08)
+
+ - Added first-run onboarding guide shown to new installs and updaters: language selection, dark/light mode, and API key configuration, with per-step confirm/skip buttons
+
 # 1.0.8 (2026-06-16)
 
  - Added ability to add costumes and sprites from URL in AI assistant

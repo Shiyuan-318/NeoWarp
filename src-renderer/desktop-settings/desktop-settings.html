@@ -174,6 +174,7 @@
       /* Section tints (light) */
       .nav-item[data-page="updates"]      { --tint: #34C759; --tint-soft: rgba(52, 199, 89, 0.15);  --tint-text: #248A3D; }
       .nav-item[data-page="ui"]           { --tint: #5856D6; --tint-soft: rgba(88, 86, 214, 0.13);  --tint-text: #5856D6; }
+      .nav-item[data-page="language"]     { --tint: #5AC8FA; --tint-soft: rgba(90, 200, 250, 0.14); --tint-text: #0A84FF; }
       .nav-item[data-page="media"]        { --tint: #007AFF; --tint-soft: rgba(0, 122, 255, 0.13);  --tint-text: #007AFF; }
       .nav-item[data-page="performance"]  { --tint: #FF9500; --tint-soft: rgba(255, 149, 0, 0.16);  --tint-text: #C77800; }
       .nav-item[data-page="privacy"]      { --tint: #FF3B30; --tint-soft: rgba(255, 59, 48, 0.13);  --tint-text: #E0362B; }
@@ -182,6 +183,7 @@
       /* Section tints (dark) */
       [data-theme="dark"] .nav-item[data-page="updates"]      { --tint: #30D158; --tint-text: #30D158; }
       [data-theme="dark"] .nav-item[data-page="ui"]           { --tint: #7D7AFF; --tint-text: #7D7AFF; }
+      [data-theme="dark"] .nav-item[data-page="language"]     { --tint: #64D2FF; --tint-text: #64D2FF; }
       [data-theme="dark"] .nav-item[data-page="media"]        { --tint: #0A84FF; --tint-text: #0A84FF; }
       [data-theme="dark"] .nav-item[data-page="performance"]  { --tint: #FF9F0A; --tint-text: #FF9F0A; }
       [data-theme="dark"] .nav-item[data-page="privacy"]      { --tint: #FF453A; --tint-text: #FF453A; }
@@ -943,6 +945,12 @@
             </span>
             <span class="nav-label"></span>
           </button>
+          <button class="nav-item" data-page="language">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            </span>
+            <span class="nav-label"></span>
+          </button>
           <button class="nav-item" data-page="media">
             <span class="nav-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
@@ -1126,6 +1134,28 @@
               </div>
               <div class="setting-control">
                 <button class="btn home-reset-btn"></button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Language -->
+        <section class="page" data-page="language">
+          <h1 class="page-title"></h1>
+          <div class="card">
+            <div class="setting-row">
+              <div class="row-icon icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label language-label"></div>
+                <div class="setting-desc language-desc"></div>
+              </div>
+              <div class="setting-control">
+                <div class="segmented" id="languageSegmented">
+                  <button class="segment" data-value="zh-cn" type="button">简体中文</button>
+                  <button class="segment" data-value="en" type="button">English</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1320,6 +1350,7 @@
       const sectionStringKeys = {
         updates: 'desktop-settings.section-updates',
         ui: 'desktop-settings.section-ui',
+        language: 'desktop-settings.section-language',
         media: 'desktop-settings.section-media',
         performance: 'desktop-settings.section-performance',
         privacy: 'desktop-settings.section-privacy',
@@ -1437,6 +1468,43 @@
           DesktopSettingsPreload.setUITheme(segment.dataset.value);
         });
       }
+
+      // ===== Interface language =====
+      // 语言名固定用母语书写，不随界面语言变化，因此不经过 l10n。
+      const languageSegments = Array.from(document.querySelectorAll('#languageSegmented .segment'));
+      const setLanguageSelection = (value) => {
+        for (const segment of languageSegments) {
+          segment.classList.toggle('selected', segment.dataset.value === value);
+        }
+      };
+      document.querySelector('.language-label').textContent = strings['desktop-settings.language-label'];
+      document.querySelector('.language-desc').textContent = strings['desktop-settings.language-desc'];
+      // 当前 locale 归一化：zh* 视作 zh-cn，其余视作 en
+      const currentLangValue = (locale && locale.toLowerCase().indexOf('zh') === 0) ? 'zh-cn' : 'en';
+      setLanguageSelection(currentLangValue);
+      for (const segment of languageSegments) {
+        segment.addEventListener('click', () => {
+          if (segment.classList.contains('selected')) return;
+          setLanguageSelection(segment.dataset.value);
+          // 记住当前页，便于切换语言后重载回到此页
+          try { sessionStorage.setItem('ds-restore-page', 'language'); } catch (e) {}
+          DesktopSettingsPreload.setLocale(segment.dataset.value).then(() => {
+            location.reload();
+          });
+        });
+      }
+
+      // 切换语言重载后恢复到语言页
+      try {
+        const restorePage = sessionStorage.getItem('ds-restore-page');
+        if (restorePage) {
+          sessionStorage.removeItem('ds-restore-page');
+          const targetNav = document.querySelector(`.nav-item[data-page="${restorePage}"]`);
+          if (targetNav && !targetNav.classList.contains('selected')) {
+            targetNav.click();
+          }
+        }
+      } catch (e) {}
 
       // ===== Home branding =====
       const homeLogoPreview = document.querySelector('.home-logo-preview');

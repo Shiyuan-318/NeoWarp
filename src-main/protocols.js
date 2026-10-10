@@ -43,6 +43,13 @@ const FILE_SCHEMES = {
     root: path.resolve(__dirname, '../src-renderer/about'),
     csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
   },
+  // 安装/更新引导页：语言、深浅色、API Key 配置
+  'tw-onboarding': {
+    root: path.resolve(__dirname, '../src-renderer/onboarding'),
+    standard: true,
+    secure: true,
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:"
+  },
   'tw-home': {
     root: path.resolve(__dirname, '../src-renderer/home'),
     standard: true,
