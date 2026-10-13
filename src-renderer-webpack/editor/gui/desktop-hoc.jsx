@@ -2166,11 +2166,13 @@ const DesktopHOC = function (WrappedComponent) {
             for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
             const vm = this.props.vm;
             if (!vm || !vm.runtime) { finish(false, '编辑器尚未就绪'); return; }
+            // onError 必须在 import 之前声明：末尾 `.catch(onError)` 在外层作用域求值它，
+            // 若定义在 .then 回调内会同步抛 "onError is not defined"（而导入其实已成功）
+            const onError = (err) => finish(false, err);
             import(
               /* webpackChunkName: "file-uploader" */
               'scratch-gui/src/lib/file-uploader'
             ).then(({ costumeUpload, spriteUpload }) => {
-              const onError = (err) => finish(false, err);
               if (asNewSprite || !targetId) {
                 // 新建角色：spriteUpload 会把图片作为造型生成一个精灵 JSON
                 spriteUpload(bytes.buffer, 'image/png', name || 'Sprite', vm, (spriteJSON) => {
