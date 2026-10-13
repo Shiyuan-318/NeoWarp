@@ -62,6 +62,32 @@ function hashCode(str) {
   return hash;
 }
 
+// NeoWarp: Collaboration — a project's JSON only references costumes, backdrops
+// and sounds by md5. A peer that loads that JSON cannot resolve the host's
+// uploaded assets (they are not on the public asset CDN), so every asset shows
+// up empty. Collaborators therefore exchange the full .sb3 archive, which
+// embeds all assets, base64-encoded inside the existing JSON message.
+const COLLAB_PROJECT_FORMAT = 'sb3';
+
+const arrayBufferToBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+};
+
+const base64ToArrayBuffer = (base64) => {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+};
+
 const handleClickAddonSettings = (search) => {
   EditorPreload.openAddonSettings(typeof search === 'string' ? search : null);
 };
@@ -1882,12 +1908,9 @@ const DesktopHOC = function (WrappedComponent) {
 
       // NeoWarp: Collaboration - Host receives request for project JSON
       EditorPreload.onCollabRequestProjectJSON((data) => {
-        try {
-          const json = this.props.vm.toJSON();
-          EditorPreload.sendCollabProjectJSON(json, data.targetUsername);
-        } catch (e) {
-          console.error('Collab: failed to export project JSON', e);
-        }
+        this.buildCollabProjectPayload().then((payload) => {
+          EditorPreload.sendCollabProjectJSON(payload, data.targetUsername);
+        });
       });
 
       // NeoWarp: Collaboration - Receive project update from host/other participant
@@ -1903,24 +1926,41 @@ const DesktopHOC = function (WrappedComponent) {
         this.applyCollabProjectUpdate(data);
       });
 
-      // NeoWarp: Collaboration - Broadcast project changes to others (debounced)
+      // NeoWarp: Collaboration - Broadcast project changes to others (debounced).
+      // Building the archive is async, so guard against overlapping builds: a
+      // change arriving mid-build just queues one more send.
       this._collabSyncTimer = null;
+      this._collabBuildInFlight = false;
+      this._collabBuildQueued = false;
+      this._collabSendProjectPayload = () => {
+        const collabState = this.state.collaborationState;
+        if (!collabState || !collabState.isCollaborating) return;
+        if (this._collabBuildInFlight) {
+          this._collabBuildQueued = true;
+          return;
+        }
+        this._collabBuildInFlight = true;
+        this.buildCollabProjectPayload().then((payload) => {
+          this._collabBuildInFlight = false;
+          // The session may have ended while the archive was being built
+          const current = this.state.collaborationState;
+          if (current && current.isCollaborating) {
+            if (current.role === 'host') {
+              EditorPreload.sendCollabProjectJSON(payload, null);
+            } else {
+              EditorPreload.sendCollabProjectUpdate(payload);
+            }
+          }
+          if (this._collabBuildQueued) {
+            this._collabBuildQueued = false;
+            this._collabSendProjectPayload();
+          }
+        });
+      };
       this._collabBroadcastProject = () => {
         if (this._collabSyncTimer) clearTimeout(this._collabSyncTimer);
         this._collabSyncTimer = setTimeout(() => {
-          try {
-            const json = this.props.vm.toJSON();
-            const collabState = this.state.collaborationState;
-            if (collabState && collabState.isCollaborating) {
-              if (collabState.role === 'host') {
-                EditorPreload.sendCollabProjectJSON(json, null);
-              } else {
-                EditorPreload.sendCollabProjectUpdate(json);
-              }
-            }
-          } catch (e) {
-            // ignore
-          }
+          this._collabSendProjectPayload();
         }, 1000);
       };
 
@@ -2102,6 +2142,55 @@ const DesktopHOC = function (WrappedComponent) {
       // Remove old listeners first to avoid duplicates
       if (typeof EditorPreload.removeAllAIListeners === 'function') {
         EditorPreload.removeAllAIListeners();
+      }
+
+      // 图片编辑器「导出到 Scratch 项目」：把一张 PNG 导入为造型（或新建角色）
+      if (typeof EditorPreload.onImportCostume === 'function') {
+        EditorPreload.onImportCostume((data) => {
+          const { requestId, targetId, name, dataUrl, asNewSprite } = data || {};
+          const finish = (success, error) => {
+            try {
+              EditorPreload.sendImportCostumeResult({
+                requestId,
+                success: !!success,
+                error: error ? String(error) : null
+              });
+            } catch (e) { /* 忽略 */ }
+          };
+          try {
+            if (!dataUrl) { finish(false, '缺少图片数据'); return; }
+            const raw = String(dataUrl);
+            const commaIndex = raw.indexOf(',');
+            const binary = atob(commaIndex >= 0 ? raw.slice(commaIndex + 1) : raw);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const vm = this.props.vm;
+            if (!vm || !vm.runtime) { finish(false, '编辑器尚未就绪'); return; }
+            import(
+              /* webpackChunkName: "file-uploader" */
+              'scratch-gui/src/lib/file-uploader'
+            ).then(({ costumeUpload, spriteUpload }) => {
+              const onError = (err) => finish(false, err);
+              if (asNewSprite || !targetId) {
+                // 新建角色：spriteUpload 会把图片作为造型生成一个精灵 JSON
+                spriteUpload(bytes.buffer, 'image/png', name || 'Sprite', vm, (spriteJSON) => {
+                  Promise.resolve(vm.addSprite(spriteJSON)).then(() => finish(true)).catch(onError);
+                }, onError);
+              } else {
+                // 追加到已有角色的造型列表
+                costumeUpload(bytes.buffer, 'image/png', vm, (costumes) => {
+                  const list = Array.isArray(costumes) ? costumes : [costumes];
+                  if (name) list.forEach((c, i) => { c.name = i ? `${name}${i + 1}` : name; });
+                  Promise.all(list.map((c) => vm.addCostume(c.md5, c, targetId)))
+                    .then(() => finish(true))
+                    .catch(onError);
+                }, onError);
+              }
+            }).catch(onError);
+          } catch (e) {
+            finish(false, (e && e.message) || e);
+          }
+        });
       }
 
       EditorPreload.onRequestProjectJSON((data) => {
@@ -4973,6 +5062,36 @@ const DesktopHOC = function (WrappedComponent) {
         observer.observe(flyoutEl, { attributes: true, childList: true, subtree: true });
       }
     }
+    // NeoWarp: Serialize the whole project (code + every asset) as an sb3
+    // archive so collaborators receive costumes, backdrops and sounds too,
+    // not just md5 references they cannot resolve.
+    buildCollabProjectPayload () {
+      return Promise.resolve()
+        .then(() => this.props.vm.saveProjectSb3('arraybuffer'))
+        .then((sb3) => ({format: COLLAB_PROJECT_FORMAT, data: arrayBufferToBase64(sb3)}))
+        .catch((error) => {
+          // Fall back to bare JSON: syncing the code without assets still
+          // beats not syncing at all.
+          console.error('Collab: failed to build sb3 payload, falling back to JSON', error);
+          return this.props.vm.toJSON();
+        });
+    }
+
+    // Decode a collaboration payload into what vm.loadProject accepts. Peers
+    // send {format:'sb3', data:<base64>} so assets travel along; a bare JSON
+    // project (older peer, or the sb3 fallback) is still accepted.
+    parseCollabProject (raw) {
+      let project = raw;
+      if (typeof project === 'string') {
+        project = JSON.parse(project);
+      }
+      if (project && typeof project === 'object' &&
+          project.format === COLLAB_PROJECT_FORMAT && project.data) {
+        return base64ToArrayBuffer(project.data);
+      }
+      return project;
+    }
+
     // NeoWarp: Apply a project state received from a collaborator.
     // The cooldown after loadProject swallows PROJECT_CHANGED events that
     // fire after deserialization, so remote updates don't echo back out.
@@ -4984,7 +5103,7 @@ const DesktopHOC = function (WrappedComponent) {
         this._collabSyncTimer = null;
       }
       try {
-        const project = typeof data.project === 'string' ? JSON.parse(data.project) : data.project;
+        const project = this.parseCollabProject(data.project);
         this.props.vm.loadProject(project).then(() => {
           this._collabLoadCooldown = setTimeout(() => {
             this._collabLoadingProject = false;

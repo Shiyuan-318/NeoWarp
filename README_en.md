@@ -88,7 +88,16 @@ A built-in IDE for extension developers:
 
 ### Image Editor
 
-A standalone image editing window: shape drawing, cropping, rotation and flips, layer management, brightness / contrast / hue / saturation adjustments and filter presets — plus exclusive **frosted-glass / liquid-glass** shape effects (SVG displacement filters).
+A standalone, Photoshop-style layered image editor: a menu bar, a tool options bar and a status bar, with 14 tools on the left (Move, Marquee, Lasso, Magic Wand, Crop, Eyedropper, Brush, Eraser, Paint Bucket, Gradient, Type, Shape, Zoom, Hand) and Color, Layers, History, Adjustments, Filters and Properties panels on the right.
+
+- **Layers**: raster / shape / text / adjustment layers, 16 blend modes, opacity, visibility and locking, thumbnails, double-click to rename, plus new / duplicate / delete / rasterize / merge down / reorder
+- **Adjustments & filters**: non-destructive adjustments (brightness / contrast / saturation / hue / blur / grayscale / sepia / invert) with presets, and destructive filters (Gaussian blur / sharpen / mosaic / noise / emboss / find edges / threshold / posterize / sepia / black & white)
+- **Selections**: rectangular marquee, lasso and magic wand with add / subtract / inverse / feather and animated marching ants
+- **Transform & image**: free transform (scale / rotate), image size, canvas size (9-point anchor), rotate 90°/180°, flip horizontal / vertical, crop to selection, flatten image
+- **Color**: HSV picker with HEX / RGB inputs and swatches, foreground / background colors with quick swap
+- **History**: named, step-based undo / redo you can jump to by clicking any step
+- **Export to a Scratch project**: when a Scratch project is open, an "Export to Scratch Project" entry appears in the menu bar — pick a project and one of its sprites to import the image as a costume, or import it directly as a new sprite
+- Open and export PNG / JPG / WebP — via the system file dialog on desktop and the File System Access API / download in the web build
 
 ### Productivity Tool Windows
 

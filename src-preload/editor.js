@@ -176,12 +176,22 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   sendSpriteStats: (data) => {
     ipcRenderer.send('sprite-stats-response', data);
   },
+  // 图片编辑器「导出到 Scratch 项目」：把图片导入为造型 / 新角色
+  onImportCostume: (callback) => {
+    ipcRenderer.on('import-costume', (event, data) => {
+      callback(data);
+    });
+  },
+  sendImportCostumeResult: (data) => {
+    ipcRenderer.send('import-costume-result', data);
+  },
   removeAllAIListeners: () => {
     ipcRenderer.removeAllListeners('request-project-json');
     ipcRenderer.removeAllListeners('apply-project');
     ipcRenderer.removeAllListeners('apply-sprite');
     ipcRenderer.removeAllListeners('ai-tool-call');
     ipcRenderer.removeAllListeners('request-theme');
+    ipcRenderer.removeAllListeners('import-costume');
   },
   openCollaborationHost: () => ipcRenderer.invoke('open-collaboration-host'),
   openCollaborationJoin: () => ipcRenderer.invoke('open-collaboration-join'),

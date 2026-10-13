@@ -3,6 +3,7 @@ const {dialog} = require('electron');
 const AbstractWindow = require('./abstract');
 const {getEffectiveTheme} = require('../effective-theme');
 const fsPromises = require('fs/promises');
+const editorWindowEvents = require('../editor-window-events');
 
 const LIGHT_BACKGROUND = '#f2f2f7';
 const DARK_BACKGROUND = '#0a0a0d';
@@ -75,6 +76,36 @@ class ImageEditorWindow extends AbstractWindow {
       await fsPromises.writeFile(target, buffer);
       return 'saved';
     });
+
+    // ===== 「导出到 Scratch 项目」 =====
+    // 列出所有已打开的编辑器项目及其角色（隐藏的 SOLO 后台宿主不参与）
+    this.ipc.handle('image-editor-list-projects', async () => {
+      // 延迟 require，避免 editor <-> image-editor 循环依赖
+      const EditorWindow = require('./editor');
+      const editors = AbstractWindow.getWindowsByClass(EditorWindow)
+        .filter(w => !w.window.isDestroyed() && !w.isHiddenHost);
+      return Promise.all(editors.map(async w => ({
+        id: w.window.id,
+        title: w.getProjectTitle() || '未命名项目',
+        sprites: await w.getSpriteList()
+      })));
+    });
+
+    // 把图片导入到指定项目的指定角色（spriteId 为空则新建角色）
+    this.ipc.handle('image-editor-import', async (event, payload) => {
+      const EditorWindow = require('./editor');
+      const target = AbstractWindow.getWindowsByClass(EditorWindow)
+        .find(w => !w.window.isDestroyed() && w.window.id === payload.projectId);
+      if (!target) return {success: false, error: '目标项目已关闭'};
+      return target.importCostume(payload);
+    });
+
+    // 编辑器窗口开/关 → 让渲染层实时刷新入口显隐
+    this._onEditorsChanged = () => {
+      if (!this.window.isDestroyed()) this.window.webContents.send('image-editor-projects-changed');
+    };
+    editorWindowEvents.on('changed', this._onEditorsChanged);
+    this.window.on('closed', () => editorWindowEvents.removeListener('changed', this._onEditorsChanged));
 
     this.loadURL('tw-image-editor://./index.html');
   }

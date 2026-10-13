@@ -32,6 +32,7 @@ const MobilePreviewWindow = require('./mobile-preview');
 const HomeWindow = require('./home');
 const AbstractWindow = require('./abstract');
 const {scanExpands} = require('../neowarp-expands');
+const editorWindowEvents = require('../editor-window-events');
 
 const TYPE_FILE = 'file';
 const TYPE_URL = 'url';
@@ -370,6 +371,12 @@ class EditorWindow extends ProjectRunningWindow {
     // SOLO 的后台工程宿主（hidden=true）：不显示窗口，不应出现在
     // 扩展编辑器「添加到项目」的项目列表里
     this.isHiddenHost = !!(options && options.hidden);
+
+    // 通知图片编辑器等订阅者：项目列表发生了变化
+    editorWindowEvents.emit('changed');
+    this.window.on('closed', () => {
+      editorWindowEvents.emit('changed');
+    });
 
     /**
      * Ideally we would revoke access after loading a new project, but our file handle handling in
@@ -968,6 +975,28 @@ class EditorWindow extends ProjectRunningWindow {
       tmWindows.forEach(w => {
         if (!w.window.isDestroyed()) w.window.webContents.send('sprite-stats-response', data);
       });
+      // 图片编辑器查询角色列表：按 requestId 回给发起方
+      if (data && data.requestId) {
+        const waiter = this._spriteListWaiters && this._spriteListWaiters.get(data.requestId);
+        if (waiter) {
+          this._spriteListWaiters.delete(data.requestId);
+          clearTimeout(waiter.timer);
+          waiter.resolve(Array.isArray(data.sprites) ? data.sprites : []);
+        }
+      }
+    });
+
+    // 图片编辑器「导出到 Scratch 项目」：导入造型的结果回执
+    this._spriteListWaiters = new Map();
+    this._costumeWaiters = new Map();
+    this.ipc.on('import-costume-result', (event, data) => {
+      if (!data || !data.requestId) return;
+      const waiter = this._costumeWaiters.get(data.requestId);
+      if (waiter) {
+        this._costumeWaiters.delete(data.requestId);
+        clearTimeout(waiter.timer);
+        waiter.resolve({success: !!data.success, error: data.error || null});
+      }
     });
 
     this.ipc.on('theme-changed', (event, data) => {
@@ -1261,6 +1290,74 @@ class EditorWindow extends ProjectRunningWindow {
       irq,
       total: user + nice + sys + idle + irq
     };
+  }
+
+  /** 项目标题（窗口标题去掉 " - <APP_NAME>" 后缀） */
+  getProjectTitle () {
+    try {
+      const title = this.window.getTitle();
+      if (!title || title === APP_NAME) return '';
+      const suffix = ` - ${APP_NAME}`;
+      return title.endsWith(suffix) ? title.slice(0, -suffix.length) : title;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /**
+   * 本窗口项目的角色列表（含造型数量），供图片编辑器选择导入目标。
+   * 走渲染层已有的 request-sprite-stats 通道，按 requestId 匹配响应。
+   * @returns {Promise<Array<{id: string, name: string, isStage: boolean, costumeCount: number}>>}
+   */
+  getSpriteList () {
+    if (this.window.isDestroyed()) return Promise.resolve([]);
+    return new Promise(resolve => {
+      const requestId = `sprites-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const timer = setTimeout(() => {
+        this._spriteListWaiters.delete(requestId);
+        resolve([]);
+      }, 4000);
+      this._spriteListWaiters.set(requestId, {resolve, timer});
+      try {
+        this.window.webContents.send('request-sprite-stats', {requestId});
+      } catch (e) {
+        clearTimeout(timer);
+        this._spriteListWaiters.delete(requestId);
+        resolve([]);
+      }
+    });
+  }
+
+  /**
+   * 把一张 PNG（dataURL）导入本窗口项目：
+   * spriteId 有值 → 作为该角色的新造型；为空 → 新建一个角色。
+   * @param {{spriteId?: string|null, name?: string, dataUrl: string, asNewSprite?: boolean}} payload
+   * @returns {Promise<{success: boolean, error?: string|null}>}
+   */
+  importCostume (payload) {
+    if (this.window.isDestroyed()) return Promise.resolve({success: false, error: '目标项目已关闭'});
+    const {spriteId, name, dataUrl, asNewSprite} = payload || {};
+    return new Promise(resolve => {
+      const requestId = `costume-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const timer = setTimeout(() => {
+        this._costumeWaiters.delete(requestId);
+        resolve({success: false, error: '导入超时'});
+      }, 30000);
+      this._costumeWaiters.set(requestId, {resolve, timer});
+      try {
+        this.window.webContents.send('import-costume', {
+          requestId,
+          targetId: spriteId || null,
+          name,
+          dataUrl,
+          asNewSprite: !!asNewSprite
+        });
+      } catch (e) {
+        clearTimeout(timer);
+        this._costumeWaiters.delete(requestId);
+        resolve({success: false, error: String((e && e.message) || e)});
+      }
+    });
   }
 
   getPreload () {
