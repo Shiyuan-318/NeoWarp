@@ -1056,6 +1056,21 @@
                 </div>
               </div>
             </div>
+            <div class="setting-row">
+              <div class="row-icon icon-indigo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="5" rx="1.5"></rect><rect x="2" y="15" width="20" height="5" rx="1.5"></rect></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label toolbar-height-label"></div>
+                <div class="setting-desc toolbar-height-desc"></div>
+              </div>
+              <div class="setting-control">
+                <div class="segmented" id="toolbarHeightSegmented">
+                  <button class="segment" data-value="normal"></button>
+                  <button class="segment" data-value="narrow"></button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Home branding -->
@@ -1466,6 +1481,29 @@
           if (segment.classList.contains('selected')) return;
           setUIThemeSelection(segment.dataset.value);
           DesktopSettingsPreload.setUITheme(segment.dataset.value);
+        });
+      }
+
+      // ===== 顶部工具栏高度 =====
+      // normal（默认 3rem）/ narrow（2.25rem）。保存后由主进程广播给
+      // 编辑器窗口，编辑器在 <html> 上写 data-toolbar-height 立即生效。
+      const toolbarHeightSegments = Array.from(document.querySelectorAll('#toolbarHeightSegmented .segment'));
+      const setToolbarHeightSelection = (value) => {
+        for (const segment of toolbarHeightSegments) {
+          segment.classList.toggle('selected', segment.dataset.value === value);
+        }
+      };
+      document.querySelector('.toolbar-height-label').textContent = strings['desktop-settings.toolbar-height'];
+      document.querySelector('.toolbar-height-desc').textContent = strings['desktop-settings.toolbar-height-desc'];
+      for (const segment of toolbarHeightSegments) {
+        segment.textContent = strings[`desktop-settings.toolbar-height-${segment.dataset.value}`];
+      }
+      setToolbarHeightSelection(settings.toolbarHeight || 'normal');
+      for (const segment of toolbarHeightSegments) {
+        segment.addEventListener('click', () => {
+          if (segment.classList.contains('selected')) return;
+          setToolbarHeightSelection(segment.dataset.value);
+          DesktopSettingsPreload.setToolbarHeight(segment.dataset.value);
         });
       }
 

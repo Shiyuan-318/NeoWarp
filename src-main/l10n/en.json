@@ -411,6 +411,22 @@
     "string": "Dark",
     "developer_comment": "Global interface theme option for dark appearance"
   },
+  "desktop-settings.toolbar-height": {
+    "string": "Toolbar Height",
+    "developer_comment": "Label of the editor top toolbar height option in desktop settings"
+  },
+  "desktop-settings.toolbar-height-desc": {
+    "string": "Height of the editor's top toolbar. Narrow fits more of the project on screen",
+    "developer_comment": "Description of the editor top toolbar height option in desktop settings"
+  },
+  "desktop-settings.toolbar-height-normal": {
+    "string": "Normal",
+    "developer_comment": "Editor top toolbar height option for the default height"
+  },
+  "desktop-settings.toolbar-height-narrow": {
+    "string": "Narrow",
+    "developer_comment": "Editor top toolbar height option for a compact height"
+  },
   "desktop-settings.home-logo": {
     "string": "Home Logo",
     "developer_comment": "Label of the home page logo option in desktop settings UI section"

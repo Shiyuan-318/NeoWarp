@@ -19,6 +19,7 @@
   var DEFAULT_SETTINGS = {
     updateChecker: 'startup',
     uiTheme: 'system',
+    toolbarHeight: 'normal',
     microphone: null,
     camera: null,
     hardwareAcceleration: true,

@@ -4808,6 +4808,29 @@ const DesktopHOC = function (WrappedComponent) {
         EditorPreload.onGlobalUIThemeChanged(applyGlobalUITheme);
       }
 
+      // 顶部工具栏高度（桌面设置 → UI 设置）：normal（默认）/ narrow。
+      // 初始值在 index.jsx 渲染前已同步写入 <html>，这里只负责之后的变更。
+      // 关键：scratch-blocks 只在 window 的 resize 事件里重新测量代码区
+      // （inject.js 的 workspaceResizeHandler），改 CSS 不会触发它，
+      // 画布会停留在旧尺寸、与容器错位。因此改完属性要补发一次 resize。
+      // 这与 scratch-gui 自己在 blocks.jsx 里切换舞台尺寸时的做法一致。
+      var applyToolbarHeight = function(height) {
+        try {
+          var next = height === 'narrow' ? 'narrow' : 'normal';
+          var current = document.documentElement.getAttribute('data-toolbar-height');
+          if (current === next) return;
+          document.documentElement.setAttribute('data-toolbar-height', next);
+          // 等一帧再触发，确保浏览器已按新高度完成布局，Blockly 量到的
+          // 才是最终尺寸（getBoundingClientRect 会同步触发 reflow）。
+          window.requestAnimationFrame(function() {
+            window.dispatchEvent(new Event('resize'));
+          });
+        } catch (e) {}
+      };
+      if (EditorPreload.onToolbarHeightChanged) {
+        EditorPreload.onToolbarHeightChanged(applyToolbarHeight);
+      }
+
       // This component is re-mounted when the locale changes, but we only want to load
       // the initial project once.
       if (mountedOnce) {

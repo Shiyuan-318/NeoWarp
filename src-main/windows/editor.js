@@ -1058,6 +1058,13 @@ class EditorWindow extends ProjectRunningWindow {
     // 之后的变更由桌面设置广播（global-ui-theme-changed）推送
     this.ipc.handle('editor-get-global-ui-theme', () => settings.uiTheme);
 
+    // 顶部工具栏高度（桌面设置 → UI 设置）：在 React 渲染前同步读一次，
+    // 让 Blockly 首次注入时就按正确高度测量代码区；之后的变更由桌面设置
+    // 广播（toolbar-height-changed）推送。
+    this.ipc.on('editor-get-toolbar-height', (event) => {
+      event.returnValue = settings.toolbarHeight;
+    });
+
     this.ipc.on('get-code-area-background-image', (event) => {
       event.returnValue = settings.codeAreaBackgroundImage;
     });

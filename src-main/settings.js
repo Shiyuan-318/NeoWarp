@@ -112,6 +112,16 @@ class Settings {
     this.data.uiTheme = uiTheme;
   }
 
+  // 编辑器顶部工具栏高度：normal（默认，3rem）/ narrow（2.25rem）
+  // 只影响编辑器窗口的顶栏，不影响其它子窗口。
+  get toolbarHeight () {
+    const value = this.data.toolbarHeight;
+    return value === 'narrow' ? 'narrow' : 'normal';
+  }
+  set toolbarHeight (toolbarHeight) {
+    this.data.toolbarHeight = toolbarHeight === 'narrow' ? 'narrow' : 'normal';
+  }
+
   get ignoredUpdate () {
     return this.data.ignoredUpdate || null;
   }

@@ -168,6 +168,13 @@ contextBridge.exposeInMainWorld('EditorPreload', {
       callback(mode);
     });
   },
+  // 顶部工具栏高度（normal / narrow）：渲染前同步读取一次 + 变更推送
+  getToolbarHeight: () => ipcRenderer.sendSync('editor-get-toolbar-height'),
+  onToolbarHeightChanged: (callback) => {
+    ipcRenderer.on('toolbar-height-changed', (event, height) => {
+      callback(height);
+    });
+  },
   onRequestSpriteStats: (callback) => {
     ipcRenderer.on('request-sprite-stats', (event, data) => {
       callback(data);

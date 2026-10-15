@@ -1055,6 +1055,21 @@
       });
     },
 
+    // 顶部工具栏高度（normal / narrow）。同步返回：需要在 React 渲染前
+    // 拿到值，让 Blockly 首次注入时就按正确高度测量代码区。
+    getToolbarHeight: () => {
+      var value = storage.getSettings().toolbarHeight;
+      return value === 'narrow' ? 'narrow' : 'normal';
+    },
+    onToolbarHeightChanged: (callback) => {
+      storage.onSettingsChanged(function (key, value) {
+        if (key === 'toolbarHeight') callback(value);
+      });
+      util.onBroadcast(function (message) {
+        if (message.type === 'toolbarHeight') callback(message.data && message.data.height);
+      });
+    },
+
     /* ---- AI / 扩展协作回调 ---- */
     onRequestProjectJSON: (cb) => { callbacks.requestProjectJSON.push(cb); },
     sendProjectJSON: (data) => {

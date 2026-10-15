@@ -46,6 +46,7 @@
       updateCheckerAllowed: true,
       updateChecker: stored.updateChecker,
       uiTheme: stored.uiTheme,
+      toolbarHeight: stored.toolbarHeight === 'narrow' ? 'narrow' : 'normal',
       microphone: stored.microphone,
       camera: stored.camera,
       hardwareAcceleration: true,
@@ -125,6 +126,16 @@
     },
 
     setUpdateChecker: function (value) { storage.setSetting('updateChecker', value); return Promise.resolve(null); },
+
+    // 顶部工具栏高度：storage 的变更事件会带动编辑器立即切换
+    setToolbarHeight: function (toolbarHeight) {
+      if (toolbarHeight !== 'normal' && toolbarHeight !== 'narrow') {
+        return Promise.resolve(null);
+      }
+      storage.setSetting('toolbarHeight', toolbarHeight);
+      util.broadcast('toolbarHeight', { height: toolbarHeight });
+      return Promise.resolve(null);
+    },
 
     checkForUpdates: function () {
       return checkUpdatesViaGitHub().catch(function (error) {

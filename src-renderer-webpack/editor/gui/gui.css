@@ -613,3 +613,99 @@ p {
   outline: 0.5px solid var(--ui-black-transparent) !important;
   outline-offset: -0.5px;
 }
+
+/* ============================================================
+   NeoWarp: 顶部工具栏高度自定义（桌面设置 → UI 设置）
+   高度档位：normal（默认，3rem）/ narrow（2.25rem）。
+   切换方式：desktop-hoc.jsx 在 <html> 上写 data-toolbar-height，
+   本节样式据此生效，无需重新渲染 React 树。
+
+   为什么不能只改 .menu-bar 的 height：scratch-gui 把 3rem 这个值
+   编译进了多处（$menu-bar-height 用于 .menu-bar、.menu-bar-item、
+   .menu-bar-menu 的 margin-top、.user-info 等），少改一处就会
+   出现"工具栏变矮了但下拉菜单仍按 3rem 偏移"之类的错位。
+   因此这里把所有受 3rem 影响的选择器一并覆盖。
+
+   选择器沿用 [class*="<文件名>_<类名>_"] 属性写法匹配 CSS Modules
+   编译后的哈希类名；末尾下划线可确保 menu-bar_menu-bar_ 只命中
+   工具栏本身，不会误伤 menu-bar_menu-bar-item_ / -menu_。
+   ============================================================ */
+[data-toolbar-height="narrow"] :global([class*="menu-bar_menu-bar_"]) {
+  height: 2.25rem !important;
+  font-size: 0.72rem;
+  gap: 0.35rem;
+}
+[data-toolbar-height="narrow"] :global([class*="menu-bar_main-menu_"]) {
+  gap: 0.35rem;
+}
+/* 菜单项等高，与工具栏对齐 */
+[data-toolbar-height="narrow"] :global([class*="menu-bar_menu-bar-item_"]) {
+  height: 2.25rem;
+}
+/* 下拉菜单靠 margin-top 3rem 定位到工具栏下方，必须同步缩短，
+   否则窄模式时下拉面板会整体下移 0.75rem，与工具栏脱开。 */
+[data-toolbar-height="narrow"] :global([class*="menu-bar_menu-bar-menu_"]) {
+  margin-top: 2.25rem;
+}
+
+/* 工具栏内的图形元素按同一比例（0.75x）缩小，保持原有视觉比例 */
+[data-toolbar-height="narrow"] :global([class*="menu-bar_scratch-logo_"]) {
+  height: 1.2rem;
+}
+[data-toolbar-height="narrow"] :global([class*="menu-bar_menu-bar-button_"]) {
+  height: 1.5rem;
+}
+[data-toolbar-height="narrow"] :global([class*="menu-bar_profile-icon_"]),
+[data-toolbar-height="narrow"] :global([class*="user-avatar_user-thumbnail_"]) {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+[data-toolbar-height="narrow"] :global([class*="menu-bar_mystuff-icon_"]) {
+  height: 0.8rem;
+}
+[data-toolbar-height="narrow"] :global([class*="menu-bar_dropdown-caret-icon_"]) {
+  width: 0.4rem;
+  height: 0.4rem;
+}
+[data-toolbar-height="narrow"] :global([class*="menu-bar_help-icon_"]),
+[data-toolbar-height="narrow"] :global([class*="menu-bar_about-icon_"]),
+[data-toolbar-height="narrow"] :global([class*="menu-bar_remix-button-icon_"]) {
+  height: 1rem;
+}
+[data-toolbar-height="narrow"] :global([class*="menu-bar_divider_"]) {
+  height: 26px;
+}
+
+/* 作者信息两行文字：随行高一起收窄 */
+[data-toolbar-height="narrow"] :global([class*="author-info_project-title_"]) {
+  font-size: 0.8rem;
+}
+[data-toolbar-height="narrow"] :global([class*="author-info_username-line_"]) {
+  font-size: 0.7rem;
+}
+[data-toolbar-height="narrow"] :global([class*="author-info_avatar_"]) {
+  margin-right: 0.4rem;
+}
+
+/* 工程名输入框：原生上下各 0.5rem 内边距，在 2.25rem 里会溢出，
+   这里改用更小的内边距由内容撑高。 */
+[data-toolbar-height="narrow"] :global([class*="project-title-input_title-field_"]) {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.72rem;
+}
+
+/* 顶栏设备占用（CPU/内存）指示条 */
+[data-toolbar-height="narrow"] :global([class*="menu-bar_system-stats_"]) {
+  font-size: 0.68rem;
+  padding: 0.15rem 0.4rem;
+}
+[data-toolbar-height="narrow"] :global([class*="menu-bar_stat-value_"]) {
+  min-width: 2rem;
+}
+
+/* 深色模式：工具栏是"上边距 + 自身高度"的组合（见上方深色规则），
+   窄模式同样把两者按 2.25rem 的总高重新分配。 */
+[data-toolbar-height="narrow"][data-gui-theme="dark"] :global([class*="menu-bar_menu-bar_"]) {
+  margin: 4px 10px 0 10px !important;
+  height: calc(2.25rem - 4px) !important;
+}

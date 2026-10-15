@@ -41,6 +41,7 @@ class DesktopSettingsWindow extends AbstractWindow {
           updateCheckerAllowed: true,
           updateChecker: settings.updateChecker,
           uiTheme: settings.uiTheme,
+          toolbarHeight: settings.toolbarHeight,
           microphone: settings.microphone,
           camera: settings.camera,
           hardwareAcceleration: settings.hardwareAcceleration,
@@ -109,6 +110,23 @@ class DesktopSettingsWindow extends AbstractWindow {
         if (AbstractWindow.getWindowsByClass(EditorWindow).length === 0) {
           const {nativeTheme} = require('electron');
           AIAssistantWindow.broadcastTheme(nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
+        }
+      }
+    });
+
+    // 编辑器顶栏高度：normal / narrow。
+    // 保存后立刻广播给所有编辑器窗口，编辑器据此在 <html> 上打
+    // data-toolbar-height 属性，顶栏样式随之切换（无需重启编辑器）。
+    this.ipc.handle('set-toolbar-height', async (event, toolbarHeight) => {
+      if (toolbarHeight !== 'normal' && toolbarHeight !== 'narrow') {
+        return;
+      }
+      settings.toolbarHeight = toolbarHeight;
+      await settings.save();
+      const EditorWindow = require('./editor');
+      for (const editorWindow of AbstractWindow.getWindowsByClass(EditorWindow)) {
+        if (!editorWindow.window.isDestroyed()) {
+          editorWindow.window.webContents.send('toolbar-height-changed', toolbarHeight);
         }
       }
     });
