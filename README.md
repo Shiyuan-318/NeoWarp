@@ -242,3 +242,13 @@ AI 助手工具链脚本：
 - QQ 交流群：**517453896**
 
 > 如果你发现了 Bug 或有功能建议，欢迎提交 Issue 或 Pull Request，或加入 QQ 群与作者直接交流。
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=shiyuan-318%2Fneowarp&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=shiyuan-318/neowarp&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=shiyuan-318/neowarp&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=shiyuan-318/neowarp&type=date&legend=top-left" />
+ </picture>
+</a>
