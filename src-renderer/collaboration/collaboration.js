@@ -657,6 +657,19 @@
 
   /* ===== 主进程事件 ===== */
 
+  // 发起协作时的防火墙授权结果：成功给出确认，取消或失败给出可操作的提示。
+  // 必须在 enterChat 之后调用，否则提示会被聊天区的空状态清空。
+  function applyFirewallNotice (firewall) {
+    if (!firewall) return;
+    if (firewall.status === 'granted') {
+      toast('已获得防火墙权限，局域网设备可以连接本房间');
+    } else if (firewall.status === 'declined' || firewall.status === 'failed') {
+      addSystemMessage('⚠️ ' + (firewall.status === 'declined'
+        ? '防火墙授权未完成：其他设备可能无法连接本房间。结束协作后重新发起，并在系统弹窗中点击「允许」即可。'
+        : '防火墙规则添加失败：其他设备可能无法连接。可尝试以管理员身份运行 NeoWarp，或在系统防火墙设置中手动放行。'));
+    }
+  }
+
   Preload.onHostStarted(function (data) {
     setBusy(el.btnStartHost, false, '发起协作');
     if (!data.success) {
@@ -673,6 +686,7 @@
       members: data.members,
       emptyText: '协作已启动。把地址 ' + el.hostAddress.textContent + ' 和房间密码发给伙伴，就能一起编程了。'
     });
+    applyFirewallNotice(data.firewall);
   });
 
   Preload.onJoinConnected(function (data) {

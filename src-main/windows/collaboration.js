@@ -1,5 +1,6 @@
 const AbstractWindow = require('./abstract');
 const CollaborationServer = require('../collaboration-server');
+const {ensureCollaborationFirewall} = require('../firewall');
 const {ipcMain} = require('electron');
 const os = require('os');
 const http = require('http');
@@ -158,6 +159,8 @@ class CollaborationWindow extends AbstractWindow {
     this.ipc.handle('collab-start-host', async (event, { password, port, permissions, nickname, avatar }) => {
       this.hostNickname = (nickname && String(nickname).trim()) || '主机';
       this.hostAvatar = (avatar && String(avatar)) || '🏠';
+      // 启动监听前先确保防火墙放行：必要时弹出系统授权窗口（授权失败不阻断协作）
+      const firewall = await ensureCollaborationFirewall({ port, mode: 'host' });
       this.server = new CollaborationServer({
         password,
         port,
@@ -219,7 +222,8 @@ class CollaborationWindow extends AbstractWindow {
           onlineCount: 1,
           nickname: this.hostNickname,
           avatar: this.hostAvatar,
-          members: this.server.getRoster()
+          members: this.server.getRoster(),
+          firewall
         });
         this.sendToEditor('collaboration-state-changed', {
           isCollaborating: true,
@@ -257,6 +261,9 @@ class CollaborationWindow extends AbstractWindow {
         this.sendToCollabWindow('collab-join-connected', { success: false, error: 'WebSocket 不可用' });
         return { success: false, error: 'WebSocket 不可用' };
       }
+
+      // 加入只做出站连接（默认放行），静默检查防火墙即可，不弹授权窗口
+      const firewall = await ensureCollaborationFirewall({ port, mode: 'join' });
 
       this.joinNickname = (nickname && String(nickname).trim()) || '';
       this.joinAvatar = (avatar && String(avatar)) || '👤';
@@ -321,7 +328,8 @@ class CollaborationWindow extends AbstractWindow {
                   onlineCount: message.onlineCount,
                   hostName: message.hostName,
                   hostAvatar: message.hostAvatar,
-                  members: message.members
+                  members: message.members,
+                  firewall
                 });
                 this.sendToEditor('collaboration-state-changed', {
                   isCollaborating: true,
