@@ -874,6 +874,148 @@
         }
       }
 
+      /* ===== 特殊日子彩蛋 =====
+         仅在 10-01 国庆、10-24 程序员节、春节、01-01 元旦生效；
+         其余日子脚本不会创建任何节点，这里只是备用样式。
+         画布位于 UI 之上（玻璃按钮之下留白处仍可看清粒子），
+         但低于提示气泡(3)与弹窗(4)，不干扰交互。 */
+      .festive-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        display: block;
+        pointer-events: none;
+      }
+
+      /* ---- 元旦：翻页日历 ---- */
+      .ny-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: radial-gradient(circle at 50% 44%, rgba(24, 16, 40, 0.32), rgba(6, 6, 10, 0.68));
+        opacity: 0;
+        transition: opacity 0.5s ease;
+        cursor: pointer;
+      }
+      html[data-theme="light"] .ny-overlay {
+        background: radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.52), rgba(206, 206, 220, 0.74));
+      }
+      .ny-overlay.in { opacity: 1; }
+      .ny-overlay.out { opacity: 0; }
+      .ny-card {
+        width: min(352px, 100%);
+        padding: 22px 26px 18px;
+        border-radius: 26px;
+        border: 1px solid var(--modal-border);
+        background: var(--modal-bg);
+        box-shadow: var(--modal-shadow);
+        cursor: default;
+        transform: translateY(18px) scale(0.96);
+        transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .ny-overlay.in .ny-card { transform: translateY(0) scale(1); }
+      .ny-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 8px;
+        font-size: 12.5px;
+        letter-spacing: 1.6px;
+        color: var(--text-dim);
+      }
+      .ny-head b {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        color: var(--text);
+      }
+      .ny-stage {
+        position: relative;
+        height: 96px;
+        margin: 10px 0 14px;
+        perspective: 900px;
+      }
+      /* 翻页中缝：暗示日历纸张的分界 */
+      .ny-stage::after {
+        content: "";
+        position: absolute;
+        left: 10%;
+        right: 10%;
+        top: 50%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--card-border-hover), transparent);
+      }
+      .ny-flipper {
+        position: absolute;
+        inset: 0;
+        transform-style: preserve-3d;
+        transition: transform 1.15s cubic-bezier(0.52, 0.02, 0.3, 1);
+      }
+      .ny-flipper.flipped { transform: rotateX(180deg); }
+      .ny-face {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        font-size: 60px;
+        font-weight: 800;
+        letter-spacing: 8px;
+        text-indent: 8px;
+        font-variant-numeric: tabular-nums;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+      }
+      .ny-front {
+        color: var(--text-faint);
+        background: linear-gradient(180deg, var(--card), transparent);
+      }
+      .ny-back {
+        color: var(--text);
+        background: linear-gradient(180deg, rgba(91, 140, 255, 0.2), rgba(91, 140, 255, 0.04));
+        box-shadow: inset 0 0 0 1px var(--card-border);
+        transform: rotateX(180deg);
+      }
+      .ny-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+        margin-bottom: 12px;
+        opacity: 0;
+        transition: opacity 0.6s ease 0.45s;
+      }
+      .ny-overlay.revealed .ny-grid { opacity: 1; }
+      .ny-grid span {
+        padding: 5px 0;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 12.5px;
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+      }
+      .ny-grid span.ny-week {
+        font-size: 11px;
+        letter-spacing: 0.5px;
+        color: var(--text-dim);
+      }
+      .ny-grid span.ny-today {
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+      }
+      .ny-foot {
+        text-align: center;
+        font-size: 13px;
+        letter-spacing: 3px;
+        text-indent: 3px;
+        color: var(--text-dim);
+      }
+
       /* ===== 动画偏好：减少动态效果 ===== */
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
@@ -1725,6 +1867,912 @@
       settingsButton.addEventListener('click', () => {
         HomePreload.openSettings();
       });
+
+      // ============================================================
+      // 特殊日子彩蛋
+      //   · 10-01 国庆节    ：正中心偏下，粒子汇聚成天安门
+      //   · 10-24 程序员节  ：左下角，绿色粒子组成像素风「1024」
+      //   · 春节（除夕～正月初七）：顶部交错垂挂的灯笼 + 烟花粒子
+      //   · 01-01 元旦      ：当天首次打开时播放日历翻页（上一年 → 新一年）
+      // 只有命中的日子才会创建画布与动画，其余日子页面元素与原来完全一致。
+      // 日期按本机时区判断；控制台执行 NeoWarpFestive.replay(true) 可重播。
+      // ============================================================
+      const Festive = (function () {
+        'use strict';
+
+        // ---------- 日期判定 ----------
+        // 春节（农历正月初一）公历对照表，2020–2045。
+        // 除 2034 年外均可由天文推算（含雨水的朔望月即正月）复核；
+        // 2034 年因 2033 年闰十一月属「2033 年问题」的特例，2 月 19 日为
+        // 官方颁行值（本世纪最晚春节），请勿按上述规则「修正」。
+        const SPRING_FESTIVAL = {
+          2020: [1, 25], 2021: [2, 12], 2022: [2, 1],  2023: [1, 22],
+          2024: [2, 10], 2025: [1, 29], 2026: [2, 17], 2027: [2, 6],
+          2028: [1, 26], 2029: [2, 13], 2030: [2, 3],  2031: [1, 23],
+          2032: [2, 11], 2033: [1, 31], 2034: [2, 19], 2035: [2, 8],
+          2036: [1, 28], 2037: [2, 15], 2038: [2, 4],  2039: [1, 24],
+          2040: [2, 12], 2041: [2, 1],  2042: [1, 22], 2043: [2, 10],
+          2044: [1, 30], 2045: [2, 17]
+        };
+        // 春节彩蛋的显示区间：除夕（-1 天）到正月初七（+6 天）
+        const SPRING_FROM = -1;
+        const SPRING_TO = 6;
+        const DAY_MS = 86400000;
+
+        const dateKey = (d) => d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
+        const midnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+        function inSpringFestival(date) {
+          const first = SPRING_FESTIVAL[date.getFullYear()];
+          if (!first) return false;
+          const offset = Math.round(
+            (midnight(date) - new Date(date.getFullYear(), first[0] - 1, first[1]).getTime()) / DAY_MS
+          );
+          return offset >= SPRING_FROM && offset <= SPRING_TO;
+        }
+
+        function effectsFor(date) {
+          const month = date.getMonth() + 1;
+          const day = date.getDate();
+          const list = [];
+          if (month === 10 && day === 1) list.push('nationalDay');
+          if (month === 10 && day === 24) list.push('pixel1024');
+          if (inSpringFestival(date)) list.push('springFestival');
+          if (month === 1 && day === 1) list.push('newYearFlip');
+          return list;
+        }
+
+        // ---------- 通用工具 ----------
+        const TAU = Math.PI * 2;
+        const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+        const rand = (lo, hi) => lo + Math.random() * (hi - lo);
+        const STILL = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+        // 光点精灵：预渲染一次，之后只做 drawImage，避免每帧重建渐变
+        const spriteCache = {};
+        function sprite(rgb) {
+          if (spriteCache[rgb]) return spriteCache[rgb];
+          const size = 32;
+          const cv = document.createElement('canvas');
+          cv.width = cv.height = size;
+          const c = cv.getContext('2d');
+          const g = c.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+          g.addColorStop(0, 'rgba(' + rgb + ',1)');
+          g.addColorStop(0.24, 'rgba(' + rgb + ',0.62)');
+          g.addColorStop(0.56, 'rgba(' + rgb + ',0.16)');
+          g.addColorStop(1, 'rgba(' + rgb + ',0)');
+          c.fillStyle = g;
+          c.fillRect(0, 0, size, size);
+          spriteCache[rgb] = cv;
+          return cv;
+        }
+        function glow(ctx, rgb, x, y, r, alpha) {
+          if (alpha <= 0.006 || r <= 0.2) return;
+          ctx.globalAlpha = alpha > 1 ? 1 : alpha;
+          ctx.drawImage(sprite(rgb), x - r, y - r, r * 2, r * 2);
+        }
+
+        // 采样：矩形 / 多边形内的点阵
+        function rectPoints(x, y, w, h, step, visit) {
+          const cols = Math.max(1, Math.round(w / step));
+          const rows = Math.max(1, Math.round(h / step));
+          const dw = w / cols;
+          const dh = h / rows;
+          for (let i = 0; i < cols; i++) {
+            for (let j = 0; j < rows; j++) visit(x + (i + 0.5) * dw, y + (j + 0.5) * dh);
+          }
+        }
+        function pointInPoly(px, py, pts) {
+          let inside = false;
+          for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+            const xi = pts[i][0], yi = pts[i][1];
+            const xj = pts[j][0], yj = pts[j][1];
+            if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+          }
+          return inside;
+        }
+        function polyPoints(pts, step, visit) {
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          for (let i = 0; i < pts.length; i++) {
+            if (pts[i][0] < minX) minX = pts[i][0];
+            if (pts[i][0] > maxX) maxX = pts[i][0];
+            if (pts[i][1] < minY) minY = pts[i][1];
+            if (pts[i][1] > maxY) maxY = pts[i][1];
+          }
+          const cols = Math.max(1, Math.round((maxX - minX) / step));
+          const rows = Math.max(1, Math.round((maxY - minY) / step));
+          const dw = (maxX - minX) / cols;
+          const dh = (maxY - minY) / rows;
+          for (let i = 0; i < cols; i++) {
+            for (let j = 0; j < rows; j++) {
+              const px = minX + (i + 0.5) * dw;
+              const py = minY + (j + 0.5) * dh;
+              if (pointInPoly(px, py, pts)) visit(px, py);
+            }
+          }
+        }
+
+        // 粒子场：初始散落 → 弹簧汇聚 → 目标点缓慢漂移带来「呼吸」感
+        function fieldFrom(targets, opt) {
+          const out = [];
+          for (let i = 0; i < targets.length; i++) {
+            const t = targets[i];
+            const size = opt.size * rand(0.7, 1.35);
+            out.push({
+              tx: t.x, ty: t.y, rgb: t.rgb,
+              x: STILL ? t.x : t.x + rand(-opt.spread, opt.spread),
+              y: STILL ? t.y : t.y + rand(-opt.spread, opt.spread),
+              vx: 0, vy: 0,
+              ph: rand(0, TAU),
+              f: rand(0.45, 1.25),
+              amp: opt.amp * rand(0.4, 1),
+              baseSize: size,
+              size: size,
+              alpha: opt.alpha * rand(0.55, 1)
+            });
+          }
+          return out;
+        }
+        function stepField(list, dt, t, k, c) {
+          for (let i = 0; i < list.length; i++) {
+            const p = list[i];
+            const tx = p.tx + Math.sin(t * p.f + p.ph) * p.amp;
+            const ty = p.ty + Math.cos(t * p.f * 0.82 + p.ph * 1.7) * p.amp;
+            p.vx += (k * (tx - p.x) - c * p.vx) * dt;
+            p.vy += (k * (ty - p.y) - c * p.vy) * dt;
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+          }
+        }
+        // 只改目标点、保留当前位置：面板尺寸变化时图案平滑移动而不是重新飞入
+        function retargetField(list, targets, sizeScale) {
+          for (let i = 0; i < list.length; i++) {
+            list[i].tx = targets[i].x;
+            list[i].ty = targets[i].y;
+            list[i].rgb = targets[i].rgb;
+            if (sizeScale) list[i].size = list[i].baseSize * sizeScale;
+          }
+        }
+
+        // 与面板重叠的粒子自动减淡，保证按钮文字始终清晰
+        function uiMask() {
+          const panel = document.querySelector('.panel');
+          if (!panel) return null;
+          const rect = panel.getBoundingClientRect();
+          return rect.width > 0 ? rect : null;
+        }
+        function maskAlpha(m, x, y) {
+          if (!m) return 1;
+          return (x > m.left - 4 && x < m.right + 4 && y > m.top - 4 && y < m.bottom + 4) ? 0.4 : 1;
+        }
+
+        // ---------- 场景一：像素风「1024」（左下角） ----------
+        const GLYPH_W = 5;
+        const GLYPH_H = 7;
+        const PIXEL_FONT = {
+          '0': ['01110', '10001', '10011', '10101', '11001', '10001', '01110'],
+          '1': ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+          '2': ['01110', '10001', '00001', '00010', '00100', '01000', '11111'],
+          '3': ['11111', '00010', '00100', '00010', '00001', '10001', '01110'],
+          '4': ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
+          '5': ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+          '6': ['00110', '01000', '10000', '11110', '10001', '10001', '01110'],
+          '7': ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+          '8': ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
+          '9': ['01110', '10001', '10001', '01111', '00001', '00010', '01100']
+        };
+
+        function createPixelWord(word, opt) {
+          let pixels = [];
+          let dust = [];
+          let square = 8;
+          let cellPx = 10;
+
+          function layout(w, h, keep) {
+            const cols = word.length * (GLYPH_W + 1) - 1;
+            const padX = clamp(w * 0.035, 18, 60);
+            const padY = clamp(h * 0.055, 22, 58);
+            let px = clamp(Math.min(w, h) * 0.0135, 6, 15);
+            const panel = uiMask();
+            // 窄窗口会变成上下排布，左下角可能被面板压住；
+            // 左侧若还剩一条空白带，就把字号缩到整幅能放进去
+            if (panel && panel.bottom > h - padY && panel.left - padX > 90) {
+              px = Math.max(5, Math.min(px, (panel.left - padX - 12) / cols));
+            }
+            const totalW = cols * px;
+            const totalH = GLYPH_H * px;
+            const ox = padX;
+            const oy = h - padY - totalH;
+            const cells = [];
+            for (let g = 0; g < word.length; g++) {
+              const glyph = PIXEL_FONT[word.charAt(g)];
+              if (!glyph) continue;
+              for (let r = 0; r < GLYPH_H; r++) {
+                const row = glyph[r];
+                for (let c = 0; c < GLYPH_W; c++) {
+                  if (row.charAt(c) === '1') cells.push([g * (GLYPH_W + 1) + c, r]);
+                }
+              }
+            }
+            const core = [];
+            const sparks = [];
+            for (let i = 0; i < cells.length; i++) {
+              const cx = ox + (cells[i][0] + 0.5) * px;
+              const cy = oy + (cells[i][1] + 0.5) * px;
+              core.push({ x: cx, y: cy, rgb: opt.rgb });
+              sparks.push({ x: cx + rand(-px, px) * 0.95, y: cy + rand(-px, px) * 0.95, rgb: opt.rgb });
+              sparks.push({ x: cx + rand(-px, px) * 0.95, y: cy + rand(-px, px) * 0.95, rgb: opt.dust });
+            }
+            const ratio = px / cellPx;
+            square = px * 0.8;
+            cellPx = px;
+            if (keep && pixels.length === core.length) {
+              retargetField(pixels, core, ratio);
+              retargetField(dust, sparks, ratio);
+              return;
+            }
+            const spread = Math.max(totalW, totalH) * 0.55;
+            pixels = fieldFrom(core, { spread: spread, amp: px * 0.05, size: px * 0.62, alpha: 0.95 });
+            dust = fieldFrom(sparks, { spread: spread * 1.3, amp: px * 0.4, size: px * 0.3, alpha: 0.5 });
+          }
+
+          function update(dt, t) {
+            if (STILL) return;
+            stepField(pixels, dt, t, 46, 9);
+            stepField(dust, dt, t, 24, 6.5);
+          }
+
+          function draw(ctx, t) {
+            ctx.globalCompositeOperation = 'lighter';
+            const half = square / 2;
+            const m = uiMask();
+            for (let i = 0; i < pixels.length; i++) {
+              const p = pixels[i];
+              glow(ctx, opt.glow, p.x, p.y, p.size * 2.3, p.alpha * 0.2 * maskAlpha(m, p.x, p.y));
+            }
+            ctx.fillStyle = 'rgb(' + opt.rgb + ')';
+            for (let i = 0; i < pixels.length; i++) {
+              const p = pixels[i];
+              ctx.globalAlpha = p.alpha * (0.68 + 0.32 * Math.sin(t * (0.8 + p.f) + p.ph * 2.1)) * maskAlpha(m, p.x, p.y);
+              ctx.fillRect(p.x - half, p.y - half, square, square);
+            }
+            for (let i = 0; i < dust.length; i++) {
+              const p = dust[i];
+              glow(ctx, p.rgb, p.x, p.y, p.size,
+                p.alpha * (0.6 + 0.4 * Math.sin(t * 1.7 + p.ph * 2.3)) * maskAlpha(m, p.x, p.y));
+            }
+            ctx.globalAlpha = 1;
+          }
+
+          return { layout: layout, update: update, draw: draw };
+        }
+
+        // ---------- 场景二：天安门（正中心偏下） ----------
+        // 本地坐标：总宽 100，地面 y = 64，形状由矩形与多边形拼出
+        // 颜色取饱和中间调：深色下靠加色发光，浅色下也仍有对比度
+        const GATE_COLOR = {
+          wall: '245, 66, 60',        // 城台红墙
+          brick: '255, 110, 64',      // 城楼柱枋
+          roof: '255, 170, 48',       // 琉璃屋檐
+          ridge: '255, 208, 84',      // 正脊与鸱吻
+          marble: '255, 216, 150',    // 须弥座
+          pillar: '255, 202, 128',    // 华表
+          portrait: '255, 186, 72'    // 城台画像
+        };
+        // 纵向压到 0.78：真实城楼「宽大于高」，同样的空白高度能画出更大的图案
+        const GATE_SQUASH = 0.78;
+        const GATE_H = 64 * GATE_SQUASH;
+        const GATE_FIT = { wishW: 0.34, wishH: 0.28, minScale: 2.2, ground: 12 };
+        const GATE_FILLS = [
+          // 华表（左右各一）
+          { t: 'rect', x: 1, y: 20, w: 2.4, h: 44, c: 'pillar' },
+          { t: 'rect', x: 96.6, y: 20, w: 2.4, h: 44, c: 'pillar' },
+          { t: 'rect', x: -0.6, y: 18.4, w: 5.6, h: 1.8, c: 'pillar' },
+          { t: 'rect', x: 95, y: 18.4, w: 5.6, h: 1.8, c: 'pillar' },
+          // 城台（红墙）与画像
+          { t: 'rect', x: 6, y: 40, w: 88, h: 24, c: 'wall' },
+          { t: 'rect', x: 44.6, y: 41, w: 10.8, h: 7, c: 'portrait' },
+          // 须弥座
+          { t: 'rect', x: 4, y: 37, w: 92, h: 3, c: 'marble' },
+          // 下层城楼：上下额枋
+          { t: 'rect', x: 16, y: 29.4, w: 68, h: 1.5, c: 'brick' },
+          { t: 'rect', x: 16, y: 36.4, w: 68, h: 1.3, c: 'brick' },
+          // 下檐（含翘角）
+          { t: 'poly', p: [[9.5, 26.6], [13, 30.6], [87, 30.6], [90.5, 26.6], [76, 24.6], [24, 24.6]], c: 'roof' },
+          // 上层城楼：上下额枋
+          { t: 'rect', x: 28, y: 17.5, w: 44, h: 1.3, c: 'brick' },
+          { t: 'rect', x: 28, y: 23.7, w: 44, h: 1.2, c: 'brick' },
+          // 上檐（含翘角）
+          { t: 'poly', p: [[17.5, 14.4], [21, 18.4], [79, 18.4], [82.5, 14.4], [67, 5], [33, 5]], c: 'roof' },
+          // 正脊与两端鸱吻
+          { t: 'rect', x: 32, y: 3.4, w: 36, h: 1.7, c: 'ridge' },
+          { t: 'rect', x: 29.6, y: 2.2, w: 3.2, h: 3.2, c: 'ridge' },
+          { t: 'rect', x: 67.2, y: 2.2, w: 3.2, h: 3.2, c: 'ridge' }
+        ];
+        // 五个券门（城台上挖空）
+        const GATE_ARCHES = [
+          { x: 44.5, y: 54, w: 11, h: 10, r: 5.5 },
+          { x: 29, y: 56, w: 8, h: 8, r: 4 },
+          { x: 63, y: 56, w: 8, h: 8, r: 4 },
+          { x: 14.5, y: 57.5, w: 7, h: 6.5, r: 3.5 },
+          { x: 78.5, y: 57.5, w: 7, h: 6.5, r: 3.5 }
+        ];
+
+        function inArch(px, py, a) {
+          if (px < a.x || px > a.x + a.w || py > a.y + a.h) return false;
+          if (py >= a.y) return true;
+          const dx = px - (a.x + a.w / 2);
+          if (Math.abs(dx) > a.r) return false;
+          const dy = a.y - py;
+          return dx * dx + dy * dy <= a.r * a.r;
+        }
+        function inAnyArch(px, py) {
+          for (let i = 0; i < GATE_ARCHES.length; i++) {
+            if (inArch(px, py, GATE_ARCHES[i])) return true;
+          }
+          return false;
+        }
+        function columnPoints(out, x0, x1, count, y, h, width, step, color) {
+          const rgb = GATE_COLOR[color];
+          for (let i = 0; i < count; i++) {
+            const cx = count === 1 ? (x0 + x1) / 2 : x0 + ((x1 - x0) * i) / (count - 1);
+            rectPoints(cx - width / 2, y, width, h, step, (px, py) => out.push({ x: px, y: py, rgb: rgb }));
+          }
+        }
+        function gateTargets(step) {
+          const out = [];
+          for (let i = 0; i < GATE_FILLS.length; i++) {
+            const shape = GATE_FILLS[i];
+            const rgb = GATE_COLOR[shape.c];
+            if (shape.t === 'rect') {
+              const solid = shape.c !== 'wall';   // 只有城台需要挖出门洞
+              rectPoints(shape.x, shape.y, shape.w, shape.h, step, (px, py) => {
+                if (!solid && inAnyArch(px, py)) return;
+                out.push({ x: px, y: py, rgb: rgb });
+              });
+            } else {
+              polyPoints(shape.p, step, (px, py) => out.push({ x: px, y: py, rgb: rgb }));
+            }
+          }
+          // 城楼廊柱：下层 9 根、上层 7 根
+          columnPoints(out, 18, 82, 9, 30.9, 5.5, 1.7, step, 'brick');
+          columnPoints(out, 30, 70, 7, 18.8, 4.9, 1.6, step, 'brick');
+          for (let i = 0; i < out.length; i++) out[i].y *= GATE_SQUASH;
+          return out;
+        }
+
+        function createGate() {
+          let field = [];
+          let ground = { x: 0, y: 0, r: 0 };
+          let lastScale = 0;
+
+          function layout(w, h, keep) {
+            const wish = Math.min((w * GATE_FIT.wishW) / 100, (h * GATE_FIT.wishH) / GATE_H);
+            const floor = Math.min(wish, GATE_FIT.minScale);
+            const panel = uiMask();
+            const baseY = h - GATE_FIT.ground;
+            // 优先完整落在面板下方的空白区；空间不足时缩小，仍放不下才与面板重叠，
+            // 与面板重叠的粒子会在绘制时自动减淡。
+            const room = (panel ? baseY - 8 - panel.bottom : baseY - h * 0.5) / GATE_H;
+            const scale = clamp(room, floor, wish);
+            const ox = w / 2 - 50 * scale;
+            const oy = baseY - GATE_H * scale;
+            const targets = gateTargets(1.8);
+            for (let i = 0; i < targets.length; i++) {
+              targets[i].x = ox + targets[i].x * scale;
+              targets[i].y = oy + targets[i].y * scale;
+            }
+            if (keep && field.length === targets.length) {
+              retargetField(field, targets, lastScale ? scale / lastScale : 0);
+            } else {
+              field = fieldFrom(targets, {
+                spread: Math.max(70, 30 * scale),
+                amp: 0.9,
+                size: clamp(scale * 0.68, 1.8, 3.4),
+                alpha: 0.92
+              });
+            }
+            lastScale = scale;
+            ground = { x: w / 2, y: baseY, r: 30 * scale };
+          }
+
+          function update(dt, t) {
+            if (STILL) return;
+            stepField(field, dt, t, 42, 8.5);
+          }
+
+          function draw(ctx, t) {
+            ctx.globalCompositeOperation = 'lighter';
+            const m = uiMask();
+            glow(ctx, '255, 168, 92', ground.x, ground.y, ground.r, 0.09);
+            for (let i = 0; i < field.length; i++) {
+              const p = field[i];
+              const tw = 0.62 + 0.38 * Math.sin(t * (0.75 + p.f) + p.ph * 2.5);
+              glow(ctx, p.rgb, p.x, p.y, p.size, p.alpha * tw * maskAlpha(m, p.x, p.y));
+            }
+            ctx.globalAlpha = 1;
+          }
+
+          return { layout: layout, update: update, draw: draw };
+        }
+
+        // ---------- 场景三：春节灯笼 + 烟花（顶部） ----------
+        // 灯笼骨架：环向点构成灯体，上下两层为金边
+        const LANTERN_LATTICE = (function () {
+          const pts = [];
+          const rows = 7;
+          const cols = 9;
+          for (let r = 0; r <= rows; r++) {
+            const v = r / rows;
+            const rr = Math.sqrt(Math.max(0, 1 - (2 * v - 1) * (2 * v - 1)));
+            const gold = r === 0 || r === rows;
+            const n = gold ? 5 : cols;
+            for (let c = 0; c < n; c++) {
+              const lon = (c / n) * TAU + r * 0.3;
+              pts.push({ ux: Math.sin(lon) * rr, uy: v * 2, z: Math.cos(lon), gold: gold });
+            }
+          }
+          return pts;
+        })();
+
+        function quadPoint(a, c, b, t) {
+          const u = 1 - t;
+          return [
+            u * u * a[0] + 2 * u * t * c[0] + t * t * b[0],
+            u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]
+          ];
+        }
+
+        function createSpringFestival() {
+          const strings = [
+            { a: null, c: null, b: null, ts: [0.34, 0.58, 0.84] },
+            { a: null, c: null, b: null, ts: [0.28, 0.56] },
+            { a: null, c: null, b: null, ts: [0.32, 0.7] }
+          ];
+          let lanterns = [];
+          let sparks = [];
+          let rockets = [];
+          let nextLaunch = 0.8;
+          let w = 0;
+          let h = 0;
+
+          function layout(width, height) {
+            w = width;
+            h = height;
+            const R = clamp(Math.min(w, h) * 0.038, 15, 32);
+            const anchors = [
+              [[-0.05 * w, 0.02 * h], [0.32 * w, 0.36 * h], [0.68 * w, 0.01 * h]],
+              [[1.05 * w, 0.04 * h], [0.66 * w, 0.38 * h], [0.30 * w, 0.02 * h]],
+              [[0.14 * w, -0.05 * h], [0.50 * w, 0.30 * h], [0.88 * w, -0.04 * h]]
+            ];
+            lanterns = [];
+            for (let i = 0; i < strings.length; i++) {
+              strings[i].a = anchors[i][0];
+              strings[i].c = anchors[i][1];
+              strings[i].b = anchors[i][2];
+              for (let k = 0; k < strings[i].ts.length; k++) {
+                const pt = quadPoint(anchors[i][0], anchors[i][1], anchors[i][2], strings[i].ts[k]);
+                lanterns.push({
+                  ax: pt[0], ay: pt[1],
+                  r: R * rand(0.78, 1.05),
+                  drop: R * rand(0.8, 1.7),
+                  ph: rand(0, TAU),
+                  sp: rand(0.42, 0.72),
+                  amp: rand(0.045, 0.1)
+                });
+              }
+            }
+            sparks = [];
+            rockets = [];
+            if (STILL) {
+              // 减少动态效果：直接摆出两朵绽放的烟花
+              burst(w * 0.27, h * 0.2);
+              burst(w * 0.75, h * 0.14);
+              for (let i = 0; i < 40; i++) stepSparks(1 / 60);
+            }
+          }
+
+          function launch() {
+            rockets.push({
+              x: rand(w * 0.12, w * 0.88),
+              y: h * 0.66,
+              vx: rand(-16, 16),
+              vy: -rand(430, 570) * clamp(Math.min(w, h) / 800, 0.7, 1.25),
+              ty: rand(h * 0.06, h * 0.4)
+            });
+          }
+
+          function burst(x, y) {
+            const palette = ['255, 96, 78', '255, 170, 56', '255, 208, 84', '255, 132, 178', '110, 190, 255', '196, 158, 255'];
+            const main = palette[(Math.random() * palette.length) | 0];
+            const count = 84 + ((Math.random() * 50) | 0);
+            const life = rand(0.9, 1.6);
+            const scale = clamp(Math.min(w, h) / 800, 0.6, 1.4);
+            for (let i = 0; i < count; i++) {
+              const angle = rand(0, TAU);
+              const speed = rand(40, 205) * scale;
+              sparks.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed * 0.92,
+                life: 0,
+                ttl: life * rand(0.75, 1.25),
+                r: rand(1.5, 3.1),
+                rgb: Math.random() < 0.82 ? main : '255, 226, 150',
+                flick: rand(0, TAU)
+              });
+            }
+            sparks.push({ x: x, y: y, vx: 0, vy: 0, life: 0, ttl: 0.24, r: 30 * scale, rgb: '255, 232, 170', flick: 0, flash: true });
+          }
+
+          function stepSparks(dt) {
+            const drag = 1 - 0.85 * dt;
+            for (let i = sparks.length - 1; i >= 0; i--) {
+              const s = sparks[i];
+              s.life += dt;
+              if (s.life >= s.ttl) {
+                sparks.splice(i, 1);
+                continue;
+              }
+              if (s.flash) continue;
+              s.vy += 68 * dt;
+              s.vx *= drag;
+              s.vy *= drag;
+              s.x += s.vx * dt;
+              s.y += s.vy * dt;
+            }
+          }
+
+          function update(dt, t) {
+            if (STILL) return;
+            nextLaunch -= dt;
+            if (nextLaunch <= 0) {
+              launch();
+              nextLaunch = rand(1.4, 2.9);
+            }
+            for (let i = rockets.length - 1; i >= 0; i--) {
+              const r = rockets[i];
+              r.vy += 130 * dt;
+              r.x += r.vx * dt;
+              r.y += r.vy * dt;
+              sparks.push({
+                x: r.x + rand(-1.6, 1.6), y: r.y,
+                vx: rand(-14, 14), vy: rand(-8, 30),
+                life: 0, ttl: rand(0.2, 0.42), r: rand(1, 2),
+                rgb: '255, 196, 110', flick: rand(0, TAU)
+              });
+              if (r.vy >= -70 || r.y <= r.ty) {
+                burst(r.x, r.y);
+                rockets.splice(i, 1);
+              }
+            }
+            stepSparks(dt);
+            if (sparks.length > 560) sparks.splice(0, sparks.length - 560);
+          }
+
+          function drawLantern(ctx, o, t, m) {
+            const sway = STILL ? 0 : o.amp * Math.sin(t * o.sp + o.ph);
+            const sin = Math.sin(sway);
+            const cos = Math.cos(sway);
+            const hx = o.ax + sin * o.drop;
+            const hy = o.ay + cos * o.drop;
+            // 吊绳
+            ctx.globalAlpha = 0.5;
+            ctx.strokeStyle = 'rgba(255, 190, 120, 0.55)';
+            ctx.lineWidth = 1.1;
+            ctx.beginPath();
+            ctx.moveTo(o.ax, o.ay);
+            ctx.lineTo(hx, hy);
+            ctx.stroke();
+            const R = o.r;
+            const V = R * 0.82;
+            glow(ctx, '255, 74, 58', hx, hy + V, R * 2.9, 0.14 + 0.03 * Math.sin(t * 1.6 + o.ph));
+            for (let i = 0; i < LANTERN_LATTICE.length; i++) {
+              const q = LANTERN_LATTICE[i];
+              const lx = q.ux * R;
+              const ly = q.uy * V;
+              const x = hx + lx * cos - ly * sin;
+              const y = hy + lx * sin + ly * cos;
+              const dim = maskAlpha(m, x, y);
+              if (q.gold) glow(ctx, '255, 200, 100', x, y, R * 0.16, 0.8 * dim);
+              else glow(ctx, '245, 70, 58', x, y, R * 0.13 * (0.72 + 0.34 * (q.z * 0.5 + 0.5)), 0.68 * dim);
+            }
+            // 灯脚流苏
+            for (let i = 0; i < 5; i++) {
+              const ly = 2 * V + (i + 0.6) * R * 0.26;
+              const lx = (i * 0.6 - 1.2) * 0.35;
+              const x = hx + lx * cos - ly * sin;
+              const y = hy + lx * sin + ly * cos;
+              glow(ctx, '255, 190, 90', x, y, R * 0.1, (0.6 - i * 0.09) * maskAlpha(m, x, y));
+            }
+          }
+
+          function draw(ctx, t) {
+            ctx.globalCompositeOperation = 'lighter';
+            const m = uiMask();
+            // 烟花粒子
+            for (let i = 0; i < sparks.length; i++) {
+              const s = sparks[i];
+              const k = 1 - s.life / s.ttl;
+              const dim = maskAlpha(m, s.x, s.y);
+              if (s.flash) {
+                glow(ctx, s.rgb, s.x, s.y, s.r * (0.7 + 1.8 * (1 - k)), 0.45 * k * dim);
+                continue;
+              }
+              const flick = 0.62 + 0.38 * Math.sin(t * 22 + s.flick);
+              glow(ctx, s.rgb, s.x, s.y, s.r * (0.8 + 0.6 * k), k * k * 0.92 * flick * dim);
+              if (s.vx * s.vx + s.vy * s.vy > 900) {
+                ctx.globalAlpha = k * 0.28 * dim;
+                ctx.strokeStyle = 'rgba(' + s.rgb + ',1)';
+                ctx.lineWidth = 1.1;
+                ctx.beginPath();
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(s.x - s.vx * 0.035, s.y - s.vy * 0.035);
+                ctx.stroke();
+              }
+            }
+            // 上升中的火箭
+            for (let i = 0; i < rockets.length; i++) {
+              glow(ctx, '255, 214, 130', rockets[i].x, rockets[i].y, 3.6, 0.85);
+            }
+            // 交错的红绳
+            ctx.globalAlpha = 1;
+            ctx.lineWidth = 1.3;
+            for (let i = 0; i < strings.length; i++) {
+              const s = strings[i];
+              if (!s.a) continue;
+              const g = ctx.createLinearGradient(s.a[0], s.a[1], s.b[0], s.b[1]);
+              g.addColorStop(0, 'rgba(255, 176, 110, 0.06)');
+              g.addColorStop(0.5, 'rgba(255, 196, 132, 0.42)');
+              g.addColorStop(1, 'rgba(255, 176, 110, 0.06)');
+              ctx.strokeStyle = g;
+              ctx.beginPath();
+              ctx.moveTo(s.a[0], s.a[1]);
+              ctx.quadraticCurveTo(s.c[0], s.c[1], s.b[0], s.b[1]);
+              ctx.stroke();
+            }
+            // 灯笼
+            for (let i = 0; i < lanterns.length; i++) drawLantern(ctx, lanterns[i], t, m);
+            ctx.globalAlpha = 1;
+          }
+
+          return { layout: layout, update: update, draw: draw };
+        }
+
+        // ---------- 元旦翻页日历 ----------
+        const NEW_YEAR_STORE = 'neowarp.home.newYearFlip';
+        let calendar = null;
+
+        function readStore(key) {
+          try { return window.localStorage.getItem(key); } catch (err) { return null; }
+        }
+        function writeStore(key, value) {
+          try { window.localStorage.setItem(key, value); } catch (err) { /* 无痕模式等：忽略 */ }
+        }
+        function el(tag, cls, text) {
+          const node = document.createElement(tag);
+          if (cls) node.className = cls;
+          if (text !== undefined) node.textContent = text;
+          return node;
+        }
+
+        function closeCalendar(immediate) {
+          const state = calendar;
+          if (!state) return;
+          calendar = null;
+          for (let i = 0; i < state.timers.length; i++) clearTimeout(state.timers[i]);
+          document.removeEventListener('keydown', state.onKey);
+          const overlay = state.overlay;
+          if (immediate) {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            return;
+          }
+          overlay.classList.add('out');
+          setTimeout(() => {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          }, 520);
+        }
+
+        function playNewYearFlip(year) {
+          closeCalendar(true);
+          const previous = year - 1;
+          const overlay = el('div', 'ny-overlay');
+          const card = el('div', 'ny-card');
+
+          const head = el('div', 'ny-head');
+          head.appendChild(el('b', null, lang === 'zh' ? '1 月 1 日' : 'January 1'));
+          head.appendChild(el('span', null, lang === 'zh' ? '元旦' : "New Year's Day"));
+          card.appendChild(head);
+
+          // 年份翻页：正面是上一年，翻过去露出新一年
+          const stage = el('div', 'ny-stage');
+          const flipper = el('div', 'ny-flipper');
+          flipper.appendChild(el('div', 'ny-face ny-front', String(previous)));
+          flipper.appendChild(el('div', 'ny-face ny-back', String(year)));
+          stage.appendChild(flipper);
+          card.appendChild(stage);
+
+          // 一月日历：1 号高亮
+          const grid = el('div', 'ny-grid');
+          const weeks = lang === 'zh'
+            ? ['日', '一', '二', '三', '四', '五', '六']
+            : ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+          for (let i = 0; i < weeks.length; i++) grid.appendChild(el('span', 'ny-week', weeks[i]));
+          const offset = new Date(year, 0, 1).getDay();
+          for (let i = 0; i < offset; i++) grid.appendChild(el('span'));
+          for (let d = 1; d <= 31; d++) grid.appendChild(el('span', d === 1 ? 'ny-today' : null, String(d)));
+          card.appendChild(grid);
+
+          card.appendChild(el('div', 'ny-foot', lang === 'zh' ? '新年快乐' : 'Happy New Year'));
+          overlay.appendChild(card);
+          document.body.appendChild(overlay);
+
+          const state = {
+            overlay: overlay,
+            timers: [],
+            onKey: (event) => {
+              if (event.key === 'Escape') closeCalendar();
+            }
+          };
+          calendar = state;
+
+          requestAnimationFrame(() => {
+            if (calendar !== state) return;
+            overlay.classList.add('in');
+            state.timers.push(setTimeout(() => {
+              flipper.classList.add('flipped');
+              overlay.classList.add('revealed');
+            }, 900));
+            state.timers.push(setTimeout(() => closeCalendar(), 6500));
+          });
+          overlay.addEventListener('click', () => closeCalendar());
+          document.addEventListener('keydown', state.onKey);
+        }
+
+        // ---------- 画布与主循环 ----------
+        let layer = null;
+        let ctx = null;
+        let scenes = [];
+        let rafId = 0;
+        let lastTs = 0;
+        let clock = 0;
+        let viewW = 0;
+        let viewH = 0;
+        let dpr = 1;
+        let currentKey = '';
+        let panelObserver = null;
+
+        function createLayer() {
+          const canvas = document.createElement('canvas');
+          canvas.className = 'festive-layer';
+          canvas.setAttribute('aria-hidden', 'true');
+          const host = document.querySelector('main.container');
+          if (host && host.parentNode) host.parentNode.insertBefore(canvas, host.nextSibling);
+          else document.body.appendChild(canvas);
+          return canvas;
+        }
+
+        function renderFrame() {
+          ctx.clearRect(0, 0, viewW, viewH);
+          for (let i = 0; i < scenes.length; i++) scenes[i].draw(ctx, clock);
+        }
+
+        function resize() {
+          if (!layer) return;
+          dpr = Math.min(window.devicePixelRatio || 1, 2);
+          viewW = window.innerWidth;
+          viewH = window.innerHeight;
+          layer.width = Math.max(1, Math.round(viewW * dpr));
+          layer.height = Math.max(1, Math.round(viewH * dpr));
+          layer.style.width = viewW + 'px';
+          layer.style.height = viewH + 'px';
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          for (let i = 0; i < scenes.length; i++) scenes[i].layout(viewW, viewH);
+          if (STILL) renderFrame();
+        }
+
+        // 面板高度会随后端数据（最近项目等）变化，重新排布图案位置
+        function relayout() {
+          if (!layer || !viewW) return;
+          for (let i = 0; i < scenes.length; i++) scenes[i].layout(viewW, viewH, true);
+          if (STILL) renderFrame();
+        }
+
+        function tick(ts) {
+          rafId = requestAnimationFrame(tick);
+          const dt = clamp((ts - lastTs) / 1000, 0.001, 0.05);
+          lastTs = ts;
+          clock += dt;
+          for (let i = 0; i < scenes.length; i++) scenes[i].update(dt, clock);
+          renderFrame();
+        }
+
+        function onVisibility() {
+          if (document.hidden) {
+            if (rafId) {
+              cancelAnimationFrame(rafId);
+              rafId = 0;
+            }
+          } else if (!STILL && layer && !rafId) {
+            lastTs = performance.now();
+            rafId = requestAnimationFrame(tick);
+          }
+        }
+
+        function teardown() {
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = 0;
+          }
+          window.removeEventListener('resize', resize);
+          document.removeEventListener('visibilitychange', onVisibility);
+          if (panelObserver) {
+            panelObserver.disconnect();
+            panelObserver = null;
+          }
+          if (layer && layer.parentNode) layer.parentNode.removeChild(layer);
+          layer = null;
+          ctx = null;
+          scenes = [];
+          clock = 0;
+          closeCalendar(true);
+        }
+
+        function build(canvasEffects) {
+          layer = createLayer();
+          ctx = layer.getContext('2d');
+          for (let i = 0; i < canvasEffects.length; i++) {
+            const name = canvasEffects[i];
+            if (name === 'nationalDay') scenes.push(createGate());
+            else if (name === 'pixel1024') {
+              scenes.push(createPixelWord('1024', { rgb: '70, 240, 140', glow: '40, 210, 120', dust: '120, 245, 175' }));
+            } else if (name === 'springFestival') {
+              scenes.push(createSpringFestival());
+            }
+          }
+          resize();
+          window.addEventListener('resize', resize);
+          document.addEventListener('visibilitychange', onVisibility);
+          const panel = document.querySelector('.panel');
+          if (panel && typeof ResizeObserver === 'function') {
+            panelObserver = new ResizeObserver(relayout);
+            panelObserver.observe(panel);
+          }
+          if (!STILL) {
+            lastTs = performance.now();
+            rafId = requestAnimationFrame(tick);
+          }
+        }
+
+        function refresh(force) {
+          const now = new Date();
+          const key = dateKey(now);
+          if (!force && key === currentKey) return;
+          const effects = effectsFor(now);
+          const canvasEffects = effects.filter((name) => name !== 'newYearFlip');
+          teardown();
+          currentKey = key;
+          if (canvasEffects.length) build(canvasEffects);
+          if (effects.indexOf('newYearFlip') >= 0 && (force || readStore(NEW_YEAR_STORE) !== key)) {
+            // 只在当天第一次打开主页时播放
+            writeStore(NEW_YEAR_STORE, key);
+            playNewYearFlip(now.getFullYear());
+          }
+        }
+
+        return {
+          day: () => currentKey,
+          effects: () => effectsFor(new Date()),
+          refresh: refresh,
+          replay: (force) => refresh(force === undefined ? true : force)
+        };
+      })();
+
+      Festive.refresh();
+      // 窗口长时间不关时跨零点自动切换彩蛋
+      setInterval(() => Festive.refresh(), 60 * 1000);
+      // 调试/预览入口：控制台执行 NeoWarpFestive.replay()
+      window.NeoWarpFestive = Festive;
     </script>
   </body>
 </html>
