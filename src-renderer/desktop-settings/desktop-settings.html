@@ -179,6 +179,7 @@
       .nav-item[data-page="performance"]  { --tint: #FF9500; --tint-soft: rgba(255, 149, 0, 0.16);  --tint-text: #C77800; }
       .nav-item[data-page="privacy"]      { --tint: #FF3B30; --tint-soft: rgba(255, 59, 48, 0.13);  --tint-text: #E0362B; }
       .nav-item[data-page="integrations"] { --tint: #AF52DE; --tint-soft: rgba(175, 82, 222, 0.14); --tint-text: #A028C9; }
+      .nav-item[data-page="associations"] { --tint: #00C7BE; --tint-soft: rgba(0, 199, 190, 0.15); --tint-text: #008E8A; }
       .nav-item[data-page="advanced"]     { --tint: #8E8E93; --tint-soft: rgba(142, 142, 147, 0.18); --tint-text: #636366; }
       /* Section tints (dark) */
       [data-theme="dark"] .nav-item[data-page="updates"]      { --tint: #30D158; --tint-text: #30D158; }
@@ -188,6 +189,7 @@
       [data-theme="dark"] .nav-item[data-page="performance"]  { --tint: #FF9F0A; --tint-text: #FF9F0A; }
       [data-theme="dark"] .nav-item[data-page="privacy"]      { --tint: #FF453A; --tint-text: #FF453A; }
       [data-theme="dark"] .nav-item[data-page="integrations"] { --tint: #BF5AF2; --tint-text: #BF5AF2; }
+      [data-theme="dark"] .nav-item[data-page="associations"] { --tint: #66D4CF; --tint-text: #66D4CF; }
       [data-theme="dark"] .nav-item[data-page="advanced"]     { --tint: #98989D; --tint-text: #98989D; }
 
       .sidebar-footer {
@@ -310,6 +312,7 @@
       .icon-purple { background: #AF52DE; }
       .icon-indigo { background: #5856D6; }
       .icon-gray { background: #8E8E93; }
+      .icon-teal { background: #00C7BE; }
       [data-theme="dark"] .icon-green { background: #30D158; }
       [data-theme="dark"] .icon-blue { background: #0A84FF; }
       [data-theme="dark"] .icon-orange { background: #FF9F0A; }
@@ -317,6 +320,7 @@
       [data-theme="dark"] .icon-purple { background: #BF5AF2; }
       [data-theme="dark"] .icon-indigo { background: #7D7AFF; }
       [data-theme="dark"] .icon-gray { background: #98989D; }
+      [data-theme="dark"] .icon-teal { background: #66D4CF; }
 
       /* Segmented control (iOS) */
       .segmented {
@@ -975,6 +979,12 @@
             </span>
             <span class="nav-label"></span>
           </button>
+          <button class="nav-item" data-page="associations">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            </span>
+            <span class="nav-label"></span>
+          </button>
           <button class="nav-item" data-page="ai">
             <span class="nav-icon">
               <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2a1 1 0 0 1 .95.68l1.7 4.67 4.67 1.7a1 1 0 0 1 0 1.9l-4.67 1.7-1.7 4.67a1 1 0 0 1-1.9 0l-1.7-4.67-4.67-1.7a1 1 0 0 1 0-1.9l4.67-1.7 1.7-4.67A1 1 0 0 1 12 2zm7 12a.9.9 0 0 1 .86.61l.85 2.34 2.34.85a.9.9 0 0 1 0 1.71l-2.34.85-.85 2.34a.9.9 0 0 1-1.71 0l-.85-2.34-2.34-.85a.9.9 0 0 1 0-1.71l2.34-.85.85-2.34A.9.9 0 0 1 19 14z"/></svg>
@@ -1323,6 +1333,46 @@
           </div>
         </section>
 
+        <!-- File Associations -->
+        <section class="page" data-page="associations">
+          <h1 class="page-title"></h1>
+          <div class="card" id="fileAssociationsCard">
+            <div class="setting-row">
+              <div class="row-icon icon-teal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label assoc-sb3-label"></div>
+                <div class="setting-desc assoc-sb3-desc"></div>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="assoc-checkbox" data-ext="sb3" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="row-icon icon-teal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label assoc-js-label"></div>
+                <div class="setting-desc assoc-js-desc"></div>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="assoc-checkbox" data-ext="js" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-warning associations-note" hidden></div>
+          <div class="alert alert-danger associations-error" hidden></div>
+        </section>
+
         <!-- AI Models -->
         <section class="page" data-page="ai">
           <h1 class="page-title"></h1>
@@ -1370,6 +1420,7 @@
         performance: 'desktop-settings.section-performance',
         privacy: 'desktop-settings.section-privacy',
         integrations: 'desktop-settings.section-integrations',
+        associations: 'desktop-settings.section-associations',
         advanced: 'desktop-settings.section-advanced'
       };
       for (const [id, key] of Object.entries(sectionStringKeys)) {
@@ -1889,6 +1940,58 @@
         DesktopSettingsPreload.openUserData();
       });
       openUserData.querySelector('span').textContent = strings['desktop-settings.open-user-data'];
+
+      // ===== 文件关联 =====
+      // 勾选状态始终反映注册表中的实际关联状态，而不是上次的操作结果：
+      // 其他程序或安装器可能随时改动这些关联。
+      const associationsNote = document.querySelector('.associations-note');
+      const associationsError = document.querySelector('.associations-error');
+      const associationCheckboxes = Array.from(document.querySelectorAll('.assoc-checkbox'));
+
+      document.querySelector('.assoc-sb3-label').textContent = strings['desktop-settings.assoc-sb3'];
+      document.querySelector('.assoc-sb3-desc').textContent = strings['desktop-settings.assoc-sb3-desc'];
+      document.querySelector('.assoc-js-label').textContent = strings['desktop-settings.assoc-js'];
+      document.querySelector('.assoc-js-desc').textContent = strings['desktop-settings.assoc-js-desc'];
+
+      const syncAssociationCheckboxes = (list) => {
+        for (const {ext, associated} of list) {
+          const checkbox = associationCheckboxes.find((item) => item.dataset.ext === ext);
+          if (checkbox) {
+            checkbox.checked = associated;
+          }
+        }
+      };
+
+      if (settings.fileAssociationsSupported) {
+        associationsNote.hidden = false;
+        associationsNote.textContent = strings['desktop-settings.associations-note'];
+        DesktopSettingsPreload.getFileAssociations().then(syncAssociationCheckboxes).catch((error) => {
+          console.error(error);
+        });
+      } else {
+        document.getElementById('fileAssociationsCard').hidden = true;
+        associationsNote.hidden = false;
+        associationsNote.textContent = strings['desktop-settings.associations-unsupported'];
+      }
+
+      associationCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', async () => {
+          checkbox.disabled = true;
+          associationsError.hidden = true;
+          try {
+            syncAssociationCheckboxes(await DesktopSettingsPreload.setFileAssociation(checkbox.dataset.ext, checkbox.checked));
+          } catch (error) {
+            console.error(error);
+            associationsError.textContent = strings['desktop-settings.associations-error'].replace('{error}', error.message);
+            associationsError.hidden = false;
+            // 操作失败时回到真实状态
+            try {
+              syncAssociationCheckboxes(await DesktopSettingsPreload.getFileAssociations());
+            } catch (e) {}
+          }
+          checkbox.disabled = false;
+        });
+      });
 
       // ===== AI 模型配置 =====
       // 与 AI 助手 / NeoWarp SOLO / 扩展编辑器共用同一份中心存储

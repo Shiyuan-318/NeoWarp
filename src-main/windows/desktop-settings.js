@@ -5,6 +5,7 @@ const AbstractWindow = require('./abstract');
 const {translate, getStrings, getLocale, updateLocale} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const settings = require('../settings');
+const fileAssociations = require('../file-associations');
 const {registerAiModelConfigIpc} = require('../ai-model-configs');
 const {getEffectiveTheme} = require('../effective-theme');
 const {manualCheck} = require('../update-checker');
@@ -56,9 +57,20 @@ class DesktopSettingsWindow extends AbstractWindow {
           homeLogo: settings.homeLogo,
           homeLogoText: settings.homeLogoText,
           homeBackground: settings.homeBackground,
-          showRecentProjects: settings.showRecentProjects
+          showRecentProjects: settings.showRecentProjects,
+          fileAssociationsSupported: fileAssociations.isSupported()
         }
       };
+    });
+
+    // 文件关联状态与修改（仅 Windows 安装版可用，见 file-associations.js）
+    this.ipc.handle('get-file-associations', () => fileAssociations.getAssociations());
+
+    this.ipc.handle('set-file-association', async (event, ext, enabled) => {
+      if (typeof enabled !== 'boolean') {
+        throw new Error('enabled must be a boolean');
+      }
+      return fileAssociations.setAssociation(ext, enabled);
     });
 
     this.ipc.handle('set-update-checker', async (event, updateChecker) => {

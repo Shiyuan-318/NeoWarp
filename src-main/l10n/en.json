@@ -383,6 +383,38 @@
     "string": "Integrations",
     "developer_comment": "Name of the integrations section in desktop settings sidebar"
   },
+  "desktop-settings.section-associations": {
+    "string": "File Associations",
+    "developer_comment": "Name of the file associations section in desktop settings sidebar"
+  },
+  "desktop-settings.assoc-sb3": {
+    "string": "Associate .sb3 files",
+    "developer_comment": "Toggle in desktop settings to make NeoWarp the default app for .sb3 (Scratch project) files"
+  },
+  "desktop-settings.assoc-sb3-desc": {
+    "string": "Open Scratch projects in NeoWarp when double-clicked",
+    "developer_comment": "Description of the .sb3 file association toggle in desktop settings"
+  },
+  "desktop-settings.assoc-js": {
+    "string": "Associate .js files",
+    "developer_comment": "Toggle in desktop settings to make NeoWarp the default app for .js (JavaScript extension) files"
+  },
+  "desktop-settings.assoc-js-desc": {
+    "string": "Open NeoWarp JavaScript extensions in NeoWarp when double-clicked",
+    "developer_comment": "Description of the .js file association toggle in desktop settings"
+  },
+  "desktop-settings.associations-note": {
+    "string": "Changes apply immediately. If another app is currently the default for these files, Windows may ask which app to use the next time you open one.",
+    "developer_comment": "Note shown in the desktop settings file associations section"
+  },
+  "desktop-settings.associations-unsupported": {
+    "string": "File associations can only be managed on Windows.",
+    "developer_comment": "Shown instead of the file associations toggles on platforms where they are not supported"
+  },
+  "desktop-settings.associations-error": {
+    "string": "Failed to update file association: {error}",
+    "developer_comment": "Error shown in desktop settings when a file association could not be changed"
+  },
   "desktop-settings.section-advanced": {
     "string": "Advanced",
     "developer_comment": "Name of the advanced section in desktop settings sidebar"

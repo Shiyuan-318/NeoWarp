@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('DesktopSettingsPreload', {
   setHomeBackground: (homeBackground) => ipcRenderer.invoke('set-home-background', homeBackground),
   resetHomeBranding: () => ipcRenderer.invoke('reset-home-branding'),
   setShowRecentProjects: (showRecentProjects) => ipcRenderer.invoke('set-show-recent-projects', showRecentProjects),
+  getFileAssociations: () => ipcRenderer.invoke('get-file-associations'),
+  setFileAssociation: (ext, enabled) => ipcRenderer.invoke('set-file-association', ext, enabled),
   getDefaultLogo: () => ipcRenderer.invoke('home-get-default-logo'),
   // 统一的 AI 模型配置存储（与 AI 助手 / SOLO / 扩展编辑器共用）
   getAiModelConfigs: () => ipcRenderer.invoke('ai-get-model-configs'),
