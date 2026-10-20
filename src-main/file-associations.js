@@ -1,19 +1,35 @@
 const {execFile} = require('child_process');
 const path = require('path');
-const packageJSON = require('../package.json');
+const {APP_NAME} = require('./brand');
 
 // 允许用户在桌面设置中勾选关联/取消关联的扩展名。
 // 这两个格式常被其他程序占用（.js 属于文本编辑器、.sb3 属于其他 Scratch 改版），
 // 因此提供开关而不是像安装器一样强制关联。
-const MANAGED_EXTENSIONS = ['sb3', 'js'];
+//
+// 定义必须在这里静态声明，不能在运行时读取 package.json 的 build.fileAssociations：
+// electron-builder 打包时会删除应用内 package.json 的 build 字段
+// （见 app-builder-lib 的 fileTransformer.js），打包版将拿不到任何定义。
+// progId 对应 package.json build.fileAssociations 的 name，修改时需与安装器配置同步。
+const MANAGED_EXTENSIONS = [
+  {
+    ext: 'sb3',
+    progId: 'Scratch 3 Project',
+    description: 'Scratch 3 Project'
+  },
+  {
+    ext: 'js',
+    progId: 'JavaScript File',
+    description: 'JavaScript File (NeoWarp Extension)'
+  }
+];
 
 // 与安装器（NSIS，按用户安装时写入 HKCU）保持一致的键布局：
 //   HKCU\Software\Classes\.{ext}             默认值 = ProgID
 //   HKCU\Software\Classes\.{ext}\OpenWithProgids   值名 = ProgID
 //   HKCU\Software\Classes\{ProgID}           默认值 = 描述
 //   HKCU\Software\Classes\{ProgID}\shell\open\command
-// ProgID 直接取 package.json build.fileAssociations 的 name 字段，
-// 与安装器生成的 FILECLASS 完全一致。
+// ProgID 与 package.json build.fileAssociations 的 name 字段一致，
+// 也与安装器生成的 FILECLASS 完全一致。
 const REG_HKCU_CLASSES = 'HKCU\\Software\\Classes';
 const USER_CHOICE_TEMPLATE = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.{ext}\\UserChoice';
 const REG_EXE = path.join(
@@ -24,27 +40,11 @@ const REG_EXE = path.join(
 
 const isSupported = () => process.platform === 'win32' && !process.windowsStore;
 
-// productName 位于 build 配置内（与 electron-builder 的取值处一致）
-const PRODUCT_NAME = (packageJSON.build && packageJSON.build.productName) || packageJSON.name;
-
 /**
- * 从 package.json 的安装器配置中解析出需要管理的扩展名定义。
+ * 返回需要管理的扩展名定义。
  * @returns {{ext: string, progId: string, description: string}[]}
  */
-const getDefinitions = () => {
-  const installerAssociations = (packageJSON.build && packageJSON.build.fileAssociations) || [];
-  const definitions = [];
-  for (const ext of MANAGED_EXTENSIONS) {
-    const item = installerAssociations.find((association) => [].concat(association.ext).includes(ext));
-    if (!item) continue;
-    definitions.push({
-      ext,
-      progId: item.name || ext,
-      description: item.description || item.name || ext
-    });
-  }
-  return definitions;
-};
+const getDefinitions = () => MANAGED_EXTENSIONS.map((definition) => ({...definition}));
 
 /**
  * 执行 reg.exe。查询类调用在键/值不存在时（退出码非 0）视为 null 而不是错误。
@@ -135,7 +135,7 @@ const isAssociated = async (definition) => {
  */
 const enableAssociation = async (definition) => {
   const exe = process.execPath;
-  const commandText = `Open with ${PRODUCT_NAME}`;
+  const commandText = `Open with ${APP_NAME}`;
   const command = `"${exe}" "%1"`;
   const icon = `"${exe},0"`;
   const extKey = `${REG_HKCU_CLASSES}\\.${definition.ext}`;
