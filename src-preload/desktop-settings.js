@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('DesktopSettingsPreload', {
   setUpdateChecker: (updateChecker) => ipcRenderer.invoke('set-update-checker', updateChecker),
   setUITheme: (uiTheme) => ipcRenderer.invoke('set-ui-theme', uiTheme),
   setToolbarHeight: (toolbarHeight) => ipcRenderer.invoke('set-toolbar-height', toolbarHeight),
+  setCompactWindowStyle: (compactWindowStyle) => ipcRenderer.invoke('set-compact-window-style', compactWindowStyle),
   setLocale: (locale) => ipcRenderer.invoke('set-locale', locale),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   enumerateMediaDevices: () => ipcRenderer.invoke('enumerate-media-devices'),

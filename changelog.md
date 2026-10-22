@@ -2,6 +2,16 @@ This document is the authoritative source for NeoWarp's changelogs. Everything e
 
 Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **formatting** or [links](https://desktop.turbowarp.org/).
 
+# 2.2.0 (2026-10-19)
+
+ - Windows: added a "Windows Window Style" option in desktop settings (UI section) to merge the editor's minimize/maximize/close buttons into the top toolbar in one row; enabling it also switches the toolbar to the narrow height, and the option only affects the editor window
+ - Collaboration: remote changes now apply incrementally instead of reloading the whole project, so other members' editors no longer reset on every edit, running scripts keep running, and the selected sprite stays put
+ - Collaboration: code edits now appear in real time again — the script workspace refreshes right after a remote update lands instead of only after switching to the costumes tab and back
+ - Collaboration: workspace rebuilds are batched and postponed while you are dragging a block or editing a field, so incoming edits no longer flash the code area
+ - Collaboration: monitor changes (creating variables, dragging or toggling monitors) are applied in place instead of triggering a whole-project reload
+ - Collaboration: edits made while a remote update is being applied are no longer silently dropped and are re-broadcast when the update settles
+ - Collaboration: removed the firewall permission (PowerShell/UAC) prompt when starting a room; if the system firewall needs permission it will show its own standard dialog
+
 # 2.0.1 (2026-10-08)
 
  - Added first-run onboarding guide shown to new installs and updaters: language selection, dark/light mode, and API key configuration, with per-step confirm/skip buttons

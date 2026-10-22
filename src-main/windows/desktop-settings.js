@@ -43,6 +43,9 @@ class DesktopSettingsWindow extends AbstractWindow {
           updateChecker: settings.updateChecker,
           uiTheme: settings.uiTheme,
           toolbarHeight: settings.toolbarHeight,
+          compactWindowStyle: settings.compactWindowStyle,
+          compactWindowStyleSupported: process.platform === 'win32',
+          topBarDeviceStats: settings.topBarDeviceStats,
           microphone: settings.microphone,
           camera: settings.camera,
           hardwareAcceleration: settings.hardwareAcceleration,
@@ -133,6 +136,11 @@ class DesktopSettingsWindow extends AbstractWindow {
       if (toolbarHeight !== 'normal' && toolbarHeight !== 'narrow') {
         return;
       }
+      // NeoWarp: 开启紧凑窗口样式时顶栏固定为窄档（高度须与窗口控制
+      // 覆盖层一致）。设置页会把其他档位禁用，这里再兜底拦一次。
+      if (settings.compactWindowStyle && toolbarHeight !== 'narrow') {
+        return;
+      }
       settings.toolbarHeight = toolbarHeight;
       await settings.save();
       const EditorWindow = require('./editor');
@@ -141,6 +149,29 @@ class DesktopSettingsWindow extends AbstractWindow {
           editorWindow.window.webContents.send('toolbar-height-changed', toolbarHeight);
         }
       }
+    });
+
+    // NeoWarp: Windows 窗口样式（紧凑窗口样式，仅 Windows 提供开关）。
+    // 开启后编辑器右上角系统按钮与顶栏合并为一行，此时顶栏高度固定使用
+    // 窄档：若当前不是窄档则强制写入并广播联动；最后统一更新所有编辑器
+    // 窗口的覆盖层并广播渲染层切换标题栏布局（无需重启编辑器）。
+    this.ipc.handle('set-compact-window-style', async (event, compact) => {
+      if (typeof compact !== 'boolean') {
+        return;
+      }
+      settings.compactWindowStyle = compact;
+      await settings.save();
+      const EditorWindow = require('./editor');
+      if (compact && settings.toolbarHeight !== 'narrow') {
+        settings.toolbarHeight = 'narrow';
+        await settings.save();
+        for (const editorWindow of AbstractWindow.getWindowsByClass(EditorWindow)) {
+          if (!editorWindow.window.isDestroyed()) {
+            editorWindow.window.webContents.send('toolbar-height-changed', 'narrow');
+          }
+        }
+      }
+      EditorWindow.applyCompactWindowStyle();
     });
 
     this.ipc.handle('set-locale', async (event, locale) => {
@@ -260,10 +291,23 @@ class DesktopSettingsWindow extends AbstractWindow {
       await settings.save();
     });
 
+    // NeoWarp: 顶栏设备占用（CPU/内存）显示开关（桌面设置 → UI 设置）。
+    // 保存后立即广播给所有编辑器窗口：顶栏（menu-bar）订阅
+    // top-bar-device-stats-changed 实时显隐，flex 布局自动重新居中，
+    // 无需重启编辑器。
     this.ipc.handle('set-top-bar-device-stats', async (event, topBarDeviceStats) => {
+      if (typeof topBarDeviceStats !== 'boolean') {
+        return;
+      }
       settings.topBarDeviceStats = topBarDeviceStats;
       AbstractWindow.settingsChanged();
       await settings.save();
+      const EditorWindow = require('./editor');
+      for (const editorWindow of AbstractWindow.getWindowsByClass(EditorWindow)) {
+        if (!editorWindow.window.isDestroyed()) {
+          editorWindow.window.webContents.send('top-bar-device-stats-changed', topBarDeviceStats);
+        }
+      }
     });
 
     this.ipc.handle('set-home-logo', async (event, homeLogo) => {

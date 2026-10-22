@@ -471,7 +471,9 @@
         gap: 6px;
         max-height: 168px;
         overflow-y: auto;
-        padding-right: 2px;
+        /* 不要在这里留右侧空隙：列表会按自身边缘裁切投影，
+           空隙会让 .recent-item 圆角旁的玻璃投影被切成直角。 */
+        padding-right: 0;
       }
       .recent-list::-webkit-scrollbar { width: 6px; }
       .recent-list::-webkit-scrollbar-thumb {

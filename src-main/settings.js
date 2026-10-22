@@ -122,6 +122,17 @@ class Settings {
     this.data.toolbarHeight = toolbarHeight === 'narrow' ? 'narrow' : 'normal';
   }
 
+  // Windows 紧凑窗口样式（桌面设置 → UI 设置，仅 Windows 提供）：
+  // 开启后编辑器右上角的最小化/最大化/关闭按钮与顶部工具栏合并为同一行，
+  // 同时顶部工具栏固定使用窄高度。只影响编辑器窗口的标题栏布局，
+  // 不影响其它窗口，也不会改变任何窗口按钮/拖动/关闭行为本身。
+  get compactWindowStyle () {
+    return this.data.compactWindowStyle === true;
+  }
+  set compactWindowStyle (compactWindowStyle) {
+    this.data.compactWindowStyle = compactWindowStyle === true;
+  }
+
   get ignoredUpdate () {
     return this.data.ignoredUpdate || null;
   }
@@ -243,8 +254,12 @@ class Settings {
     this.data.activeAiModelConfigId = activeAiModelConfigId || null;
   }
 
+  /**
+   * 顶栏设备占用（CPU/内存）显示开关。默认 true：与既有行为一致（始终
+   * 显示），仅在用户显式保存过 false 后关闭。
+   */
   get topBarDeviceStats () {
-    return this.data.topBarDeviceStats === true;
+    return this.data.topBarDeviceStats !== false;
   }
   set topBarDeviceStats (topBarDeviceStats) {
     this.data.topBarDeviceStats = topBarDeviceStats;

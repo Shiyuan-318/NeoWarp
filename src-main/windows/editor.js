@@ -3,7 +3,7 @@ const path = require('path');
 const nodeURL = require('url');
 const zlib = require('zlib');
 const nodeCrypto = require('crypto');
-const {app, dialog} = require('electron');
+const {app, dialog, nativeTheme} = require('electron');
 const os = require('os');
 const ProjectRunningWindow = require('./project-running-window');
 const AddonsWindow = require('./addons');
@@ -33,6 +33,7 @@ const HomeWindow = require('./home');
 const AbstractWindow = require('./abstract');
 const {scanExpands} = require('../neowarp-expands');
 const editorWindowEvents = require('../editor-window-events');
+const {getEffectiveTheme} = require('../effective-theme');
 
 const TYPE_FILE = 'file';
 const TYPE_URL = 'url';
@@ -483,6 +484,29 @@ class EditorWindow extends ProjectRunningWindow {
     this.window.on('focus', () => {
       this.updateRichPresence();
     });
+
+    // NeoWarp: Windows 窗口控制覆盖层（WCO）。窗口创建时就以"隐藏原生
+    // 标题栏 + 原生窗口控制按钮覆盖层"生成（Electron 只能在创建时启用
+    // titleBarOverlay，运行期仅能改颜色/高度），「Windows 窗口样式」开关
+    // 只影响渲染层呈现：关闭 = 顶部自绘标题条；开启 = 顶栏兼作标题栏。
+    if (process.platform === 'win32') {
+      this.window.on('enter-full-screen', () => {
+        // F11 / Alt+Enter 等 OS 级全屏：渲染层隐藏标题条并取消内容区补偿；
+        // 编辑器自身的全屏模式（GUI 内部）不涉及这里
+        this.window.webContents.send('os-fullscreen-changed', {fullscreen: true});
+      });
+      this.window.on('leave-full-screen', () => {
+        this.window.webContents.send('os-fullscreen-changed', {fullscreen: false});
+      });
+      // overlay 按钮底色按生效主题修正：getWindowOptions 里只能同步猜
+      // （全局固定主题或系统外观，编辑器自身的主题配置拿不到），这里
+      // 在构造完窗口后异步取一次生效主题
+      getEffectiveTheme().then((theme) => {
+        if (this.window.isDestroyed()) return;
+        this.overlayTheme = theme === 'dark' ? 'dark' : 'light';
+        this.updateTitleBarOverlay();
+      }).catch(() => {});
+    }
 
     this.ipc.on('is-initially-fullscreen', (e) => {
       e.returnValue = isInitiallyFullscreen;
@@ -1000,6 +1024,12 @@ class EditorWindow extends ProjectRunningWindow {
     });
 
     this.ipc.on('theme-changed', (event, data) => {
+      // NeoWarp: overlay 按钮底色跟随编辑器的实际主题（编辑器自身可能
+      // 配置了与全局设置不同的主题）
+      if (process.platform === 'win32') {
+        this.overlayTheme = data && data.theme === 'dark' ? 'dark' : 'light';
+        this.updateTitleBarOverlay();
+      }
       // 统一走 AIAssistantWindow.broadcastTheme：里面会连同 SOLO（子类）一起广播
       AIAssistantWindow.broadcastTheme(data.theme);
       const todoWindows = AbstractWindow.getWindowsByClass(TodoListWindow);
@@ -1063,6 +1093,17 @@ class EditorWindow extends ProjectRunningWindow {
     // 广播（toolbar-height-changed）推送。
     this.ipc.on('editor-get-toolbar-height', (event) => {
       event.returnValue = settings.toolbarHeight;
+    });
+
+    // NeoWarp: Windows 窗口控制覆盖层状态：渲染层在 React 渲染前同步
+    // 读取一次，决定画自绘标题条还是把顶栏兼作标题栏；之后的切换由
+    // compact-window-style-changed 广播推送（见 applyCompactWindowStyle）。
+    this.ipc.on('editor-get-window-controls-overlay-state', (event) => {
+      const hasOverlay = process.platform === 'win32';
+      event.returnValue = {
+        hasOverlay,
+        compact: hasOverlay && settings.compactWindowStyle
+      };
     });
 
     this.ipc.on('get-code-area-background-image', (event) => {
@@ -1367,6 +1408,22 @@ class EditorWindow extends ProjectRunningWindow {
     });
   }
 
+  /**
+   * NeoWarp: Windows 窗口控制覆盖层（WCO）。只有创建时才能启用
+   * titleBarOverlay（运行期仅能改颜色/高度），所以无论「Windows 窗口
+   * 样式」开关如何都以 hidden + overlay 创建，开关只切换渲染层呈现
+   * （见 window-titlebar.js 与 gui.css）；compactWindowStyle 的处理、
+   * 主题配色与主题修正见构造函数。
+   */
+  getWindowOptions () {
+    const options = super.getWindowOptions();
+    if (process.platform === 'win32') {
+      options.titleBarStyle = 'hidden';
+      options.titleBarOverlay = this.getTitleBarOverlayOptions();
+    }
+    return options;
+  }
+
   getPreload () {
     return 'editor';
   }
@@ -1440,6 +1497,62 @@ class EditorWindow extends ProjectRunningWindow {
 
   updateRichPresence () {
     RichPresence.setActivity(this.projectTitle, this.openedProjectAt);
+  }
+
+  /**
+   * NeoWarp: 更新 Windows 窗口控制覆盖层（按钮底色/符号色/高度）。
+   * 只有 compactWindowStyle 开关和主题变化时需要调用。
+   */
+  updateTitleBarOverlay () {
+    if (process.platform !== 'win32') {
+      return;
+    }
+    if (!this.window || this.window.isDestroyed()) {
+      return;
+    }
+    try {
+      this.window.setTitleBarOverlay(this.getTitleBarOverlayOptions());
+    } catch (e) {
+      // setTitleBarOverlay 要求窗口创建时启用了 titleBarOverlay；
+      // 编辑器窗口都启用，万一失败保持系统默认按钮样式即可
+    }
+  }
+
+  /**
+   * NeoWarp: Windows 窗口控制覆盖层配置。配色跟随生效主题（亮色 =
+   * 编辑器顶栏主题色，深色 = #333333，渲染层同步画同色背景）；高度
+   * 对应渲染层布局：未开启紧凑样式时为自绘标题条高度 32px，开启后
+   * 等于窄档顶栏 36px。
+   */
+  getTitleBarOverlayOptions () {
+    let isDark;
+    if (this.overlayTheme === 'dark' || this.overlayTheme === 'light') {
+      isDark = this.overlayTheme === 'dark';
+    } else {
+      // super() 构造窗口时构造体还没跑到主题修正：同步只有全局设置与
+      // 系统外观可用，构造完成后会按生效主题立即刷新一次
+      isDark = settings.uiTheme === 'dark' ||
+        (settings.uiTheme !== 'light' && nativeTheme.shouldUseDarkColors);
+    }
+    return {
+      color: isDark ? '#333333' : '#ff4c4c',
+      symbolColor: '#ffffff',
+      height: settings.compactWindowStyle ? 36 : 32
+    };
+  }
+
+  /**
+   * NeoWarp: 桌面设置切换「Windows 窗口样式」后统一应用到所有编辑器：
+   * 更新覆盖层高度（32 ⇄ 36）并广播渲染层切换标题栏布局。
+   */
+  static applyCompactWindowStyle () {
+    for (const editorWindow of AbstractWindow.getWindowsByClass(EditorWindow)) {
+      if (editorWindow.window.isDestroyed()) {
+        continue;
+      }
+      editorWindow.updateTitleBarOverlay();
+      editorWindow.window.webContents.send('compact-window-style-changed', settings.compactWindowStyle === true);
+    }
   }
 
   /**

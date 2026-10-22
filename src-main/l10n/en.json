@@ -459,6 +459,14 @@
     "string": "Narrow",
     "developer_comment": "Editor top toolbar height option for a compact height"
   },
+  "desktop-settings.compact-window-style": {
+    "string": "Windows Window Style",
+    "developer_comment": "Label of the Windows window style option (merging window control buttons into the editor toolbar) in desktop settings"
+  },
+  "desktop-settings.compact-window-style-desc": {
+    "string": "Merge the minimize/maximize/close buttons into the editor's top toolbar. Only affects the editor window",
+    "developer_comment": "Description of the Windows window style option in desktop settings"
+  },
   "desktop-settings.home-logo": {
     "string": "Home Logo",
     "developer_comment": "Label of the home page logo option in desktop settings UI section"

@@ -47,6 +47,13 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   getStageAreaBackgroundImage: () => ipcRenderer.sendSync('get-stage-area-background-image'),
   setStageAreaBackgroundImage: (imageData) => ipcRenderer.invoke('set-stage-area-background-image', imageData),
   getTopBarDeviceStats: () => ipcRenderer.sendSync('get-top-bar-device-stats'),
+  // 顶栏设备占用（CPU/内存）显示开关（桌面设置 → UI 设置）：保存后由
+  // 主进程实时推送，顶栏无需重启即显隐适配
+  onTopBarDeviceStatsChanged: (callback) => {
+    ipcRenderer.on('top-bar-device-stats-changed', (event, enabled) => {
+      callback(enabled);
+    });
+  },
   getNeowarpExpands: () => ipcRenderer.invoke('get-neowarp-expands'),
   openAI: () => ipcRenderer.invoke('open-ai-assistant'),
   openTodoList: () => ipcRenderer.invoke('open-todo-list'),
@@ -173,6 +180,21 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   onToolbarHeightChanged: (callback) => {
     ipcRenderer.on('toolbar-height-changed', (event, height) => {
       callback(height);
+    });
+  },
+  // NeoWarp: Windows 窗口控制覆盖层（WCO）：hasOverlay 表示本窗口以
+  // 隐藏标题栏 + 原生按钮覆盖层创建（仅 Windows），compact 表示开启了
+  // 「Windows 窗口样式」（顶栏兼作标题栏）。
+  getWindowControlsOverlayState: () => ipcRenderer.sendSync('editor-get-window-controls-overlay-state'),
+  onCompactWindowStyleChanged: (callback) => {
+    ipcRenderer.on('compact-window-style-changed', (event, compact) => {
+      callback(compact);
+    });
+  },
+  // F11 等 OS 级全屏切换推送（编辑器内部全屏模式不推送）
+  onOSFullscreenChanged: (callback) => {
+    ipcRenderer.on('os-fullscreen-changed', (event, data) => {
+      callback(!!(data && data.fullscreen));
     });
   },
   onRequestSpriteStats: (callback) => {

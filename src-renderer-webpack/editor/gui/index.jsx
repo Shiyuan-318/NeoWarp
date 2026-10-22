@@ -4,6 +4,7 @@ import GUI from './gui.jsx';
 
 import './media-device-chooser-impl.js';
 import '../prompt/prompt.js';
+import {setupWindowControlsOverlay} from './window-titlebar.js';
 
 const appTarget = document.getElementById('app');
 document.body.classList.add('tw-loaded');
@@ -19,6 +20,12 @@ try {
 } catch (e) {
   // 读不到就用默认的 normal（无对应样式，行为等同未设置）
 }
+
+// NeoWarp: Windows 窗口控制覆盖层（「Windows 窗口样式」开关）。同样必须
+// React 渲染前处理：normal 模式要画自绘标题条并把 #app 下移补偿，
+// Blockly 首次测量前 <html> 属性与布局就必须就位。未启用覆盖层
+// （macOS/Linux）时内部直接返回，零影响。
+setupWindowControlsOverlay();
 
 ReactDOM.render(<GUI />, appTarget);
 

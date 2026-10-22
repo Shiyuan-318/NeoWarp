@@ -709,3 +709,100 @@ p {
   margin: 4px 10px 0 10px !important;
   height: calc(2.25rem - 4px) !important;
 }
+
+/* ============================================================
+   NeoWarp: Windows 窗口样式（桌面设置 → UI 设置，仅 Windows）
+   编辑器窗口始终以"隐藏原生标题栏 + 原生窗口控制覆盖层"创建（见
+   editor.js），本节依据 <html> 上的 data-compact-window-style 切换：
+
+   - "normal"（开关关闭，默认）：渲染层画一条 32px 自绘标题条，内容区
+     整体下移补偿；
+   - "compact"（开关开启）：隐藏自绘标题条，编辑器顶栏（menu-bar）
+     兼作标题栏，右上角系统按钮覆盖在顶栏右侧（主进程把覆盖层高度
+     设为 36px，恰等于窄档顶栏 2.25rem）；
+   - data-os-fullscreen="true"：F11 等 OS 级全屏，隐藏标题条并取消
+     内容区补偿（编辑器自身的全屏模式不与标题条重叠，无需处理）。
+
+   环境变量 titlebar-area-* 由系统窗口控制覆盖层提供：
+   titlebar-area-width/x 圈出系统按钮区（x 为窗口贴到屏幕右半时非 0），
+   titlebar-area-height 为覆盖层高度。未启用覆盖层的平台不会挂这些
+   data 属性，本节全部规则不会命中，零影响。
+   ============================================================ */
+
+/* ---- 自绘标题条：仅在 normal 模式显示 ---- */
+:global(#neowarp-titlebar) {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* 宽度只画到系统按钮区左侧，按钮区由系统绘制（底色与主进程同步） */
+  width: env(titlebar-area-width, 100%);
+  height: env(titlebar-area-height, 32px);
+  /* 可拖动窗口；双击最大化/右键系统菜单由系统对拖动区的默认行为提供 */
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+  /* 亮色 = 顶栏同款主题色（含强调色变体），深色 = 顶栏同款深灰 */
+  background-color: var(--looks-secondary, #ff4c4c);
+  color: #ffffff;
+  z-index: 2147483646;
+}
+[data-gui-theme="dark"] :global(#neowarp-titlebar) {
+  background-color: var(--menu-bar-background, #333333);
+}
+:global(#neowarp-titlebar-title) {
+  position: absolute;
+  top: 0;
+  left: 10px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 14px;
+}
+[data-compact-window-style="normal"] :global(#neowarp-titlebar) {
+  display: block;
+}
+[data-compact-window-style="normal"][data-os-fullscreen="true"] :global(#neowarp-titlebar) {
+  display: none;
+}
+
+/* ---- 内容区补偿：标题条占掉窗口顶部一行 ---- */
+[data-compact-window-style="normal"] :global(#app) {
+  top: env(titlebar-area-height, 32px);
+  height: calc(100% - env(titlebar-area-height, 32px));
+}
+[data-compact-window-style="normal"][data-os-fullscreen="true"] :global(#app) {
+  top: 0;
+  height: 100%;
+}
+
+/* ---- compact 模式：顶栏兼作标题栏 ----
+   允许从顶栏空白处拖动；顶栏内部所有后代显式 no-drag 以免盖住
+   可点击元素，再对分组容器恢复 drag，使组内空白也能拖动。 */
+[data-compact-window-style="compact"] :global([class*="menu-bar_menu-bar_"]) {
+  -webkit-app-region: drag;
+  /* 预留系统按钮区宽度，避免顶栏项被系统按钮盖住 */
+  padding-right: calc(100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px));
+}
+[data-compact-window-style="compact"] :global([class*="menu-bar_menu-bar_"]) * {
+  -webkit-app-region: no-drag;
+}
+/* 注意：这两条必须放在上面的 no-drag 通配之后，同级选择器后者生效 */
+[data-compact-window-style="compact"] :global([class*="menu-bar_main-menu_"]),
+[data-compact-window-style="compact"] :global([class*="menu-bar_account-info-group_"]) {
+  -webkit-app-region: drag;
+}
+
+/* 深色模式顶栏是悬浮圆角样式（见上方深色规则），兼作标题栏时必须变成
+   通顶直角贴边的一行，与系统按钮区底色拼成同一行标题栏 */
+[data-compact-window-style="compact"][data-gui-theme="dark"] :global([class*="menu-bar_menu-bar_"]) {
+  margin: 0 !important;
+  height: 2.25rem !important;
+  border-radius: 0 !important;
+}

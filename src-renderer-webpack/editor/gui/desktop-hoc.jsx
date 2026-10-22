@@ -32,6 +32,11 @@ import {manuallyTrustExtension} from 'scratch-gui/src/containers/tw-security-man
 import {WrappedFileHandle} from './filesystem-api.js';
 import {setStrings} from '../prompt/prompt.js';
 import {showEncryptedSaveDialog, showPasswordDialog, setStrings as setEncryptedSaveStrings} from '../encrypted-save-dialog/encrypted-save-dialog.js';
+import JSZip from '@turbowarp/jszip';
+import sb3 from 'scratch-vm/src/serialization/sb3';
+import StageLayering from 'scratch-vm/src/engine/stage-layering';
+import Runtime from 'scratch-vm/src/engine/runtime';
+import AddonHooks from 'scratch-gui/src/addons/hooks';
 
 let mountedOnce = false;
 let isStageDetached = false;
@@ -86,6 +91,170 @@ const base64ToArrayBuffer = (base64) => {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes.buffer;
+};
+
+// ===== Collaboration: incremental project sync helpers =====
+//
+// Remote updates used to be applied with vm.loadProject(), which tears down
+// and rebuilds every target: the whole editor visibly "reloads", all running
+// scripts stop and the editing target resets on every single edit any peer
+// makes. Instead, received projects are diffed against the local state and
+// applied per sprite: only changed sprites are rebuilt in place, pure
+// position/pose changes are merged onto the live target, monitors are synced
+// through the runtime's monitor API, and a full reload remains only for
+// stage-level/global changes. When a rebuild of the script workspace is
+// needed, it is deferred while the user is dragging or editing a field, so
+// remote updates land without visible flashes and without interrupting.
+
+// Target fields that change while scripts run (dragging on stage, switching
+// costume tabs, volume). They are synced, but must not be treated as a
+// structural edit that requires rebuilding the target.
+const COLLAB_SPRITE_RUNTIME_PROPS = [
+  'x', 'y', 'size', 'direction', 'visible', 'draggable',
+  'rotationStyle', 'currentCostume', 'volume'
+];
+
+const collabStableStringify = value => {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(collabStableStringify).join(',')}]`;
+  const keys = Object.keys(value).sort();
+  return `{${keys.map(key => `${JSON.stringify(key)}:${collabStableStringify(value[key])}`).join(',')}}`;
+};
+
+// Strip runtime-only data from sb3 target JSON: variable/list values are
+// written by running scripts all the time and are not part of a structural
+// edit, so they must not make two structurally identical sprites differ.
+const collabNormalizeTarget = (targetJson, isStage) => {
+  const normalized = JSON.parse(collabStableStringify(targetJson));
+  const stripValues = record => {
+    const copy = {};
+    for (const id of Object.keys(record || {})) {
+      const entry = record[id];
+      // [name, value, ...flags] — keep the name and flags, drop the value
+      copy[id] = Array.isArray(entry) ? entry.slice(0, 1).concat(entry.slice(2)) : entry;
+    }
+    return copy;
+  };
+  normalized.variables = stripValues(normalized.variables);
+  normalized.lists = stripValues(normalized.lists);
+  if (isStage) {
+    // Stage fields scripts mutate while running (tempo, video settings…)
+    for (const key of ['tempo', 'videoState', 'videoTransparency', 'textToSpeechLanguage', 'volume']) {
+      delete normalized[key];
+    }
+  }
+  return normalized;
+};
+
+const collabSpritesEqual = (localJson, remoteJson) =>
+  collabStableStringify(collabNormalizeTarget(localJson, localJson.isStage)) ===
+  collabStableStringify(collabNormalizeTarget(remoteJson, remoteJson.isStage));
+
+// True when the two sprites differ only in runtime props (drag, costume tab,
+// volume…): those can be merged onto the live target without rebuilding it.
+const collabSpriteRuntimePropsOnly = (localJson, remoteJson) => {
+  const stripProps = json => {
+    const copy = collabNormalizeTarget(json, json.isStage);
+    for (const prop of COLLAB_SPRITE_RUNTIME_PROPS) delete copy[prop];
+    return copy;
+  };
+  if (collabStableStringify(stripProps(localJson)) !== collabStableStringify(stripProps(remoteJson))) {
+    return false;
+  }
+  return COLLAB_SPRITE_RUNTIME_PROPS.some(prop =>
+    JSON.stringify(localJson[prop]) !== JSON.stringify(remoteJson[prop]));
+};
+
+// Monitors diff. Every serialized monitor field maps onto a MonitorRecord
+// property, so monitor differences never require a full project reload; this
+// returns the per-record operations to apply to the runtime monitor state.
+// The serialized `value` is a placeholder, so it is ignored when comparing.
+const collabMonitorRecordShape = record => {
+  const copy = {...record};
+  delete copy.value;
+  return copy;
+};
+
+const collabMonitorChanges = (localMonitors, remoteMonitors) => {
+  const localById = new Map((localMonitors || []).map(record => [record.id, record]));
+  const remoteById = new Map((remoteMonitors || []).map(record => [record.id, record]));
+  const additions = [];
+  const updates = [];
+  const deletions = [];
+  for (const [id, remote] of remoteById) {
+    const local = localById.get(id);
+    if (!local) {
+      additions.push(remote);
+      continue;
+    }
+    if (collabStableStringify(collabMonitorRecordShape(local)) !==
+        collabStableStringify(collabMonitorRecordShape(remote))) {
+      updates.push(remote);
+    }
+  }
+  for (const [id] of localById) {
+    if (!remoteById.has(id)) deletions.push(id);
+  }
+  return {additions, updates, deletions};
+};
+
+// Stage structural diff. Peers create variables, lists and broadcast messages
+// all the time while editing; when that is the ONLY stage change it is applied
+// in place: {additions, deletions}. Any other stage change (backdrops, stage
+// blocks, comments, renames, cloud variable removal…) needs a full reload and
+// returns null.
+const collabStageChanges = (localStageJson, remoteStageJson) => {
+  // Any difference outside the variable records cannot be applied in place
+  const stripVariables = stageJson => {
+    const copy = collabNormalizeTarget(stageJson, true);
+    delete copy.variables;
+    delete copy.lists;
+    delete copy.broadcasts;
+    return copy;
+  };
+  if (collabStableStringify(stripVariables(localStageJson)) !==
+      collabStableStringify(stripVariables(remoteStageJson))) {
+    return null;
+  }
+  const kinds = [
+    ['variables', ''],
+    ['lists', 'list'],
+    ['broadcasts', 'broadcast_msg']
+  ];
+  const additions = [];
+  const deletions = [];
+  for (const [field, type] of kinds) {
+    const localRecord = localStageJson[field] || {};
+    const remoteRecord = remoteStageJson[field] || {};
+    for (const id of Object.keys(remoteRecord)) {
+      const entry = remoteRecord[id];
+      if (Object.prototype.hasOwnProperty.call(localRecord, id)) {
+        const localEntry = Array.isArray(localRecord[id])
+          ? localRecord[id].slice(0, 1).concat(localRecord[id].slice(2))
+          : localRecord[id];
+        const remoteEntry = Array.isArray(entry) ? entry.slice(0, 1).concat(entry.slice(2)) : entry;
+        if (JSON.stringify(localEntry) !== JSON.stringify(remoteEntry)) return null; // renamed
+      } else {
+        additions.push({
+          id,
+          field,
+          name: Array.isArray(entry) ? entry[0] : entry,
+          type,
+          isCloud: Array.isArray(entry) && entry[2] === true
+        });
+      }
+    }
+    for (const id of Object.keys(localRecord)) {
+      if (Object.prototype.hasOwnProperty.call(remoteRecord, id)) continue;
+      const entry = localRecord[id];
+      if (field === 'variables' && Array.isArray(entry) && entry[2] === true) {
+        // Cloud variable bookkeeping lives in the runtime; don't remove here
+        return null;
+      }
+      deletions.push({id, field});
+    }
+  }
+  return {additions, deletions};
 };
 
 const handleClickAddonSettings = (search) => {
@@ -1916,6 +2085,8 @@ const DesktopHOC = function (WrappedComponent) {
       // NeoWarp: Collaboration - Receive project update from host/other participant
       this._collabLoadingProject = false;
       this._collabPendingProject = null;
+      this._collabApplyingRemote = false;
+      this._collabMissedLocalChange = false;
       EditorPreload.onCollabProjectUpdate((data) => {
         if (this._collabLoadingProject) {
           // Keep only the latest remote state; it is applied once the
@@ -1930,6 +2101,9 @@ const DesktopHOC = function (WrappedComponent) {
       // Building the archive is async, so guard against overlapping builds: a
       // change arriving mid-build just queues one more send.
       this._collabSyncTimer = null;
+      this._collabWorkspaceRefreshTimer = null;
+      this._collabWorkspaceRefreshAttempts = 0;
+      this._collabLastWorkspaceRefresh = 0;
       this._collabBuildInFlight = false;
       this._collabBuildQueued = false;
       this._collabSendProjectPayload = () => {
@@ -1967,7 +2141,13 @@ const DesktopHOC = function (WrappedComponent) {
       // Listen for VM PROJECT_CHANGED events to trigger collaboration sync
       if (this.props.vm) {
         this.props.vm.on('PROJECT_CHANGED', () => {
-          if (this._collabLoadingProject) return;
+          if (this._collabLoadingProject) {
+            // Events our own apply produces are swallowed; genuine local
+            // edits made in this window must not be lost, so remember to
+            // re-broadcast once the apply and its cooldown have settled
+            if (!this._collabApplyingRemote) this._collabMissedLocalChange = true;
+            return;
+          }
           const collabState = this.state.collaborationState;
           if (collabState && collabState.isCollaborating) {
             this._collabBroadcastProject();
@@ -2200,6 +2380,8 @@ const DesktopHOC = function (WrappedComponent) {
           const json = this.props.vm.toJSON();
           // Calculate total asset size from runtime VM objects
           let assetSize = 0;
+          let assetCostumeSize = 0;
+          let assetSoundSize = 0;
           const runtimeTargets = this.props.vm.runtime.targets;
           if (runtimeTargets) {
             runtimeTargets.forEach(function(target) {
@@ -2208,8 +2390,10 @@ const DesktopHOC = function (WrappedComponent) {
                 var costume = costumes[ci];
                 if (costume.asset && costume.asset.data && typeof costume.asset.data === 'string') {
                   assetSize += Math.round(costume.asset.data.length * 0.75);
+                  assetCostumeSize += Math.round(costume.asset.data.length * 0.75);
                 } else if (costume.width && costume.height) {
                   assetSize += costume.width * costume.height * 4;
+                  assetCostumeSize += costume.width * costume.height * 4;
                 }
               }
               var sounds = target.getSounds ? target.getSounds() : [];
@@ -2217,6 +2401,7 @@ const DesktopHOC = function (WrappedComponent) {
                 var sound = sounds[si];
                 if (sound.asset && sound.asset.data && typeof sound.asset.data === 'string') {
                   assetSize += Math.round(sound.asset.data.length * 0.75);
+                  assetSoundSize += Math.round(sound.asset.data.length * 0.75);
                 }
               }
             });
@@ -2224,13 +2409,17 @@ const DesktopHOC = function (WrappedComponent) {
           EditorPreload.sendProjectJSON({
             requestId: data.requestId,
             projectJSON: json,
-            assetSize: assetSize
+            assetSize: assetSize,
+            assetCostumeSize: assetCostumeSize,
+            assetSoundSize: assetSoundSize
           });
         } catch (e) {
           EditorPreload.sendProjectJSON({
             requestId: data ? data.requestId : null,
             projectJSON: null,
-            assetSize: 0
+            assetSize: 0,
+            assetCostumeSize: 0,
+            assetSoundSize: 0
           });
         }
       });
@@ -4831,6 +5020,27 @@ const DesktopHOC = function (WrappedComponent) {
         EditorPreload.onToolbarHeightChanged(applyToolbarHeight);
       }
 
+      // NeoWarp: Windows 窗口样式（compact）：系统按钮并入顶栏时顶栏高度
+      // 变为 36px 并保持窄档，<html> 的 data-compact-window-style 由
+      // window-titlebar.js 在 React 渲染前就写好并处理广播；这里再兜底
+      // 订阅一次，行为与 toolbar-height 相同（幂等：<html> 已是目标值时
+      // 不重复发 resize）。属性存在与否代表本窗口是否启用了标题栏覆盖层。
+      if (EditorPreload.onCompactWindowStyleChanged &&
+          document.documentElement.hasAttribute('data-compact-window-style')) {
+        EditorPreload.onCompactWindowStyleChanged(function (compact) {
+          try {
+            var next = compact === true ? 'compact' : 'normal';
+            if (document.documentElement.getAttribute('data-compact-window-style') === next) {
+              return;
+            }
+            document.documentElement.setAttribute('data-compact-window-style', next);
+            window.requestAnimationFrame(function () {
+              window.dispatchEvent(new Event('resize'));
+            });
+          } catch (e) {}
+        });
+      }
+
       // This component is re-mounted when the locale changes, but we only want to load
       // the initial project once.
       if (mountedOnce) {
@@ -5026,6 +5236,18 @@ const DesktopHOC = function (WrappedComponent) {
         clearInterval(this._topBarStatsInterval);
         this._topBarStatsInterval = null;
       }
+      if (this._collabWorkspaceRefreshTimer) {
+        clearTimeout(this._collabWorkspaceRefreshTimer);
+        this._collabWorkspaceRefreshTimer = null;
+      }
+      if (this._collabLoadCooldown) {
+        clearTimeout(this._collabLoadCooldown);
+        this._collabLoadCooldown = null;
+      }
+      if (this._collabSyncTimer) {
+        clearTimeout(this._collabSyncTimer);
+        this._collabSyncTimer = null;
+      }
     }
     setupFlyoutFrostedGlass () {
       const injectionDiv = document.querySelector('.injectionDiv');
@@ -5118,32 +5340,468 @@ const DesktopHOC = function (WrappedComponent) {
     }
 
     // NeoWarp: Apply a project state received from a collaborator.
-    // The cooldown after loadProject swallows PROJECT_CHANGED events that
-    // fire after deserialization, so remote updates don't echo back out.
+    // Structural changes are applied incrementally (per sprite, in place) so
+    // peers no longer reload the whole project on every edit; stage-level or
+    // global changes fall back to a full reload. Applications are chained so
+    // overlapping remote updates land in arrival order.
     applyCollabProjectUpdate (data) {
+      this._collabApplyChain = (this._collabApplyChain || Promise.resolve())
+        .then(() => this.collabApplyProjectUpdateInner(data))
+        .catch(error => {
+          console.error('Collab: failed to apply remote project update', error);
+        });
+    }
+
+    // Decode a received payload into {raw, projectJSON, zip}: raw is what
+    // vm.loadProject accepts (sb3 ArrayBuffer or bare JSON), projectJSON/zip
+    // power the incremental diff.
+    collabReadPayload (project) {
+      return Promise.resolve()
+        .then(() => {
+          const raw = this.parseCollabProject(project);
+          if (raw instanceof ArrayBuffer) {
+            return JSZip.loadAsync(raw).then(zip =>
+              zip.file('project.json').async('string').then(text => ({
+                raw,
+                projectJSON: JSON.parse(text),
+                zip
+              }))
+            );
+          }
+          const projectJSON = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          return {raw, projectJSON, zip: null};
+        })
+        .catch(error => {
+          console.error('Collab: failed to decode project payload', error);
+          return null;
+        });
+    }
+
+    // Compute how to apply a remote project: a full reload, or a list of
+    // per-sprite operations applied in place.
+    collabBuildApplyPlan (projectJSON, zip) {
+      const vm = this.props.vm;
+      const localJSON = JSON.parse(vm.toJSON());
+      const remoteStage = (projectJSON.targets || []).find(target => target.isStage);
+      const localStage = (localJSON.targets || []).find(target => target.isStage);
+      if (!remoteStage || !localStage) return {fullLoad: true};
+
+      const stringify = value => collabStableStringify(value);
+      // Monitor differences are applied in place through the runtime monitor
+      // API; deliberately NOT a full reload (the most frequent source of
+      // whole-project flicker: variable creation, monitor drags, checks)
+      const monitorChanges = collabMonitorChanges(localJSON.monitors, projectJSON.monitors);
+      if (stringify(projectJSON.extensionURLs || null) !== stringify(localJSON.extensionURLs || null) ||
+          stringify(projectJSON.customFonts || null) !== stringify(localJSON.customFonts || null) ||
+          stringify(projectJSON.extensionStorage || null) !== stringify(localJSON.extensionStorage || null)) {
+        return {fullLoad: true};
+      }
+
+      const stageChanges = collabStageChanges(localStage, remoteStage);
+      if (stageChanges === null) return {fullLoad: true};
+
+      const remoteSprites = (projectJSON.targets || []).filter(target => !target.isStage);
+      const localTargets = vm.runtime.targets.filter(target => target.isSprite && target.isSprite());
+      const localTargetByName = new Map(localTargets.map(target => [target.getName(), target]));
+      const localJsonByName = new Map((localJSON.targets || [])
+        .filter(target => !target.isStage)
+        .map(target => [target.name, target]));
+      const remoteNames = new Set(remoteSprites.map(target => target.name));
+
+      const ops = [];
+      for (const sprite of remoteSprites) {
+        const localTarget = localTargetByName.get(sprite.name);
+        if (!localTarget) {
+          ops.push({op: 'add', sprite, zip});
+          continue;
+        }
+        const localSprite = localJsonByName.get(sprite.name);
+        if (!localSprite || collabSpritesEqual(localSprite, sprite)) continue;
+        if (collabSpriteRuntimePropsOnly(localSprite, sprite)) {
+          ops.push({op: 'props', target: localTarget, sprite});
+        } else {
+          ops.push({op: 'replace', target: localTarget, sprite, zip});
+        }
+      }
+      for (const target of localTargets) {
+        if (!remoteNames.has(target.getName())) ops.push({op: 'delete', target});
+      }
+
+      const desiredOrder = remoteSprites.map(target => target.name);
+      const currentOrder = localTargets.map(target => target.getName());
+      const structural = ops.some(op => op.op === 'add' || op.op === 'delete');
+      const orderDiffers = currentOrder.length === desiredOrder.length &&
+        currentOrder.some((name, index) => name !== desiredOrder[index]);
+      if (structural || orderDiffers) ops.push({op: 'reorder', desiredOrder});
+
+      if (ops.length === 0 && stageChanges.additions.length === 0 && stageChanges.deletions.length === 0 &&
+          monitorChanges.additions.length === 0 && monitorChanges.updates.length === 0 &&
+          monitorChanges.deletions.length === 0) {
+        return {noop: true};
+      }
+      return {ops, stageChanges, monitorChanges};
+    }
+
+    async collabApplyProjectUpdateInner (data) {
+      const decoded = await this.collabReadPayload(data.project);
+      if (!decoded) return;
+      const {raw, projectJSON, zip} = decoded;
+
+      let plan = null;
+      try {
+        plan = this.collabBuildApplyPlan(projectJSON, zip);
+      } catch (error) {
+        console.error('Collab: incremental diff failed, falling back to reload', error);
+      }
+      if (plan && !plan.fullLoad) {
+        if (plan.noop) return; // identical state: no churn, no echo
+        // A previous apply's cooldown must not fire mid-apply and drop the
+        // echo guard this apply is about to install
+        if (this._collabLoadCooldown) {
+          clearTimeout(this._collabLoadCooldown);
+          this._collabLoadCooldown = null;
+        }
+        // Swallow PROJECT_CHANGED events our own apply triggers, so the
+        // refreshed state does not echo back to the sender
+        this._collabLoadingProject = true;
+        if (this._collabSyncTimer) {
+          // A debounced send was scheduled for genuine local changes: don't
+          // drop them, re-broadcast once the apply has settled
+          this._collabMissedLocalChange = true;
+          clearTimeout(this._collabSyncTimer);
+          this._collabSyncTimer = null;
+        }
+        this._collabApplyingRemote = true;
+        let applyFailed = false;
+        try {
+          await this.collabApplyPlan(plan);
+        } catch (error) {
+          console.error('Collab: incremental apply failed, falling back to reload', error);
+          applyFailed = true;
+        }
+        this._collabApplyingRemote = false;
+        if (applyFailed) {
+          this._collabLoadingProject = false;
+          this.collabFullLoad(raw);
+          return;
+        }
+        this._collabLoadCooldown = setTimeout(() => {
+          this._collabLoadCooldown = null;
+          this._collabLoadingProject = false;
+          if (this._collabMissedLocalChange) {
+            // Local edits that were swallowed while this remote update was
+            // being applied must still reach the room
+            this._collabMissedLocalChange = false;
+            this._collabBroadcastProject();
+          }
+          const pending = this._collabPendingProject;
+          if (pending) {
+            this._collabPendingProject = null;
+            this.applyCollabProjectUpdate(pending);
+          }
+        }, 300);
+        return;
+      }
+      this.collabFullLoad(raw);
+    }
+
+    collabApplyPlan (plan) {
+      const vm = this.props.vm;
+      const editingTargetBefore = vm.editingTarget;
+      const stage = vm.runtime.getTargetForStage();
+      // At runtime ALL stage data (scalars, lists, broadcasts) lives in
+      // stage.variables; the variables/lists/broadcasts split only exists in
+      // serialized project JSON
+      for (const {id, name, type, isCloud} of plan.stageChanges.additions) {
+        if (!Object.prototype.hasOwnProperty.call(stage.variables, id)) {
+          stage.createVariable(id, name, type, isCloud);
+        }
+      }
+      for (const {id} of plan.stageChanges.deletions) {
+        if (Object.prototype.hasOwnProperty.call(stage.variables, id)) {
+          delete stage.variables[id];
+        }
+      }
+      if (plan.stageChanges.deletions.length > 0) {
+        // Recreate any variable a local block still references (the peer was
+        // guaranteed to have no references, but this editor might)
+        for (const target of vm.runtime.targets) {
+          target.fixUpVariableReferences();
+        }
+      }
+      // Deletions and property merges run synchronously first; add/replace
+      // deserialize assets and run sequentially to keep ordering deterministic.
+      // Stamping whether an op touched the editing target must happen HERE:
+      // collabReplaceSprite/collabDeleteSprite swap in new target objects (and
+      // possibly a new editing target), so the identity captured in the plan
+      // would no longer match vm.editingTarget afterwards.
+      for (const op of plan.ops) {
+        if (op.op === 'props') {
+          this.collabApplyRuntimeProps(op.target, op.sprite);
+        } else if (op.op === 'delete') {
+          op.hadEditingTarget = op.target === vm.editingTarget;
+          this.collabDeleteSprite(op.target);
+        } else if (op.op === 'replace') {
+          op.hadEditingTarget = op.target === vm.editingTarget;
+        }
+      }
+      const asyncOps = plan.ops.filter(op => op.op === 'replace' || op.op === 'add');
+      return asyncOps.reduce((chain, op) => chain.then(() => {
+        const work = op.op === 'replace'
+          ? this.collabReplaceSprite(op.target, op.sprite, op.zip)
+          : this.collabAddSprite(op.sprite, op.zip);
+        return work.catch(error => {
+          // One broken sprite must not block the rest of the update
+          console.error(`Collab: failed to apply sprite ${op.sprite.name}`, error);
+        });
+      }), Promise.resolve())
+        .then(() => {
+          const reorder = plan.ops.find(op => op.op === 'reorder');
+          if (reorder) this.collabApplyReorder(reorder.desiredOrder);
+          // Monitors are applied last; their params may reference variables
+          // and sprites created by the ops above
+          this.collabApplyMonitorChanges(plan.monitorChanges);
+          vm.emitTargetsUpdate(false /* no project change echo */);
+          // Rebuilding the workspace clears and reloads the whole canvas, so
+          // it is visible churn: do it only when the code view actually
+          // changed (the editing target was replaced or deleted, or global
+          // variables/broadcasts changed and must show up in the palette),
+          // and defer it while the user is interacting with the workspace
+          const editingTouched = plan.ops.some(op => op.hadEditingTarget === true);
+          const editingChanged = vm.editingTarget !== editingTargetBefore;
+          const stageVariablesChanged = plan.stageChanges.additions.length > 0 ||
+            plan.stageChanges.deletions.length > 0;
+          if (editingTouched || editingChanged || stageVariablesChanged) {
+            this.collabRequestWorkspaceRefresh();
+          }
+          if (vm.editingTarget) vm.runtime.setEditingTarget(vm.editingTarget);
+        });
+    }
+
+    // Apply monitor differences in place through the runtime's public monitor
+    // API (add/update/remove). Never merges the serialized placeholder value
+    // over the live one for updates; the monitored blocks keep updating it.
+    collabApplyMonitorChanges (monitorChanges) {
+      if (!monitorChanges) return;
+      const runtime = this.props.vm.runtime;
+      for (const id of monitorChanges.deletions) {
+        runtime.requestRemoveMonitor(id);
+      }
+      for (const record of monitorChanges.updates) {
+        const delta = {...record};
+        delete delta.value;
+        runtime.requestAddMonitor(delta);
+      }
+      for (const record of monitorChanges.additions) {
+        runtime.requestAddMonitor(record);
+      }
+      // The runtime step loop emits MONITORS_UPDATE whenever the monitor
+      // state flagged itself dirty. Flush immediately when the frame loop is
+      // stopped (the collab/pause feature freezes it), so the monitors still
+      // refresh in place; otherwise the next frame carries the update.
+      const monitorState = runtime._monitorState;
+      if (monitorState && monitorState.dirty && runtime.frameLoop &&
+          runtime.frameLoop.running === false) {
+        monitorState.dirty = false;
+        runtime.emit(Runtime.MONITORS_UPDATE, monitorState.shallowClone());
+      }
+    }
+
+    // Schedule an in-place rebuild of the script workspace (the editor's code
+    // view) after remote changes landed in the VM. The rebuild clears and
+    // reloads the canvas, so it is batched and postponed until the user is
+    // done interacting (dragging blocks, editing a field); without this,
+    // every peer edit would visibly flash the workspace mid-drag.
+    collabRequestWorkspaceRefresh () {
+      if (this._collabWorkspaceRefreshTimer) return;
+      this._collabWorkspaceRefreshAttempts = 0;
+      this._collabWorkspaceRefreshTimer = setTimeout(() => this.collabFlushWorkspaceRefresh(), 150);
+    }
+
+    collabFlushWorkspaceRefresh () {
+      this._collabWorkspaceRefreshTimer = null;
+      // Deduplicate refreshes that were queued right after one already ran
+      if (Date.now() - (this._collabLastWorkspaceRefresh || 0) < 150) {
+        this.collabRequestWorkspaceRefresh();
+        return;
+      }
+      if (this.collabWorkspaceRefreshIsBusy() && this._collabWorkspaceRefreshAttempts < 20) {
+        // The user is mid-gesture: retry shortly until they go idle, giving
+        // up after ~5s so an update can never be stuck indefinitely
+        this._collabWorkspaceRefreshAttempts++;
+        this.collabRequestWorkspaceRefresh();
+        return;
+      }
+      const vm = this.props.vm;
+      this._collabLastWorkspaceRefresh = Date.now();
+      if (vm) vm.emitWorkspaceUpdate();
+    }
+
+    collabWorkspaceRefreshIsBusy () {
+      try {
+        const workspace = AddonHooks.blocklyWorkspace;
+        if (!workspace) return false;
+        if (workspace.currentGesture_) return true;
+        const active = document.activeElement;
+        if (active && active.classList && active.classList.contains('blocklyHtmlInput')) return true;
+      } catch (error) {
+        // Anything failing here simply means "not busy"
+      }
+      return false;
+    }
+
+    // Merge position/pose-only changes onto the live target: no rebuild, so
+    // running scripts and editor state are untouched.
+    collabApplyRuntimeProps (target, sprite) {
+      target.setXY(sprite.x, sprite.y);
+      if (typeof sprite.direction === 'number') target.setDirection(sprite.direction);
+      if (typeof sprite.size === 'number') target.setSize(sprite.size);
+      target.setVisible(sprite.visible !== false);
+      target.setDraggable(sprite.draggable === true);
+      if (typeof sprite.volume === 'number') target.volume = sprite.volume;
+      if (sprite.rotationStyle) target.rotationStyle = sprite.rotationStyle;
+      if (typeof sprite.currentCostume === 'number' && target.sprite.costumes.length > 0) {
+        target.currentCostume = Math.max(0, Math.min(
+          sprite.currentCostume, target.sprite.costumes.length - 1));
+      }
+      target.updateAllDrawableProperties();
+    }
+
+    // Remove a sprite remotely deleted by a peer (same steps as
+    // vm.deleteSprite, minus the undo export).
+    collabDeleteSprite (target) {
+      const vm = this.props.vm;
+      if (!target || !target.isSprite || !target.isSprite()) return;
+      const index = vm.runtime.targets.indexOf(target);
+      const wasEditing = vm.editingTarget === target;
+      target.deleteMonitors();
+      for (const clone of target.sprite.clones.slice()) {
+        vm.runtime.stopForTarget(clone);
+        vm.runtime.disposeTarget(clone);
+      }
+      if (wasEditing) {
+        const next = vm.runtime.targets[Math.min(index, vm.runtime.targets.length - 1)];
+        if (next) {
+          // Mirror vm.setEditingTarget WITHOUT its immediate
+          // emitWorkspaceUpdate: the deferred refresh scheduled by
+          // collabApplyPlan rebuilds the (possibly stale) workspace once
+          vm.editingTarget = next;
+          vm.emitTargetsUpdate(false);
+          vm.runtime.setEditingTarget(next);
+        }
+      }
+    }
+
+    // Install a sprite a peer added. Unlike vm.addSprite, the user's current
+    // editing target is not changed.
+    collabAddSprite (spriteJson, zip) {
+      const vm = this.props.vm;
+      const savedOrigin = vm.runtime.origin;
+      return sb3.deserialize(spriteJson, vm.runtime, zip, true)
+        .then(({targets, extensions}) =>
+          vm._loadExtensions(extensions.extensionIDs, extensions.extensionURLs).then(() => targets[0]))
+        .then(newTarget => {
+          vm.runtime.origin = savedOrigin;
+          if (!newTarget) return;
+          vm.runtime.targets.push(newTarget);
+          vm.runtime.executableTargets = vm.runtime.targets.slice();
+          newTarget.updateAllDrawableProperties();
+          newTarget.fixUpVariableReferences();
+        });
+    }
+
+    // Rebuild a sprite a peer edited, in place: the new target takes over the
+    // old one's id (so monitors and cross-sprite references keep working), its
+    // position in the sprite pane and its stacking order on the stage. Scripts
+    // on all OTHER sprites keep running, and the editing target stays put.
+    collabReplaceSprite (oldTarget, spriteJson, zip) {
+      const vm = this.props.vm;
+      const savedOrigin = vm.runtime.origin;
+      return sb3.deserialize(spriteJson, vm.runtime, zip, true)
+        .then(({targets, extensions}) =>
+          vm._loadExtensions(extensions.extensionIDs, extensions.extensionURLs).then(() => targets[0]))
+        .then(newTarget => {
+          vm.runtime.origin = savedOrigin;
+          if (!newTarget) return;
+          const wasEditing = vm.editingTarget === oldTarget;
+          const oldId = oldTarget.id;
+          const oldIndex = vm.runtime.targets.indexOf(oldTarget);
+          const oldDrawableOrder = oldTarget.drawableID !== null && vm.renderer
+            ? vm.renderer.getDrawableOrder(oldTarget.drawableID)
+            : null;
+          // Tear down the old sprite: stop its scripts and clones, free its
+          // drawable. disposeTarget also removes it from runtime.targets.
+          for (const clone of oldTarget.sprite.clones.slice()) {
+            vm.runtime.stopForTarget(clone);
+            vm.runtime.disposeTarget(clone);
+          }
+          newTarget.id = oldId;
+          vm.runtime.targets.splice(Math.min(oldIndex, vm.runtime.targets.length), 0, newTarget);
+          vm.runtime.executableTargets = vm.runtime.targets.slice();
+          newTarget.updateAllDrawableProperties();
+          newTarget.fixUpVariableReferences();
+          // The new drawable is created on top; restore the old stacking
+          if (oldDrawableOrder !== null && newTarget.drawableID !== null && vm.renderer) {
+            vm.renderer.setDrawableOrder(
+              newTarget.drawableID, oldDrawableOrder, StageLayering.SPRITE_LAYER, false);
+          }
+          if (wasEditing) vm.editingTarget = newTarget;
+        });
+    }
+
+    // Align the sprite pane order with the remote project (best effort).
+    collabApplyReorder (desiredOrder) {
+      const vm = this.props.vm;
+      for (let i = 0; i < desiredOrder.length; i++) {
+        const index = vm.runtime.targets.findIndex((target, idx) =>
+          idx > 0 && target.isSprite && target.isSprite() && target.getName() === desiredOrder[i]);
+        if (index === -1) return;
+        if (index !== i + 1) vm.reorderTarget(index, i + 1);
+      }
+    }
+
+    // Full project reload — kept for stage-level and global changes that the
+    // incremental path cannot express (backdrops, stage code, extension
+    // changes…). The cooldown afterwards swallows PROJECT_CHANGED events
+    // that fire after deserialization, so the reloaded state doesn't echo
+    // back out.
+    collabFullLoad (project) {
+      const vm = this.props.vm;
+      const previousName = vm.editingTarget ? vm.editingTarget.getName() : null;
       this._collabLoadingProject = true;
-      // The incoming remote state supersedes any broadcast still pending
+      this._collabApplyingRemote = true;
+      // The incoming remote state supersedes any broadcast still pending:
+      // those local changes get re-broadcast once the cooldown ends
       if (this._collabSyncTimer) {
+        this._collabMissedLocalChange = true;
         clearTimeout(this._collabSyncTimer);
         this._collabSyncTimer = null;
       }
-      try {
-        const project = this.parseCollabProject(data.project);
-        this.props.vm.loadProject(project).then(() => {
-          this._collabLoadCooldown = setTimeout(() => {
-            this._collabLoadingProject = false;
-            const pending = this._collabPendingProject;
-            if (pending) {
-              this._collabPendingProject = null;
-              this.applyCollabProjectUpdate(pending);
-            }
-          }, 1200);
-        }).catch(() => {
+      vm.loadProject(project).then(() => {
+        this._collabApplyingRemote = false;
+        // Keep the user on the sprite they were editing before the reload
+        if (previousName) {
+          const match = vm.runtime.targets.find(target =>
+            target.getName && target.getName() === previousName);
+          if (match && vm.editingTarget !== match) vm.setEditingTarget(match.id);
+        }
+        this._collabLoadCooldown = setTimeout(() => {
+          this._collabLoadCooldown = null;
           this._collabLoadingProject = false;
-        });
-      } catch (e) {
+          if (this._collabMissedLocalChange) {
+            this._collabMissedLocalChange = false;
+            this._collabBroadcastProject();
+          }
+          const pending = this._collabPendingProject;
+          if (pending) {
+            this._collabPendingProject = null;
+            this.applyCollabProjectUpdate(pending);
+          }
+        }, 1200);
+      }).catch(() => {
+        this._collabApplyingRemote = false;
         this._collabLoadingProject = false;
-      }
+      });
     }
 
     wrapVMWithPermissions () {

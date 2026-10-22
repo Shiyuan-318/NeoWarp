@@ -1,5 +1,6 @@
 const AbstractWindow = require('./abstract');
 const {ipcMain} = require('electron');
+const zlib = require('zlib');
 
 class ProjectAnalysisWindow extends AbstractWindow {
   constructor (editorWindow) {
@@ -27,7 +28,10 @@ class ProjectAnalysisWindow extends AbstractWindow {
               projectJSON: data.projectJSON || null,
               openTime: openTime,
               projectTitle: projectTitle,
-              assetSize: data.assetSize || 0
+              assetSize: data.assetSize || 0,
+              assetCostumeSize: data.assetCostumeSize || 0,
+              assetSoundSize: data.assetSoundSize || 0,
+              jsonCompressedSize: this.estimateJSONCompressedSize(data.projectJSON)
             });
           }
         };
@@ -36,7 +40,7 @@ class ProjectAnalysisWindow extends AbstractWindow {
         setTimeout(() => {
           ipcMain.removeListener('project-json-response', handler);
           resolve({ projectJSON: null, openTime: Date.now(), projectTitle: '', assetSize: 0 });
-        }, 5000);
+        }, 8000);
       });
     });
 
@@ -104,10 +108,23 @@ class ProjectAnalysisWindow extends AbstractWindow {
     this.show();
   }
 
+  // 用 deflate 估算 project.json 的压缩体积，作为工程大小与资源构成的依据
+  estimateJSONCompressedSize (projectJSON) {
+    try {
+      if (!projectJSON) return 0;
+      const raw = typeof projectJSON === 'string' ?
+        projectJSON :
+        JSON.stringify(projectJSON);
+      return zlib.deflateSync(Buffer.from(raw, 'utf8'), { level: 9 }).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
   getDimensions () {
     return {
-      width: 560,
-      height: 620
+      width: 1010,
+      height: 840
     };
   }
 
