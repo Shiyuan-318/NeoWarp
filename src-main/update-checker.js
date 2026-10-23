@@ -119,6 +119,44 @@ const showUpdateNotification = (version, releaseUrl) => {
 };
 
 /**
+ * Get the available update to surface on the home page capsule.
+ * Respects the "remind me later" choice from the update window.
+ * @returns {{version: string, url?: string}|null}
+ */
+const getAvailableUpdate = () => {
+  const available = settings.availableUpdate;
+  if (!available || !available.version) {
+    return null;
+  }
+  const ignoredUntil = (settings.ignoredUpdateUntil || 0) * 1000;
+  if (ignoredUntil > Date.now() && settings.ignoredUpdate === available.version) {
+    return null;
+  }
+  return available;
+};
+
+/**
+ * Push the latest known available update to all home windows.
+ * (Broadcasts the effective value, so an ignored update stays hidden.)
+ */
+const broadcastAvailableUpdate = () => {
+  // Imported late due to circular dependencies
+  const HomeWindow = require('./windows/home');
+  HomeWindow.broadcastAvailableUpdate(getAvailableUpdate());
+};
+
+/**
+ * Persist the detected available update for the home page capsule and
+ * broadcast it. Pass null when the running version is the newest.
+ * @param {{version: string, url?: string}|null} available
+ */
+const syncAvailableUpdate = async (available) => {
+  settings.availableUpdate = available;
+  await settings.save();
+  broadcastAvailableUpdate();
+};
+
+/**
  * Check for updates on app startup (once per day)
  */
 const checkForUpdatesOnStartup = async () => {
@@ -148,7 +186,12 @@ const checkForUpdatesOnStartup = async () => {
 
   // Check if current version is older than latest
   if (semverLt(currentVersion, stable.version)) {
+    // Keep the home page capsule in sync with the detected update
+    await syncAvailableUpdate({ version: stable.version, url: stable.url });
     showUpdateNotification(stable.version, stable.url);
+  } else {
+    // Running the newest version: clear any stale capsule state
+    await syncAvailableUpdate(null);
   }
 };
 
@@ -178,6 +221,13 @@ const manualCheck = async () => {
   const semverLt = require('semver/functions/lt');
   const hasUpdate = semverLt(currentVersion, stable.version);
 
+  // Keep the home page capsule in sync with the manual check result
+  if (hasUpdate) {
+    await syncAvailableUpdate({ version: stable.version, url: stable.url });
+  } else {
+    await syncAvailableUpdate(null);
+  }
+
   return {
     hasUpdate,
     currentVersion,
@@ -201,5 +251,6 @@ module.exports = {
   isUpdateCheckerAllowed,
   checkForUpdatesOnStartup,
   manualCheck,
+  getAvailableUpdate,
   ignoreUpdate
 };

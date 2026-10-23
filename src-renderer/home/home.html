@@ -47,6 +47,8 @@
         --tint-pink-bg: rgba(255, 90, 160, 0.14);    --tint-pink-fg: #ff8ab8;
         --tint-teal-bg: rgba(32, 191, 180, 0.14);    --tint-teal-fg: #5ad4c8;
         --tint-indigo-bg: rgba(99, 122, 244, 0.16);  --tint-indigo-fg: #97abff;
+        --update-dot-bg: rgba(94, 214, 151, 0.28);
+        --update-dot-color: #5ed697;
       }
       html[data-theme="light"] {
         color-scheme: light;
@@ -89,6 +91,8 @@
         --tint-pink-bg: rgba(255, 90, 160, 0.12);    --tint-pink-fg: #d84a8f;
         --tint-teal-bg: rgba(32, 191, 180, 0.12);    --tint-teal-fg: #0f9488;
         --tint-indigo-bg: rgba(99, 122, 244, 0.12);  --tint-indigo-fg: #4c63d2;
+        --update-dot-bg: rgba(36, 138, 61, 0.18);
+        --update-dot-color: #248a3d;
       }
 
       * { box-sizing: border-box; }
@@ -605,6 +609,86 @@
         fill: currentColor;
       }
 
+      /* ===== "检测到新版本"胶囊（位于两枚圆按钮左侧） ===== */
+      #update-capsule {
+        position: fixed;
+        z-index: 2;
+        bottom: 26px;
+        right: 146px;
+        height: 46px;
+        padding: 0 18px 0 9px;
+        border: 1px solid var(--card-border);
+        border-radius: 999px;
+        background: var(--card);
+        backdrop-filter: blur(12px);
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--text-dim);
+        cursor: pointer;
+        text-decoration: none;
+        transition: background 0.15s ease,
+                    color 0.15s ease, border-color 0.15s ease, transform 0.2s ease;
+      }
+      #update-capsule[hidden] { display: none; }
+      #update-capsule:hover {
+        background: var(--card-hover);
+        border-color: var(--card-border-hover);
+        color: var(--text);
+        transform: translateY(-2px);
+      }
+      #update-capsule:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+      }
+      /* 出现动画（reduced-motion 时全局规则会压缩至 0ms） */
+      #update-capsule.reveal {
+        animation: capsule-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      @keyframes capsule-in {
+        from { opacity: 0; transform: translateY(12px) scale(0.94); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      /* 圆形浅绿上箭头 */
+      #update-capsule .update-dot {
+        width: 28px;
+        height: 28px;
+        flex: none;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--update-dot-bg);
+      }
+      #update-capsule .update-dot svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: var(--update-dot-color);
+        stroke-width: 2.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      #update-capsule .update-text {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        line-height: 1.2;
+      }
+      #update-capsule .update-title {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        color: var(--text);
+        white-space: nowrap;
+      }
+      #update-capsule .update-version {
+        font-size: 11px;
+        color: var(--text-faint);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
       /* ===== 提示气泡 ===== */
       #toast {
         position: fixed;
@@ -714,7 +798,8 @@
       body.custom-bg .menu-button,
       body.custom-bg .recent-item,
       body.custom-bg #github-button,
-      body.custom-bg #settings-button {
+      body.custom-bg #settings-button,
+      body.custom-bg #update-capsule {
         background: var(--glass-bg);
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
@@ -724,13 +809,16 @@
       body.custom-bg .menu-button:hover,
       body.custom-bg .recent-item:hover,
       body.custom-bg #github-button:hover,
-      body.custom-bg #settings-button:hover {
+      body.custom-bg #settings-button:hover,
+      body.custom-bg #update-capsule:hover {
         background: var(--glass-bg-hover);
       }
       body.custom-bg .menu-button > *,
       body.custom-bg .recent-item > *,
       body.custom-bg #github-button > svg,
-      body.custom-bg #settings-button > svg {
+      body.custom-bg #settings-button > svg,
+      body.custom-bg #update-capsule > .update-dot,
+      body.custom-bg #update-capsule > .update-text {
         position: relative;
         z-index: 1;
       }
@@ -766,7 +854,8 @@
       body.custom-bg .menu-button:hover .lg-tint,
       body.custom-bg .recent-item:hover .lg-tint,
       body.custom-bg #github-button:hover .lg-tint,
-      body.custom-bg #settings-button:hover .lg-tint {
+      body.custom-bg #settings-button:hover .lg-tint,
+      body.custom-bg #update-capsule:hover .lg-tint {
         background: var(--glass-bg-hover);
       }
       /* 罕见兜底：不支持元素级 SVG 滤镜时退化为纯 backdrop 模糊 */
@@ -1131,6 +1220,16 @@
       </section>
     </main>
 
+    <a id="update-capsule" href="" title="" hidden>
+      <span class="update-dot" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      </span>
+      <span class="update-text">
+        <span class="update-title"></span>
+        <span class="update-version"></span>
+      </span>
+    </a>
+
     <a id="github-button" href="https://github.com/Shiyuan-318/NeoWarp" title="">
       <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
@@ -1217,6 +1316,8 @@
           cancel: '取消',
           settings: '设置',
           github: 'GitHub 仓库',
+          updateAvailable: '检测到新版本',
+          viewReleases: '前往 GitHub Releases',
           recent: '最近项目',
           recentMissing: '该文件已不存在，已从列表移除'
         },
@@ -1244,6 +1345,8 @@
           cancel: 'Cancel',
           settings: 'Settings',
           github: 'GitHub Repository',
+          updateAvailable: 'New version available',
+          viewReleases: 'View GitHub Releases',
           recent: 'Recent Projects',
           recentMissing: 'This file no longer exists and was removed from the list'
         }
@@ -1420,7 +1523,7 @@
         parts.feDisp.setAttribute('scale', amount);
       }
 
-      const LG_SELECTOR = '.menu-button, .recent-item, #github-button, #settings-button';
+      const LG_SELECTOR = '.menu-button, .recent-item, #github-button, #settings-button, #update-capsule';
       let lgObserver = null;
 
       function lgApply(el) {
@@ -1869,6 +1972,41 @@
       settingsButton.addEventListener('click', () => {
         HomePreload.openSettings();
       });
+
+      // ===== "检测到新版本"胶囊 =====
+      // 启动时的每日检测由主进程完成；这里加载时拉取一次结果，
+      // 并监听广播（检测完成 / 桌面设置手动检查后）即时刷新。
+      const updateCapsule = document.getElementById('update-capsule');
+      const RELEASES_URL = 'https://github.com/Shiyuan-318/NeoWarp/releases';
+
+      function applyAvailableUpdate (data) {
+        if (data && data.version) {
+          const wasHidden = updateCapsule.hidden;
+          updateCapsule.hidden = false;
+          updateCapsule.href = data.url || RELEASES_URL;
+          updateCapsule.title = strings.viewReleases;
+          updateCapsule.setAttribute('aria-label', strings.viewReleases);
+          updateCapsule.querySelector('.update-title').textContent = strings.updateAvailable;
+          updateCapsule.querySelector('.update-version').textContent = 'v' + data.version;
+          if (wasHidden) {
+            // 出现时播放入场动画（隐藏→显示切换时重新触发）
+            updateCapsule.classList.remove('reveal');
+            void updateCapsule.offsetWidth;
+            updateCapsule.classList.add('reveal');
+          }
+          updateLiquidGlass();
+        } else {
+          updateCapsule.hidden = true;
+          updateCapsule.classList.remove('reveal');
+        }
+      }
+
+      if (HomePreload.getAvailableUpdate) {
+        HomePreload.getAvailableUpdate().then(applyAvailableUpdate).catch(() => {});
+      }
+      if (HomePreload.onUpdateAvailable) {
+        HomePreload.onUpdateAvailable(applyAvailableUpdate);
+      }
 
       // ============================================================
       // 特殊日子彩蛋

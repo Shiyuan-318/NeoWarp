@@ -21,6 +21,10 @@ contextBridge.exposeInMainWorld('HomePreload', {
   openSolo: () => ipcRenderer.invoke('home-open-solo'),
   getRecentProjects: () => ipcRenderer.invoke('home-get-recent-projects'),
   openRecentProject: (filePath) => ipcRenderer.invoke('home-open-recent', filePath),
+  getAvailableUpdate: () => ipcRenderer.invoke('home-get-available-update'),
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on('home-update-available', (event, data) => callback(data));
+  },
   onRecentChanged: (callback) => {
     ipcRenderer.on('home-recent-changed', () => callback());
   }

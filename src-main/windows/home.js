@@ -160,6 +160,13 @@ class HomeWindow extends AbstractWindow {
       projects: getRecentProjects()
     }));
 
+    // 主页"检测到新版本"胶囊：读取检测到的可用更新
+    this.ipc.handle('home-get-available-update', () => {
+      // Imported late due to circular dependencies
+      const updateChecker = require('../update-checker');
+      return updateChecker.getAvailableUpdate();
+    });
+
     // 点击最近项目直接打开，按类型分流
     this.ipc.handle('home-open-recent', async (event, filePath) => {
       const resolved = path.resolve(String(filePath));
@@ -223,6 +230,19 @@ class HomeWindow extends AbstractWindow {
           text: settings.homeLogoText,
           background: settings.homeBackground
         });
+      }
+    }
+  }
+
+  /**
+   * 向所有主页窗口广播检测到的可用更新（{version,url} 或 null），
+   * 渲染层收到后显示/隐藏"检测到新版本"胶囊。
+   * @param {{version: string, url?: string}|null} available
+   */
+  static broadcastAvailableUpdate (available) {
+    for (const homeWindow of AbstractWindow.getWindowsByClass(HomeWindow)) {
+      if (!homeWindow.window.isDestroyed()) {
+        homeWindow.window.webContents.send('home-update-available', available);
       }
     }
   }

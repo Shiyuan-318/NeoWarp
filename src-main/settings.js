@@ -147,6 +147,17 @@ class Settings {
     this.data.ignoredUpdateUntil = ignoredUpdateUntil;
   }
 
+  /**
+   * Home page update capsule: the latest detected available update
+   * ({version, url}) or null.
+   */
+  get availableUpdate () {
+    return this.data.availableUpdate || null;
+  }
+  set availableUpdate (availableUpdate) {
+    this.data.availableUpdate = availableUpdate;
+  }
+
   get camera () {
     return this.data.camera || null;
   }
