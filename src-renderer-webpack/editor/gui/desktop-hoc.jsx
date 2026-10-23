@@ -2382,15 +2382,36 @@ const DesktopHOC = function (WrappedComponent) {
           let assetSize = 0;
           let assetCostumeSize = 0;
           let assetSoundSize = 0;
+          // asset.data 是二进制（Uint8Array/Buffer），仅文本取 base64 长度折算
+          const assetByteCount = function (asset) {
+            if (!asset) return 0;
+            const data = asset.data;
+            if (!data) return 0;
+            if (typeof data === 'string') return Math.round(data.length * 0.75);
+            if (ArrayBuffer.isView(data) || data instanceof ArrayBuffer) return data.byteLength || 0;
+            return data.length || 0;
+          };
+          // 按 assetId 去重，多角色共用素材只计一次，与导出的 sb3 占用一致
+          const seenAssetIds = new Set();
           const runtimeTargets = this.props.vm.runtime.targets;
           if (runtimeTargets) {
             runtimeTargets.forEach(function(target) {
               var costumes = target.getCostumes ? target.getCostumes() : [];
               for (var ci = 0; ci < costumes.length; ci++) {
                 var costume = costumes[ci];
-                if (costume.asset && costume.asset.data && typeof costume.asset.data === 'string') {
-                  assetSize += Math.round(costume.asset.data.length * 0.75);
-                  assetCostumeSize += Math.round(costume.asset.data.length * 0.75);
+                if (costume.asset) {
+                  var costumeBytes = assetByteCount(costume.asset);
+                  if (costumeBytes > 0) {
+                    var costumeId = costume.assetId || costume.asset.assetId;
+                    if (!seenAssetIds.has(costumeId)) {
+                      seenAssetIds.add(costumeId);
+                      assetSize += costumeBytes;
+                      assetCostumeSize += costumeBytes;
+                    }
+                  } else if (costume.width && costume.height) {
+                    assetSize += costume.width * costume.height * 4;
+                    assetCostumeSize += costume.width * costume.height * 4;
+                  }
                 } else if (costume.width && costume.height) {
                   assetSize += costume.width * costume.height * 4;
                   assetCostumeSize += costume.width * costume.height * 4;
@@ -2399,9 +2420,14 @@ const DesktopHOC = function (WrappedComponent) {
               var sounds = target.getSounds ? target.getSounds() : [];
               for (var si = 0; si < sounds.length; si++) {
                 var sound = sounds[si];
-                if (sound.asset && sound.asset.data && typeof sound.asset.data === 'string') {
-                  assetSize += Math.round(sound.asset.data.length * 0.75);
-                  assetSoundSize += Math.round(sound.asset.data.length * 0.75);
+                var soundBytes = assetByteCount(sound.asset);
+                if (soundBytes > 0) {
+                  var soundId = sound.assetId || (sound.asset && sound.asset.assetId);
+                  if (!seenAssetIds.has(soundId)) {
+                    seenAssetIds.add(soundId);
+                    assetSize += soundBytes;
+                    assetSoundSize += soundBytes;
+                  }
                 }
               }
             });
