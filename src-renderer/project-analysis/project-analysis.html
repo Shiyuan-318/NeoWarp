@@ -6,56 +6,34 @@
     <title>项目分析</title>
     <style>
         :root {
-            --bg: #f2f2f7;
-            --surface: #ffffff;
-            --surface-secondary: #f2f2f7;
+            --bg: #fbfbfd;
+            --card: #f3f4f8;
+            --card-deep: #eceef4;
+            --track: #e6e8ef;
             --text: #1c1c1e;
-            --text-secondary: #8e8e93;
-            --text-tertiary: #aeaeb2;
-            --border: rgba(60, 60, 67, 0.12);
-            --accent: #007aff;
-            --accent-light: rgba(0, 122, 255, 0.08);
-            --shadow: 0 0.5px 0 rgba(0,0,0,0.04);
-            --shadow-lg: 0 2px 16px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.08);
-            --radius: 16px;
-            --radius-sm: 12px;
-            --radius-xs: 8px;
+            --text-2: #71757e;
+            --text-3: #9a9ea8;
+            --accent: #0a84ff;
+            --warn: #ff9500;
+            --good: #34c759;
+            --separator: rgba(60, 60, 67, 0.10);
+            --radius: 14px;
+            --radius-sm: 10px;
             --transition: 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
-            --motion: #4C97FF;
-            --looks: #9966FF;
-            --sound: #CF63CF;
-            --events: #FFBF00;
-            --control: #FFAB19;
-            --sensing: #5CB1D6;
-            --operators: #59C059;
-            --variables: #FF8C1A;
-            --myblocks: #FF6680;
-            --other: #8E8E93;
-            --warn: #FF9500;
-            --warn-light: rgba(255, 149, 0, 0.1);
-            --good: #34C759;
-            --good-light: rgba(52, 199, 89, 0.1);
-            --danger: #FF3B30;
-            --danger-light: rgba(255, 59, 48, 0.1);
-            --separator: rgba(60, 60, 67, 0.12);
         }
 
         [data-theme="dark"] {
             --bg: #000000;
-            --surface: #1c1c1e;
-            --surface-secondary: #2c2c2e;
+            --card: #1c1c1e;
+            --card-deep: #2a2a2c;
+            --track: #3a3a3c;
             --text: #f5f5f7;
-            --text-secondary: #98989d;
-            --text-tertiary: #636366;
-            --border: rgba(84, 84, 88, 0.65);
+            --text-2: #98989d;
+            --text-3: #6b6b70;
             --accent: #0a84ff;
-            --accent-light: rgba(10, 132, 255, 0.12);
-            --shadow: 0 0.5px 0 rgba(255,255,255,0.04);
-            --shadow-lg: 0 2px 16px rgba(0,0,0,0.24), 0 0 1px rgba(255,255,255,0.06);
-            --warn-light: rgba(255, 149, 0, 0.15);
-            --good-light: rgba(52, 199, 89, 0.15);
-            --danger-light: rgba(255, 59, 48, 0.15);
-            --separator: rgba(84, 84, 88, 0.65);
+            --warn: #ff9500;
+            --good: #34c759;
+            --separator: rgba(84, 84, 88, 0.55);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -64,10 +42,7 @@
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
             background: var(--bg);
             color: var(--text);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            min-height: 100vh;
             -webkit-user-select: none;
             user-select: none;
             transition: background var(--transition), color var(--transition);
@@ -75,99 +50,22 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
-            padding-top: max(12px, env(safe-area-inset-top));
-            border-bottom: 0.5px solid var(--separator);
-            background: rgba(242, 242, 247, 0.72);
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            z-index: 100;
-            -webkit-app-region: drag;
-            transition: background var(--transition), border-color var(--transition);
-        }
-
-        [data-theme="dark"] .header {
-            background: rgba(0, 0, 0, 0.72);
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .header-icon {
-            width: 20px;
-            height: 20px;
-            color: var(--accent);
-            flex-shrink: 0;
-        }
-
-        .header-title {
-            font-size: 17px;
-            font-weight: 600;
-            letter-spacing: -0.4px;
-        }
-
-        .export-btn {
-            -webkit-app-region: no-drag;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            border: none;
-            border-radius: var(--radius-xs);
-            background: var(--surface-secondary);
-            color: var(--accent);
-            cursor: pointer;
-            transition: all var(--transition);
-        }
-        .export-btn:hover {
-            background: var(--accent-light);
-        }
-        .export-btn:active {
-            transform: scale(0.92);
-            opacity: 0.7;
-        }
-
-        .analysis-footer {
-            text-align: center;
-            padding: 20px 0 12px;
-            color: var(--text-tertiary);
-        }
-        .analysis-time {
-            font-size: 12px;
-        }
-        .analysis-brand {
-            font-size: 11px;
-            margin-top: 2px;
-            letter-spacing: 0.5px;
-        }
-
         .loading-state {
+            position: fixed;
+            inset: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            flex: 1;
             gap: 16px;
-            padding-top: 60px;
-            color: var(--text-tertiary);
+            color: var(--text-3);
+            font-size: 13px;
         }
 
         .spinner {
             width: 32px;
             height: 32px;
-            border: 3px solid var(--border);
+            border: 3px solid var(--track);
             border-top-color: var(--accent);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
@@ -175,224 +73,16 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        .main-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 56px 16px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .main-content::-webkit-scrollbar {
-            width: 0;
-        }
-
-        .card {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 16px;
-            box-shadow: var(--shadow-lg);
-            transition: all var(--transition);
-        }
-
-        .card-header {
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: -0.1px;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
-            text-transform: none;
-        }
-
-        .metric-row {
-            display: flex;
-            gap: 8px;
-        }
-
-        .metric-card {
-            flex: 1;
-            background: var(--surface-secondary);
-            border-radius: var(--radius-sm);
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            min-width: 0;
-        }
-
-        .metric-value {
-            font-size: 28px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            color: var(--text);
-            line-height: 1.1;
-            font-variant-numeric: tabular-nums;
-        }
-        .metric-value.accent { color: var(--accent); }
-        .metric-value.warn { color: var(--warn); }
-        .metric-value.good { color: var(--good); }
-
-        .metric-label {
-            font-size: 12px;
-            color: var(--text-secondary);
-            letter-spacing: -0.1px;
-        }
-
-        .project-name {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: -0.6px;
-            margin-bottom: 4px;
-            word-break: break-word;
-        }
-        .project-meta {
-            font-size: 13px;
-            color: var(--text-secondary);
-            letter-spacing: -0.1px;
-        }
-
-        .chart-section {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .donut-container {
-            flex-shrink: 0;
-            position: relative;
-            width: 140px;
-            height: 140px;
-        }
-
-        .donut-center {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-        }
-        .donut-total {
-            font-size: 28px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            line-height: 1.1;
-        }
-        .donut-label {
-            font-size: 11px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-
-        .donut-svg {
-            width: 140px;
-            height: 140px;
-            transform: rotate(-90deg);
-        }
-
-        .legend {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            flex: 1;
-            min-width: 0;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            padding: 4px 0;
-        }
-
-        .legend-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 3px;
-            flex-shrink: 0;
-        }
-
-        .legend-name {
-            flex: 1;
-            min-width: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .legend-count {
-            font-weight: 600;
-            color: var(--text-secondary);
-            font-variant-numeric: tabular-nums;
-            font-size: 13px;
-            min-width: 24px;
-            text-align: right;
-        }
-
-        .legend-pct {
-            color: var(--text-tertiary);
-            font-variant-numeric: tabular-nums;
-            font-size: 12px;
-            min-width: 36px;
-            text-align: right;
-        }
-
-        .empty-legend {
-            color: var(--text-tertiary);
-            font-size: 13px;
-            text-align: center;
-            padding: 20px;
-        }
-
-        .optimization-box {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            padding: 12px 14px;
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            line-height: 1.5;
-            letter-spacing: -0.1px;
-        }
-        .optimization-box.good {
-            background: var(--good-light);
-            color: var(--good);
-        }
-        .optimization-box.warn {
-            background: var(--warn-light);
-            color: var(--warn);
-        }
-        .optimization-box svg {
-            flex-shrink: 0;
-            margin-top: 1px;
-        }
-
-        .progress-bar {
-            height: 6px;
-            border-radius: 3px;
-            background: var(--border);
-            margin-top: 8px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
-        }
-        .progress-fill.low { background: var(--good); }
-        .progress-fill.medium { background: var(--warn); }
-        .progress-fill.high { background: var(--danger); }
-
         .error-state {
+            position: fixed;
+            inset: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            flex: 1;
             gap: 12px;
-            padding-top: 60px;
-            color: var(--text-tertiary);
+            color: var(--text-3);
+            font-size: 13px;
         }
         .error-state svg {
             width: 40px;
@@ -400,178 +90,486 @@
             opacity: 0.4;
         }
 
-        @media (min-width: 700px) {
-            .main-content {
-                padding: 60px 24px 24px;
-                gap: 24px;
-            }
-
-            .card {
-                padding: 20px;
-            }
-
-            .card-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 20px;
-            }
-            .card-grid .card {
-                height: 100%;
-            }
-
-            .chart-section {
-                gap: 28px;
-            }
-
-            .donut-container {
-                width: 170px;
-                height: 170px;
-            }
-            .donut-svg {
-                width: 170px;
-                height: 170px;
-            }
-            .donut-total {
-                font-size: 32px;
-            }
-
-            .legend {
-                gap: 7px;
-            }
-            .legend-item {
-                font-size: 14px;
-            }
-
-            .metric-value {
-                font-size: 32px;
-            }
-            .metric-card {
-                padding: 14px 16px;
-            }
-
-            .project-name {
-                font-size: 24px;
-            }
+        .report {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 22px 22px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
-        @media (min-width: 900px) {
-            .main-content {
-                max-width: 960px;
-                margin: 0 auto;
-                width: 100%;
-                padding: 64px 32px 28px;
-                gap: 28px;
-            }
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+        }
 
-            .card-grid {
-                gap: 24px;
-            }
+        /* ---------- 报告头部 ---------- */
+        .head-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+        .head-icon {
+            width: 46px;
+            height: 46px;
+            flex-shrink: 0;
+            border-radius: 12px;
+        }
+        .head-main { flex: 1; min-width: 0; padding-top: 2px; }
+        .head-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+        .head-meta {
+            margin-top: 5px;
+            font-size: 12.5px;
+            color: var(--text-2);
+            letter-spacing: -0.1px;
+        }
+        .head-right {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            flex-shrink: 0;
+            padding-top: 2px;
+        }
+        .head-info {
+            text-align: right;
+            font-size: 11.5px;
+            line-height: 1.6;
+            color: var(--text-3);
+            white-space: nowrap;
+        }
+        .export-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 9px;
+            background: var(--card-deep);
+            color: var(--accent);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition);
+            flex-shrink: 0;
+        }
+        .export-btn:hover { background: var(--track); }
+        .export-btn:active { transform: scale(0.92); opacity: 0.7; }
 
-            .donut-container {
-                width: 200px;
-                height: 200px;
-            }
-            .donut-svg {
-                width: 200px;
-                height: 200px;
-            }
-            .donut-total {
-                font-size: 36px;
-            }
+        /* ---------- 统计卡片 ---------- */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .tile {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 14px 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+        }
+        .tile-label {
+            font-size: 12px;
+            color: var(--text-2);
+            letter-spacing: -0.1px;
+        }
+        .tile-value {
+            font-size: 27px;
+            font-weight: 700;
+            letter-spacing: -0.6px;
+            color: var(--accent);
+            line-height: 1.15;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .tile-value .den {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-3);
+            letter-spacing: 0;
+        }
+        .tile-value .den-unit { font-size: 15px; font-weight: 600; }
+        .mini-bar {
+            height: 5px;
+            border-radius: 3px;
+            background: var(--track);
+            margin: 6px 0 2px;
+            overflow: hidden;
+        }
+        .mini-bar i {
+            display: block;
+            height: 100%;
+            border-radius: 3px;
+            background: var(--accent);
+        }
+        .tile-sub {
+            font-size: 11px;
+            color: var(--text-3);
+            letter-spacing: -0.1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-            .chart-section {
-                gap: 36px;
-            }
+        /* ---------- 区块标题 ---------- */
+        .sec-title {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .sec-title::before {
+            content: '';
+            width: 4px;
+            height: 14px;
+            border-radius: 2px;
+            background: var(--accent);
+            align-self: center;
+            flex-shrink: 0;
+        }
+        .sec-title b {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+        }
+        .sec-title span {
+            font-size: 12px;
+            color: var(--text-3);
+            letter-spacing: -0.1px;
+        }
+        .sec-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .sec-note {
+            font-size: 11.5px;
+            color: var(--text-3);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
 
-            .legend-item {
-                font-size: 15px;
-            }
+        /* ---------- 图表通用 ---------- */
+        .chart-svg { width: 100%; height: auto; display: block; }
+        .bubble-legend {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px 16px;
+        }
+        .bubble-legend .item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11.5px;
+            color: var(--text-2);
+        }
+        .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1.08fr 0.92fr;
+            gap: 14px;
+        }
+        .grid-2 .card { min-width: 0; }
+
+        /* ---------- 环形图 ---------- */
+        .donut-wrap {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .donut-box {
+            width: 196px;
+            height: 196px;
+            flex-shrink: 0;
+        }
+        .donut-legend {
+            flex: 1;
+            min-width: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px 16px;
+        }
+        .donut-legend .item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12.5px;
+            min-width: 0;
+        }
+        .donut-legend .name {
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-2);
+        }
+        .donut-legend .count {
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            color: var(--text);
+        }
+
+        /* ---------- 条形排行 ---------- */
+        .top10-empty,
+        .ext-empty {
+            color: var(--text-3);
+            font-size: 13px;
+            padding: 14px 0 8px;
+            text-align: center;
+        }
+
+        /* ---------- 资源构成 ---------- */
+        .res-stack {
+            display: flex;
+            height: 14px;
+            border-radius: 7px;
+            overflow: hidden;
+            background: var(--track);
+            margin-bottom: 14px;
+        }
+        .res-stack i { display: block; height: 100%; }
+        .res-row {
+            display: grid;
+            grid-template-columns: minmax(64px, 92px) 84px 46px 1fr;
+            gap: 12px;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 12.5px;
+        }
+        .res-row .name { color: var(--text-2); white-space: nowrap; }
+        .res-row .val,
+        .res-row .pct {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            color: var(--text);
+            white-space: nowrap;
+        }
+        .res-row .pct { color: var(--text-3); font-size: 11.5px; }
+        .res-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: var(--track);
+            overflow: hidden;
+        }
+        .res-bar i {
+            display: block;
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        /* ---------- json 构成 ---------- */
+        .json-row {
+            display: grid;
+            grid-template-columns: minmax(190px, 230px) 1fr 108px;
+            gap: 14px;
+            align-items: center;
+            padding: 6px 0;
+        }
+        .json-row .name {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: -0.1px;
+        }
+        .json-row .desc {
+            font-size: 11px;
+            color: var(--text-3);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .json-row .right {
+            text-align: right;
+            font-size: 11.5px;
+            color: var(--text-2);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .json-row .right b {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        /* ---------- 拓展资源 ---------- */
+        .ext-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px 28px;
+        }
+        .ext-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            min-width: 0;
+        }
+        .ext-item .name {
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-2);
+        }
+        .ext-item .use {
+            font-variant-numeric: tabular-nums;
+            color: var(--text-3);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .ext-item .use b { color: var(--text); font-weight: 600; }
+
+        /* ---------- 建议 ---------- */
+        .advice-row {
+            display: flex;
+            gap: 10px;
+            padding: 5px 0;
+            font-size: 13px;
+            line-height: 1.55;
+            letter-spacing: -0.1px;
+        }
+        .advice-row i {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+        .advice-row.info i { background: var(--accent); }
+        .advice-row.warn i { background: var(--warn); }
+        .advice-row.ok i { background: var(--good); }
+
+        @media (max-width: 900px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .report { padding: 16px 14px 24px; }
+            .head-card { flex-wrap: wrap; }
+            .ext-grid { grid-template-columns: 1fr; }
+            .json-row { grid-template-columns: 1fr 90px; }
+            .json-row .bar-col { display: none; }
+            .res-row { grid-template-columns: 64px 72px 42px 1fr; gap: 8px; }
         }
     </style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-left">
-            <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path>
-            </svg>
-            <span class="header-title">项目分析</span>
-        </div>
-        <button class="export-btn" id="exportBtn" title="导出为图片">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-        </button>
-    </div>
 
     <div class="loading-state" id="loadingState">
         <div class="spinner"></div>
         <span>正在分析项目...</span>
     </div>
 
-    <div class="main-content" id="mainContent" style="display:none;">
-        <div class="card" id="overviewCard">
-            <div class="project-name" id="projectName">-</div>
-            <div class="project-meta" id="projectMeta">-</div>
-        </div>
-
-        <div class="card-grid">
-            <div class="card">
-                <div class="card-header">基本信息</div>
-            <div class="metric-row">
-                <div class="metric-card">
-                    <div class="metric-value accent" id="spriteCount">0</div>
-                    <div class="metric-label">角色</div>
+    <div class="report" id="report" style="display:none;">
+        <!-- 头部 -->
+        <div class="card head-card" id="headCard">
+            <svg class="head-icon" viewBox="0 0 48 48" aria-hidden="true">
+                <rect x="1.5" y="1.5" width="45" height="45" rx="12" fill="#0A84FF"/>
+                <path d="M14.5 33.5V15.5L33.5 32.5V14.5" stroke="#ffffff" stroke-width="4.4"
+                    stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+            <div class="head-main">
+                <div class="head-title" id="headTitle">-</div>
+                <div class="head-meta" id="headMeta">-</div>
+            </div>
+            <div class="head-right">
+                <div class="head-info">
+                    <div id="headTime">-</div>
+                    <div>Dr.Scratch 2015 AMS</div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-value accent" id="backdropCount">0</div>
-                    <div class="metric-label">背景</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-value accent" id="soundCount">0</div>
-                    <div class="metric-label">声音</div>
-                </div>
+                <button class="export-btn" id="exportBtn" title="导出为图片">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </button>
             </div>
         </div>
 
+        <!-- 概览指标 -->
+        <div class="stats" id="statsGrid"></div>
+
+        <!-- 代码分布趋势 -->
         <div class="card">
-            <div class="card-header">代码构成</div>
-            <div class="chart-section">
-                <div class="donut-container">
-                    <svg class="donut-svg" viewBox="0 0 160 160" id="donutSvg"></svg>
-                    <div class="donut-center">
-                        <div class="donut-total" id="blockTotal">0</div>
-                        <div class="donut-label">总积木数</div>
-                    </div>
-                </div>
-                <div class="legend" id="legendContainer">
-                    <div class="empty-legend">暂无积木</div>
+            <div class="sec-title"><b>代码分布趋势</b><span>(X: 概念理解难度 Y: 外观展示 ← 算法搭建)</span></div>
+            <svg id="bubbleChart" class="chart-svg" viewBox="0 0 920 272" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="bubble-legend" id="bubbleLegend"></div>
+        </div>
+
+        <div class="grid-2">
+            <!-- 能力雷达图 -->
+            <div class="card">
+                <div class="sec-title"><b>Dr.Scratch 核心能力</b><span>0 – 3 分 / 维度</span></div>
+                <svg id="radarChart" class="chart-svg" viewBox="0 0 320 302" preserveAspectRatio="xMidYMid meet"></svg>
+            </div>
+            <!-- 代码基因组成 -->
+            <div class="card">
+                <div class="sec-title"><b>代码基因组成</b><span>按积木类别</span></div>
+                <div class="donut-wrap">
+                    <svg id="donutChart" class="donut-box" viewBox="0 0 200 200"></svg>
+                    <div class="donut-legend" id="donutLegend"></div>
                 </div>
             </div>
         </div>
+
+        <!-- 积木使用频次 Top 10 -->
+        <div class="card">
+            <div class="sec-title"><b>积木使用频次 Top 10</b><span>使用次数最多的积木</span></div>
+            <svg id="top10Chart" class="chart-svg" viewBox="0 0 920 336" preserveAspectRatio="xMidYMid meet"></svg>
         </div>
 
-        <div class="card" id="complexityCard">
-            <div class="card-header">代码复杂度</div>
-            <div id="complexityContent"></div>
+        <!-- 资源构成 -->
+        <div class="card">
+            <div class="sec-head">
+                <div class="sec-title" style="margin:0;"><b>资源构成</b></div>
+                <div class="sec-note" id="resTotal">-</div>
+            </div>
+            <div class="res-stack" id="resStack"></div>
+            <div id="resRows"></div>
         </div>
 
-        <div class="card" id="qualityCard">
-            <div class="card-header">代码质量</div>
-            <div id="qualityContent"></div>
+        <!-- project.json 内部构成 -->
+        <div class="card">
+            <div class="sec-head">
+                <div class="sec-title" style="margin:0;"><b>project.json 内部构成 (未压缩)</b></div>
+                <div class="sec-note" id="jsonTotal">-</div>
+            </div>
+            <div id="jsonRows"></div>
         </div>
 
-        <div class="card" id="healthCard">
-            <div class="card-header">项目健康度</div>
-            <div id="healthContent"></div>
+        <!-- 拓展资源 -->
+        <div class="card">
+            <div class="sec-head">
+                <div class="sec-title" style="margin:0;"><b>拓展资源 (按使用量)</b></div>
+                <div class="sec-note" id="extTotal">-</div>
+            </div>
+            <div id="extRows"></div>
         </div>
 
-        <div class="analysis-footer">
-            <div class="analysis-time" id="analysisTime">-</div>
-            <div class="analysis-brand">NeoWarp</div>
+        <!-- 确定性建议 -->
+        <div class="card">
+            <div class="sec-title"><b>确定性建议</b><span>由当前数据直接推导</span></div>
+            <div id="adviceRows"></div>
         </div>
     </div>
 
@@ -587,678 +585,1148 @@
     <script src="html2canvas.min.js"></script>
     <script>
     (function() {
+        'use strict';
+
         var theme = 'light';
+        var lastStats = null;
 
-        var CATEGORY_COLORS = {
-            motion: '#4C97FF',
-            looks: '#9966FF',
-            sound: '#CF63CF',
-            events: '#FFBF00',
-            control: '#FFAB19',
-            sensing: '#5CB1D6',
-            operators: '#59C059',
-            variables: '#FF8C1A',
-            myBlocks: '#FF6680',
-            other: '#AAAAAA'
+        function el(id) { return document.getElementById(id); }
+        function hide(node) { node.style.display = 'none'; }
+        function show(node) { node.style.display = ''; }
+
+        /* ================= 基础工具 ================= */
+
+        function hash01(str) {
+            var h = 2166136261;
+            for (var i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h = (h * 16777619) >>> 0;
+            }
+            return (h % 100000) / 100000;
+        }
+
+        function utf8Size(str) {
+            try { return new Blob([str]).size; } catch (e) { return str.length * 2; }
+        }
+
+        function fmtBytes(n) {
+            if (!isFinite(n) || n == null) n = 0;
+            if (n === 0) return '0 KB';
+            if (n >= 1048576) return (n / 1048576).toFixed(2) + ' MB';
+            if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+            return n + ' B';
+        }
+
+        function fmtPct(value, total) {
+            if (!total) return '0%';
+            return ((value / total) * 100).toFixed(1) + '%';
+        }
+
+        function escapeHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function svgNode(tag, attrs) {
+            var node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+            if (attrs) {
+                Object.keys(attrs).forEach(function(k) { node.setAttribute(k, attrs[k]); });
+            }
+            return node;
+        }
+
+        function chartColors() {
+            var dark = theme === 'dark';
+            return {
+                grid: dark ? '#3a3a3c' : '#e4e6ee',
+                tick: dark ? '#8d8d94' : '#98989d',
+                axis: dark ? '#c4c7cf' : '#3f434b',
+                label: dark ? '#98989d' : '#797e88',
+                ring: dark ? '#333338' : '#dfe1e9',
+                empty: dark ? '#2c2c2e' : '#dcdde3'
+            };
+        }
+
+        /* ================= 积木分类与命名 ================= */
+
+        var CATS = [
+            { key: 'motion',    name: '运动',     color: '#4C97FF' },
+            { key: 'looks',     name: '外观',     color: '#9966FF' },
+            { key: 'sound',     name: '声音',     color: '#CF63CF' },
+            { key: 'events',    name: '事件',     color: '#FFBF00' },
+            { key: 'control',   name: '控制',     color: '#FFAB19' },
+            { key: 'sensing',   name: '侦测',     color: '#5CB1D6' },
+            { key: 'operators', name: '运算',     color: '#59C059' },
+            { key: 'variables', name: '数据',     color: '#FF8C1A' },
+            { key: 'myBlocks',  name: '自制积木', color: '#FF6680' }
+        ];
+        var CAT_BY_KEY = {};
+        CATS.forEach(function(c) { CAT_BY_KEY[c.key] = c; });
+
+        var EXT_META = {
+            'music':        { name: '音乐',       color: '#CF63CF' },
+            'pen':          { name: '画笔',       color: '#0FBD8C' },
+            'videoSensing': { name: '视频侦测',   color: '#7C87CC' },
+            'text2speech':  { name: '文字朗读',   color: '#5CB1D6' },
+            'translate':    { name: '翻译',       color: '#575E75' },
+            'makeymakey':   { name: 'Makey Makey', color: '#4C97FF' },
+            'microbit':     { name: 'micro:bit',  color: '#FF6680' },
+            'ev3':          { name: '乐高 EV3',   color: '#FF8C1A' },
+            'wedo':         { name: 'WeDo',       color: '#FFBF00' },
+            'wedo2':        { name: 'WeDo 2.0',   color: '#FFBF00' },
+            'boost':        { name: 'Boost',      color: '#59C059' },
+            'gdxfor':       { name: '重力感应',   color: '#5CB1D6' },
+            'stretch':      { name: '角色拉伸',   color: '#4C97FF' },
+            'gamepad':      { name: '手柄',       color: '#59C059' },
+            'box2d':        { name: '物理引擎',   color: '#FF8C1A' },
+            'face':         { name: '面部侦测',   color: '#FF6680' },
+            'speech':       { name: '语音识别',   color: '#CF63CF' },
+            'text':         { name: '艺术字',     color: '#9966FF' }
+        };
+        var EXT_PALETTE = ['#9966FF', '#CF63CF', '#4C97FF', '#0FBD8C', '#FFAB19', '#5CB1D6', '#FF6680', '#FFBF00', '#59C059', '#8E8E93'];
+
+        var OPCODE_NAMES = {
+            motion_movesteps: '移动步数', motion_turnright: '右转角度', motion_turnleft: '左转角度',
+            motion_gotoxy: '移到 X/Y', motion_goto: '移到指定位置', motion_glidesecstoxy: '滑行到 X/Y',
+            motion_glideto: '滑行到指定位置', motion_pointindirection: '面向角度', motion_pointtowards: '面向指定目标',
+            motion_changexby: 'X 坐标增加', motion_setx: 'X 坐标设为', motion_changeyby: 'Y 坐标增加',
+            motion_sety: 'Y 坐标设为', motion_ifonedgebounce: '碰到边缘反弹', motion_setrotationstyle: '旋转方式设为',
+            motion_xposition: 'X 坐标', motion_yposition: 'Y 坐标', motion_direction: '方向',
+
+            looks_sayforsecs: '说(指定秒数)', looks_say: '说', looks_thinkforsecs: '思考(指定秒数)',
+            looks_think: '思考', looks_switchcostumeto: '换成造型', looks_nextcostume: '下一个造型',
+            looks_switchbackdropto: '换成背景', looks_nextbackdrop: '下一个背景', looks_changesizeby: '大小增加',
+            looks_setsizeto: '大小设为', looks_changeeffectby: '图形特效增加', looks_seteffectto: '图形特效设为',
+            looks_cleargraphiceffects: '清除图形特效', looks_show: '显示', looks_hide: '隐藏',
+            looks_gotofrontback: '移到最前/最后', looks_goforwardbackwardlayers: '前移/后移层次',
+            looks_costumenumbername: '造型编号/名称', looks_backdropnumbername: '背景编号/名称', looks_size: '大小',
+
+            sound_playuntildone: '播放声音等播完', sound_play: '播放声音', sound_stopallsounds: '停止全部声音',
+            sound_changevolumeby: '音量增加', sound_setvolumeto: '音量设为', sound_volume: '音量',
+            sound_seteffectto: '声音特效设为', sound_changeeffectby: '声音特效增加', sound_cleareffects: '清除声音特效',
+
+            event_whenflagclicked: '当绿旗被点击', event_whenkeypressed: '当按下按键',
+            event_whenthisspriteclicked: '当角色被点击', event_whenstageclicked: '当舞台被点击',
+            event_whenbroadcastreceived: '当接收到广播', event_whenbackdropswitchesto: '当背景换成',
+            event_whenquantitychanged: '当数值大于', event_broadcast: '广播消息', event_broadcastandwait: '广播并等待',
+
+            control_wait: '等待秒数', control_repeat: '重复执行次数', control_forever: '重复执行',
+            control_if: '如果…那么', control_if_else: '如果…否则', control_wait_until: '等到条件成立',
+            control_repeat_until: '重复直到条件成立', control_stop: '停止脚本',
+            control_start_as_clone: '当作为克隆体启动', control_create_clone_of: '克隆角色',
+            control_delete_this_clone: '删除克隆体',
+
+            sensing_touchingobject: '碰到角色/边缘', sensing_touchingcolor: '碰到颜色',
+            sensing_coloristouchingcolor: '颜色碰到颜色', sensing_distanceto: '到指定目标距离',
+            sensing_askandwait: '询问并等待', sensing_answer: '回答', sensing_keypressed: '按键被按下',
+            sensing_mousedown: '鼠标被按下', sensing_mousex: '鼠标 X 坐标', sensing_mousey: '鼠标 Y 坐标',
+            sensing_setdragmode: '拖动模式设为', sensing_loudness: '响度', sensing_timer: '计时器值',
+            sensing_resettimer: '计时器归零', sensing_of: '角色属性值', sensing_current: '当前时间',
+            sensing_dayssince2000: '2000 年至今天数', sensing_username: '用户名',
+
+            operator_add: '加法', operator_subtract: '减法', operator_multiply: '乘法', operator_divide: '除法',
+            operator_random: '随机数', operator_gt: '大于', operator_lt: '小于', operator_equals: '等于',
+            operator_and: '逻辑与', operator_or: '逻辑或', operator_not: '逻辑非', operator_join: '连接字符串',
+            operator_letter_of: '取第几个字符', operator_length: '字符串长度', operator_contains: '包含字符串',
+            operator_mod: '取余数', operator_round: '四舍五入', operator_mathop: '数学运算',
+
+            data_variable: '读取变量', data_setvariableto: '将变量设为', data_changevariableby: '将变量增加',
+            data_showvariable: '显示变量', data_hidevariable: '隐藏变量', data_listcontents: '读取列表',
+            data_addtolist: '加入列表', data_deleteoflist: '删除列表项', data_deletealloflist: '清空列表',
+            data_insertatlist: '插入列表项', data_itemoflist: '列表第几项', data_itemnumoflist: '项在列表中的编号',
+            data_lengthoflist: '列表长度', data_listcontainsitem: '列表包含项', data_showlist: '显示列表',
+            data_hidelist: '隐藏列表',
+
+            procedures_definition: '定义积木', procedures_definition_return: '定义返回积木',
+            argument_reporter_string_number: '积木参数', procedures_call: '调用积木',
+
+            music_playdrum: '播放鼓声', music_playnote: '演奏音符', music_rest: '休止拍数',
+            music_setinstrument: '设定乐器', music_settempo: '设定节奏', music_changetempo: '节奏增加',
+            pen_clear: '全部擦除', pen_stamp: '图章', pen_penDown: '落笔', pen_penUp: '抬笔',
+            pen_setPenColorToColor: '笔的颜色设为', pen_setPenColorParamTo: '笔参数设为',
+            pen_changePenColorParamBy: '笔参数增加', pen_setPenSizeTo: '笔粗细设为', pen_changePenSizeBy: '笔粗细增加',
+            videoSensing_videoOn: '开启视频', videoSensing_videoOff: '关闭视频',
+            videoSensing_setVideoTransparency: '视频透明度设为', videoSensing_whenMotionGreaterThan: '当视频运动大于',
+            text2speech_speakAndWait: '朗读并等待', text2speech_speakSpeakableString: '朗读文本',
+            text2speech_setVoice: '设定嗓音', text2speech_setLanguage: '设定语言',
+            translate_getTranslate: '翻译文本', translate_getViewerLanguage: '读者语言',
+            makeymakey_whenMakeyKeyPressed: '当按下按键'
         };
 
-        var CATEGORY_NAMES = {
-            motion: '运动',
-            looks: '外观',
-            sound: '声音',
-            events: '事件',
-            control: '控制',
-            sensing: '侦测',
-            operators: '运算',
-            variables: '变量',
-            myBlocks: '自制积木',
-            other: '其他'
-        };
+        function opcodeName(op) {
+            return OPCODE_NAMES[op] || op;
+        }
+
+        function extMeta(seg) {
+            var known = EXT_META[seg];
+            var color = known ? known.color : EXT_PALETTE[Math.floor(hash01('ext:' + seg) * EXT_PALETTE.length)];
+            var name = known ? known.name : seg;
+            return { name: name, color: color };
+        }
+
+        // 分类积木：核心类别直接映射，其余按拓展命名空间归组
+        function classify(op) {
+            var seg = op.split('_')[0];
+            var key = {
+                motion: 'motion', looks: 'looks', sound: 'sound', event: 'events',
+                control: 'control', sensing: 'sensing', operator: 'operators',
+                data: 'variables', procedures: 'myBlocks', argument: 'myBlocks'
+            }[seg];
+            if (key) {
+                var cat = CAT_BY_KEY[key];
+                return { bucket: 'core', key: key, name: cat.name, color: cat.color, seg: null };
+            }
+            var ext = extMeta(seg);
+            return { bucket: 'ext', key: 'ext:' + seg, name: ext.name, color: ext.color, seg: seg };
+        }
+
+        // 概念难度 1–4 与外观/算法倾向 -1~1，用于分布趋势图坐标系
+        function opcodeProfile(op) {
+            var d = 2, s = 0;
+            if (op.indexOf('motion_') === 0) { d = 1; s = -0.35; }
+            else if (op.indexOf('looks_') === 0) { d = 1; s = -0.9; }
+            else if (op.indexOf('sound_') === 0) { d = 1; s = -0.75; }
+            else if (op.indexOf('event_') === 0) { d = 1; s = -0.5; }
+            else if (op.indexOf('control_') === 0) {
+                d = 2; s = 0.1;
+                if (op === 'control_wait') { d = 1; s = 0; }
+                if (op === 'control_create_clone_of' || op === 'control_start_as_clone' ||
+                    op === 'control_delete_this_clone') { d = 3; s = 0.4; }
+                if (op === 'control_repeat_until' || op === 'control_wait_until') { d = 3; s = 0.3; }
+            }
+            else if (op.indexOf('sensing_') === 0) {
+                d = 2; s = 0.25;
+                if (op === 'sensing_of') d = 3;
+                if (op === 'sensing_current' || op === 'sensing_dayssince2000') d = 2;
+            }
+            else if (op.indexOf('operator_') === 0) {
+                d = 3; s = 0.9;
+                if (op === 'operator_join' || op === 'operator_length' ||
+                    op === 'operator_letter_of' || op === 'operator_contains') { d = 2; s = 0.7; }
+                if (op === 'operator_random') { d = 2; s = 0.6; }
+                if (op === 'operator_mod' || op === 'operator_round' || op === 'operator_mathop') { d = 4; s = 0.95; }
+            }
+            else if (op.indexOf('data_') === 0) {
+                d = 2; s = 0.75;
+                if (op === 'data_variable' || op === 'data_setvariableto' || op === 'data_changevariableby') { d = 2; s = 0.7; }
+                if (op.indexOf('list') !== -1) { d = 3; s = 0.85; }
+            }
+            else if (op.indexOf('procedures_') === 0 || op.indexOf('argument_') === 0) { d = 4; s = 0.55; }
+            else { d = 2; s = -0.35; }
+            return { diff: d, style: s };
+        }
+
+        var DS_DIMS = ['抽象', '并行', '逻辑', '同步', '流控', '交互', '数据'];
+
+        function proficiencyText(score) {
+            if (score === 0) return 'NOT DEVELOPED 未发展';
+            if (score <= 7) return 'BASIC 基础';
+            if (score <= 13) return 'DEVELOPMENT 发展';
+            return 'PROFICIENT 熟通';
+        }
+
+        /* ================= 主题 ================= */
 
         function applyTheme(t) {
-            theme = t;
+            theme = (t === 'dark') ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', theme);
+            if (lastStats) renderAll(lastStats);
         }
 
         function initTheme() {
             if (window.ProjectAnalysisPreload) {
-                window.ProjectAnalysisPreload.getTheme().then(function(t) {
-                    applyTheme(t);
-                });
+                window.ProjectAnalysisPreload.getTheme().then(function(t) { applyTheme(t); }).catch(function(){});
                 window.ProjectAnalysisPreload.onThemeChanged(function(data) {
-                    applyTheme(data.theme || 'light');
+                    applyTheme((data && data.theme) || 'light');
                 });
             }
         }
 
-        function show(el) { el.style.display = ''; }
-        function hide(el) { el.style.display = 'none'; }
+        /* ================= 统计计算 ================= */
 
-        function getSubstackDepth(block, blocks, visited) {
-            if (!block || visited.has(block)) return 0;
-            visited.add(block);
-
+        // 追踪子栈嵌套深度（用于复杂度统计）
+        function substackDepth(block, blocks, visited) {
+            if (!block || visited.indexOf(block) !== -1) return 0;
+            visited.push(block);
             var maxSub = 0;
             var inputs = block.inputs || {};
             ['SUBSTACK', 'SUBSTACK2'].forEach(function(name) {
                 var input = inputs[name];
-                if (input && Array.isArray(input) && input.length >= 2) {
-                    var subBlockId = input[1];
-                    if (typeof subBlockId === 'string' && blocks[subBlockId]) {
-                        var subDepth = getSubstackDepth(blocks[subBlockId], blocks, visited);
-                        maxSub = Math.max(maxSub, subDepth + 1);
-                    }
+                if (Array.isArray(input) && input.length >= 2 && typeof input[1] === 'string' && blocks[input[1]]) {
+                    var d = substackDepth(blocks[input[1]], blocks, visited) + (name === 'SUBSTACK2' ? 1 : 0);
+                    if (d > maxSub) maxSub = d;
                 }
             });
-
-            if (block.next && typeof block.next === 'string' && blocks[block.next]) {
-                var nextDepth = getSubstackDepth(blocks[block.next], blocks, visited);
-                maxSub = Math.max(maxSub, nextDepth);
+            if (typeof block.next === 'string' && blocks[block.next]) {
+                var nd = substackDepth(blocks[block.next], blocks, visited);
+                if (nd > maxSub) maxSub = nd;
             }
-
             return maxSub;
         }
 
-        function analyzeProject(projectJSON, openTime, projectTitle, assetSize) {
-            var data;
-            try {
-                data = typeof projectJSON === 'string' ? JSON.parse(projectJSON) : projectJSON;
-            } catch(e) {
-                hide(document.getElementById('loadingState'));
-                hide(document.getElementById('mainContent'));
-                show(document.getElementById('errorState'));
-                document.getElementById('errorText').textContent = '项目数据解析失败';
-                return;
-            }
+        function niceStep(raw) {
+            if (raw <= 0) return 1;
+            var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+            var f = raw / mag;
+            var n = f <= 1 ? 1 : (f <= 2 ? 2 : (f <= 5 ? 5 : 10));
+            return n * mag;
+        }
 
-            if (!data) {
-                hide(document.getElementById('loadingState'));
-                hide(document.getElementById('mainContent'));
-                show(document.getElementById('errorState'));
-                return;
-            }
-
-            var targets = data.targets || [];
+        function computeStats(project, payload) {
+            var targets = project.targets || [];
             var stage = null;
             var sprites = [];
-
             targets.forEach(function(t) {
-                if (t.isStage) {
-                    stage = t;
-                } else {
-                    sprites.push(t);
-                }
+                if (t && t.isStage) stage = t; else sprites.push(t);
             });
 
-            var projectName = (projectTitle && projectTitle !== 'NeoWarp') ? projectTitle : ((stage && stage.name && stage.name !== 'Stage') ? stage.name : '未命名项目');
-            var backdropCount = stage ? (stage.costumes || []).length : 0;
-            var spriteCount = sprites.length;
+            var stats = {
+                targetsCount: targets.length,
+                spriteCount: sprites.length,
+                costumeCount: 0,
+                soundCount: 0,
+                blockAll: 0, blockReal: 0, blockShadow: 0,
+                catCounts: {}, extCounts: {}, 
+                opcodeCounts: {},
+                varCount: 0, listCount: 0,
+                varUsed: {}, listUsed: {},
+                variablesBytes: 0, listsBytes: 0,
+                bigListCount: 0,
+                commentCount: 0,
+                scriptCount: 0, emptyScripts: 0,
+                signatures: {}, dupGroups: 0,
+                longestScript: 0, scriptBlockSum: 0,
+                maxDepth: 0,
+                loopCount: 0, ifCount: 0, ifElseCount: 0,
+                defsCount: 0, callsCount: 0,
+                comparisons: 0, boolOps: 0,
+                flagHats: 0,
+                keyHats: 0, clickHats: 0,
+                broadcastSend: 0, broadcastRecv: 0,
+                asks: 0, interactiveSensing: 0,
+                timerUses: 0, waits: 0,
+                multiScriptSprites: 0, flagSpriteCount: 0
+            };
+            CATS.forEach(function(c) { stats.catCounts[c.key] = 0; });
 
-            var totalSounds = 0;
-            sprites.forEach(function(s) {
-                totalSounds += (s.sounds || []).length;
-            });
-            if (stage && stage.sounds) totalSounds += stage.sounds.length;
-
-            var totalMemory = assetSize || 0;
+            var perTargetScriptCounts = [];
 
             targets.forEach(function(target) {
-                if (target.blocks) {
-                    var realBlocks = {};
-                    Object.keys(target.blocks).forEach(function(blockId) {
-                        var block = target.blocks[blockId];
-                        if (block && !block.shadow) {
-                            realBlocks[blockId] = block;
-                        }
-                    });
-                    var blocksSize = JSON.stringify(realBlocks).length;
-                    totalMemory += blocksSize;
-                }
-            });
+                if (!target) return;
+                stats.costumeCount += (target.costumes || []).length;
+                stats.soundCount += (target.sounds || []).length;
+                stats.commentCount += Object.keys(target.comments || {}).length;
 
-            var categoryCounts = {};
-            Object.keys(CATEGORY_NAMES).forEach(function(k) { categoryCounts[k] = 0; });
-            var totalBlocks = 0;
-            var varCount = 0;
-            var listCount = 0;
+                var variables = target.variables || {};
+                var lists = target.lists || {};
+                stats.varCount += Object.keys(variables).length;
+                stats.listCount += Object.keys(lists).length;
 
-            // 统计变量：target.variables 存放普通变量([name, value])，target.lists 存放列表([name, items])
-            var stageBlocks = 0;
-            targets.forEach(function(target) {
-                if (target.variables) {
-                    varCount += Object.keys(target.variables).length;
-                }
-                if (target.lists) {
-                    listCount += Object.keys(target.lists).length;
-                }
+                var variablesClone = {}, listsClone = {};
+                Object.keys(variables).forEach(function(id) { variablesClone[id] = variables[id]; });
+                Object.keys(lists).forEach(function(id) { listsClone[id] = lists[id]; });
+                stats.variablesBytes += utf8Size(JSON.stringify(variablesClone));
+                stats.listsBytes += utf8Size(JSON.stringify(listsClone));
 
-                if (target.blocks) {
-                    Object.keys(target.blocks).forEach(function(blockId) {
-                        var block = target.blocks[blockId];
-                        if (!block || !block.opcode) return;
-                        if (block.shadow) return;
+                Object.keys(lists).forEach(function(id) {
+                    var entry = lists[id];
+                    var items = Array.isArray(entry) ? entry[1] : (entry && entry.value);
+                    if (Array.isArray(items) && items.length >= 1000) stats.bigListCount++;
+                });
 
-                        totalBlocks++;
-                        if (target.isStage) stageBlocks++;
-
-                        var opcode = block.opcode;
-                        var cat = 'other';
-
-                        if (opcode.startsWith('motion_')) cat = 'motion';
-                        else if (opcode.startsWith('looks_')) cat = 'looks';
-                        else if (opcode.startsWith('sound_')) cat = 'sound';
-                        else if (opcode.startsWith('event_')) cat = 'events';
-                        else if (opcode.startsWith('control_')) cat = 'control';
-                        else if (opcode.startsWith('sensing_')) cat = 'sensing';
-                        else if (opcode.startsWith('operator_')) cat = 'operators';
-                        else if (opcode.startsWith('data_')) cat = 'variables';
-                        else if (opcode.startsWith('procedures_')) cat = 'myBlocks';
-
-                        categoryCounts[cat]++;
-                    });
-                }
-            });
-
-            // 代码复杂度和质量分析数据收集
-            var scriptData = [];
-            var maxNestingDepth = 0;
-            var loopCount = 0;
-            var conditionalCount = 0;
-            var commentCount = 0;
-            var usedVarNames = {};
-            var allVarNames = {};
-
-            targets.forEach(function(target) {
                 var blocks = target.blocks || {};
-                var comments = target.comments || {};
-                commentCount += Object.keys(comments).length;
-
-                if (target.variables) {
-                    Object.keys(target.variables).forEach(function(varId) {
-                        var v = target.variables[varId];
-                        var name = Array.isArray(v) ? v[0] : (v.name || varId);
-                        allVarNames[name] = true;
-                    });
-                }
-                if (target.lists) {
-                    Object.keys(target.lists).forEach(function(listId) {
-                        var l = target.lists[listId];
-                        allVarNames[Array.isArray(l) ? l[0] : listId] = true;
-                    });
-                }
+                var scriptCountHere = 0;
 
                 Object.keys(blocks).forEach(function(blockId) {
                     var block = blocks[blockId];
-                    if (!block || block.shadow) return;
+                    if (!block || !block.opcode) return;
+                    stats.blockAll++;
+                    if (block.shadow) { stats.blockShadow++; return; }
+                    stats.blockReal++;
 
                     var op = block.opcode;
-                    if (op === 'control_repeat' || op === 'control_repeat_until' || op === 'control_forever') loopCount++;
-                    if (op === 'control_if' || op === 'control_if_else') conditionalCount++;
+                    stats.opcodeCounts[op] = (stats.opcodeCounts[op] || 0) + 1;
 
-                    if (op === 'data_variable' || op === 'data_listcontents') {
-                        var fields = block.fields || {};
-                        if (fields.VARIABLE && fields.VARIABLE[0]) usedVarNames[fields.VARIABLE[0]] = true;
-                        if (fields.LIST && fields.LIST[0]) usedVarNames[fields.LIST[0]] = true;
-                    }
+                    var cls = classify(op);
+                    if (cls.bucket === 'core') stats.catCounts[cls.key]++;
+                    else stats.extCounts[cls.seg] = (stats.extCounts[cls.seg] || 0) + 1;
+
+                    var fields = block.fields || {};
+                    var fv = fields.VARIABLE;
+                    if (Array.isArray(fv) && fv[0]) stats.varUsed[fv[0]] = true;
+                    var fl = fields.LIST;
+                    if (Array.isArray(fl) && fl[0]) stats.listUsed[fl[0]] = true;
+
+                    // 能力评分各维度所用积木计数
+                    if (op === 'control_repeat' || op === 'control_forever' || op === 'control_repeat_until') stats.loopCount++;
+                    if (op === 'control_if') stats.ifCount++;
+                    if (op === 'control_if_else') stats.ifElseCount++;
+                    if (op === 'control_wait' || op === 'control_wait_until') stats.waits++;
+                    if (op === 'procedures_definition' || op === 'procedures_definition_return') stats.defsCount++;
+                    if (op === 'procedures_call') stats.callsCount++;
+                    if (op === 'operator_equals' || op === 'operator_gt' || op === 'operator_lt') stats.comparisons++;
+                    if (op === 'operator_and' || op === 'operator_or' || op === 'operator_not') stats.boolOps++;
+                    if (op === 'event_whenflagclicked') stats.flagHats++;
+                    if (op === 'event_whenkeypressed') stats.keyHats++;
+                    if (op === 'event_whenthisspriteclicked' || op === 'event_whenstageclicked' ||
+                        op === 'event_whenquantitychanged') stats.clickHats++;
+                    if (op === 'event_whenbroadcastreceived') stats.broadcastRecv++;
+                    if (op === 'event_broadcast' || op === 'event_broadcastandwait') stats.broadcastSend++;
+                    if (op === 'sensing_askandwait') stats.asks++;
+                    if (op === 'sensing_mousedown' || op === 'sensing_keypressed' ||
+                        op === 'sensing_loudness') stats.interactiveSensing++;
+                    if (op === 'sensing_timer' || op === 'sensing_resettimer') stats.timerUses++;
 
                     if (block.topLevel) {
-                        var opcodes = [];
+                        var chain = [];
                         var current = block;
-                        var visited = new Set();
-                        var blockCount = 0;
-
-                        while (current && !visited.has(current)) {
-                            visited.add(current);
-                            opcodes.push(current.opcode);
-                            blockCount++;
-
-                            if (current.next && blocks[current.next]) {
+                        var guard = 0;
+                        while (current && guard++ < 100000) {
+                            chain.push(current.opcode);
+                            if (typeof current.next === 'string' && blocks[current.next]) {
                                 current = blocks[current.next];
-                            } else {
-                                break;
-                            }
+                            } else break;
                         }
-
-                        var depth = getSubstackDepth(block, blocks, new Set());
-                        if (depth > maxNestingDepth) maxNestingDepth = depth;
-
-                        scriptData.push({
-                            opcodes: opcodes,
-                            blockCount: blockCount,
-                            isEmpty: blockCount <= 1
-                        });
+                        stats.scriptCount++;
+                        scriptCountHere++;
+                        stats.scriptBlockSum += chain.length;
+                        if (chain.length > stats.longestScript) stats.longestScript = chain.length;
+                        if (chain.length <= 1) stats.emptyScripts++;
+                        if (chain.length >= 2) {
+                            var sig = chain.join('|');
+                            if (stats.signatures[sig]) stats.dupGroups++;
+                            else stats.signatures[sig] = true;
+                        }
+                        var depth = substackDepth(block, blocks, []);
+                        if (depth > stats.maxDepth) stats.maxDepth = depth;
                     }
                 });
+
+                perTargetScriptCounts.push(scriptCountHere);
             });
 
-            var scriptCount = scriptData.length;
-            var longestScript = 0;
-            var totalScriptBlocks = 0;
-            scriptData.forEach(function(s) {
-                if (s.blockCount > longestScript) longestScript = s.blockCount;
-                totalScriptBlocks += s.blockCount;
-            });
-            var avgScriptLength = scriptCount > 0 ? (totalScriptBlocks / scriptCount).toFixed(1) : '0';
-
-            var emptyScriptCount = scriptData.filter(function(s) { return s.isEmpty; }).length;
-
-            var signatures = {};
-            var duplicateScriptCount = 0;
-            scriptData.forEach(function(s) {
-                if (s.opcodes.length < 2) return;
-                var sig = s.opcodes.join(',');
-                if (signatures[sig]) {
-                    duplicateScriptCount++;
-                } else {
-                    signatures[sig] = true;
-                }
+            // 并行能力：多脚本角色与绿旗角色
+            perTargetScriptCounts.forEach(function(count, index) {
+                if (targets[index] && targets[index].isStage) return;
+                if (count >= 2) stats.multiScriptSprites++;
             });
 
-            var unusedVarCount = 0;
-            Object.keys(allVarNames).forEach(function(name) {
-                if (!usedVarNames[name]) unusedVarCount++;
+            var unusedVars = 0, unusedLists = 0;
+            targets.forEach(function(target) {
+                Object.keys(target.variables || {}).forEach(function(id) {
+                    var entry = target.variables[id];
+                    var name = Array.isArray(entry) ? entry[0] : (entry && (entry.name || id));
+                    if (name && !stats.varUsed[name]) unusedVars++;
+                });
+                Object.keys(target.lists || {}).forEach(function(id) {
+                    var entry = target.lists[id];
+                    var name = Array.isArray(entry) ? entry[0] : (entry && (entry.name || id));
+                    if (name && !stats.listUsed[name]) unusedLists++;
+                });
             });
+            stats.unusedVars = unusedVars;
+            stats.unusedLists = unusedLists;
 
-            document.getElementById('projectName').textContent = projectName;
-            document.getElementById('projectMeta').textContent =
-                spriteCount + ' 个角色 · ' + backdropCount + ' 个背景 · ' + totalBlocks + ' 个积木' +
-                (stageBlocks > 0 ? '（其中舞台 ' + stageBlocks + ' 个）' : '');
+            // 各类别与拓展汇总
+            stats.donutSlices = [];
+            CATS.forEach(function(c) {
+                var count = stats.catCounts[c.key];
+                if (count > 0) stats.donutSlices.push({ name: c.name, color: c.color, count: count });
+            });
+            Object.keys(stats.extCounts).forEach(function(seg) {
+                var meta = extMeta(seg);
+                stats.donutSlices.push({ name: meta.name, color: meta.color, count: stats.extCounts[seg], seg: seg });
+            });
+            stats.donutSlices.sort(function(a, b) { return b.count - a.count; });
+            if (stats.donutSlices.length > 16) stats.donutSlices = stats.donutSlices.slice(0, 16);
 
-            document.getElementById('spriteCount').textContent = spriteCount;
-            document.getElementById('backdropCount').textContent = backdropCount;
-            document.getElementById('soundCount').textContent = totalSounds;
-            document.getElementById('blockTotal').textContent = totalBlocks;
+            // Top 10 积木
+            stats.top10 = Object.keys(stats.opcodeCounts).map(function(op) {
+                var cls = classify(op);
+                return { op: op, name: opcodeName(op), count: stats.opcodeCounts[op], color: cls.color };
+            }).sort(function(a, b) { return b.count - a.count; }).slice(0, 10);
 
-            renderDonut(categoryCounts, totalBlocks);
+            // 分布趋势气泡：按积木聚合（难度与倾向由积木族决定）
+            var bubbleEntries = Object.keys(stats.opcodeCounts).map(function(op) {
+                var cls = classify(op);
+                var prof = opcodeProfile(op);
+                return {
+                    op: op,
+                    count: stats.opcodeCounts[op],
+                    color: cls.color,
+                    name: cls.name,
+                    key: cls.key,
+                    diff: prof.diff,
+                    style: prof.style
+                };
+            }).sort(function(a, b) { return b.count - a.count; }).slice(0, 60);
+            stats.bubbles = bubbleEntries;
 
-            renderHealth(openTime, totalMemory, spriteCount, totalBlocks);
+            // 能力评分
+            var flagSprites = 0;
+            perTargetScriptCounts.forEach(function(count, index) {
+                if (targets[index] && !targets[index].isStage && count > 0) flagSprites++;
+            });
+            stats.flagSpriteCount = flagSprites;
 
-            renderComplexity(scriptCount, longestScript, avgScriptLength, maxNestingDepth, loopCount, conditionalCount);
+            var logicUnits = stats.ifCount + stats.ifElseCount + (stats.comparisons > 0 ? 1 : 0) + (stats.boolOps > 0 ? 1 : 0);
+            var syncUnits = stats.broadcastSend + stats.broadcastRecv + stats.waits + stats.timerUses;
+            var flowUnits = stats.loopCount + stats.waits;
+            var interUnits = stats.keyHats + stats.clickHats + stats.asks + stats.interactiveSensing;
+            var dataUnits = stats.varCount + stats.listCount * 2;
+            var parallelUnits = stats.multiScriptSprites * 2 + (stats.broadcastRecv > 0 ? 1 : 0) + stats.flagSpriteCount;
 
-            renderQuality(unusedVarCount, emptyScriptCount, duplicateScriptCount, commentCount, scriptCount);
+            function band(count, t1, t2) {
+                if (count <= 0) return 0;
+                if (count < t1) return 1;
+                if (count < t2) return 2;
+                return 3;
+            }
+            var abstraction = band(stats.defsCount, 3, 8);
+            var parallelism = band(parallelUnits, 3, 8);
+            var logic = band(logicUnits, 4, 10);
+            var sync = band(syncUnits, 5, 12);
+            var flow = band(flowUnits, 5, 12);
+            var interaction = band(interUnits, 4, 10);
+            var dataRep = band(dataUnits, 2, 6);
+            stats.dsScores = [abstraction, parallelism, logic, sync, flow, interaction, dataRep];
+            stats.dsTotal = stats.dsScores.reduce(function(a, b) { return a + b; }, 0);
 
-            var now = new Date();
-            var timeStr = now.getFullYear() + '/' +
-                String(now.getMonth() + 1).padStart(2, '0') + '/' +
-                String(now.getDate()).padStart(2, '0') + ' ' +
-                String(now.getHours()).padStart(2, '0') + ':' +
-                String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('analysisTime').textContent = '分析时间：' + timeStr;
+            // 体积信息
+            var jsonRaw = JSON.stringify(project);
+            var jsonBytes = utf8Size(jsonRaw);
 
-            hide(document.getElementById('loadingState'));
-            show(document.getElementById('mainContent'));
+            var jsonCompressed = payload.jsonCompressedSize || Math.round(jsonBytes * 0.3);
+            var costumeSize = payload.assetCostumeSize != null ? payload.assetCostumeSize : 0;
+            var soundSize = payload.assetSoundSize != null ? payload.assetSoundSize : 0;
+            var assetTotal = payload.assetSize != null ? payload.assetSize : (costumeSize + soundSize);
+            if (costumeSize + soundSize === 0 && assetTotal > 0 && stats.costumeCount + stats.soundCount > 0) {
+                costumeSize = Math.round(assetTotal * stats.costumeCount / (stats.costumeCount + stats.soundCount));
+                soundSize = assetTotal - costumeSize;
+            }
+            if (assetTotal < costumeSize + soundSize) assetTotal = costumeSize + soundSize;
+
+            // data: URL 内嵌拓展源码体量
+            var embeddedExtBytes = 0;
+            var dataUrlMatches = jsonRaw.match(/data:[A-Za-z0-9\-._~\/+;=,]{16,}/g) || [];
+            dataUrlMatches.forEach(function(m) { embeddedExtBytes += Math.round(m.length * 0.75); });
+
+            var varsBytes = stats.variablesBytes;
+            var listsBytes = stats.listsBytes;
+            var restBytes = jsonBytes - embeddedExtBytes - varsBytes - listsBytes;
+            if (restBytes < 0) restBytes = 0;
+
+            stats.sizes = {
+                jsonBytes: jsonBytes,
+                jsonCompressed: jsonCompressed,
+                costumeSize: costumeSize,
+                soundSize: soundSize,
+                assetTotal: assetTotal,
+                projectSize: jsonCompressed + assetTotal,
+                embeddedExtBytes: embeddedExtBytes,
+                varsBytes: varsBytes,
+                listsBytes: listsBytes,
+                restBytes: restBytes
+            };
+
+            return stats;
         }
 
-        function renderDonut(categoryCounts, totalBlocks) {
-            var svg = document.getElementById('donutSvg');
-            var legendContainer = document.getElementById('legendContainer');
+        /* ================= 渲染：头部与指标 ================= */
 
-            if (totalBlocks === 0) {
-                var cx = 80, cy = 80, r = 64, sw = 18;
-                svg.innerHTML =
-                    '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="var(--border)" stroke-width="' + sw + '"/>';
-                legendContainer.innerHTML = '<div class="empty-legend">暂无积木</div>';
+        function renderHeader(stats) {
+            el('headTitle').textContent = stats.projectTitle;
+
+            var metaParts = ['NeoWarp', fmtBytes(stats.sizes.projectSize),
+                stats.targetsCount + ' 个目标', stats.blockAll + ' 个积木'];
+            el('headMeta').textContent = metaParts.join(' · ');
+
+            var now = new Date();
+            var pad = function(n) { return String(n).padStart(2, '0'); };
+            el('headTime').textContent = '生成于 ' + now.getFullYear() + '-' + pad(now.getMonth() + 1) +
+                '-' + pad(now.getDate()) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+        }
+
+        function statTile(option) {
+            var tile = document.createElement('div');
+            tile.className = 'tile';
+            var label = document.createElement('div');
+            label.className = 'tile-label';
+            label.textContent = option.label;
+            tile.appendChild(label);
+            var value = document.createElement('div');
+            value.className = 'tile-value';
+            value.innerHTML = option.value;
+            tile.appendChild(value);
+            if (option.progress != null) {
+                var bar = document.createElement('div');
+                bar.className = 'mini-bar';
+                var fill = document.createElement('i');
+                fill.style.width = Math.max(0, Math.min(100, option.progress)) + '%';
+                bar.appendChild(fill);
+                tile.appendChild(bar);
+            }
+            var sub = document.createElement('div');
+            sub.className = 'tile-sub';
+            sub.textContent = option.sub;
+            tile.appendChild(sub);
+            return tile;
+        }
+
+        function renderStats(stats) {
+            var grid = el('statsGrid');
+            grid.innerHTML = '';
+
+            grid.appendChild(statTile({
+                label: '积木总数',
+                value: stats.blockAll,
+                progress: stats.blockAll > 0 ? (stats.blockReal / stats.blockAll) * 100 : 0,
+                sub: '有效 ' + stats.blockReal + ' · 隐藏 ' + stats.blockShadow
+            }));
+
+            grid.appendChild(statTile({
+                label: '角色数量',
+                value: stats.spriteCount,
+                sub: '舞台 ' + (stats.targetsCount - stats.spriteCount) + ' · 造型 ' + stats.costumeCount
+            }));
+
+            var customTotal = stats.defsCount + stats.callsCount;
+            grid.appendChild(statTile({
+                label: '自定义积木',
+                value: customTotal,
+                sub: customTotal > 0 ? ('定义 ' + stats.defsCount + ' · 调用 ' + stats.callsCount) : '未使用自定义积木'
+            }));
+
+            var extBlockCount = 0;
+            Object.keys(stats.extCounts).forEach(function(seg) { extBlockCount += stats.extCounts[seg]; });
+            grid.appendChild(statTile({
+                label: '拓展数量',
+                value: Object.keys(stats.extCounts).length,
+                sub: '拓展积木 ' + extBlockCount + ' 个'
+            }));
+
+            grid.appendChild(statTile({
+                label: '变量 / 列表',
+                value: stats.varCount + stats.listCount,
+                sub: '变量 ' + stats.varCount + ' · 列表 ' + stats.listCount
+            }));
+
+            grid.appendChild(statTile({
+                label: '工程大小',
+                value: fmtBytes(stats.sizes.projectSize),
+                sub: '代码 + 素材(压缩估算)'
+            }));
+
+            grid.appendChild(statTile({
+                label: '资源占用',
+                value: fmtBytes(stats.sizes.assetTotal),
+                progress: stats.sizes.projectSize > 0 ? (stats.sizes.assetTotal / stats.sizes.projectSize) * 100 : 0,
+                sub: '造型 + 音频'
+            }));
+
+            grid.appendChild(statTile({
+                label: 'Dr.Scratch 总分',
+                value: stats.dsTotal + '<span class="den"> / 21</span>',
+                progress: (stats.dsTotal / 21) * 100,
+                sub: proficiencyText(stats.dsTotal)
+            }));
+        }
+
+        /* ================= 渲染：分布趋势气泡图 ================= */
+
+        function renderBubble(stats) {
+            var svg = el('bubbleChart');
+            svg.innerHTML = '';
+            var colors = chartColors();
+            var entries = stats.bubbles;
+
+            var x0 = 46, x1 = 896;
+            var bandW = (x1 - x0) / 4;
+            var rows = [
+                { label: '外观', y: 42 },
+                { label: '平衡', y: 108 },
+                { label: '算法', y: 174 }
+            ];
+
+            rows.forEach(function(row) {
+                svg.appendChild(svgNode('line', {
+                    x1: x0, y1: row.y, x2: x1, y2: row.y,
+                    stroke: colors.grid, 'stroke-width': 1
+                }));
+                var text = svgNode('text', {
+                    x: x0 - 10, y: row.y + 4, 'text-anchor': 'end',
+                    'font-size': 12, fill: colors.label
+                });
+                text.textContent = row.label;
+                svg.appendChild(text);
+            });
+
+            var ticks = ['基础', '初级', '中级', '高级'];
+            ticks.forEach(function(tick, index) {
+                var text = svgNode('text', {
+                    x: x0 + (index + 0.5) * bandW, y: 212, 'text-anchor': 'middle',
+                    'font-size': 12, fill: colors.tick
+                });
+                text.textContent = tick;
+                svg.appendChild(text);
+            });
+
+            var axis = svgNode('text', {
+                x: (x0 + x1) / 2, y: 240, 'text-anchor': 'middle',
+                'font-size': 12.5, 'font-weight': 600, fill: colors.axis
+            });
+            axis.textContent = '概念理解难度 →';
+            svg.appendChild(axis);
+
+            if (entries.length === 0) {
+                var empty = svgNode('text', {
+                    x: (x0 + x1) / 2, y: 112, 'text-anchor': 'middle',
+                    'font-size': 13, fill: colors.label
+                });
+                empty.textContent = '暂无积木';
+                svg.appendChild(empty);
                 return;
             }
 
-            var categories = Object.keys(CATEGORY_NAMES);
-            var entries = [];
+            var maxCount = entries[0].count;
+            entries.forEach(function(entry) {
+                var band = Math.max(1, Math.min(4, entry.diff)) - 1;
+                var rowIndex = entry.style <= -0.3 ? 0 : (entry.style >= 0.35 ? 2 : 1);
+                var jx = hash01(entry.op);
+                var jy = hash01(entry.op + '#y');
+                var x = x0 + (band + 0.10 + jx * 0.80) * bandW;
+                var y = rows[rowIndex].y + (jy - 0.5) * 46;
+                var r = 3 + Math.sqrt(entry.count / maxCount) * 11;
+                svg.appendChild(svgNode('circle', {
+                    cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(1),
+                    fill: entry.color, 'fill-opacity': 0.72
+                }));
+            });
 
-            categories.forEach(function(cat) {
-                var count = categoryCounts[cat] || 0;
-                if (count > 0) {
-                    entries.push({ cat: cat, count: count });
+            // 图例：核心类别在前，拓展跟后
+            var legend = el('bubbleLegend');
+            var seen = {};
+            var items = [];
+            CATS.forEach(function(c) { seen[c.key] = false; });
+            entries.forEach(function(entry) {
+                if (!seen[entry.key]) {
+                    seen[entry.key] = true;
+                    items.push({ name: entry.name, color: entry.color });
                 }
             });
+            var html = items.slice(0, 12).map(function(item) {
+                return '<div class="item"><div class="dot" style="background:' + item.color + '"></div>' +
+                    '<span>' + escapeHtml(item.name) + '</span></div>';
+            }).join('');
+            legend.innerHTML = html;
+        }
 
-            entries.sort(function(a, b) { return b.count - a.count; });
+        /* ================= 渲染：能力雷达图 ================= */
 
-            var cx = 80, cy = 80, r = 60, sw = 16;
+        function renderRadar(stats) {
+            var svg = el('radarChart');
+            svg.innerHTML = '';
+            var colors = chartColors();
+
+            var cx = 160, cy = 152, R = 100;
+            function point(angle, radius) {
+                var rad = angle * Math.PI / 180;
+                return [cx + radius * Math.cos(rad), cy + radius * Math.sin(rad)];
+            }
+            function ringPolygon(level) {
+                var pts = [];
+                DS_DIMS.forEach(function(label, index) {
+                    var angle = -90 + index * (360 / DS_DIMS.length);
+                    var p = point(angle, R * level / 3);
+                    pts.push(p[0].toFixed(1) + ',' + p[1].toFixed(1));
+                });
+                svg.appendChild(svgNode('polygon', {
+                    points: pts.join(' '), fill: 'none',
+                    stroke: colors.ring, 'stroke-width': 1
+                }));
+            }
+            ringPolygon(1); ringPolygon(2); ringPolygon(3);
+
+            DS_DIMS.forEach(function(label, index) {
+                var angle = -90 + index * (360 / DS_DIMS.length);
+                var p = point(angle, R);
+                svg.appendChild(svgNode('line', {
+                    x1: cx, y1: cy, x2: p[0].toFixed(1), y2: p[1].toFixed(1),
+                    stroke: colors.ring, 'stroke-width': 1
+                }));
+            });
+
+            var dataPts = [];
+            stats.dsScores.forEach(function(score, index) {
+                var angle = -90 + index * (360 / DS_DIMS.length);
+                var p = point(angle, R * score / 3);
+                dataPts.push(p[0].toFixed(1) + ',' + p[1].toFixed(1));
+                if (score > 0) {
+                    svg.appendChild(svgNode('circle', {
+                        cx: p[0].toFixed(1), cy: p[1].toFixed(1), r: 3.2,
+                        fill: '#0a84ff'
+                    }));
+                }
+            });
+            svg.appendChild(svgNode('polygon', {
+                points: dataPts.join(' '),
+                fill: 'rgba(10,132,255,0.16)', stroke: '#0a84ff',
+                'stroke-width': 2, 'stroke-linejoin': 'round'
+            }));
+
+            DS_DIMS.forEach(function(label, index) {
+                var angle = -90 + index * (360 / DS_DIMS.length);
+                var rad = angle * Math.PI / 180;
+                var cosV = Math.cos(rad), sinV = Math.sin(rad);
+                var lx = cx + (R + 20) * cosV;
+                var ly = cy + (R + 20) * sinV;
+                var anchor = cosV > 0.3 ? 'start' : (cosV < -0.3 ? 'end' : 'middle');
+                var dy = sinV > 0.3 ? 10 : (sinV < -0.3 ? 2 : 4);
+                var text = svgNode('text', {
+                    x: lx.toFixed(1), y: (ly + dy).toFixed(1), 'text-anchor': anchor,
+                    'font-size': 12.5, 'font-weight': 600, fill: colors.axis
+                });
+                text.textContent = label;
+                svg.appendChild(text);
+            });
+        }
+
+        /* ================= 渲染：代码基因环图 ================= */
+
+        function renderDonut(stats) {
+            var svg = el('donutChart');
+            svg.innerHTML = '';
+            var legend = el('donutLegend');
+
+            var slices = stats.donutSlices;
+            var total = stats.blockReal;
+
+            legend.innerHTML = slices.map(function(slice) {
+                return '<div class="item">' +
+                    '<div class="dot" style="background:' + slice.color + '"></div>' +
+                    '<span class="name">' + escapeHtml(slice.name) + '</span>' +
+                    '<span class="count">' + slice.count + '</span>' +
+                    '</div>';
+            }).join('');
+
+            var cx = 100, cy = 100, r = 72, sw = 26;
+            if (total <= 0 || slices.length === 0) {
+                svg.appendChild(svgNode('circle', {
+                    cx: cx, cy: cy, r: r, fill: 'none',
+                    stroke: chartColors().empty, 'stroke-width': sw
+                }));
+                return;
+            }
+
             var circumference = 2 * Math.PI * r;
             var cumulativeAngle = 0;
-
-            var svgParts = [];
-
-            entries.forEach(function(entry) {
-                var fraction = entry.count / totalBlocks;
-                var dashLength = fraction * circumference;
-                var rotationDeg = (cumulativeAngle / (2 * Math.PI)) * 360;
-
-                svgParts.push(
-                    '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none"' +
-                    ' stroke="' + CATEGORY_COLORS[entry.cat] + '"' +
-                    ' stroke-width="' + sw + '"' +
-                    ' stroke-dasharray="' + dashLength.toFixed(2) + ' ' + (circumference - dashLength).toFixed(2) + '"' +
-                    ' stroke-dashoffset="0"' +
-                    ' transform="rotate(' + rotationDeg.toFixed(2) + ' ' + cx + ' ' + cy + ')"' +
-                    '/>'
-                );
-
-                cumulativeAngle += fraction * 2 * Math.PI;
+            slices.forEach(function(slice) {
+                var fraction = slice.count / total;
+                if (fraction <= 0) return;
+                var dash = fraction * circumference;
+                var rotate = (cumulativeAngle / circumference) * 360;
+                svg.appendChild(svgNode('circle', {
+                    cx: cx, cy: cy, r: r, fill: 'none',
+                    stroke: slice.color, 'stroke-width': sw,
+                    'stroke-dasharray': dash.toFixed(2) + ' ' + (circumference - dash).toFixed(2),
+                    transform: 'rotate(' + rotate.toFixed(2) + ' ' + cx + ' ' + cy + ')'
+                }));
+                cumulativeAngle += dash;
             });
-
-            svg.innerHTML = svgParts.join('');
-
-            var legendParts = [];
-            entries.forEach(function(entry) {
-                var pct = ((entry.count / totalBlocks) * 100).toFixed(1);
-                legendParts.push(
-                    '<div class="legend-item">' +
-                    '<div class="legend-dot" style="background:' + CATEGORY_COLORS[entry.cat] + '"></div>' +
-                    '<span class="legend-name">' + (CATEGORY_NAMES[entry.cat] || entry.cat) + '</span>' +
-                    '<span class="legend-count">' + entry.count + '</span>' +
-                    '<span class="legend-pct">' + pct + '%</span>' +
-                    '</div>'
-                );
-            });
-            legendContainer.innerHTML = legendParts.join('');
         }
 
-        function renderHealth(openTime, memoryBytes, spriteCount, totalBlocks) {
-            var container = document.getElementById('healthContent');
+        /* ================= 渲染：Top 10 条形图 ================= */
 
-            var now = Date.now();
-            var elapsedMs = now - (openTime || now);
-            var elapsedMin = Math.floor(elapsedMs / 60000);
-            var elapsedHours = Math.floor(elapsedMin / 60);
-            var remainingMin = elapsedMin % 60;
+        function renderTop10(stats) {
+            var svg = el('top10Chart');
+            svg.innerHTML = '';
+            var colors = chartColors();
+            var rows = stats.top10;
 
-            var timeDisplay;
-            if (elapsedHours > 0) {
-                timeDisplay = elapsedHours + ' 小时 ' + remainingMin + ' 分钟';
-            } else {
-                timeDisplay = elapsedMin + ' 分钟';
+            if (rows.length === 0) {
+                var empty = svgNode('text', {
+                    x: 460, y: 120, 'text-anchor': 'middle', 'font-size': 13, fill: colors.label
+                });
+                empty.textContent = '暂无积木';
+                svg.appendChild(empty);
+                return;
             }
 
-            var memoryKB = Math.round(memoryBytes / 1024);
-            var memoryMB = (memoryBytes / (1024 * 1024)).toFixed(2);
-            var memoryDisplay;
-            if (memoryBytes >= 1024 * 1024) {
-                memoryDisplay = memoryMB + ' MB';
-            } else {
-                memoryDisplay = memoryKB + ' KB';
+            var labelW = 128;
+            var x0 = labelW + 14;
+            var x1 = 852;
+            var rowH = 30;
+            var barH = 16;
+            var plotH = rows.length * rowH;
+
+            var maxCount = rows[0].count;
+            var niceMax = niceStep(maxCount);
+            var step = niceMax / 5;
+
+            for (var t = 0; t <= 5; t++) {
+                var tickValue = step * t;
+                var tx = x0 + (tickValue / niceMax) * (x1 - x0);
+                svg.appendChild(svgNode('line', {
+                    x1: tx.toFixed(1), y1: 4, x2: tx.toFixed(1), y2: plotH + 12,
+                    stroke: colors.grid, 'stroke-width': 1
+                }));
+                var tick = svgNode('text', {
+                    x: tx.toFixed(1), y: plotH + 30, 'text-anchor': 'middle',
+                    'font-size': 11, fill: colors.tick
+                });
+                tick.textContent = Number.isInteger(tickValue) ? tickValue : tickValue.toFixed(1);
+                svg.appendChild(tick);
             }
 
-            var memoryLevel = '低';
-            var memoryClass = 'good';
-            if (memoryBytes > 50 * 1024 * 1024) { memoryLevel = '高'; memoryClass = 'high'; }
-            else if (memoryBytes > 10 * 1024 * 1024) { memoryLevel = '中'; memoryClass = 'medium'; }
-            else { memoryClass = 'low'; }
-
-            var memoryPct = Math.min(100, Math.round((memoryBytes / (200 * 1024 * 1024)) * 100));
-
-            var elapsedScore = elapsedMin > 120 ? 2 : (elapsedMin > 60 ? 1 : 0);
-            var memoryScore = memoryBytes > 50 * 1024 * 1024 ? 2 : (memoryBytes > 10 * 1024 * 1024 ? 1 : 0);
-            var totalScore = elapsedScore + memoryScore;
-
-            var overallLevel = totalScore <= 1 ? '健康' : (totalScore <= 2 ? '一般' : '需关注');
-            var overallClass = totalScore <= 1 ? 'good' : (totalScore <= 2 ? 'warn' : 'warn');
-
-            var html = '';
-
-            html += '<div class="metric-row">' +
-                '<div class="metric-card">' +
-                '<div class="metric-value" style="font-size:22px;">' + timeDisplay + '</div>' +
-                '<div class="metric-label">项目已打开时长</div>' +
-                '</div>' +
-                '<div class="metric-card">' +
-                '<div class="metric-value ' + (memoryLevel === '高' ? 'warn' : (memoryLevel === '中' ? 'warn' : 'good')) + '" style="font-size:22px;">' + memoryDisplay + '</div>' +
-                '<div class="metric-label">内存占用</div>' +
-                '<div class="progress-bar"><div class="progress-fill ' + memoryClass + '" style="width:' + memoryPct + '%"></div></div>' +
-                '</div>' +
-                '<div class="metric-card">' +
-                '<div class="metric-value ' + overallClass + '" style="font-size:22px;">' + overallLevel + '</div>' +
-                '<div class="metric-label">综合健康度</div>' +
-                '</div>' +
-                '</div>';
-
-            var suggestions = [];
-
-            if (elapsedMin > 120) {
-                suggestions.push({
-                    type: 'warn',
-                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
-                    text: '项目已打开超过 2 小时，建议保存并稍作休息，避免眼疲劳。'
+            rows.forEach(function(row, index) {
+                var y = index * rowH + 6;
+                var label = svgNode('text', {
+                    x: x0 - 14, y: y + barH / 2 + 4, 'text-anchor': 'end',
+                    'font-size': 12, fill: colors.label
                 });
-            } else if (elapsedMin > 60) {
-                suggestions.push({
-                    type: 'warn',
-                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
-                    text: '项目已打开超过 1 小时，记得定时保存您的作品。'
-                });
-            }
+                label.textContent = row.name.length > 9 ? row.name.slice(0, 8) + '…' : row.name;
+                svg.appendChild(label);
 
-            if (memoryBytes > 50 * 1024 * 1024) {
-                suggestions.push({
-                    type: 'warn',
-                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
-                    text: '内存占用较高（' + memoryDisplay + '），建议清理不用的造型和声音文件以优化加载速度。'
-                });
-            } else if (memoryBytes > 10 * 1024 * 1024) {
-                suggestions.push({
-                    type: 'warn',
-                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
-                    text: '内存占用中等（' + memoryDisplay + '），仍在合理范围内，但建议注意资源管理。'
-                });
-            }
+                var barW = Math.max(2, (row.count / niceMax) * (x1 - x0));
+                svg.appendChild(svgNode('rect', {
+                    x: x0, y: y.toFixed(1), width: barW.toFixed(1), height: barH,
+                    rx: barH / 2, ry: barH / 2, fill: row.color, 'fill-opacity': 0.92
+                }));
 
-            if (totalBlocks > 20000) {
-                suggestions.push({
-                    type: 'warn',
-                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
-                    text: '积木数量较多（' + totalBlocks + ' 个），建议合理使用自制积木（函数）来组织代码结构，提高可维护性。'
+                var value = svgNode('text', {
+                    x: 904, y: y + barH / 2 + 4, 'text-anchor': 'end',
+                    'font-size': 11.5, fill: colors.tick
                 });
-            }
-
-            if (spriteCount > 100) {
-                suggestions.push({
-                    type: 'warn',
-                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
-                    text: '角色数量较多（' + spriteCount + ' 个），考虑是否有多余的未使用角色可以清理。'
-                });
-            }
-
-            if (suggestions.length === 0) {
-                suggestions.push({
-                    type: 'good',
-                    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
-                    text: '项目状态良好！内存占用合理，继续保持。'
-                });
-            }
-
-            suggestions.forEach(function(s) {
-                html += '<div class="optimization-box ' + s.type + '">' + s.icon + '<span>' + s.text + '</span></div>';
+                value.textContent = row.count;
+                svg.appendChild(value);
             });
-
-            container.innerHTML = html;
         }
 
-        function renderComplexity(scriptCount, longestScript, avgScriptLength, maxNestingDepth, loopCount, conditionalCount) {
-            var container = document.getElementById('complexityContent');
+        /* ================= 渲染：资源构成 ================= */
 
-            var complexityScore = 0;
-            if (maxNestingDepth >= 5) complexityScore += 3;
-            else if (maxNestingDepth >= 3) complexityScore += 2;
-            else if (maxNestingDepth >= 1) complexityScore += 1;
+        function renderResource(stats) {
+            var sizes = stats.sizes;
+            var total = sizes.projectSize;
+            el('resTotal').textContent = '总体积 ' + fmtBytes(total);
 
-            if (longestScript >= 50) complexityScore += 3;
-            else if (longestScript >= 30) complexityScore += 2;
-            else if (longestScript >= 15) complexityScore += 1;
+            var others = Math.max(0, total - sizes.costumeSize - sizes.soundSize - sizes.jsonCompressed);
+            var segments = [
+                { name: '造型', value: sizes.costumeSize, color: '#4C97FF' },
+                { name: '音频', value: sizes.soundSize, color: '#CF63CF' },
+                { name: '代码与数据', value: sizes.jsonCompressed, color: '#FF8C1A' },
+                { name: '其他资源', value: others, color: '#8E8E93' }
+            ];
 
-            if (loopCount >= 20) complexityScore += 2;
-            else if (loopCount >= 10) complexityScore += 1;
-
-            if (conditionalCount >= 20) complexityScore += 2;
-            else if (conditionalCount >= 10) complexityScore += 1;
-
-            var complexityLevel = complexityScore <= 2 ? '低' : (complexityScore <= 5 ? '中' : '高');
-            var complexityClass = complexityScore <= 2 ? 'good' : 'warn';
-            var complexityBarClass = complexityScore <= 2 ? 'low' : (complexityScore <= 5 ? 'medium' : 'high');
-            var complexityPct = Math.min(100, complexityScore * 10);
-
-            var html = '';
-            html += '<div class="metric-row">' +
-                '<div class="metric-card">' +
-                '<div class="metric-value accent" style="font-size:22px;">' + maxNestingDepth + '</div>' +
-                '<div class="metric-label">最大嵌套深度</div>' +
-                '</div>' +
-                '<div class="metric-card">' +
-                '<div class="metric-value accent" style="font-size:22px;">' + scriptCount + '</div>' +
-                '<div class="metric-label">脚本数量</div>' +
-                '</div>' +
-                '<div class="metric-card">' +
-                '<div class="metric-value accent" style="font-size:22px;">' + longestScript + '</div>' +
-                '<div class="metric-label">最长脚本</div>' +
-                '</div>' +
-                '</div>';
-
-            html += '<div class="metric-row" style="margin-top:12px;">' +
-                '<div class="metric-card">' +
-                '<div class="metric-value accent" style="font-size:22px;">' + avgScriptLength + '</div>' +
-                '<div class="metric-label">平均脚本长度</div>' +
-                '</div>' +
-                '<div class="metric-card">' +
-                '<div class="metric-value accent" style="font-size:22px;">' + loopCount + '</div>' +
-                '<div class="metric-label">循环数量</div>' +
-                '</div>' +
-                '<div class="metric-card">' +
-                '<div class="metric-value accent" style="font-size:22px;">' + conditionalCount + '</div>' +
-                '<div class="metric-label">条件判断</div>' +
-                '</div>' +
-                '</div>';
-
-            html += '<div style="margin-top:14px;">' +
-                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-                '<span style="font-size:13px;color:var(--text-secondary);">复杂度等级</span>' +
-                '<span class="metric-value ' + complexityClass + '" style="font-size:16px;">' + complexityLevel + '</span>' +
-                '</div>' +
-                '<div class="progress-bar"><div class="progress-fill ' + complexityBarClass + '" style="width:' + complexityPct + '%"></div></div>' +
-                '</div>';
-
-            container.innerHTML = html;
-        }
-
-        function renderQuality(unusedVarCount, emptyScriptCount, duplicateScriptCount, commentCount, scriptCount) {
-            var container = document.getElementById('qualityContent');
-
-            var html = '';
-            html += '<div class="metric-row">' +
-                '<div class="metric-card">' +
-                '<div class="metric-value ' + (unusedVarCount > 0 ? 'warn' : 'good') + '" style="font-size:22px;">' + unusedVarCount + '</div>' +
-                '<div class="metric-label">未使用变量</div>' +
-                '</div>' +
-                '<div class="metric-card">' +
-                '<div class="metric-value ' + (emptyScriptCount > 0 ? 'warn' : 'good') + '" style="font-size:22px;">' + emptyScriptCount + '</div>' +
-                '<div class="metric-label">空脚本</div>' +
-                '</div>' +
-                '<div class="metric-card">' +
-                '<div class="metric-value ' + (duplicateScriptCount > 0 ? 'warn' : 'good') + '" style="font-size:22px;">' + duplicateScriptCount + '</div>' +
-                '<div class="metric-label">重复脚本</div>' +
-                '</div>' +
-                '<div class="metric-card">' +
-                '<div class="metric-value good" style="font-size:22px;">' + commentCount + '</div>' +
-                '<div class="metric-label">注释数</div>' +
-                '</div>' +
-                '</div>';
-
-            var warnIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
-            var goodIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
-
-            var suggestions = [];
-
-            if (unusedVarCount > 0) {
-                suggestions.push({ type: 'warn', text: '发现 ' + unusedVarCount + ' 个未使用的变量，建议删除以保持代码整洁。' });
-            }
-            if (emptyScriptCount > 0) {
-                suggestions.push({ type: 'warn', text: '发现 ' + emptyScriptCount + ' 个空脚本（仅有帽子积木），建议删除或补充代码。' });
-            }
-            if (duplicateScriptCount > 0) {
-                suggestions.push({ type: 'warn', text: '发现 ' + duplicateScriptCount + ' 个结构重复的脚本，建议使用自制积木来复用代码。' });
-            }
-            if (commentCount === 0 && scriptCount > 3) {
-                suggestions.push({ type: 'warn', text: '项目中没有注释，建议为复杂脚本添加注释以提高可读性。' });
-            }
-            if (suggestions.length === 0) {
-                suggestions.push({ type: 'good', text: '代码质量良好！没有发现明显的质量问题。' });
-            }
-
-            suggestions.forEach(function(s) {
-                var icon = s.type === 'good' ? goodIcon : warnIcon;
-                html += '<div class="optimization-box ' + s.type + '" style="margin-top:8px;">' + icon + '<span>' + s.text + '</span></div>';
+            var stack = el('resStack');
+            stack.innerHTML = '';
+            segments.forEach(function(seg) {
+                if (seg.value <= 0) return;
+                var piece = document.createElement('i');
+                piece.style.background = seg.color;
+                piece.style.width = ((seg.value / total) * 100).toFixed(2) + '%';
+                stack.appendChild(piece);
             });
 
-            container.innerHTML = html;
+            var rowsHtml = segments.map(function(seg) {
+                return '<div class="res-row">' +
+                    '<span class="name">' + seg.name + '</span>' +
+                    '<span class="val">' + fmtBytes(seg.value) + '</span>' +
+                    '<span class="pct">' + fmtPct(seg.value, total) + '</span>' +
+                    '<span class="res-bar"><i style="background:' + seg.color +
+                    ';width:' + (total > 0 ? Math.min(100, (seg.value / total) * 100) : 0).toFixed(1) + '%"></i></span>' +
+                    '</div>';
+            }).join('');
+            el('resRows').innerHTML = rowsHtml;
+        }
+
+        /* ================= 渲染：project.json 内部构成 ================= */
+
+        function renderJSONParts(stats) {
+            var sizes = stats.sizes;
+            var total = sizes.jsonBytes;
+            el('jsonTotal').textContent = fmtBytes(total);
+
+            var rows = [
+                {
+                    name: '内嵌拓展源码',
+                    desc: 'data: URL 里的 JavaScript',
+                    value: sizes.embeddedExtBytes,
+                    color: '#9AA0AC'
+                },
+                {
+                    name: '变量与列表数据',
+                    desc: '变量 ' + fmtBytes(sizes.varsBytes) + ' · 列表 ' + fmtBytes(sizes.listsBytes),
+                    value: sizes.varsBytes + sizes.listsBytes,
+                    color: '#FF8C1A'
+                },
+                {
+                    name: '积木与其他元数据',
+                    desc: '积木、造型/音频索引、注释等',
+                    value: sizes.restBytes,
+                    color: '#575E75'
+                }
+            ];
+
+            el('jsonRows').innerHTML = rows.map(function(row) {
+                var pct = total > 0 ? (row.value / total) * 100 : 0;
+                return '<div class="json-row">' +
+                    '<div><div class="name">' + row.name + '</div><div class="desc">' + escapeHtml(row.desc) + '</div></div>' +
+                    '<div class="res-bar bar-col"><i style="background:' + row.color + ';width:' + Math.min(100, pct).toFixed(1) + '%"></i></div>' +
+                    '<div class="right"><b>' + fmtBytes(row.value) + '</b>  ' + fmtPct(row.value, total) + '</div>' +
+                    '</div>';
+            }).join('');
+        }
+
+        /* ================= 渲染：拓展资源 ================= */
+
+        function renderExtensions(stats) {
+            var container = el('extRows');
+            var extTotal = 0;
+            Object.keys(stats.extCounts).forEach(function(seg) { extTotal += stats.extCounts[seg]; });
+            el('extTotal').textContent = '共 ' + Object.keys(stats.extCounts).length + ' 个命名空间';
+
+            if (extTotal === 0) {
+                container.innerHTML = '<div class="ext-empty">未使用拓展积木</div>';
+                return;
+            }
+
+            var items = Object.keys(stats.extCounts).map(function(seg) {
+                var meta = extMeta(seg);
+                return { name: meta.name, color: meta.color, count: stats.extCounts[seg] };
+            }).sort(function(a, b) { return b.count - a.count; });
+
+            container.innerHTML = items.map(function(item) {
+                return '<div class="ext-item">' +
+                    '<div class="dot" style="background:' + item.color + '"></div>' +
+                    '<span class="name">' + escapeHtml(item.name) + '</span>' +
+                    '<span class="use"><b>' + item.count + '</b> 个 · ' + fmtPct(item.count, extTotal) + '</span>' +
+                    '</div>';
+            }).join('');
+        }
+
+        /* ================= 渲染：确定性建议 ================= */
+
+        function renderAdvice(stats) {
+            var rows = [];
+
+            if (stats.bigListCount > 0) {
+                rows.push({ type: 'warn', text: '存在 ' + stats.bigListCount + ' 个列表元素超过 1000 条，会明显拖慢加载与保存。' });
+            }
+            if (stats.unusedVars + stats.unusedLists > 0) {
+                rows.push({ type: 'info', text: '存在 ' + (stats.unusedVars + stats.unusedLists) +
+                    ' 个未被积木引用的变量或列表，删除前请确认不是通过输入或拓展动态访问。' });
+            }
+            if (stats.emptyScripts > 0) {
+                rows.push({ type: 'warn', text: '存在 ' + stats.emptyScripts + ' 个空脚本（仅帽子积木），建议删除或补充逻辑。' });
+            }
+            if (stats.dupGroups > 0) {
+                rows.push({ type: 'info', text: '存在 ' + stats.dupGroups + ' 组结构重复的脚本，建议改用自定义积木复用。' });
+            }
+            if (stats.maxDepth >= 5) {
+                rows.push({ type: 'warn', text: '最深脚本嵌套达 ' + stats.maxDepth + ' 层，建议拆分为多个自定义积木。' });
+            }
+            if (stats.sizes.assetTotal > 10 * 1024 * 1024) {
+                rows.push({ type: 'warn', text: '造型与音频体积较大（' + fmtBytes(stats.sizes.assetTotal) + '），压缩后可明显加快加载与保存。' });
+            }
+            if (rows.length === 0) {
+                rows.push({ type: 'ok', text: '未发现确定性问题，项目结构与资源占用处于合理区间。' });
+            }
+
+            var colors = { info: 'info', warn: 'warn', ok: 'ok' };
+            el('adviceRows').innerHTML = rows.map(function(row) {
+                return '<div class="advice-row ' + colors[row.type] + '"><i></i><span>' +
+                    escapeHtml(row.text) + '</span></div>';
+            }).join('');
+        }
+
+        /* ================= 总渲染 ================= */
+
+        function renderAll(stats) {
+            renderHeader(stats);
+            renderStats(stats);
+            renderBubble(stats);
+            renderRadar(stats);
+            renderDonut(stats);
+            renderTop10(stats);
+            renderResource(stats);
+            renderJSONParts(stats);
+            renderExtensions(stats);
+            renderAdvice(stats);
+        }
+
+        function showError(text) {
+            hide(el('loadingState'));
+            hide(el('report'));
+            show(el('errorState'));
+            if (text) el('errorText').textContent = text;
+        }
+
+        function analyzeProject(payload) {
+            try {
+                var project = payload && payload.projectJSON;
+                if (typeof project === 'string') project = JSON.parse(project);
+                if (!project || !Array.isArray(project.targets)) {
+                    showError('无法获取项目数据');
+                    return;
+                }
+                var stats = computeStats(project, payload || {});
+                stats.projectTitle = (payload.projectTitle && payload.projectTitle !== 'NeoWarp') ?
+                    payload.projectTitle : '未命名项目';
+                lastStats = stats;
+                renderAll(stats);
+                hide(el('loadingState'));
+                show(el('report'));
+            } catch (error) {
+                showError('项目数据分析失败：' + (error && error.message));
+            }
         }
 
         function loadData() {
-            if (window.ProjectAnalysisPreload) {
+            if (window.ProjectAnalysisPreload && window.ProjectAnalysisPreload.getProjectData) {
                 window.ProjectAnalysisPreload.getProjectData().then(function(result) {
-                    if (result && result.projectJSON) {
-                        analyzeProject(result.projectJSON, result.openTime, result.projectTitle, result.assetSize);
-                    } else {
-                        hide(document.getElementById('loadingState'));
-                        hide(document.getElementById('mainContent'));
-                        show(document.getElementById('errorState'));
-                    }
+                    if (result && result.projectJSON) analyzeProject(result);
+                    else showError();
                 }).catch(function() {
-                    hide(document.getElementById('loadingState'));
-                    hide(document.getElementById('mainContent'));
-                    show(document.getElementById('errorState'));
+                    showError();
                 });
             } else {
-                setTimeout(function() {
-                    hide(document.getElementById('loadingState'));
-                    hide(document.getElementById('mainContent'));
-                    show(document.getElementById('errorState'));
-                }, 500);
+                setTimeout(function() { showError(); }, 500);
             }
+        }
+
+        /* ================= 导出 ================= */
+
+        function initExport() {
+            var button = el('exportBtn');
+            if (!button) return;
+            button.addEventListener('click', function() {
+                var report = el('report');
+                if (!report || report.style.display === 'none') return;
+                if (!window.ProjectAnalysisPreload || !window.html2canvas) return;
+
+                button.disabled = true;
+                button.style.opacity = '0.5';
+
+                window.html2canvas(report, {
+                    backgroundColor: getComputedStyle(document.body).backgroundColor,
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                }).then(function(canvas) {
+                    return window.ProjectAnalysisPreload.saveImage(canvas.toDataURL('image/png'));
+                }).catch(function(error) {
+                    console.error('导出失败', error);
+                }).finally(function() {
+                    button.disabled = false;
+                    button.style.opacity = '';
+                });
+            });
         }
 
         initTheme();
         loadData();
-
-        var exportBtn = document.getElementById('exportBtn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', function() {
-                var mainContent = document.getElementById('mainContent');
-                if (!mainContent || mainContent.style.display === 'none') return;
-
-                exportBtn.disabled = true;
-                exportBtn.style.opacity = '0.5';
-
-                if (window.ProjectAnalysisPreload && window.html2canvas) {
-                    var bodyBg = getComputedStyle(document.body).backgroundColor;
-
-                    // 临时展开容器以捕获完整内容
-                    var savedOverflow = mainContent.style.overflow;
-                    var savedHeight = mainContent.style.height;
-                    var savedFlex = mainContent.style.flex;
-                    mainContent.style.overflow = 'visible';
-                    mainContent.style.height = 'auto';
-                    mainContent.style.flex = 'none';
-
-                    window.html2canvas(mainContent, {
-                        backgroundColor: bodyBg,
-                        scale: 2,
-                        useCORS: true,
-                        logging: false
-                    }).then(function(canvas) {
-                        var dataUrl = canvas.toDataURL('image/png');
-                        return window.ProjectAnalysisPreload.saveImage(dataUrl);
-                    }).finally(function() {
-                        // 恢复容器样式
-                        mainContent.style.overflow = savedOverflow;
-                        mainContent.style.height = savedHeight;
-                        mainContent.style.flex = savedFlex;
-                        exportBtn.disabled = false;
-                        exportBtn.style.opacity = '';
-                    });
-                } else {
-                    exportBtn.disabled = false;
-                    exportBtn.style.opacity = '';
-                }
-            });
-        }
+        initExport();
     })();
     </script>
 </body>

@@ -29,7 +29,7 @@
     exitFullscreenOnEscape: true,
     richPresence: false,
     showRecentProjects: true,
-    topBarDeviceStats: false,
+    topBarDeviceStats: true,
     homeLogoText: 'NeoWarp'
   };
 

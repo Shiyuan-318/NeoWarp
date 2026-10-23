@@ -4892,27 +4892,43 @@
         custom: '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>'
     };
 
+    // 模型信息更新于 2026-10，来源：各厂商官方模型/定价文档（OpenAI 部分参照
+    // Azure OpenAI 模型表）。上下文与最大输出按厂商公告填写；已停售/退役的
+    // 旧模型不再列出（DeepSeek v4-flash、Qwen3.7-max/Qwen3.6、MiMo V2.5 等）。
     var PROVIDERS = {
         openai: {
             name: 'OpenAI', logo: '#10a37f', logoText: 'O',
             endpoint: 'https://api.openai.com/v1/chat/completions',
             supportsVision: true,
+            // GPT-6.x/5.5/5.4 为 1.05M 上下文 / 128K 输出，5.4-mini/nano 与
+            // 5.3-codex 为 400K / 128K。早期无后缀的 gpt-5.6 已拆分为
+            // sol/terra/luna 变体，按官方 ID 收录。
             models: [
-                { id: 'gpt-5.6', name: 'GPT-5.6', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+                { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+                { id: 'gpt-6-sol', name: 'GPT-6 Sol', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+                { id: 'gpt-6-luna', name: 'GPT-6 Luna', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+                { id: 'gpt-6-astra', name: 'GPT-6 Astra', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+                { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+                { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+                { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
                 { id: 'gpt-5.5', name: 'GPT-5.5', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
                 { id: 'gpt-5.4', name: 'GPT-5.4', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
-                { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', supportsReasoning: false, contextLimit: 400000, maxOutput: 131072 },
+                { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', supportsReasoning: true, contextLimit: 400000, maxOutput: 131072 },
+                { id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano', supportsReasoning: true, contextLimit: 400000, maxOutput: 131072 },
                 { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex', supportsReasoning: true, contextLimit: 400000, maxOutput: 131072 }
             ],
-            defaultModel: 'gpt-5.4'
+            defaultModel: 'gpt-6.1-sol'
         },
         deepseek: {
             name: 'DeepSeek', logo: '#4f46e5', logoText: 'D',
             endpoint: 'https://api.deepseek.com/chat/completions',
-            supportsVision: false,
+            supportsVision: true,
+            // 官方在售两个型号：deepseek-v4-pro 与 deepseek-flash（DeepSeek-V4.1-Flash，
+            // 已支持视觉）。旧的 deepseek-v4-flash 已退役，由 deepseek-flash 接管。
+            // 两者均 1M 上下文 / 384K 最大输出。
             models: [
-                { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', supportsReasoning: true, contextLimit: 1000000, maxOutput: 16384 },
-                { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 16384 }
+                { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 393216 },
+                { id: 'deepseek-flash', name: 'DeepSeek Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 393216 }
             ],
             defaultModel: 'deepseek-v4-pro'
         },
@@ -4920,13 +4936,15 @@
             name: 'Zhipu GLM', logo: '#3859ff', logoText: 'Z',
             endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
             supportsVision: true,
+            // 参数来自智谱开放文档：5.3 系列均为 1M 上下文 / 128K 输出；
+            // GLM-5.3 为纯文本，多模态的是 GLM-5.3-Flash / FlashX；
+            // GLM-5.2 最大输出由 16K 修正为 128K。
+            // alwaysThinking：思考常开，请求里传 disabled 会直接报错。
             models: [
-                // 参数来自智谱开放文档：两个 5.3 系列均为 1M 上下文 / 128K 输出；
-                // GLM-5.3 为纯文本，多模态的是 GLM-5.3-Flash。
-                // alwaysThinking：该系列思考常开，请求里传 disabled 会直接报错。
                 { id: 'glm-5.3', name: 'GLM-5.3', supportsReasoning: true, supportsVision: false, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
                 { id: 'glm-5.3-flash', name: 'GLM-5.3 Flash', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
-                { id: 'glm-5.2', name: 'GLM-5.2', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 16384 }
+                { id: 'glm-5.3-flashx', name: 'GLM-5.3 FlashX', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
+                { id: 'glm-5.2', name: 'GLM-5.2', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 131072 }
             ],
             defaultModel: 'glm-5.3'
         },
@@ -4935,7 +4953,8 @@
             endpoint: 'https://api.moonshot.cn/v1/chat/completions',
             supportsVision: true,
             models: [
-                { id: 'kimi-k3', name: 'Kimi K3', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 16384 },
+                // K3 始终开启思考模式（无法关闭），max_completion_tokens 默认 131072
+                { id: 'kimi-k3', name: 'Kimi K3', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
                 { id: 'kimi-k2.7-code', name: 'Kimi K2.7 Code', supportsReasoning: true, supportsVision: true, contextLimit: 262144, maxOutput: 16384 },
                 { id: 'kimi-k2.6', name: 'Kimi K2.6', supportsReasoning: false, contextLimit: 262144, maxOutput: 16384 }
             ],
@@ -4945,16 +4964,19 @@
             name: 'Xiaomi MiMo', logo: '#ff6900', logoText: 'M',
             endpoint: 'https://api.xiaomimimo.com/v1/chat/completions',
             supportsVision: true,
+            // 2026-09 起 V2.6 系列全面替代 V2.5（官方已停售 V2.5 型号），
+            // 全系原生多模态，1M 上下文；UltraSpeed 为 20 倍速高速档。
             models: [
-                { id: 'mimo-v2.5-pro', name: 'MiMo V2.5 Pro', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 131072 },
-                { id: 'mimo-v2.5-pro-ultraspeed', name: 'MiMo V2.5 Pro UltraSpeed', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 131072 },
-                { id: 'mimo-v2.5', name: 'MiMo V2.5', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 }
+                { id: 'mimo-v2.6-pro', name: 'MiMo V2.6 Pro', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 },
+                { id: 'mimo-v2.6-pro-ultraspeed', name: 'MiMo V2.6 Pro UltraSpeed', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 },
+                { id: 'mimo-v2.6-flash', name: 'MiMo V2.6 Flash', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 }
             ],
-            defaultModel: 'mimo-v2.5-pro'
+            defaultModel: 'mimo-v2.6-pro'
         },
         huaweipangu: {
             name: 'Huawei Pangu', logo: '#cf0a2c', logoText: 'H',
             endpoint: 'https://api.huaweicloud.com/api/v2/chat/completions',
+            supportsVision: false,
             models: [
                 { id: 'pangu-2.0-pro', name: 'Pangu 2.0 Pro', supportsReasoning: true, contextLimit: 524288, maxOutput: 16384 },
                 { id: 'pangu-2.0-flash', name: 'Pangu 2.0 Flash', supportsReasoning: false, contextLimit: 524288, maxOutput: 16384 }
@@ -4965,10 +4987,12 @@
             name: 'Qwen', logo: '#6366f1', logoText: 'Q',
             endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
             models: [
-                { id: 'qwen3.8-max-preview', name: 'Qwen3.8 Max Preview', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
-                { id: 'qwen3.7-max', name: 'Qwen3.7 Max', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
+                // 百炼推荐列表（1M 上下文）：qwen3.8-max 为最强推理档，
+                // qwen3.7-plus 为官方推荐的成本均衡档；qwen3.7-max 已转为旧版。
+                { id: 'qwen3.8-max', name: 'Qwen3.8 Max', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
+                { id: 'qwen3.8-flash', name: 'Qwen3.8 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
                 { id: 'qwen3.7-plus', name: 'Qwen3.7 Plus', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
-                { id: 'qwen3.6-flash', name: 'Qwen3.6 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 }
+                { id: 'qwen3.7-flash', name: 'Qwen3.7 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 }
             ],
             defaultModel: 'qwen3.7-plus'
         },
@@ -4988,9 +5012,9 @@
             isFree: true
         },
         custom: {
-            name: 'Custom', logo: '#888', logoText: '?',
+            name: 'Custom', nameEn: 'Custom', nameZh: '自定义', logo: '#888', logoText: '?',
             endpoint: '',
-            models: [{ id: 'custom', name: 'Custom Model', supportsReasoning: false }],
+            models: [{ id: 'custom', name: 'Custom Model', nameEn: 'Custom Model', nameZh: '自定义模型', supportsReasoning: false }],
             defaultModel: 'custom',
             isCustom: true
         }
@@ -6990,6 +7014,20 @@
         return currentConfig.provider + ':' + getEffectiveModelId();
     }
 
+    // 按界面语言取显示名：“自定义”服务商与其占位模型名需本地化，
+    // 预设厂商品牌名两种语言一致
+    function isZhLocale() {
+        return (currentLocale || 'en').split('-')[0] === 'zh';
+    }
+    function providerDisplayName(providerId) {
+        var p = PROVIDERS[providerId] || {};
+        return (isZhLocale() ? (p.nameZh || p.name) : (p.nameEn || p.name)) || providerId;
+    }
+    function modelNameDisplayName(m) {
+        if (!m) return '';
+        return (isZhLocale() ? (m.nameZh || m.name) : (m.nameEn || m.name)) || '';
+    }
+
     function usageModelLabel(key) {
         var parts = String(key).split(':');
         var providerId = parts.shift();
@@ -6997,7 +7035,7 @@
         var p = PROVIDERS[providerId];
         var m = p && (p.models || []).find(function(x) { return x.id === modelId; });
         return {
-            provider: p ? p.name : providerId,
+            provider: providerDisplayName(providerId),
             logo: p ? p.logo : '#888',
             logoText: p ? p.logoText : '?',
             model: m ? m.name : modelId
@@ -8092,9 +8130,9 @@
         var m = getModelInfo();
         var label;
         if (activeConfigIndex >= 0 && savedConfigs[activeConfigIndex]) {
-            label = savedConfigs[activeConfigIndex].name || (m ? m.name : 'Model');
+            label = savedConfigs[activeConfigIndex].name || (modelNameDisplayName(m) || 'Model');
         } else {
-            label = m ? m.name : 'Model';
+            label = modelNameDisplayName(m) || 'Model';
         }
         modelNameDisplay.textContent = label;
         modelShortDisplay.textContent = label.length > 8 ? label.substring(0, 7) + '\u2026' : (label || 'Model');
@@ -8249,15 +8287,15 @@
         var isActive = idx === activeConfigIndex;
         var free = isFreeConfig(cfg);
         var expired = isFreeExpired(cfg);
-        var nameDisplay = cfg.name || (m ? m.name : p.name) || 'Unnamed';
+        var nameDisplay = cfg.name || (m ? modelNameDisplayName(m) : providerDisplayName(cfg.provider)) || 'Unnamed';
         var modelLabel = p.isCustom ? (cfg.customModelId || cfg.model) : (m ? m.name : cfg.model);
         // 免费模型不展示任何密钥信息（掩码也不行），改为“免费提供”说明
         var sub = free
             ? (expired ? '' : t('freeNoKey'))
             : (IS_REMOTE ? cfg.apiKey : maskApiKey(cfg.apiKey));
         var meta = free
-            ? (p.name || 'Free') + ' · ' + formatTokenCount(1000000) + ' ' + t('ctxSuffix')
-            : (p.name || cfg.provider) + (modelLabel ? ' · ' + modelLabel : '');
+            ? providerDisplayName(cfg.provider) + ' · ' + formatTokenCount(1000000) + ' ' + t('ctxSuffix')
+            : providerDisplayName(cfg.provider) + (modelLabel ? ' · ' + modelLabel : '');
 
         var card = document.createElement('div');
         card.className = 'model-config-card' + (isActive ? ' active' : '') + (expired ? ' expired' : '');
@@ -8353,10 +8391,10 @@
             item.className = 'model-dropdown-item' + (idx === activeConfigIndex ? ' active' : '') + (expired ? ' disabled' : '');
             var trailing = expired
                 ? t('freeEnded')
-                : (free ? t('freeBadge') : (!cfg.apiKey ? t('noKeyBadge') : (p.name || cfg.provider)));
+                : (free ? t('freeBadge') : (!cfg.apiKey ? t('noKeyBadge') : providerDisplayName(cfg.provider)));
             item.innerHTML = '<span class="provider-logo" style="background:' + (p.logo || '#888') + ';">' +
                 (AI_LOGO_SVG[cfg.provider] || escapeHtml(p.logoText || '?')) + '</span>' +
-                '<span>' + escapeHtml(cfg.name || (m ? m.name : 'Model')) + '</span>' +
+                '<span>' + escapeHtml(cfg.name || (modelNameDisplayName(m) || 'Model')) + '</span>' +
                 '<span style="font-size:11px;color:var(--text-tertiary);">' +
                 escapeHtml(trailing) + '</span>' +
                 '<svg class="check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';

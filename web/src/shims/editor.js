@@ -1010,7 +1010,16 @@
         memory: { used: usedMemory, total: totalMemory }
       };
     },
-    getTopBarDeviceStats: () => storage.getSettings().topBarDeviceStats === true,
+    getTopBarDeviceStats: () => storage.getSettings().topBarDeviceStats !== false,
+    // 顶栏设备占用开关：本地存储变化或跨窗口广播时推进菜单栏实时显隐
+    onTopBarDeviceStatsChanged: (callback) => {
+      storage.onSettingsChanged(function (key, value) {
+        if (key === 'topBarDeviceStats') callback(value);
+      });
+      util.onBroadcast(function (message) {
+        if (message.type === 'topBarDeviceStats') callback(message.data && message.data.enabled);
+      });
+    },
     getAISystemInfo: async () => {
       var stats = await EditorPreload.getSystemStats();
       return {

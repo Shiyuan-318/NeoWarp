@@ -317,7 +317,11 @@
   },
   "desktop-settings.top-bar-device-stats": {
     "string": "Show device usage in top bar",
-    "developer_comment": "Option in desktop settings advanced section to show CPU and memory usage in the editor's top bar"
+    "developer_comment": "Toggle in desktop settings UI section to show CPU and memory usage in the editor's top bar"
+  },
+  "desktop-settings.top-bar-device-stats-desc": {
+    "string": "Display the CPU and memory usage indicator in the editor's top bar. Toggles apply immediately and the bar re-centers automatically",
+    "developer_comment": "Description of the top bar device stats toggle in desktop settings UI section"
   },
   "desktop-settings.check-for-updates": {
     "string": "Check for Updates",

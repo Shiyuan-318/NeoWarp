@@ -1462,6 +1462,24 @@
                 </label>
               </div>
             </div>
+            <!-- NeoWarp: 顶栏设备占用（CPU/内存）显示开关。开启后编辑器
+                 顶栏实时显示 CPU 与内存占用；开关即时广播，顶栏 flex
+                 布局自动重新居中，无需重启编辑器。 -->
+            <div class="setting-row">
+              <div class="row-icon icon-indigo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label top-bar-device-stats-label"></div>
+                <div class="setting-desc top-bar-device-stats-desc"></div>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="top-bar-device-stats-checkbox" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <!-- Home branding -->
@@ -1865,15 +1883,330 @@
         checkForUpdatesBtn.disabled = false;
       };
 
+      // ===== 自定义下拉组件 =====
+      // 原生 <select> 的弹层由系统渲染，无法跟随应用的深色主题（白底浅字、
+      // 字体也不一致，属于设置里显示异常的来源之一）。这里用按钮 + 弹层完整
+      // 自绘替代；弹层挂在 body 上做固定定位，样式只依赖主题变量，深浅色均正常。
+      // 兼容性：change 事件派发在容器元素上，value/onchange 通过属性转发，
+      // 原有 xxx.value / xxx.onchange / addEventListener('change') 写法不变。
+      const CSELECT_CHECK_SVG =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      class CustomSelect {
+        constructor (root, opts = {}) {
+          this.root = root;
+          this.items = [];
+          this.index = -1;
+          this.activeIndex = -1;
+          this.openState = false;
+          this.disabled = false;
+          this._onchangeHandler = null;
+          this.hideTimer = 0;
+          this.onDocPointerDown = null;
+          this.onDocScroll = null;
+          this.onWinResize = null;
+
+          const trigger = document.createElement('button');
+          trigger.type = 'button';
+          trigger.className = 'cselect-trigger' + (opts.block ? ' settings-input' : '');
+          trigger.setAttribute('aria-haspopup', 'listbox');
+          trigger.innerHTML =
+            '<span class="cselect-label"></span>' +
+            '<svg class="cselect-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+          this.trigger = trigger;
+          this.label = trigger.querySelector('.cselect-label');
+          this.menu = document.createElement('div');
+          this.menu.className = 'cselect-menu';
+          this.menu.setAttribute('role', 'listbox');
+          this.menu.hidden = true;
+
+          root.classList.add('cselect');
+          if (opts.block) root.classList.add('cselect-block');
+          root.__customSelect = this;
+          root.appendChild(trigger);
+
+          // 容器上转发 <select> 风格的 API
+          const widget = this;
+          Object.defineProperty(root, 'value', {
+            get: () => (widget.items[widget.index] ? widget.items[widget.index].value : ''),
+            set: (v) => widget.setValue(v),
+            configurable: true
+          });
+          Object.defineProperty(root, 'onchange', {
+            get: () => widget._onchangeHandler,
+            set: (fn) => {
+              // 事件系统只认真实注册的 listener，这里显式完成 <select> 的
+              // 事件处理属性语义（赋值即注册、置空即注销）
+              if (widget._onchangeHandler) {
+                root.removeEventListener('change', widget._onchangeHandler);
+              }
+              widget._onchangeHandler = typeof fn === 'function' ? fn : null;
+              if (widget._onchangeHandler) {
+                root.addEventListener('change', widget._onchangeHandler);
+              }
+            },
+            configurable: true
+          });
+
+          trigger.addEventListener('click', () => widget.toggleMenu());
+          trigger.addEventListener('keydown', (e) => widget.onKeydown(e));
+
+          document.addEventListener('mousedown', (this.onDocPointerDown = (e) => {
+            if (!widget.openState) return;
+            if (widget.menu.contains(e.target) || widget.root.contains(e.target)) return;
+            widget.closeMenu();
+          }), true);
+          window.addEventListener('scroll', (this.onDocScroll = (e) => {
+            if (!widget.openState) return;
+            // e.target 可能不是 Node（如 window），先过 instanceof 防御
+            if (e.target instanceof Node && widget.menu.contains(e.target)) return;
+            widget.positionMenu();
+          }), {capture: true, passive: true});
+          window.addEventListener('resize', (this.onWinResize = () => {
+            if (widget.openState) widget.closeMenu();
+          }));
+
+          if (opts.items) this.setOptions(opts.items, opts.value);
+        }
+        findIndexByValue (v) {
+          return this.items.findIndex((it) => it.value === v);
+        }
+        renderSelected () {
+          const item = this.items[this.index];
+          this.label.textContent = item ? item.label : '';
+        }
+        // items: {value, label, disabled?, muted?, selected?}
+        setOptions (items, selected) {
+          if (this.openState) this.closeMenu();
+          this.items = (items || []).map((it) => ({
+            value: it.value === undefined ? '' : String(it.value),
+            label: it.label == null ? '' : String(it.label),
+            disabled: !!it.disabled,
+            muted: !!it.muted,
+            selected: !!it.selected
+          }));
+          // 与原生 <select> 一致的选中规则：显式值 > 条目 selected 标记 > 首个可选项
+          let idx = -1;
+          if (selected !== undefined && selected !== null) idx = this.findIndexByValue(String(selected));
+          if (idx === -1) idx = this.items.findIndex((it) => it.selected);
+          if (idx === -1) idx = this.items.findIndex((it) => !it.disabled);
+          this.index = idx;
+          this.renderSelected();
+          return this;
+        }
+        // 原生语义：无效值设置时保持原选中不变
+        setValue (v) {
+          const idx = this.findIndexByValue(String(v));
+          if (idx !== -1) {
+            this.index = idx;
+            this.renderSelected();
+          }
+          return idx !== -1;
+        }
+        emitChange () {
+          this.root.dispatchEvent(new Event('change'));
+        }
+        select (idx, fire) {
+          if (idx < 0 || idx >= this.items.length) return;
+          const changed = idx !== this.index;
+          this.index = idx;
+          this.renderSelected();
+          if (fire && changed) this.emitChange();
+        }
+        renderMenu () {
+          this.menu.innerHTML = '';
+          this.items.forEach((it, i) => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'cselect-item' +
+              (i === this.index ? ' selected' : '') +
+              (it.muted ? ' muted' : '');
+            option.setAttribute('role', 'option');
+            option.disabled = it.disabled;
+            option.dataset.index = String(i);
+            option.innerHTML = '<span class="cselect-item-label"></span>' +
+              (i === this.index ? CSELECT_CHECK_SVG : '');
+            option.querySelector('.cselect-item-label').textContent = it.label;
+            option.addEventListener('click', () => {
+              if (it.disabled) return;
+              this.select(i, true);
+              this.closeMenu();
+              this.trigger.focus({preventScroll: true});
+            });
+            option.addEventListener('mouseenter', () => this.setActive(i));
+            this.menu.appendChild(option);
+          });
+        }
+        toggleMenu () {
+          this.openState ? this.closeMenu() : this.openMenu();
+        }
+        openMenu () {
+          if (this.openState || this.disabled || !this.items.length) return;
+          clearTimeout(this.hideTimer);
+          this.renderMenu();
+          this.menu.hidden = false;
+          this.menu.style.visibility = 'hidden';
+          this.menu.style.width = 'max-content';
+          this.menu.style.maxHeight = '';
+          document.body.appendChild(this.menu);
+          // 尺寸与位置：对话框内与触发器同宽；行内样式在触发器宽度与内容
+          // 宽度之间取较宽者，长条目（设备名等）封顶防遮挡
+          const rect = this.trigger.getBoundingClientRect();
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          let width;
+          if (this.root.classList.contains('cselect-block')) {
+            width = Math.max(rect.width, 120);
+          } else {
+            width = Math.min(Math.max(rect.width, this.menu.offsetWidth), 340);
+          }
+          width = Math.min(width, vw - 16);
+          const spaceBelow = vh - rect.bottom - 14;
+          const spaceAbove = rect.top - 14;
+          const maxH = Math.max(90, Math.min(264, Math.max(spaceBelow, spaceAbove)));
+          this.menu.style.maxHeight = maxH + 'px';
+          const height = Math.min(this.menu.offsetHeight, maxH);
+          const flip = spaceBelow < height && spaceAbove > spaceBelow;
+          let left = rect.right - width;
+          if (this.root.classList.contains('cselect-block')) left = rect.left;
+          left = Math.min(Math.max(left, 8), Math.max(8, vw - width - 8));
+          let top = flip ? rect.top - 6 - height : rect.bottom + 6;
+          top = Math.min(Math.max(top, 8), Math.max(8, vh - height - 8));
+          this.menu.style.width = width + 'px';
+          this.menu.style.left = left + 'px';
+          this.menu.style.top = top + 'px';
+          this.menu.style.visibility = '';
+          this.menu.classList.toggle('up', flip);
+          this.openState = true;
+          this.root.setAttribute('data-open', '');
+          this.trigger.setAttribute('aria-expanded', 'true');
+          this.setActive(this.index);
+          const current = this.menu.children[this.activeIndex];
+          this.menu.scrollTop = current ?
+            current.offsetTop - (this.menu.clientHeight - current.offsetHeight) / 2 : 0;
+          // 先读一次尺寸强制布局（作为过渡的起始状态），再同步加 open：
+          // 避免 rAF 未运行（如窗口不可见）时菜单停留在不可见状态
+          void this.menu.offsetHeight;
+          this.menu.classList.add('open');
+        }
+        positionMenu () {
+          if (!this.openState) return;
+          const rect = this.trigger.getBoundingClientRect();
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          const width = this.menu.offsetWidth;
+          const height = this.menu.offsetHeight;
+          const spaceBelow = vh - rect.bottom - 14;
+          const spaceAbove = rect.top - 14;
+          const flip = spaceBelow < height && spaceAbove > spaceBelow;
+          let left = rect.right - width;
+          if (this.root.classList.contains('cselect-block')) left = rect.left;
+          left = Math.min(Math.max(left, 8), Math.max(8, vw - width - 8));
+          let top = flip ? rect.top - 6 - height : rect.bottom + 6;
+          top = Math.min(Math.max(top, 8), Math.max(8, vh - height - 8));
+          this.menu.style.left = left + 'px';
+          this.menu.style.top = top + 'px';
+          this.menu.classList.toggle('up', flip);
+        }
+        closeMenu () {
+          if (!this.openState) return;
+          this.openState = false;
+          this.root.removeAttribute('data-open');
+          this.trigger.setAttribute('aria-expanded', 'false');
+          this.menu.classList.remove('open');
+          clearTimeout(this.hideTimer);
+          this.hideTimer = setTimeout(() => {
+            if (this.menu.parentNode) this.menu.parentNode.removeChild(this.menu);
+            this.menu.hidden = true;
+          }, 150);
+        }
+        setActive (i) {
+          this.activeIndex = (i < 0 || i >= this.items.length) ? -1 : i;
+          Array.prototype.forEach.call(this.menu.children, (el, k) => {
+            el.classList.toggle('active', k === this.activeIndex);
+          });
+        }
+        moveActive (dir) {
+          if (!this.items.length) return;
+          let i = this.activeIndex;
+          for (let step = 0; step < this.items.length; step++) {
+            i = (i + dir + this.items.length) % this.items.length;
+            if (!this.items[i].disabled) break;
+          }
+          this.setActive(i);
+          const el = this.menu.children[this.activeIndex];
+          if (el) {
+            const itemTop = el.offsetTop;
+            const itemBottom = itemTop + el.offsetHeight;
+            if (itemTop < this.menu.scrollTop) this.menu.scrollTop = itemTop;
+            else if (itemBottom > this.menu.scrollTop + this.menu.clientHeight) {
+              this.menu.scrollTop = itemBottom - this.menu.clientHeight;
+            }
+          }
+        }
+        commitActive () {
+          const item = this.items[this.activeIndex];
+          if (!item || item.disabled) return;
+          this.select(this.activeIndex, true);
+          this.closeMenu();
+        }
+        onKeydown (e) {
+          if (!this.openState) {
+            switch (e.key) {
+              case 'Enter': case ' ': case 'ArrowDown': case 'ArrowUp':
+                e.preventDefault();
+                this.openMenu();
+                break;
+            }
+            return;
+          }
+          switch (e.key) {
+            case 'ArrowDown': e.preventDefault(); this.moveActive(1); break;
+            case 'ArrowUp': e.preventDefault(); this.moveActive(-1); break;
+            case 'Home': e.preventDefault(); this.setActive(0); break;
+            case 'End': e.preventDefault(); this.setActive(this.items.length - 1); break;
+            case 'Enter': case ' ':
+              e.preventDefault();
+              this.commitActive();
+              break;
+            // Esc 在对话框里还承担“关闭整个对话框”，菜单打开时在这里吃掉
+            case 'Escape':
+              e.preventDefault();
+              e.stopPropagation();
+              this.closeMenu();
+              break;
+            case 'Tab':
+              this.closeMenu();
+              break;
+          }
+        }
+        focus () {
+          this.trigger.focus({preventScroll: true});
+        }
+        destroy () {
+          // 立即摘除弹层（不要带走 closeMenu 安排的 150ms 移除定时器再撤销，
+          // 否则菜单会永久滞留在 body 上）
+          clearTimeout(this.hideTimer);
+          this.openState = false;
+          if (this.menu.parentNode) this.menu.parentNode.removeChild(this.menu);
+          this.menu.hidden = true;
+          document.removeEventListener('mousedown', this.onDocPointerDown, true);
+          window.removeEventListener('scroll', this.onDocScroll, true);
+          window.removeEventListener('resize', this.onWinResize);
+        }
+      }
+
       // ===== Update checker frequency =====
       const updateCheckerRow = document.getElementById('updateCheckerRow');
       const updateCheckerSelect = document.querySelector('.update-checker-select');
       const updateCheckerWarning = document.querySelector('.update-checker-warning');
       if (settings.updateCheckerAllowed) {
         document.querySelector('.update-checker-label').textContent = strings['desktop-settings.update-checker'];
-        for (const option of updateCheckerSelect.options) {
-          option.textContent = strings[`desktop-settings.notify-${option.value}`];
-        }
+        const updateCheckerWidget = new CustomSelect(updateCheckerSelect);
+        const updateCheckerValues = ['unstable', 'stable', 'security', 'never'];
+        updateCheckerWidget.setOptions(updateCheckerValues.map((value) => ({
+          value,
+          label: strings[`desktop-settings.notify-${value}`]
+        })));
         updateCheckerSelect.value = settings.updateChecker;
         updateCheckerWarning.textContent = strings['desktop-settings.disabled-updates'];
         updateCheckerWarning.hidden = settings.updateChecker !== 'never';
@@ -1960,6 +2293,18 @@
           applyCompactWindowStyleControls(compactWindowStyleCheckbox.checked);
         };
       }
+
+      // ===== 顶栏设备占用（CPU/内存）显示 =====
+      // 保存后由主进程广播给所有编辑器窗口，编辑器顶栏（menu-bar）
+      // 实时移除/恢复「CPU/内存」块，flex 布局自动重新居中，无需
+      // 重启编辑器。默认开启（与旧行为一致），关闭仅隐藏指示块。
+      const topBarDeviceStatsCheckbox = document.querySelector('.top-bar-device-stats-checkbox');
+      document.querySelector('.top-bar-device-stats-label').textContent = strings['desktop-settings.top-bar-device-stats'];
+      document.querySelector('.top-bar-device-stats-desc').textContent = strings['desktop-settings.top-bar-device-stats-desc'];
+      topBarDeviceStatsCheckbox.checked = settings.topBarDeviceStats === true;
+      topBarDeviceStatsCheckbox.onchange = () => {
+        DesktopSettingsPreload.setTopBarDeviceStats(topBarDeviceStatsCheckbox.checked);
+      };
 
       // ===== Interface language =====
       // 语言名固定用母语书写，不随界面语言变化，因此不经过 l10n。
@@ -2194,8 +2539,9 @@
       document.querySelector('.selected-microphone-label').textContent = strings['desktop-settings.microphone'];
       document.querySelector('.selected-camera-label').textContent = strings['desktop-settings.camera'];
 
-      selectedMicrophoneSelect.firstChild.textContent = strings['desktop-settings.loading'];
-      selectedCameraSelect.firstChild.textContent = strings['desktop-settings.loading'];
+      // 自绘下拉组件；容器元素转发 value/onchange，沿用 <select> 的写法
+      new CustomSelect(selectedMicrophoneSelect);
+      new CustomSelect(selectedCameraSelect);
 
       selectedMicrophoneSelect.onchange = () => {
         DesktopSettingsPreload.setMicrophone(selectedMicrophoneSelect.value);
@@ -2206,40 +2552,34 @@
         mediaDeviceWarning.hidden = false;
       };
 
-      const createStatusMessageOption = (text) => {
-        const option = document.createElement('option');
-        option.selected = true;
-        option.disabled = true;
-        option.textContent = text;
-        return option;
-      };
+      // 状态提示条目：仅作展示（原生里是 disabled + selected 的 <option>）
+      const createStatusMessageOption = (text) => (
+        { value: '', label: text, disabled: true, muted: true }
+      );
 
       const addLoadingOption = (element) => {
-        while (element.firstChild) element.removeChild(element.firstChild);
-        element.appendChild(createStatusMessageOption(strings['desktop-settings.loading']));
+        element.__customSelect.setOptions([
+          createStatusMessageOption(strings['desktop-settings.loading'])
+        ]);
       };
 
       const addOptions = (element, selected, devices) => {
-        while (element.firstChild) element.removeChild(element.firstChild);
+        const widget = element.__customSelect;
         if (devices.length === 0) {
-          element.appendChild(createStatusMessageOption(strings['desktop-settings.no-devices']));
+          widget.setOptions([createStatusMessageOption(strings['desktop-settings.no-devices'])]);
         } else {
-          for (const device of devices) {
-            const option = document.createElement('option');
-            option.value = device.deviceId;
-            option.textContent = device.label;
-            element.appendChild(option);
-          }
-          if (selected) element.value = selected;
+          widget.setOptions(
+            devices.map((device) => ({ value: device.deviceId, label: device.label })),
+            selected
+          );
         }
       };
 
       const addErrorOption = (element, error) => {
-        while (element.firstChild) element.removeChild(element.firstChild);
         const message = `${error}`.includes('Editor must be open') ?
           strings['desktop-settings.editor-must-be-open'] :
           strings['desktop-settings.error'].replace('{error}', error);
-        element.appendChild(createStatusMessageOption(message));
+        element.__customSelect.setOptions([createStatusMessageOption(message)]);
       };
 
       const updateLists = async () => {
@@ -2419,7 +2759,7 @@
           fieldApiFormat: 'API 格式',
           fieldEndpoint: '接口地址',
           fieldModelId: '模型 ID',
-          fieldModelIdHint: '接口实际接受的模型名称，例如 gpt-4o',
+          fieldModelIdHint: '接口实际接受的模型名称，例如 gpt-6.1-sol',
           fieldContextLimit: '上下文上限（tokens）',
           fieldContextLimitHint: '用于在对话超长前裁剪历史',
           fieldApiKey: 'API Key',
@@ -2474,7 +2814,7 @@
           fieldApiFormat: 'API format',
           fieldEndpoint: 'Endpoint',
           fieldModelId: 'Model ID',
-          fieldModelIdHint: 'The model name expected by the endpoint, e.g. gpt-4o',
+          fieldModelIdHint: 'The model name expected by the endpoint, e.g. gpt-6.1-sol',
           fieldContextLimit: 'Context limit (tokens)',
           fieldContextLimitHint: 'Used to trim conversation history before it gets too long',
           fieldApiKey: 'API Key',
@@ -2537,27 +2877,43 @@
         custom: '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>'
       };
 
+      // 模型信息更新于 2026-10，来源：各厂商官方模型/定价文档（OpenAI 部分参照
+      // Azure OpenAI 模型表）。上下文与最大输出按厂商公告填写；已停售/退役的
+      // 旧模型不再列出（DeepSeek v4-flash、Qwen3.7-max/Qwen3.6、MiMo V2.5 等）。
       const AI_PROVIDERS = {
         openai: {
           name: 'OpenAI', logo: '#10a37f', logoText: 'O',
           endpoint: 'https://api.openai.com/v1/chat/completions',
           supportsVision: true,
+          // GPT-6.x/5.5/5.4 为 1.05M 上下文 / 128K 输出，5.4-mini/nano 与
+          // 5.3-codex 为 400K / 128K。早期无后缀的 gpt-5.6 已拆分为
+          // sol/terra/luna 变体，按官方 ID 收录。
           models: [
-            { id: 'gpt-5.6', name: 'GPT-5.6', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-6-sol', name: 'GPT-6 Sol', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-6-luna', name: 'GPT-6 Luna', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-6-astra', name: 'GPT-6 Astra', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
             { id: 'gpt-5.5', name: 'GPT-5.5', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
             { id: 'gpt-5.4', name: 'GPT-5.4', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
-            { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', supportsReasoning: false, contextLimit: 400000, maxOutput: 131072 },
+            { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', supportsReasoning: true, contextLimit: 400000, maxOutput: 131072 },
+            { id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano', supportsReasoning: true, contextLimit: 400000, maxOutput: 131072 },
             { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex', supportsReasoning: true, contextLimit: 400000, maxOutput: 131072 }
           ],
-          defaultModel: 'gpt-5.4'
+          defaultModel: 'gpt-6.1-sol'
         },
         deepseek: {
           name: 'DeepSeek', logo: '#4f46e5', logoText: 'D',
           endpoint: 'https://api.deepseek.com/chat/completions',
-          supportsVision: false,
+          supportsVision: true,
+          // 官方在售两个型号：deepseek-v4-pro 与 deepseek-flash（DeepSeek-V4.1-Flash，
+          // 已支持视觉）。旧的 deepseek-v4-flash 已退役，由 deepseek-flash 接管。
+          // 两者均 1M 上下文 / 384K 最大输出。
           models: [
-            { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', supportsReasoning: true, contextLimit: 1000000, maxOutput: 16384 },
-            { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 16384 }
+            { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 393216 },
+            { id: 'deepseek-flash', name: 'DeepSeek Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 393216 }
           ],
           defaultModel: 'deepseek-v4-pro'
         },
@@ -2565,10 +2921,15 @@
           name: 'Zhipu GLM', logo: '#3859ff', logoText: 'Z',
           endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
           supportsVision: true,
+          // 参数来自智谱开放文档：5.3 系列均为 1M 上下文 / 128K 输出；
+          // GLM-5.3 为纯文本，多模态的是 GLM-5.3-Flash / FlashX；
+          // GLM-5.2 最大输出由 16K 修正为 128K。
+          // alwaysThinking：思考常开，请求里传 disabled 会直接报错。
           models: [
             { id: 'glm-5.3', name: 'GLM-5.3', supportsReasoning: true, supportsVision: false, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
             { id: 'glm-5.3-flash', name: 'GLM-5.3 Flash', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
-            { id: 'glm-5.2', name: 'GLM-5.2', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 16384 }
+            { id: 'glm-5.3-flashx', name: 'GLM-5.3 FlashX', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
+            { id: 'glm-5.2', name: 'GLM-5.2', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 131072 }
           ],
           defaultModel: 'glm-5.3'
         },
@@ -2577,7 +2938,8 @@
           endpoint: 'https://api.moonshot.cn/v1/chat/completions',
           supportsVision: true,
           models: [
-            { id: 'kimi-k3', name: 'Kimi K3', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 16384 },
+            // K3 始终开启思考模式（无法关闭），max_completion_tokens 默认 131072
+            { id: 'kimi-k3', name: 'Kimi K3', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
             { id: 'kimi-k2.7-code', name: 'Kimi K2.7 Code', supportsReasoning: true, supportsVision: true, contextLimit: 262144, maxOutput: 16384 },
             { id: 'kimi-k2.6', name: 'Kimi K2.6', supportsReasoning: false, contextLimit: 262144, maxOutput: 16384 }
           ],
@@ -2587,12 +2949,14 @@
           name: 'Xiaomi MiMo', logo: '#ff6900', logoText: 'M',
           endpoint: 'https://api.xiaomimimo.com/v1/chat/completions',
           supportsVision: true,
+          // 2026-09 起 V2.6 系列全面替代 V2.5（官方已停售 V2.5 型号），
+          // 全系原生多模态，1M 上下文；UltraSpeed 为 20 倍速高速档。
           models: [
-            { id: 'mimo-v2.5-pro', name: 'MiMo V2.5 Pro', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 131072 },
-            { id: 'mimo-v2.5-pro-ultraspeed', name: 'MiMo V2.5 Pro UltraSpeed', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 131072 },
-            { id: 'mimo-v2.5', name: 'MiMo V2.5', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 }
+            { id: 'mimo-v2.6-pro', name: 'MiMo V2.6 Pro', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 },
+            { id: 'mimo-v2.6-pro-ultraspeed', name: 'MiMo V2.6 Pro UltraSpeed', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 },
+            { id: 'mimo-v2.6-flash', name: 'MiMo V2.6 Flash', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 }
           ],
-          defaultModel: 'mimo-v2.5-pro'
+          defaultModel: 'mimo-v2.6-pro'
         },
         huaweipangu: {
           name: 'Huawei Pangu', logo: '#cf0a2c', logoText: 'H',
@@ -2608,10 +2972,12 @@
           name: 'Qwen', logo: '#6366f1', logoText: 'Q',
           endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
           models: [
-            { id: 'qwen3.8-max-preview', name: 'Qwen3.8 Max Preview', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
-            { id: 'qwen3.7-max', name: 'Qwen3.7 Max', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
+            // 百炼推荐列表（1M 上下文）：qwen3.8-max 为最强推理档，
+            // qwen3.7-plus 为官方推荐的成本均衡档；qwen3.7-max 已转为旧版。
+            { id: 'qwen3.8-max', name: 'Qwen3.8 Max', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
+            { id: 'qwen3.8-flash', name: 'Qwen3.8 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
             { id: 'qwen3.7-plus', name: 'Qwen3.7 Plus', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 },
-            { id: 'qwen3.6-flash', name: 'Qwen3.6 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 }
+            { id: 'qwen3.7-flash', name: 'Qwen3.7 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65536 }
           ],
           defaultModel: 'qwen3.7-plus'
         },
@@ -2632,7 +2998,7 @@
           defaultModel: 'deepseek-v4.1-flash'
         },
         custom: {
-          name: 'Custom', logo: '#888', logoText: '?',
+          name: 'Custom', nameEn: 'Custom', nameZh: '自定义', logo: '#888', logoText: '?',
           endpoint: '',
           models: [{ id: 'custom', name: 'Custom Model', supportsReasoning: false }],
           defaultModel: 'custom',
@@ -2640,11 +3006,49 @@
         }
       };
 
+      // API 格式：标签内直接标注请求路径；接口地址输入框下方会按所选格式
+      // 动态显示完整示例 URL（endpointHint*，由 syncEndpointHint 更新）。
+      // NeoWarp 发出的都是 OpenAI 风格 chat-completions 请求：
+      // “自定义”＝ OpenAI 兼容中转/自建服务，仅不发送额外推理参数。
       const AI_API_FORMATS = {
-        openai: {name: 'OpenAI 兼容', defaultEndpoint: ''},
-        anthropic: {name: 'Anthropic', defaultEndpoint: 'https://api.anthropic.com/v1/messages'},
-        ollama: {name: 'Ollama', defaultEndpoint: 'http://localhost:11434/api/chat'},
-        custom: {name: 'Custom', defaultEndpoint: ''}
+        openai: {
+          name: 'OpenAI 兼容（/v1/chat/completions 或 /chat/completions）',
+          nameEn: 'OpenAI-compatible (/v1/chat/completions or /chat/completions)',
+          defaultEndpoint: '',
+          endpointHintZh: '示例：https://api.openai.com/v1/chat/completions 或 https://api.deepseek.com/chat/completions',
+          endpointHintEn: 'Example: https://api.openai.com/v1/chat/completions or https://api.deepseek.com/chat/completions'
+        },
+        anthropic: {
+          name: 'Anthropic（/v1/messages）',
+          nameEn: 'Anthropic (/v1/messages)',
+          defaultEndpoint: 'https://api.anthropic.com/v1/messages',
+          endpointHintZh: '示例：https://api.anthropic.com/v1/messages',
+          endpointHintEn: 'Example: https://api.anthropic.com/v1/messages'
+        },
+        ollama: {
+          name: 'Ollama（/api/chat）',
+          nameEn: 'Ollama (/api/chat)',
+          defaultEndpoint: 'http://localhost:11434/api/chat',
+          endpointHintZh: '示例：http://localhost:11434/api/chat',
+          endpointHintEn: 'Example: http://localhost:11434/api/chat'
+        },
+        custom: {
+          name: '自定义（OpenAI 兼容，不发送额外参数）',
+          nameEn: 'Custom (OpenAI-compatible, no extra params)',
+          defaultEndpoint: '',
+          endpointHintZh: '示例：https://api.example.com/v1/chat/completions',
+          endpointHintEn: 'Example: https://api.example.com/v1/chat/completions'
+        }
+      };
+
+      // 服务商/格式名称按界面语言取用（预设厂商品牌名两种语言一致）
+      const aiProviderName = (key) => {
+        const p = AI_PROVIDERS[key] || {};
+        return (aiLang === 'zh' ? (p.nameZh || p.name) : (p.nameEn || p.name)) || key;
+      };
+      const aiApiFormatName = (format) => {
+        const f = AI_API_FORMATS[format] || {};
+        return (aiLang === 'zh' ? (f.nameZh || f.name) : (f.nameEn || f.name)) || format;
       };
 
       let aiConfigs = [];
@@ -2736,11 +3140,11 @@
           '<div class="ai-provider-logo" style="background:' + (p.logo || '#888') + ';">' +
             (AI_LOGO_SVG[cfg.provider] || aiEscape(p.logoText || '?')) + '</div>' +
           '<div class="setting-info">' +
-            '<div class="setting-label">' + aiEscape(cfg.name || modelLabel || p.name || aiS.unnamed) + '</div>' +
+            '<div class="setting-label">' + aiEscape(cfg.name || modelLabel || aiProviderName(cfg.provider) || aiS.unnamed) + '</div>' +
             '<div class="setting-desc">' + aiEscape(
               isFree
-                ? (p.name || 'Free') + ' · 1M ' + aiS.ctxSuffix
-                : (p.name || cfg.provider) + (modelLabel ? ' · ' + modelLabel : '')) +
+                ? aiProviderName(cfg.provider) + ' · 1M ' + aiS.ctxSuffix
+                : aiProviderName(cfg.provider) + (modelLabel ? ' · ' + modelLabel : '')) +
               (!isFree && !cfg.apiKey ? ' · ' + aiEscape(aiS.noKey) : '') + '</div>' +
           '</div>' +
           '<div class="setting-control">' +
@@ -2861,7 +3265,7 @@
             (draft.provider === k ? ' selected' : '') + '" data-provider="' + k + '">' +
             '<span class="provider-option-logo" style="background:' + (p.logo || '#888') + ';">' +
             (AI_LOGO_SVG[k] || aiEscape(p.logoText || '?')) + '</span>' +
-            '<span class="provider-option-name">' + aiEscape(p.name) + '</span>' +
+            '<span class="provider-option-name">' + aiEscape(aiProviderName(k)) + '</span>' +
             '</button>';
         }).join('');
 
@@ -2888,10 +3292,6 @@
           }).join('');
         };
 
-        const selectOptions = (map, current) => Object.keys(map).map((k) =>
-          '<option value="' + k + '"' + (current === k ? ' selected' : '') + '>' + aiEscape(map[k].name) + '</option>'
-        ).join('');
-
         const fieldRow = (rowId, label, inner, hint) =>
           '<div class="ai-field-row" id="' + rowId + '">' +
           '<label class="ai-field-label">' + aiEscape(label) + '</label>' +
@@ -2909,11 +3309,12 @@
           '<div class="model-option-list" id="aiModelListDialog">' + modelListHtml() + '</div></div>' +
           '<div class="form-group" id="aiEndpointGroup"><div class="form-group-label">' + aiEscape(aiS.groupEndpoint) + '</div>' +
           fieldRow('aiApiFormatRow', aiS.fieldApiFormat,
-            '<select id="aiApiFormat" class="settings-input">' + selectOptions(AI_API_FORMATS, draft.apiFormat) + '</select>') +
+            '<div id="aiApiFormat" data-custom-select></div>') +
           fieldRow('aiEndpointRow', aiS.fieldEndpoint,
-            '<input type="text" id="aiEndpoint" class="settings-input settings-input-mono" placeholder="https://api.example.com/v1/chat/completions" value="' + aiEscape(draft.customEndpoint) + '">') +
+            '<input type="text" id="aiEndpoint" class="settings-input settings-input-mono" placeholder="https://api.example.com/v1/chat/completions" value="' + aiEscape(draft.customEndpoint) + '">' +
+            '<div class="ai-field-hint" id="aiEndpointHint"></div>') +
           fieldRow('aiModelIdRow', aiS.fieldModelId,
-            '<input type="text" id="aiModelId" class="settings-input settings-input-mono" placeholder="gpt-4o" value="' + aiEscape(draft.customModelId) + '">',
+            '<input type="text" id="aiModelId" class="settings-input settings-input-mono" placeholder="gpt-6.1-sol" value="' + aiEscape(draft.customModelId) + '">',
             aiS.fieldModelIdHint) +
           fieldRow('aiCtxLimitRow', aiS.fieldContextLimit,
             '<input type="text" inputmode="numeric" id="aiCtxLimit" class="settings-input" placeholder="32000" value="' + aiEscape(String(draft.customContextLimit)) + '">',
@@ -2927,7 +3328,7 @@
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>' +
             '</button></div>', aiS.fieldApiKeyHint) +
           fieldRow('aiNameRow', aiS.fieldName,
-            '<input type="text" id="aiName" class="settings-input" placeholder="' + aiEscape((AI_PROVIDERS[draft.provider] || {}).name || '') + '" value="' + aiEscape(draft.name) + '">',
+            '<input type="text" id="aiName" class="settings-input" placeholder="' + aiEscape(aiProviderName(draft.provider)) + '" value="' + aiEscape(draft.name) + '">',
             aiS.fieldNameHint) +
           '</div>' +
           '</div>' +
@@ -2943,6 +3344,14 @@
 
         const $ = (sel) => panel.querySelector(sel);
         const fmtSel = $('#aiApiFormat');
+        const fmtSelect = new CustomSelect(fmtSel, {
+          block: true,
+          items: Object.keys(AI_API_FORMATS).map((format) => ({
+            value: format,
+            label: aiApiFormatName(format)
+          })),
+          value: draft.apiFormat
+        });
         const endpointIn = $('#aiEndpoint');
         const modelIdIn = $('#aiModelId');
         const keyIn = $('#aiApiKey');
@@ -2954,7 +3363,7 @@
           const custom = isCustomProvider();
           $('#aiModelGroup').style.display = custom ? 'none' : '';
           $('#aiEndpointGroup').style.display = custom ? '' : 'none';
-          nameIn.placeholder = (AI_PROVIDERS[draft.provider] || {}).name || '';
+          nameIn.placeholder = aiProviderName(draft.provider);
         }
         syncGroups();
 
@@ -2983,9 +3392,18 @@
           setTestResult('', '');
         });
 
+        // 接口地址输入框下方的示例 URL 跟随所选 API 格式变化
+        function syncEndpointHint () {
+          const hintEl = $('#aiEndpointHint');
+          if (!hintEl) return;
+          const f = AI_API_FORMATS[fmtSel.value] || {};
+          hintEl.textContent = aiLang === 'zh' ? (f.endpointHintZh || '') : (f.endpointHintEn || '');
+        }
+        syncEndpointHint();
         fmtSel.addEventListener('change', () => {
           const def = (AI_API_FORMATS[fmtSel.value] || {}).defaultEndpoint;
           if (def && !endpointIn.value.trim()) endpointIn.value = def;
+          syncEndpointHint();
         });
 
         $('#aiKeyToggle').addEventListener('click', function () {
@@ -3056,7 +3474,7 @@
           }
           const p = AI_PROVIDERS[draft.provider] || {};
           return {
-            name: nameIn.value.trim() || p.name || 'Model',
+            name: nameIn.value.trim() || aiProviderName(draft.provider) || 'Model',
             provider: draft.provider,
             model: custom ? 'custom' : draft.model,
             apiKey: key,
@@ -3069,6 +3487,7 @@
         }
 
         function close () {
+          fmtSelect.destroy();
           overlay.classList.remove('open');
           document.removeEventListener('keydown', onKey);
           setTimeout(() => {
@@ -3082,9 +3501,7 @@
           }
         }
         document.addEventListener('keydown', onKey);
-        overlay.addEventListener('click', (e) => {
-          if (e.target === overlay) close();
-        });
+        // 仅通过“取消”按钮或 Esc 关闭对话框；点击遮罩不关闭，避免误触丢失已填内容
         $('#aiCancelBtn').addEventListener('click', close);
 
         // 测试连接：经 tw-ai-proxy 转发（主进程无 CORS 限制），不可用时直连

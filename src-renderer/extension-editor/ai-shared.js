@@ -250,25 +250,34 @@
   };
 
   // 与 NeoWarp AI 助手（ai-assistant.html）一致的完整服务商/模型表
+  // 模型信息更新于 2026-10，来源：各厂商官方模型/定价文档；已停售/退役的
+  // 旧模型不再列出（DeepSeek v4-flash、Qwen3.7-max/Qwen3.6、MiMo V2.5 等）。
   var PROVIDERS = {
     openai: {
       name: 'OpenAI',
       endpoint: 'https://api.openai.com/v1/chat/completions',
       models: [
-        {id: 'gpt-5.6', name: 'GPT-5.6'},
+        {id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol'},
+        {id: 'gpt-6-sol', name: 'GPT-6 Sol'},
+        {id: 'gpt-6-luna', name: 'GPT-6 Luna'},
+        {id: 'gpt-6-astra', name: 'GPT-6 Astra'},
+        {id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol'},
+        {id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra'},
+        {id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna'},
         {id: 'gpt-5.5', name: 'GPT-5.5'},
         {id: 'gpt-5.4', name: 'GPT-5.4'},
         {id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini'},
+        {id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano'},
         {id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex'}
       ],
-      defaultModel: 'gpt-5.4'
+      defaultModel: 'gpt-6.1-sol'
     },
     deepseek: {
       name: 'DeepSeek',
       endpoint: 'https://api.deepseek.com/chat/completions',
       models: [
         {id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro'},
-        {id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash'}
+        {id: 'deepseek-flash', name: 'DeepSeek Flash'}
       ],
       defaultModel: 'deepseek-v4-pro'
     },
@@ -278,6 +287,7 @@
       models: [
         {id: 'glm-5.3', name: 'GLM-5.3'},
         {id: 'glm-5.3-flash', name: 'GLM-5.3 Flash'},
+        {id: 'glm-5.3-flashx', name: 'GLM-5.3 FlashX'},
         {id: 'glm-5.2', name: 'GLM-5.2'}
       ],
       defaultModel: 'glm-5.3'
@@ -296,11 +306,11 @@
       name: 'Xiaomi MiMo',
       endpoint: 'https://api.xiaomimimo.com/v1/chat/completions',
       models: [
-        {id: 'mimo-v2.5-pro', name: 'MiMo V2.5 Pro'},
-        {id: 'mimo-v2.5-pro-ultraspeed', name: 'MiMo V2.5 Pro UltraSpeed'},
-        {id: 'mimo-v2.5', name: 'MiMo V2.5'}
+        {id: 'mimo-v2.6-pro', name: 'MiMo V2.6 Pro'},
+        {id: 'mimo-v2.6-pro-ultraspeed', name: 'MiMo V2.6 Pro UltraSpeed'},
+        {id: 'mimo-v2.6-flash', name: 'MiMo V2.6 Flash'}
       ],
-      defaultModel: 'mimo-v2.5-pro'
+      defaultModel: 'mimo-v2.6-pro'
     },
     huaweipangu: {
       name: 'Huawei Pangu',
@@ -315,10 +325,10 @@
       name: 'Qwen',
       endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
       models: [
-        {id: 'qwen3.8-max-preview', name: 'Qwen3.8 Max Preview'},
-        {id: 'qwen3.7-max', name: 'Qwen3.7 Max'},
+        {id: 'qwen3.8-max', name: 'Qwen3.8 Max'},
+        {id: 'qwen3.8-flash', name: 'Qwen3.8 Flash'},
         {id: 'qwen3.7-plus', name: 'Qwen3.7 Plus'},
-        {id: 'qwen3.6-flash', name: 'Qwen3.6 Flash'}
+        {id: 'qwen3.7-flash', name: 'Qwen3.7 Flash'}
       ],
       defaultModel: 'qwen3.7-plus'
     },
@@ -338,6 +348,8 @@
     },
     custom: {
       name: 'Custom',
+      nameEn: 'Custom',
+      nameZh: '自定义',
       endpoint: '',
       isCustom: true,
       models: [],
@@ -481,7 +493,9 @@
       var modelLabel = provider.isCustom
         ? (cfg.customModelId || cfg.model)
         : (((provider.models || []).find(function (m) { return m.id === cfg.model; }) || {}).name || cfg.model);
-      return cfg.name || modelLabel || provider.name || 'Model';
+      // “自定义”服务商名称按界面语言显示（预设厂商品牌名两种语言一致）
+      var providerLabel = (lang === 'zh' ? (provider.nameZh || provider.name) : (provider.nameEn || provider.name)) || 'Model';
+      return cfg.name || modelLabel || providerLabel;
     }
 
     // ── 免费模型活动 ──

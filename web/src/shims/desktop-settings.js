@@ -162,7 +162,12 @@
     setSpellchecker: function (value) { storage.setSetting('spellchecker', value); return Promise.resolve(null); },
     setExitFullscreenOnEscape: function (value) { storage.setSetting('exitFullscreenOnEscape', value); return Promise.resolve(null); },
     setRichPresence: function (value) { storage.setSetting('richPresence', value); return Promise.resolve(null); },
-    setTopBarDeviceStats: function (value) { storage.setSetting('topBarDeviceStats', value); return Promise.resolve(null); },
+    setTopBarDeviceStats: function (value) {
+      storage.setSetting('topBarDeviceStats', value === true);
+      // 广播给其它打开的窗口，菜单栏即时显隐（与 toolbarHeight 一致）
+      util.broadcast('topBarDeviceStats', { enabled: value === true });
+      return Promise.resolve(null);
+    },
     setShowRecentProjects: function (value) { storage.setSetting('showRecentProjects', value); return Promise.resolve(null); },
 
     openUserData: function () {
