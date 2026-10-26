@@ -520,6 +520,84 @@ const stopSoloStream = () => {
   }
 };
 
+/* AI 工具的「工程就绪」门：SOLO 用隐藏编辑器作工程宿主，create_project/
+   adoptProject 刚挂上工程那几秒里，页面虽已挂载、VM 却还在异步加载（实测
+   3~8 秒）。这期间工具要么"立即成功但读到空工程"（AI 误判新工程为空），
+   要么干等主进程 30 秒超时（AI 读不到新项目）。因此 VM 类工具执行前先等
+   runtime 出现原始 target：deserializeProject 一开始就清空 targets，
+   全部装完才发 PROJECT_LOADED，所以"有 isOriginal 的 target"⇔ 已加载完。 */
+const AI_TOOLS_NOT_REQUIRING_PROJECT = [
+  // 这些工具不读工程数据（宿主信息 / AI 侧快照登记 / 联网搜索），不用等加载
+  'getSystemTime',
+  'getSystemInfo',
+  'searchExtensions',
+  'getSpriteLibrary',
+  'hasProjectSnapshot',
+  'dropProjectSnapshot'
+];
+
+/**
+ * 等 VM 把工程真正加载完。返回 null 表示已就绪、调用方可继续执行工具；
+ * 返回对象则代表放弃等待（超时），调用方应把它作为工具结果直接回给主进程，
+ * 给 AI 一个明确的"工程还没加载好"信号而不是空数据或哑超时。
+ * @param {VM} vm
+ * @param {number} timeoutMs 最长等待毫秒数
+ * @returns {Promise<{success: boolean, error: string}|null>}
+ */
+const waitProjectReadyForTools = (vm, timeoutMs) => new Promise(resolve => {
+  const isReady = () => {
+    try {
+      const targets = vm.runtime && vm.runtime.targets;
+      return Array.isArray(targets) && targets.some(t => t && t.isOriginal);
+    } catch (e) {
+      // 状态读不出来就不拦工具，保持原有行为
+      return true;
+    }
+  };
+  if (isReady()) {
+    resolve(null);
+    return;
+  }
+  let finished = false;
+  let pollTimer = null;
+  let loadedHandler = null;
+  const finish = result => {
+    if (finished) return;
+    finished = true;
+    if (pollTimer) clearTimeout(pollTimer);
+    try {
+      if (loadedHandler) vm.runtime.off('PROJECT_LOADED', loadedHandler);
+    } catch (e) {
+      // ignore - 监听器解绑失败不影响结果
+    }
+    resolve(result);
+  };
+  // PROJECT_LOADED 恰在 targets 安装完时发出，事件到达比轮询更及时
+  try {
+    loadedHandler = () => finish(null);
+    vm.runtime.on('PROJECT_LOADED', loadedHandler);
+  } catch (e) {
+    loadedHandler = null; // 挂不上监听就纯靠轮询
+  }
+  const deadline = Date.now() + timeoutMs;
+  const poll = () => {
+    if (finished) return;
+    if (isReady()) {
+      finish(null);
+      return;
+    }
+    if (Date.now() >= deadline) {
+      finish({
+        success: false,
+        error: 'Project is still loading (or failed to load). Please wait a few seconds and retry.'
+      });
+      return;
+    }
+    pollTimer = setTimeout(poll, 200);
+  };
+  poll();
+});
+
 /* SOLO 舞台控制：绿旗 = 重头运行；暂停/继续 = 直接停/启 VM 的帧循环
    （scratch-vm 的 FrameLoop，stop 后所有线程原样冻结，start 后接着跑）。 */
 const handleSoloStageControl = (vm, action) => {
@@ -2632,6 +2710,18 @@ const DesktopHOC = function (WrappedComponent) {
           });
         }
         const vm = this.props.vm;
+        // 工程还没加载完时不执行 VM 类工具：等就绪或给明确报错（见 helper 注释）。
+        // 慢工具（整包快照）主进程给了 180s 预算，等待预算也放宽到 170s。
+        if (AI_TOOLS_NOT_REQUIRING_PROJECT.indexOf(toolName) === -1) {
+          const waitBudgetMs = (toolName === 'captureProjectSnapshot' || toolName === 'restoreProjectSnapshot')
+            ? 170000
+            : 25000;
+          const gateResult = await waitProjectReadyForTools(vm, waitBudgetMs);
+          if (gateResult) {
+            EditorPreload.sendAIToolResponse({ requestId, result: gateResult });
+            return;
+          }
+        }
         let result = { success: false, error: 'Unknown tool' };
         try {
           switch (toolName) {
@@ -5144,6 +5234,13 @@ const DesktopHOC = function (WrappedComponent) {
         this.props.onHasInitialProject(false, this.props.loadingState);
         this.props.onRequestNewProject();
       });
+
+      // AI 相关监听（onAIToolCall / onRequestProjectJSON / onRequestSpriteLibrary
+      // / onRequestTheme 等）已在上面全部注册：通知主进程可以安全派发工具调用。
+      // Web 端 shim 没有这个方法，按旧行为处理即可。
+      if (typeof EditorPreload.sendAIListenersReady === 'function') {
+        EditorPreload.sendAIListenersReady();
+      }
     }
     updateTopBarDeviceStats () {
       const enabled = EditorPreload.getTopBarDeviceStats ? EditorPreload.getTopBarDeviceStats() : false;

@@ -474,10 +474,20 @@ class SoloWindow extends AIAssistantWindow {
         }
       });
       // 编辑器页面就绪（did-finish-load）后开始转发舞台帧；
-      // 太早发指令页面还没挂监听，会白等一轮
+      // 太早发指令页面还没挂监听，会白等一轮。
+      // 兜底：个别机器上页面挂监听可能晚于 did-finish-load，帧流建立不起来
+      // 时侧边栏预览/舞台窗口就一直空白。编辑器侧 startSoloStream 幂等，
+      // 这里延迟重发几次开启指令补上；换工程或关闭编辑器后由身份检查作废。
       editor.window.webContents.once('did-finish-load', () => {
         this.startStageStream();
       });
+      for (const resendDelay of [3000, 8000, 15000]) {
+        setTimeout(() => {
+          if (this.editorWindow === editor && !editor.window.isDestroyed()) {
+            this.startStageStream();
+          }
+        }, resendDelay);
+      }
     } else {
       // js 工程没有后台 VM，停掉可能残留的舞台帧流并关掉舞台窗口
       this.stopStageStream();

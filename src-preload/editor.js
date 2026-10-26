@@ -95,6 +95,12 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   sendAIToolResponse: (data) => {
     ipcRenderer.send('ai-tool-response', data);
   },
+  // AI 相关 ipc 监听全部挂好后的就绪信号：SOLO 新挂工程会新开一个隐藏编辑器
+  // 窗口，主进程等这个信号到了才派发 ai-tool-call，避免调用发进还没挂监听
+  // 的页面里石沉大海（AI 侧表现为整轮 30 秒超时，"AI 读不到新工程"）
+  sendAIListenersReady: () => {
+    ipcRenderer.send('editor-ai-listeners-ready');
+  },
   // 扩展编辑器「添加到项目」：主进程转来的扩展代码，由当前项目的 VM 加载
   onAddExtension: (callback) => {
     ipcRenderer.on('extension-add-to-project', (event, data) => {

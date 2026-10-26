@@ -3,7 +3,7 @@ const path = require('path');
 const nodeURL = require('url');
 const zlib = require('zlib');
 const nodeCrypto = require('crypto');
-const {app, dialog, nativeTheme} = require('electron');
+const {app, dialog, ipcMain, nativeTheme} = require('electron');
 const os = require('os');
 const ProjectRunningWindow = require('./project-running-window');
 const AddonsWindow = require('./addons');
@@ -372,6 +372,26 @@ class EditorWindow extends ProjectRunningWindow {
     // SOLO 的后台工程宿主（hidden=true）：不显示窗口，不应出现在
     // 扩展编辑器「添加到项目」的项目列表里
     this.isHiddenHost = !!(options && options.hidden);
+
+    // AI 工具监听就绪信号：渲染层挂好全部 AI 相关监听（ai-tool-call、
+    // request-project-json 等）后发来。SOLO 换工程会重开一个隐藏编辑器窗口，
+    // 页面加载要几秒，期间发 ai-tool-call 无人接收、石沉大海，AI 侧表现为
+    // 整轮 30 秒超时（"AI 读不到新工程"）。主进程在信号到达前暂存等待。
+    this.aiListenersReady = false;
+    this.aiListenersReadyPromise = new Promise(resolve => {
+      this.resolveAIListenersReady = resolve;
+    });
+    const markAIListenersReady = (event) => {
+      if (event.sender === this.window.webContents) {
+        this.aiListenersReady = true;
+        this.resolveAIListenersReady();
+        ipcMain.removeListener('editor-ai-listeners-ready', markAIListenersReady);
+      }
+    };
+    ipcMain.on('editor-ai-listeners-ready', markAIListenersReady);
+    this.window.on('closed', () => {
+      ipcMain.removeListener('editor-ai-listeners-ready', markAIListenersReady);
+    });
 
     // 通知图片编辑器等订阅者：项目列表发生了变化
     editorWindowEvents.emit('changed');

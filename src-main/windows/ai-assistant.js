@@ -376,7 +376,19 @@ class AIAssistantWindow extends AbstractWindow {
     });
     this.window.setTitle(`AI Assistant`);
 
-    this.ipc.handle('get-project-code', () => {
+    this.ipc.handle('get-project-code', async () => {
+      // 编辑器页面还没挂好监听时先等就绪信号，再走原有 5 秒取码逻辑；
+      // 否则请求落进未挂监听的页面里，AI 拿到 null 当成"工程是空的"
+      if (this.editorWindow && !this.editorWindow.window.isDestroyed() &&
+          this.editorWindow.aiListenersReady !== true) {
+        await Promise.race([
+          this.editorWindow.aiListenersReadyPromise,
+          new Promise(resolve => setTimeout(resolve, 25000))
+        ]);
+        if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
+          return null;
+        }
+      }
       return new Promise((resolve) => {
         if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
           resolve(null);
@@ -569,15 +581,29 @@ class AIAssistantWindow extends AbstractWindow {
    * @param {object} params
    * @returns {Promise<object>}
    */
-  handleAIToolCall (toolName, params) {
+  async handleAIToolCall (toolName, params) {
     if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
-      return Promise.resolve({ success: false, error: 'Editor window not available' });
+      return { success: false, error: 'Editor window not available' };
     }
+    // 隐藏编辑器刚创建时页面可能还没挂好 AI 监听（就绪信号未到）。先等它就绪
+    // 再派发，否则调用石沉大海，AI 侧只会看到 30 秒超时（"AI 读不到新工程"）。
+    // 信号迟迟不来（异常/旧版本页面）也按旧行为继续派发，宁多等不误事。
     // 打包/恢复整个工程要压缩全部素材，大工程可能远超普通工具调用的 30 秒
     const SLOW_TOOLS = {
       captureProjectSnapshot: 180000,
       restoreProjectSnapshot: 180000
     };
+    if (this.editorWindow.aiListenersReady !== true) {
+      const settleBudget = SLOW_TOOLS[toolName] ? 170000 : 25000;
+      await Promise.race([
+        this.editorWindow.aiListenersReadyPromise,
+        new Promise(resolve => setTimeout(resolve, settleBudget))
+      ]);
+      // 等待期间可能被换工程（旧编辑器销毁）或窗口关闭
+      if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
+        return { success: false, error: 'Editor window not available' };
+      }
+    }
     return new Promise((resolve) => {
       // 随机后缀：模型一轮里并行发多个工具调用时（Promise.all 同时派发），
       // 纯时间戳的 requestId 在同一毫秒会撞车，结果互相串台
