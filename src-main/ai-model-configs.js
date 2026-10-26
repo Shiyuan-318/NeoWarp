@@ -17,6 +17,28 @@ const CONFIG_FIELDS = [
   'customEndpoint', 'customModelId', 'customContextLimit', 'thinkingLevel'
 ];
 
+/**
+ * 规范化自定义端点：兼容用户填 base URL（如 https://api.siliconflow.cn/v1）
+ * 或完整端点两种习惯。
+ * - 补协议（https://）
+ * - 末尾去斜杠
+ * - 不以 /chat/completions 结尾时自动补上（只补 /chat/completions，绝不补 /v1；
+ *   不同厂商路径前缀不同，自动补 /v1 会弄坏 DeepSeek/Groq 这类端点）
+ * Anthropic（…/v1/messages）与 Ollama（…/api/chat）样式的完整端点已带明确的
+ * 请求路径，原样返回，避免在其后追加聊天路径。
+ * @param {string} url
+ * @returns {string}
+ */
+function normalizeCustomEndpoint (url) {
+  let u = String(url || '').trim();
+  if (!u) return u;
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  u = u.replace(/\/+$/, '');
+  if (/\/(v1\/messages|api\/chat)$/i.test(u)) return u;
+  if (!/\/chat\/completions$/i.test(u)) u += '/chat/completions';
+  return u;
+}
+
 // ── 官方免费模型 ─────────────────────────────────────────────
 // 通过 NeoWarp 中转站免费提供的模型（OpenAI 兼容）。免费配置由主进程在
 // 读取时动态注入、保存时剥离：API Key 只存在于本文件，绝不写入
@@ -120,6 +142,8 @@ function normalizeConfig (raw, index) {
     cfg.apiFormat = 'openai';
   }
   if (typeof cfg.customEndpoint !== 'string') cfg.customEndpoint = '';
+  // 保存入口单点收口：base URL 与完整端点两种填法都规范化成完整端点落盘
+  cfg.customEndpoint = normalizeCustomEndpoint(cfg.customEndpoint);
   if (typeof cfg.customModelId !== 'string') cfg.customModelId = '';
   const ctx = Number(cfg.customContextLimit);
   cfg.customContextLimit = Number.isFinite(ctx) && ctx >= 1000 ? Math.floor(ctx) : 32000;
@@ -135,6 +159,7 @@ function migrateLegacyAiProviders () {
   const legacy = settings.aiProviders || {};
   if (!legacy.apiKey && !legacy.customEndpoint) return null;
   const isCustom = legacy.provider === 'custom';
+  // 构建即经 normalizeConfig 收口，旧数据里的 customEndpoint 也会被一并规范化
   const cfg = normalizeConfig({
     id: 'cfg_' + Date.now(),
     name: '',
@@ -158,7 +183,12 @@ function migrateLegacyAiProviders () {
  * @returns {{configs: Array<object>, activeId: string|null}}
  */
 function getModelConfigs () {
-  let configs = settings.aiModelConfigs;
+  // load 路径同样跑一遍规范化（旧数据兼容）：存量用户保存过的 base URL
+  // 不改配置也能在测试连接/对话里自动取到补全后的端点，
+  // 下次任意一侧保存时会随 normalizeConfig 落盘。
+  let configs = (Array.isArray(settings.aiModelConfigs) ? settings.aiModelConfigs : [])
+    .map(normalizeConfig)
+    .filter(Boolean);
   let activeId = settings.activeAiModelConfigId;
   if (!configs.length) {
     const migrated = migrateLegacyAiProviders();

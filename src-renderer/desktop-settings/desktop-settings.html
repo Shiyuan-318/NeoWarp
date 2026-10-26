@@ -2758,6 +2758,7 @@
           groupCredentials: '凭据',
           fieldApiFormat: 'API 格式',
           fieldEndpoint: '接口地址',
+          endpointAutoHint: '填 base URL 或完整端点均可，会自动补全 /chat/completions',
           fieldModelId: '模型 ID',
           fieldModelIdHint: '接口实际接受的模型名称，例如 gpt-6.1-sol',
           fieldContextLimit: '上下文上限（tokens）',
@@ -2779,7 +2780,7 @@
           testOk: '连接成功',
           testFail: '连接失败',
           errEndpointRequired: '请填写接口地址',
-          errEndpointInvalid: '地址需要以 http:// 或 https:// 开头',
+          errEndpointInvalid: '接口地址不能包含空格',
           errModelIdRequired: '请填写模型 ID',
           errContextLimit: '上下文上限至少为 1000',
           errKeyRequired: '请填写 API Key',
@@ -2813,6 +2814,7 @@
           groupCredentials: 'Credentials',
           fieldApiFormat: 'API format',
           fieldEndpoint: 'Endpoint',
+          endpointAutoHint: 'Accepts a base URL or a full endpoint URL — /chat/completions is appended automatically',
           fieldModelId: 'Model ID',
           fieldModelIdHint: 'The model name expected by the endpoint, e.g. gpt-6.1-sol',
           fieldContextLimit: 'Context limit (tokens)',
@@ -2834,7 +2836,7 @@
           testOk: 'Connection OK',
           testFail: 'Connection failed',
           errEndpointRequired: 'Endpoint is required',
-          errEndpointInvalid: 'Endpoint must start with http:// or https://',
+          errEndpointInvalid: 'Endpoint must not contain spaces',
           errModelIdRequired: 'Model ID is required',
           errContextLimit: 'Context limit must be at least 1000',
           errKeyRequired: 'API Key is required',
@@ -3049,6 +3051,26 @@
       const aiApiFormatName = (format) => {
         const f = AI_API_FORMATS[format] || {};
         return (aiLang === 'zh' ? (f.nameZh || f.name) : (f.nameEn || f.name)) || format;
+      };
+
+      /**
+       * 规范化自定义端点：兼容用户填 base URL（如 https://api.siliconflow.cn/v1）
+       * 或完整端点两种习惯。
+       * - 补协议（https://）
+       * - 末尾去斜杠
+       * - 不以 /chat/completions 结尾时自动补上（只补 /chat/completions，绝不补 /v1）
+       * Anthropic（…/v1/messages）与 Ollama（…/api/chat）样式的完整端点已带明确的
+       * 请求路径，原样返回，避免在其后追加聊天路径。
+       * 与主进程 ai-model-configs.js 保持同一实现（保存时规范化，这里测试/落库前双保险）
+       */
+      const normalizeCustomEndpoint = (url) => {
+        let u = String(url || '').trim();
+        if (!u) return u;
+        if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+        u = u.replace(/\/+$/, '');
+        if (/\/(v1\/messages|api\/chat)$/i.test(u)) return u;
+        if (!/\/chat\/completions$/i.test(u)) u += '/chat/completions';
+        return u;
       };
 
       let aiConfigs = [];
@@ -3311,7 +3333,7 @@
           fieldRow('aiApiFormatRow', aiS.fieldApiFormat,
             '<div id="aiApiFormat" data-custom-select></div>') +
           fieldRow('aiEndpointRow', aiS.fieldEndpoint,
-            '<input type="text" id="aiEndpoint" class="settings-input settings-input-mono" placeholder="https://api.example.com/v1/chat/completions" value="' + aiEscape(draft.customEndpoint) + '">' +
+            '<input type="text" id="aiEndpoint" class="settings-input settings-input-mono" placeholder="https://api.example.com/v1" value="' + aiEscape(draft.customEndpoint) + '">' +
             '<div class="ai-field-hint" id="aiEndpointHint"></div>') +
           fieldRow('aiModelIdRow', aiS.fieldModelId,
             '<input type="text" id="aiModelId" class="settings-input settings-input-mono" placeholder="gpt-6.1-sol" value="' + aiEscape(draft.customModelId) + '">',
@@ -3392,12 +3414,18 @@
           setTestResult('', '');
         });
 
-        // 接口地址输入框下方的示例 URL 跟随所选 API 格式变化
+        // 接口地址输入框下方的示例 URL 跟随所选 API 格式变化；
+        // OpenAI 兼容格式额外提示支持 base URL 自动补全，Anthropic/Ollama
+        // 需要自己的请求路径，不会触发补全
         function syncEndpointHint () {
           const hintEl = $('#aiEndpointHint');
           if (!hintEl) return;
           const f = AI_API_FORMATS[fmtSel.value] || {};
-          hintEl.textContent = aiLang === 'zh' ? (f.endpointHintZh || '') : (f.endpointHintEn || '');
+          const parts = [];
+          const fmtHint = aiLang === 'zh' ? (f.endpointHintZh || '') : (f.endpointHintEn || '');
+          if (fmtHint) parts.push(fmtHint);
+          if (fmtSel.value === 'openai' || fmtSel.value === 'custom') parts.push(aiS.endpointAutoHint);
+          hintEl.textContent = parts.join(aiLang === 'zh' ? '；' : ' · ');
         }
         syncEndpointHint();
         fmtSel.addEventListener('change', () => {
@@ -3450,7 +3478,8 @@
             if (!endpoint) {
               setError('#aiEndpointRow', aiS.errEndpointRequired);
               ok = false;
-            } else if (!/^https?:\/\//i.test(endpoint)) {
+            } else if (/\s/.test(endpoint)) {
+              // 规范化会自动补协议并补全 /chat/completions，这里只挡明显非法的输入
               setError('#aiEndpointRow', aiS.errEndpointInvalid);
               ok = false;
             }
@@ -3479,7 +3508,7 @@
             model: custom ? 'custom' : draft.model,
             apiKey: key,
             apiFormat: custom ? fmtSel.value : 'openai',
-            customEndpoint: custom ? endpoint : '',
+            customEndpoint: custom ? normalizeCustomEndpoint(endpoint) : '',
             customModelId: custom ? modelId : '',
             customContextLimit: custom ? ctx : 32000,
             thinkingLevel: (cfg && cfg.thinkingLevel) || 'medium'
@@ -3504,14 +3533,23 @@
         // 仅通过“取消”按钮或 Esc 关闭对话框；点击遮罩不关闭，避免误触丢失已填内容
         $('#aiCancelBtn').addEventListener('click', close);
 
-        // 测试连接：经 tw-ai-proxy 转发（主进程无 CORS 限制），不可用时直连
+        // 测试连接：经 tw-ai-proxy 转发（主进程无 CORS 限制），不可用时直连。
+        // Authorization 等请求头必须编码进 &h= 传给转发层（与 ai-assistant.html
+        // 的 buildAiProxyUrl 同一套编码），否则主进程只会转发一个无鉴权的裸请求
         let aiProxyBroken = false;
-        const buildProxyUrl = (endpoint) => 'tw-ai-proxy://request/?u=' + encodeURIComponent(endpoint);
+        const buildProxyUrl = (endpoint, headers) => {
+          let url = 'tw-ai-proxy://request/?u=' + encodeURIComponent(endpoint);
+          if (headers && Object.keys(headers).length) {
+            const json = JSON.stringify(headers);
+            url += '&h=' + encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
+          }
+          return url;
+        };
         $('#aiTestBtn').addEventListener('click', function () {
           const data = collect();
           if (!data) return;
           const p = AI_PROVIDERS[data.provider] || {};
-          const endpoint = p.isCustom ? (data.customEndpoint || p.endpoint) : p.endpoint;
+          const endpoint = p.isCustom ? normalizeCustomEndpoint(data.customEndpoint || p.endpoint) : p.endpoint;
           if (!endpoint) return;
           const modelId = p.isCustom ? data.customModelId : data.model;
           const btn = this;
@@ -3519,19 +3557,19 @@
           setTestResult('busy', aiS.testing);
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), 15000);
-          const doFetch = () => aiProxyBroken
-            ? fetch(endpoint, options)
-            : fetch(buildProxyUrl(endpoint), options).catch((err) => {
-              if (err && err.name === 'AbortError') throw err;
-              aiProxyBroken = true;
-              return fetch(endpoint, options);
-            });
           const options = {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + data.apiKey},
             body: JSON.stringify({model: modelId, messages: [{role: 'user', content: 'ping'}], max_tokens: 1, stream: false}),
             signal: controller.signal
           };
+          const doFetch = () => aiProxyBroken
+            ? fetch(endpoint, options)
+            : fetch(buildProxyUrl(endpoint, options.headers), options).catch((err) => {
+              if (err && err.name === 'AbortError') throw err;
+              aiProxyBroken = true;
+              return fetch(endpoint, options);
+            });
           doFetch().then((resp) => {
             clearTimeout(timer);
             if (resp.ok) {

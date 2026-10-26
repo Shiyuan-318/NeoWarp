@@ -8350,6 +8350,21 @@
     // （自建/中转端点普遍不返回 Access-Control-Allow-Origin）。
     // 主进程注册了 tw-ai-proxy 协议，在主进程侧转发请求（无 CORS 限制），
     // 目标地址与请求头编码在查询参数里，SSE 流式响应原样透传。
+
+    // 自定义端点规范化：兼容 base URL（如 https://api.siliconflow.cn/v1）与完整
+    // 端点两种填法（设置侧保存时已规范化，这里请求前双保险）。
+    // 只补 /chat/completions，绝不补 /v1；Anthropic（…/v1/messages）与
+    // Ollama（…/api/chat）样式的完整端点原样返回。
+    function normalizeCustomEndpoint(url) {
+        var u = String(url || '').trim();
+        if (!u) return u;
+        if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+        u = u.replace(/\/+$/, '');
+        if (/\/(v1\/messages|api\/chat)$/i.test(u)) return u;
+        if (!/\/chat\/completions$/i.test(u)) u += '/chat/completions';
+        return u;
+    }
+
     function buildAiProxyUrl(endpoint, headers) {
         var url = 'tw-ai-proxy://request/?u=' + encodeURIComponent(endpoint);
         if (headers && Object.keys(headers).length) {
@@ -10220,8 +10235,7 @@
 
     function doApiCall(messages, callback) {
         var provider = PROVIDERS[currentConfig.provider];
-        var endpoint;
-        endpoint = provider.isCustom ? (currentConfig.customEndpoint || provider.endpoint) : provider.endpoint;
+        var endpoint = provider.isCustom ? normalizeCustomEndpoint(currentConfig.customEndpoint || provider.endpoint) : provider.endpoint;
         var modelInfo = getModelInfo();
 
         var body = { model: getEffectiveModelId(), messages: messages, stream: true, tools: getActiveTools(), tool_choice: 'auto' };
@@ -10390,7 +10404,7 @@
         try {
             var provider = PROVIDERS[currentConfig.provider];
             if (!provider) return;
-            var endpoint = provider.isCustom ? (currentConfig.customEndpoint || provider.endpoint) : provider.endpoint;
+            var endpoint = provider.isCustom ? normalizeCustomEndpoint(currentConfig.customEndpoint || provider.endpoint) : provider.endpoint;
             var titleMessages = [
                 { role: 'system', content: '根据用户的消息生成一个简短的对话标题，不超过12个字，直接返回标题文本，不要引号不要解释。' },
                 { role: 'user', content: String(firstMessage || '').slice(0, 500) }

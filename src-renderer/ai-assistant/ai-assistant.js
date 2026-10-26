@@ -124,6 +124,23 @@
   var abortController = null;
   var projectCodeCache = null;
 
+  /**
+   * 规范化自定义端点：兼容用户填 base URL 或完整端点两种习惯。
+   * - 补协议（https://）；末尾去斜杠
+   * - 不以 /chat/completions 结尾时自动补上（只补 /chat/completions，绝不补 /v1）
+   * Anthropic（…/v1/messages）与 Ollama（…/api/chat）样式的完整端点原样返回。
+   * 与主进程 ai-model-configs.js 保持同一实现（设置侧保存时规范化，这里双保险）
+   */
+  function normalizeCustomEndpoint (url) {
+    var u = String(url || '').trim();
+    if (!u) return u;
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    u = u.replace(/\/+$/, '');
+    if (/\/(v1\/messages|api\/chat)$/i.test(u)) return u;
+    if (!/\/chat\/completions$/i.test(u)) u += '/chat/completions';
+    return u;
+  }
+
   function init () {
     loadConfig();
     updateModelDisplay();
@@ -284,7 +301,7 @@
     var apiKey = apiKeyInput.value.trim();
     if (!apiKey) { showToast('Please enter API Key', 'error'); apiKeyInput.focus(); return; }
     currentConfig.apiKey = apiKey;
-    currentConfig.customEndpoint = customEndpointInput.value.trim();
+    currentConfig.customEndpoint = normalizeCustomEndpoint(customEndpointInput.value);
     saveConfig();
     updateModelDisplay();
     updateSettingDot();
@@ -1380,7 +1397,7 @@
     showTypingIndicator();
 
     var provider = PROVIDERS[currentConfig.provider];
-    var endpoint = provider.isCustom ? (currentConfig.customEndpoint || provider.endpoint) : provider.endpoint;
+    var endpoint = provider.isCustom ? normalizeCustomEndpoint(currentConfig.customEndpoint || provider.endpoint) : provider.endpoint;
     var modelInfo = getModelInfo();
 
     fetchProjectCode().then(function() {
