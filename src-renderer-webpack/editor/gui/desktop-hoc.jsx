@@ -2265,15 +2265,11 @@ const DesktopHOC = function (WrappedComponent) {
           const newStageBackgroundImage = EditorPreload.getStageAreaBackgroundImage();
           this.applyStageAreaBackground(newStageBackgroundImage);
         }
-        this.updateTopBarDeviceStats();
       });
 
-      // NeoWarp: Top bar device stats display
-      this._topBarStatsElement = null;
-      this._topBarStatsInterval = null;
-      this.updateTopBarDeviceStats();
-
       // NeoWarp: Task Manager - per-sprite stats collection
+      // (顶栏 CPU/内存显示由菜单栏内统一实现，见 scratch-gui menu-bar.jsx，
+      // 这里不再额外创建 fixed 覆盖层，避免重复)
       // Must be registered before removeAllAIListeners to avoid being cleared
       EditorPreload.onRequestSpriteStats((data) => {
         try {
@@ -5242,41 +5238,6 @@ const DesktopHOC = function (WrappedComponent) {
         EditorPreload.sendAIListenersReady();
       }
     }
-    updateTopBarDeviceStats () {
-      const enabled = EditorPreload.getTopBarDeviceStats ? EditorPreload.getTopBarDeviceStats() : false;
-      if (enabled) {
-        if (!this._topBarStatsElement) {
-          this._topBarStatsElement = document.createElement('div');
-          this._topBarStatsElement.style.cssText = 'position:fixed;top:4px;right:12px;z-index:99999;display:flex;gap:8px;align-items:center;font-size:11px;font-family:monospace;pointer-events:none;background:rgba(0,0,0,0.45);color:#fff;padding:2px 8px;border-radius:4px;backdrop-filter:blur(4px);';
-          this._topBarStatsElement.innerHTML = '<span class="tw-cpu-stat">CPU: --</span><span class="tw-mem-stat">RAM: --</span>';
-          document.body.appendChild(this._topBarStatsElement);
-          this._topBarStatsInterval = setInterval(() => {
-            if (!this._topBarStatsElement) return;
-            EditorPreload.getSystemStats().then(stats => {
-              if (!this._topBarStatsElement) return;
-              const cpuEl = this._topBarStatsElement.querySelector('.tw-cpu-stat');
-              const memEl = this._topBarStatsElement.querySelector('.tw-mem-stat');
-              if (cpuEl) cpuEl.textContent = 'CPU: ' + stats.cpuPercent + '%';
-              if (memEl) {
-                const memUsed = Math.round(stats.usedMemory / 1024 / 1024);
-                const memTotal = Math.round(stats.totalMemory / 1024 / 1024);
-                const memPercent = Math.round(stats.usedMemory / stats.totalMemory * 100);
-                memEl.textContent = 'RAM: ' + memPercent + '% (' + memUsed + '/' + memTotal + 'MB)';
-              }
-            }).catch(() => {});
-          }, 2000);
-        }
-      } else {
-        if (this._topBarStatsElement) {
-          this._topBarStatsElement.remove();
-          this._topBarStatsElement = null;
-        }
-        if (this._topBarStatsInterval) {
-          clearInterval(this._topBarStatsInterval);
-          this._topBarStatsInterval = null;
-        }
-      }
-    }
     componentDidUpdate (prevProps, prevState) {
       if (this.props.projectChanged !== prevProps.projectChanged) {
         EditorPreload.setChanged(this.props.projectChanged);
@@ -5350,14 +5311,6 @@ const DesktopHOC = function (WrappedComponent) {
       if (this._stageAreaBackgroundTimeouts) {
         this._stageAreaBackgroundTimeouts.forEach(id => clearTimeout(id));
         this._stageAreaBackgroundTimeouts = [];
-      }
-      if (this._topBarStatsElement) {
-        this._topBarStatsElement.remove();
-        this._topBarStatsElement = null;
-      }
-      if (this._topBarStatsInterval) {
-        clearInterval(this._topBarStatsInterval);
-        this._topBarStatsInterval = null;
       }
       if (this._collabWorkspaceRefreshTimer) {
         clearTimeout(this._collabWorkspaceRefreshTimer);
