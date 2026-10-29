@@ -21,6 +21,16 @@ try {
   // 读不到就用默认的 normal（无对应样式，行为等同未设置）
 }
 
+// NeoWarp: 右键菜单毛玻璃效果（桌面设置 → UI 设置）。菜单是 Blockly 动态
+// 创建的 DOM，样式全部由 [data-ctx-menu-glass] 驱动，渲染前落属性即可，
+// 之后的变更由 desktop-hoc 订阅广播实时更新。
+try {
+  document.documentElement.setAttribute(
+    'data-ctx-menu-glass', EditorPreload.getContextMenuGlass() ? 'on' : 'off');
+} catch (e) {
+  // 读不到就按默认关闭处理（无对应样式，行为等同未设置）
+}
+
 // NeoWarp: Windows 窗口控制覆盖层（「Windows 窗口样式」开关）。同样必须
 // React 渲染前处理：normal 模式要画自绘标题条并把 #app 下移补偿，
 // Blockly 首次测量前 <html> 属性与布局就必须就位。未启用覆盖层

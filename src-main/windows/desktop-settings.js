@@ -46,6 +46,7 @@ class DesktopSettingsWindow extends AbstractWindow {
           compactWindowStyle: settings.compactWindowStyle,
           compactWindowStyleSupported: process.platform === 'win32',
           topBarDeviceStats: settings.topBarDeviceStats,
+          contextMenuGlass: settings.contextMenuGlass,
           microphone: settings.microphone,
           camera: settings.camera,
           hardwareAcceleration: settings.hardwareAcceleration,
@@ -306,6 +307,24 @@ class DesktopSettingsWindow extends AbstractWindow {
       for (const editorWindow of AbstractWindow.getWindowsByClass(EditorWindow)) {
         if (!editorWindow.window.isDestroyed()) {
           editorWindow.window.webContents.send('top-bar-device-stats-changed', topBarDeviceStats);
+        }
+      }
+    });
+
+    // NeoWarp: 编辑器右键菜单毛玻璃效果开关（桌面设置 → UI 设置）。
+    // 保存后立即广播给所有编辑器窗口：编辑器在 <html> 上写
+    // data-ctx-menu-glass 属性，右键菜单样式实时切换，无需重启。
+    this.ipc.handle('set-context-menu-glass', async (event, contextMenuGlass) => {
+      if (typeof contextMenuGlass !== 'boolean') {
+        return;
+      }
+      settings.contextMenuGlass = contextMenuGlass;
+      AbstractWindow.settingsChanged();
+      await settings.save();
+      const EditorWindow = require('./editor');
+      for (const editorWindow of AbstractWindow.getWindowsByClass(EditorWindow)) {
+        if (!editorWindow.window.isDestroyed()) {
+          editorWindow.window.webContents.send('context-menu-glass-changed', contextMenuGlass);
         }
       }
     });

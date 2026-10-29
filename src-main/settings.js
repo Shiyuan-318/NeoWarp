@@ -276,6 +276,16 @@ class Settings {
     this.data.topBarDeviceStats = topBarDeviceStats;
   }
 
+  // NeoWarp: 编辑器右键菜单毛玻璃效果（桌面设置 → UI 设置）。
+  // 开启后积木区右键菜单使用半透明背景 + backdrop-filter 模糊，
+  // 由编辑器渲染层在 <html> 上写 data-ctx-menu-glass 属性驱动。
+  get contextMenuGlass () {
+    return this.data.contextMenuGlass === true;
+  }
+  set contextMenuGlass (contextMenuGlass) {
+    this.data.contextMenuGlass = contextMenuGlass === true;
+  }
+
   get lastUpdateCheckDate () {
     return this.data.lastUpdateCheckDate || null;
   }

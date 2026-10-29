@@ -1480,6 +1480,23 @@
                 </label>
               </div>
             </div>
+            <!-- NeoWarp: 编辑器右键菜单毛玻璃效果开关。开启后积木区右键
+                 菜单使用半透明背景 + 模糊；即时广播到所有编辑器窗口。 -->
+            <div class="setting-row">
+              <div class="row-icon icon-indigo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="3"></rect><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 8h6"></path><path d="M7 12h10"></path></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label context-menu-glass-label"></div>
+                <div class="setting-desc context-menu-glass-desc"></div>
+              </div>
+              <div class="setting-control">
+                <label class="toggle">
+                  <input type="checkbox" class="context-menu-glass-checkbox" autocomplete="off">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <!-- Home branding -->
@@ -2304,6 +2321,17 @@
       topBarDeviceStatsCheckbox.checked = settings.topBarDeviceStats === true;
       topBarDeviceStatsCheckbox.onchange = () => {
         DesktopSettingsPreload.setTopBarDeviceStats(topBarDeviceStatsCheckbox.checked);
+      };
+
+      // ===== 右键菜单毛玻璃效果 =====
+      // 保存后由主进程广播给所有编辑器窗口，编辑器在 <html> 上写
+      // data-ctx-menu-glass 属性，右键菜单样式实时切换，无需重启。
+      const contextMenuGlassCheckbox = document.querySelector('.context-menu-glass-checkbox');
+      document.querySelector('.context-menu-glass-label').textContent = strings['desktop-settings.context-menu-glass'];
+      document.querySelector('.context-menu-glass-desc').textContent = strings['desktop-settings.context-menu-glass-desc'];
+      contextMenuGlassCheckbox.checked = settings.contextMenuGlass === true;
+      contextMenuGlassCheckbox.onchange = () => {
+        DesktopSettingsPreload.setContextMenuGlass(contextMenuGlassCheckbox.checked);
       };
 
       // ===== Interface language =====

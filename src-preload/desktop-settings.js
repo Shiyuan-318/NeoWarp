@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('DesktopSettingsPreload', {
   setCodeAreaBackgroundImage: (imageData) => ipcRenderer.invoke('set-code-area-background-image', imageData),
   setStageAreaBackgroundImage: (imageData) => ipcRenderer.invoke('set-stage-area-background-image', imageData),
   setTopBarDeviceStats: (topBarDeviceStats) => ipcRenderer.invoke('set-top-bar-device-stats', topBarDeviceStats),
+  setContextMenuGlass: (contextMenuGlass) => ipcRenderer.invoke('set-context-menu-glass', contextMenuGlass),
   setHomeLogo: (homeLogo) => ipcRenderer.invoke('set-home-logo', homeLogo),
   setHomeLogoText: (homeLogoText) => ipcRenderer.invoke('set-home-logo-text', homeLogoText),
   setHomeBackground: (homeBackground) => ipcRenderer.invoke('set-home-background', homeBackground),

@@ -1144,6 +1144,12 @@ class EditorWindow extends ProjectRunningWindow {
       event.returnValue = settings.topBarDeviceStats;
     });
 
+    // NeoWarp: 右键菜单毛玻璃（桌面设置 → UI 设置）：渲染前同步读一次，
+    // 变更由桌面设置广播（context-menu-glass-changed）实时推送。
+    this.ipc.on('editor-get-context-menu-glass', (event) => {
+      event.returnValue = settings.contextMenuGlass;
+    });
+
     this.ipc.handle('set-stage-area-background-image', async (event, imageData) => {
       settings.stageAreaBackgroundImage = imageData;
       AbstractWindow.settingsChanged();

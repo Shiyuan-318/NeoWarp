@@ -5132,6 +5132,17 @@ const DesktopHOC = function (WrappedComponent) {
         EditorPreload.onToolbarHeightChanged(applyToolbarHeight);
       }
 
+      // NeoWarp: 右键菜单毛玻璃效果（桌面设置 → UI 设置）。初始值已在
+      // index.jsx 渲染前写入 <html>，这里只负责之后的变更；纯 CSS 开关，
+      // 改属性即生效（下一次右键打开菜单时即为新样式）。
+      if (EditorPreload.onContextMenuGlassChanged) {
+        EditorPreload.onContextMenuGlassChanged(function (enabled) {
+          try {
+            document.documentElement.setAttribute('data-ctx-menu-glass', enabled ? 'on' : 'off');
+          } catch (e) {}
+        });
+      }
+
       // NeoWarp: Windows 窗口样式（compact）：系统按钮并入顶栏时顶栏高度
       // 变为 36px 并保持窄档，<html> 的 data-compact-window-style 由
       // window-titlebar.js 在 React 渲染前就写好并处理广播；这里再兜底

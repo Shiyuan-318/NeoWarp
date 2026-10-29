@@ -29,6 +29,41 @@ p {
 :global(.blocklyContextMenu .goog-menuitem) {
   border-radius: 8px;
   margin: 2px 4px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+/* NeoWarp: 分隔行去白线。
+   scratch-gui 的 addons api.js 会给分隔项写内联
+   border-top: 1px solid var(--ui-black-transparent)，而深色主题下该变量
+   是发白的 #ffffff26，积木描边主题（editor-colored-context-menus）还会把
+   线改成积木描边色，菜单里因此出现两条突兀的白线。这里统一去掉线，
+   只保留分隔间距（分隔项本身禁用、无 hover，方角不影响观感）。
+   .goog-menuitem 写两遍提高优先级，压过上面两个 !important 覆盖。 */
+:global(.blocklyContextMenu .goog-menuitem.goog-menuitem[style*="border-top"]) {
+  border-top: none !important;
+  padding-top: 6px !important;
+  border-radius: 0 !important;
+}
+
+/* NeoWarp: 右键菜单毛玻璃（桌面设置 → UI 设置开关）。
+   半透明底 + backdrop 模糊，随编辑器深浅主题切换底色；关闭开关时
+   任何属性都不存在，菜单完全回到原生不透明样式。 */
+[data-ctx-menu-glass="on"] :global(.blocklyContextMenu) {
+  backdrop-filter: blur(22px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+}
+[data-gui-theme="dark"][data-ctx-menu-glass="on"] :global(.blocklyContextMenu) {
+  background: rgba(17, 17, 17, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45) !important;
+}
+[data-gui-theme="light"][data-ctx-menu-glass="on"] :global(.blocklyContextMenu) {
+  background: rgba(255, 255, 255, 0.62) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+/* 毛玻璃开启时悬停块也改为半透明，让模糊背景透出来 */
+[data-ctx-menu-glass="on"] :global(.blocklyContextMenu .goog-menuitem-highlight) {
+  background-color: rgba(128, 128, 128, 0.16) !important;
 }
 
 /* NeoWarp: 角色与造型右键菜单（react-contextmenu）圆角

@@ -323,6 +323,14 @@
     "string": "Display the CPU and memory usage indicator in the editor's top bar. Toggles apply immediately and the bar re-centers automatically",
     "developer_comment": "Description of the top bar device stats toggle in desktop settings UI section"
   },
+  "desktop-settings.context-menu-glass": {
+    "string": "Frosted glass effect in context menus",
+    "developer_comment": "Toggle in desktop settings UI section to enable a frosted glass (blurred translucent) look for the editor's right-click context menu"
+  },
+  "desktop-settings.context-menu-glass-desc": {
+    "string": "Show the editor's right-click menu with a translucent blurred background. Toggles apply immediately without restarting",
+    "developer_comment": "Description of the context menu frosted glass toggle in desktop settings UI section"
+  },
   "desktop-settings.check-for-updates": {
     "string": "Check for Updates",
     "developer_comment": "Label in desktop settings for manual update check"

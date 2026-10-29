@@ -47,6 +47,14 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   getStageAreaBackgroundImage: () => ipcRenderer.sendSync('get-stage-area-background-image'),
   setStageAreaBackgroundImage: (imageData) => ipcRenderer.invoke('set-stage-area-background-image', imageData),
   getTopBarDeviceStats: () => ipcRenderer.sendSync('get-top-bar-device-stats'),
+  // 右键菜单毛玻璃效果开关（桌面设置 → UI 设置）：渲染前同步读取一次 +
+  // 变更推送，编辑器据此在 <html> 上写 data-ctx-menu-glass 属性
+  getContextMenuGlass: () => ipcRenderer.sendSync('editor-get-context-menu-glass'),
+  onContextMenuGlassChanged: (callback) => {
+    ipcRenderer.on('context-menu-glass-changed', (event, enabled) => {
+      callback(enabled);
+    });
+  },
   // 顶栏设备占用（CPU/内存）显示开关（桌面设置 → UI 设置）：保存后由
   // 主进程实时推送，顶栏无需重启即显隐适配
   onTopBarDeviceStatsChanged: (callback) => {
