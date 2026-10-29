@@ -238,7 +238,7 @@ AI 助手工具链脚本：
 
 - 作者：Shiyuan
 - GitHub：[Shiyuan-318/NeoWarp](https://github.com/Shiyuan-318/NeoWarp)
-- 网站：[np.sy1.top](https://np.sy1.top)
+- 网站：[e.np.sy1.top](https://e.np.sy1.top)
 - QQ 交流群：**517453896**
 
 > 如果你发现了 Bug 或有功能建议，欢迎提交 Issue 或 Pull Request，或加入 QQ 群与作者直接交流。

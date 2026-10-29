@@ -238,7 +238,7 @@ This project is released under the **GNU General Public License v3.0** — see t
 
 - Author: Shiyuan
 - GitHub: [Shiyuan-318/NeoWarp](https://github.com/Shiyuan-318/NeoWarp)
-- Website: [np.sy1.top](https://np.sy1.top)
+- Website: [e.np.sy1.top](https://e.np.sy1.top)
 - QQ Group: **517453896**
 
 > If you find a bug or have a feature suggestion, feel free to open an Issue or Pull Request, or join the QQ group to talk to the author directly.
