@@ -697,6 +697,15 @@ class CollaborationWindow extends AbstractWindow {
     return 'collaboration';
   }
 
+  handlePermissionCheck (permisson, details) {
+    // 页面里的复制地址按钮走 navigator.clipboard，默认权限策略会全部拒绝
+    return permisson === 'clipboard-sanitized-write' || super.handlePermissionCheck(permisson, details);
+  }
+
+  async handlePermissionRequest (permisson, details) {
+    return permisson === 'clipboard-sanitized-write' || super.handlePermissionRequest(permisson, details);
+  }
+
   isPopup () {
     return true;
   }
