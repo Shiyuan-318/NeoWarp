@@ -205,6 +205,12 @@ contextBridge.exposeInMainWorld('EditorPreload', {
       callback(compact);
     });
   },
+  // NeoWarp: 渲染层上报标题条（自绘条或顶栏）当前的实际底色，主进程
+  // 用它设置按钮覆盖层底色，保证主题/积木颜色切换后右上角按钮区与
+  // 标题条颜色一致（见 window-titlebar.js 与 gui.css）
+  sendTitleBarOverlayColor: (theme, color) => {
+    ipcRenderer.send('title-bar-overlay-color', {theme, color});
+  },
   // F11 等 OS 级全屏切换推送（编辑器内部全屏模式不推送）
   onOSFullscreenChanged: (callback) => {
     ipcRenderer.on('os-fullscreen-changed', (event, data) => {

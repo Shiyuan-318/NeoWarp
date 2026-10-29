@@ -90,6 +90,10 @@ const applyOverlayState = (dispatchResize) => {
     syncTitleText();
   }
 
+  // 布局切换后标题条的取色来源改变（自绘条 ⇄ 顶栏），按钮区底色需重测
+  ensureColorObserver();
+  pushOverlayColor();
+
   if (dispatchResize) {
     window.requestAnimationFrame(() => {
       window.dispatchEvent(new Event('resize'));
@@ -103,6 +107,132 @@ const applyOSFullscreen = (fullscreen) => {
   }
   document.documentElement.setAttribute(
     OS_FULLSCREEN_ATTRIBUTE, fullscreen ? 'true' : 'false');
+};
+
+// ============================================================
+// NeoWarp: 系统按钮区底色同步
+//
+// 右上角最小化/最大化/关闭的按钮覆盖层由主进程 setTitleBarOverlay
+// 单独绘制底色，而标题条本身（自绘条或顶栏）由渲染层按主题变量绘制，
+// 两边是两套独立上色。主进程原实现把亮色底色硬编码为 TurboWarp 默认
+// 强调色（红），一旦积木颜色/主题色不是红色，切换到浅色主题后按钮区
+// 就和标题条对不上（深色恰好同为 #333333 所以看不出问题）。
+//
+// 这里持续测量"当前实际画在标题条上的颜色"并上报主进程；主进程按
+// 主题分别保存（存下来的颜色在深浅来回切换时直接复用，不会闪色）。
+// ============================================================
+
+let colorObserver = null;
+/** 每个主题最近上报成功的颜色，用于去重 */
+const pushedColors = {dark: '', light: ''};
+
+/**
+ * 任意 CSS 颜色（hsla/rgba/命名色等）→ #rrggbb。
+ * 覆盖层需要不透明底色，带透明度或解析失败时返回 null。
+ */
+const cssColorToHex = (color) => {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return null;
+    }
+    ctx.fillStyle = '#000000';
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 1, 1);
+    const data = ctx.getImageData(0, 0, 1, 1).data;
+    if (data[3] < 255) {
+      return null;
+    }
+    return `#${[data[0], data[1], data[2]].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+  } catch (e) {
+    return null;
+  }
+};
+
+/**
+ * 读取"当前画在标题条上的颜色"：
+ * compact 模式 = 编辑器顶栏（menu-bar）元素；
+ * normal 模式 = 自绘标题条元素；
+ * 元素尚未渲染时退回 <html> 上的主题变量（与 gui.css 同一变量），
+ * 再退 meta theme-color（scratch-gui 每次应用主题都会写入解析后的
+ * 顶栏底色），全都没有时返回 null。
+ */
+const readTitleBarColor = () => {
+  const candidates = [];
+  if (overlayState && overlayState.compact) {
+    // CSS Modules 编译后类名带哈希，选择器写法与 gui.css 保持一致
+    const menuBar = document.querySelector('[class*="menu-bar_menu-bar_"]');
+    if (menuBar) {
+      candidates.push(menuBar);
+    }
+  } else {
+    const titlebar = document.getElementById('neowarp-titlebar');
+    if (titlebar) {
+      candidates.push(titlebar);
+    }
+  }
+  for (const el of candidates) {
+    const bg = window.getComputedStyle(el).backgroundColor;
+    if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+      return bg;
+    }
+  }
+  const isDark = document.documentElement.getAttribute('data-gui-theme') === 'dark';
+  const variable = isDark ? '--menu-bar-background' : '--looks-secondary';
+  const value = window.getComputedStyle(document.documentElement).getPropertyValue(variable);
+  if (value && value.trim()) {
+    return value.trim();
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    return meta.getAttribute('content');
+  }
+  return null;
+};
+
+/**
+ * 把当前主题的标题条颜色上报给主进程（按主题去重，避免 IPC 刷屏）。
+ * 上报失败不静默吞掉界面状态：主进程继续使用存量颜色/硬编码兜底。
+ */
+const pushOverlayColor = () => {
+  if (!overlayState || !overlayState.hasOverlay) {
+    return;
+  }
+  try {
+    const preload = window.EditorPreload;
+    if (!preload || !preload.sendTitleBarOverlayColor) {
+      return;
+    }
+    const isDark = document.documentElement.getAttribute('data-gui-theme') === 'dark';
+    const theme = isDark ? 'dark' : 'light';
+    const color = cssColorToHex(readTitleBarColor() || '');
+    if (color === null || color === pushedColors[theme]) {
+      return;
+    }
+    pushedColors[theme] = color;
+    preload.sendTitleBarOverlayColor(theme, color);
+  } catch (e) {
+    // 保持主进程现有颜色
+  }
+};
+
+const ensureColorObserver = () => {
+  if (colorObserver) {
+    return;
+  }
+  // scratch-gui 每次应用主题（guiHelpers 的 applyGuiColors）都会把整套
+  // 主题变量写到 <html> 的 inline style；深浅切换、积木颜色切换、系统
+  // 外观变化最终都汇到这里。data-gui-theme 由 NeoWarp 单独维护，一并监听。
+  colorObserver = new MutationObserver(() => {
+    pushOverlayColor();
+  });
+  colorObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['style', 'data-gui-theme']
+  });
 };
 
 /**
@@ -132,6 +262,14 @@ const setupWindowControlsOverlay = (dispatchResize) => {
       }
       if (preload.onOSFullscreenChanged) {
         preload.onOSFullscreenChanged(applyOSFullscreen);
+      }
+      // React 渲染前主题变量还未写入，先挂好监听，由 applyGuiColors 落
+      // 变量时触发上报；这里立即补一次（已经就绪就取到）还有兜底延后
+      // 一拍再取一次，覆盖监听开始前就已完成的极端时序
+      if (preload.sendTitleBarOverlayColor) {
+        ensureColorObserver();
+        pushOverlayColor();
+        window.requestAnimationFrame(pushOverlayColor);
       }
     } else if (typeof dispatchResize === 'boolean') {
       // 后续调用（desktop-hoc 兜底）：只按已有状态重放一遍

@@ -373,6 +373,11 @@ class EditorWindow extends ProjectRunningWindow {
     // 扩展编辑器「添加到项目」的项目列表里
     this.isHiddenHost = !!(options && options.hidden);
 
+    // NeoWarp: 渲染层上报的标题条实际底色（按深浅主题分别保存）。写入前
+    // 按钮覆盖层用下面的硬编码兜底；深浅切换时另一主题的颜色直接复用，
+    // 不会闪色。仅读取 title-bar-overlay-color 频道，格式见取值处校验。
+    this.overlayColors = {};
+
     // AI 工具监听就绪信号：渲染层挂好全部 AI 相关监听（ai-tool-call、
     // request-project-json 等）后发来。SOLO 换工程会重开一个隐藏编辑器窗口，
     // 页面加载要几秒，期间发 ai-tool-call 无人接收、石沉大海，AI 侧表现为
@@ -527,6 +532,21 @@ class EditorWindow extends ProjectRunningWindow {
         this.updateTitleBarOverlay();
       }).catch(() => {});
     }
+
+    // NeoWarp: 渲染层测量并上报标题条的实际底色（自绘标题条或顶栏），
+    // 按深浅主题分别保存，确保窗口控制覆盖层（右上角最小化/最大化/
+    // 关闭按钮）的底色跟随主题与积木颜色变化，和标题条保持一致。
+    this.ipc.on('title-bar-overlay-color', (event, data) => {
+      if (!data || (data.theme !== 'dark' && data.theme !== 'light')) {
+        return;
+      }
+      // 只接受不透明的 #rrggbb / #rrggbbaa 十六进制颜色
+      if (typeof data.color !== 'string' || !/^#[0-9a-fA-F]{3,8}$/.test(data.color)) {
+        return;
+      }
+      this.overlayColors[data.theme] = data.color;
+      this.updateTitleBarOverlay();
+    });
 
     this.ipc.on('is-initially-fullscreen', (e) => {
       e.returnValue = isInitiallyFullscreen;
@@ -1546,9 +1566,9 @@ class EditorWindow extends ProjectRunningWindow {
 
   /**
    * NeoWarp: Windows 窗口控制覆盖层配置。配色跟随生效主题（亮色 =
-   * 编辑器顶栏主题色，深色 = #333333，渲染层同步画同色背景）；高度
-   * 对应渲染层布局：未开启紧凑样式时为自绘标题条高度 32px，开启后
-   * 等于窄档顶栏 36px。
+   * 渲染层上报的标题条实际底色，兜底为 TurboWarp 默认强调色红；深色
+   * = #333333，与渲染层标题条变量一致）；高度对应渲染层布局：未开启
+   * 紧凑样式时为自绘标题条高度 32px，开启后等于窄档顶栏 36px。
    */
   getTitleBarOverlayOptions () {
     let isDark;
@@ -1561,7 +1581,8 @@ class EditorWindow extends ProjectRunningWindow {
         (settings.uiTheme !== 'light' && nativeTheme.shouldUseDarkColors);
     }
     return {
-      color: isDark ? '#333333' : '#ff4c4c',
+      color: this.overlayColors[isDark ? 'dark' : 'light'] ||
+        (isDark ? '#333333' : '#ff4c4c'),
       symbolColor: '#ffffff',
       height: settings.compactWindowStyle ? 36 : 32
     };
