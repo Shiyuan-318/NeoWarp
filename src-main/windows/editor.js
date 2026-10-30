@@ -1581,7 +1581,7 @@ class EditorWindow extends ProjectRunningWindow {
         (settings.uiTheme !== 'light' && nativeTheme.shouldUseDarkColors);
     }
     return {
-      color: this.overlayColors[isDark ? 'dark' : 'light'] ||
+      color: (this.overlayColors && this.overlayColors[isDark ? 'dark' : 'light']) ||
         (isDark ? '#333333' : '#ff4c4c'),
       symbolColor: '#ffffff',
       height: settings.compactWindowStyle ? 36 : 32
