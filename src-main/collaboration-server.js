@@ -18,6 +18,9 @@ class CollaborationServer {
     this.permissions = permissions;
     this.hostName = hostName || '主机';
     this.hostAvatar = hostAvatar || '🏠';
+    // 稳定唯一的房间 ID：主机可能在多个网卡 IP 上同时响应发现请求，
+    // 发现阶段用它区分「同一个房间的多条记录」与「不同的房间」
+    this.id = crypto.randomUUID();
     // Heartbeat: the server pings all clients periodically and drops the ones
     // that have not sent anything (incl. pongs) within the timeout window.
     this.heartbeatIntervalMs = heartbeatIntervalMs || 30000;
@@ -41,6 +44,7 @@ class CollaborationServer {
   getDiscoveryInfo () {
     return {
       ok: true,
+      id: this.id,
       roomName: `${this.hostName} 的协作`,
       hostName: this.hostName,
       hostAvatar: this.hostAvatar,

@@ -822,6 +822,21 @@
         position: relative;
         z-index: 1;
       }
+      /* 弹窗里的「打开 sb3 文件」「新建空白项目」不用液态玻璃：
+         保持常规磨砂卡片外观（与未开自定义背景时一致） */
+      body.custom-bg #btn-collab-open-file,
+      body.custom-bg #btn-collab-new {
+        background: var(--card);
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+        border-color: var(--card-border);
+        box-shadow: none;
+      }
+      body.custom-bg #btn-collab-open-file:hover,
+      body.custom-bg #btn-collab-new:hover {
+        background: var(--card-hover);
+        border-color: var(--card-border-hover);
+      }
       /* 玻璃子层：副本折射 + 蒙层补偿 + 玻璃底色 */
       body.custom-bg .lg-glass {
         position: absolute;
@@ -1523,7 +1538,7 @@
         parts.feDisp.setAttribute('scale', amount);
       }
 
-      const LG_SELECTOR = '.menu-button, .recent-item, #github-button, #settings-button, #update-capsule';
+      const LG_SELECTOR = '.menu-button:not(#btn-collab-open-file):not(#btn-collab-new), .recent-item, #github-button, #settings-button, #update-capsule';
       let lgObserver = null;
 
       function lgApply(el) {
@@ -1933,7 +1948,8 @@
 
       function showCollabModal() {
         collabModal.classList.add('open');
-        // 弹窗按钮此前 display:none，打开时立即为其烘焙玻璃
+        // 弹窗内的两个按钮不走液态玻璃（见 LG_SELECTOR），
+        // 这里仅为其它玻璃目标的状态兜底刷新
         updateLiquidGlass();
         document.getElementById('btn-collab-open-file').focus();
       }

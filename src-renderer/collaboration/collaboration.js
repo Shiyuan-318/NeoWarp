@@ -290,7 +290,7 @@
 
   function renderDiscovery (sessions) {
     if (!sessions || !sessions.length) {
-      discoveryState('empty', '没有找到协作房间。确认主机已经发起协作、端口一致，或在下面手动填写地址。');
+      discoveryState('empty', '没有找到协作房间。确认主机已发起协作、端口一致、防火墙已放行 NeoWarp，或在下面手动填写地址。');
       return;
     }
     el.discoveryList.textContent = '';

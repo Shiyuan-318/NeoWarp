@@ -4,7 +4,11 @@ const {ipcMain} = require('electron');
 const os = require('os');
 const http = require('http');
 
-// Scan the local /24 subnet for collaboration hosts on the given port.
+// Scan the local /24 subnets for collaboration hosts on the given port.
+// The joining machine's own addresses (including loopback) are scanned too,
+// so a room hosted on the same machine can be discovered, and rooms are
+// deduplicated by their per-server ID: a single host answers on every
+// interface it has, which would otherwise show up several times.
 function discoverSessions (port) {
   return new Promise((resolve) => {
     const interfaces = os.networkInterfaces();
@@ -17,7 +21,11 @@ function discoverSessions (port) {
       }
     }
 
+    // 排在前面的地址优先汇报：本机自测时房间会逐个绑定在
+    // loopback 与自己的网卡 IP 上，任意一个都能连通
     const candidates = new Set();
+    candidates.add('127.0.0.1');
+    for (const ip of localIPs) candidates.add(ip);
     for (const ip of localIPs) {
       const parts = ip.split('.');
       if (parts.length === 4) {
@@ -27,10 +35,17 @@ function discoverSessions (port) {
         }
       }
     }
-    // Exclude own IPs
-    for (const ip of localIPs) candidates.delete(ip);
 
     const results = [];
+    const seen = new Set();
+    const pushResult = (found) => {
+      // 同一个房间的 id 相同（无论从哪个 IP 探到）；旧版主机没有 id,
+      // 退回房间名+端口组合
+      const key = `${found.id || ''}|${found.roomName}|${found.port}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      results.push(found);
+    };
     const list = Array.from(candidates);
     if (list.length === 0) { resolve(results); return; }
 
@@ -46,7 +61,7 @@ function discoverSessions (port) {
         hostname: ip,
         port: port,
         path: '/discover',
-        timeout: 400
+        timeout: 1000
       }, (res) => {
         let data = '';
         res.on('data', (chunk) => { data += chunk; });
@@ -56,9 +71,10 @@ function discoverSessions (port) {
           try {
             const parsed = JSON.parse(data);
             if (parsed && parsed.ok) {
-              results.push({
+              pushResult({
+                id: parsed.id,
                 ip: ip,
-                port: port,
+                port: parsed.port || port,
                 roomName: parsed.roomName,
                 hostName: parsed.hostName,
                 hostAvatar: parsed.hostAvatar,
