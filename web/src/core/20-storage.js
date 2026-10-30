@@ -86,7 +86,7 @@
     if (typeof cfg.customEndpoint !== 'string') cfg.customEndpoint = '';
     if (typeof cfg.customModelId !== 'string') cfg.customModelId = '';
     var contextLimit = Number(cfg.customContextLimit);
-    cfg.customContextLimit = isFinite(contextLimit) && contextLimit >= 1000 ? Math.floor(contextLimit) : 32000;
+    cfg.customContextLimit = isFinite(contextLimit) && contextLimit >= 1000 ? Math.floor(contextLimit) : 1000000;
     if (typeof cfg.thinkingLevel !== 'string' || !cfg.thinkingLevel) cfg.thinkingLevel = 'medium';
     return cfg;
   }

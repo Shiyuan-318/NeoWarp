@@ -192,7 +192,9 @@ class PhoneSyncServer {
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
       MOBILE_VIEWPORT
     );
-    const inject = '<script>' +
+    // 空数据 URI 占位：浏览器不会再请求 /favicon.ico，避免控制台出现 404 噪音
+    const inject = '<link rel="icon" href="data:,">' +
+      '<script>' +
       `window.__NEOWARP_REMOTE_TOKEN__=${inlineJson(this.token)};` +
       `window.__NEOWARP_REMOTE_BOOT__=${inlineJson(snapshot || {})};` +
       '</script>\n' +

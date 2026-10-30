@@ -3292,7 +3292,7 @@
           customEndpoint: (cfg && cfg.customEndpoint) || '',
           customModelId: (cfg && cfg.customModelId) || '',
           apiKey: (cfg && cfg.apiKey) || '',
-          customContextLimit: (cfg && cfg.customContextLimit) || 32000
+          customContextLimit: (cfg && cfg.customContextLimit) || 1000000
         };
         if (!draft.model) {
           const firstModel = ((AI_PROVIDERS[draft.provider] || {}).models || [])[0];
@@ -3367,7 +3367,7 @@
             '<input type="text" id="aiModelId" class="settings-input settings-input-mono" placeholder="gpt-6.1-sol" value="' + aiEscape(draft.customModelId) + '">',
             aiS.fieldModelIdHint) +
           fieldRow('aiCtxLimitRow', aiS.fieldContextLimit,
-            '<input type="text" inputmode="numeric" id="aiCtxLimit" class="settings-input" placeholder="32000" value="' + aiEscape(String(draft.customContextLimit)) + '">',
+            '<input type="text" inputmode="numeric" id="aiCtxLimit" class="settings-input" placeholder="1000000" value="' + aiEscape(String(draft.customContextLimit)) + '">',
             aiS.fieldContextLimitHint) +
           '</div>' +
           '<div class="form-group"><div class="form-group-label">' + aiEscape(aiS.groupCredentials) + '</div>' +
@@ -3538,7 +3538,7 @@
             apiFormat: custom ? fmtSel.value : 'openai',
             customEndpoint: custom ? normalizeCustomEndpoint(endpoint) : '',
             customModelId: custom ? modelId : '',
-            customContextLimit: custom ? ctx : 32000,
+            customContextLimit: custom ? ctx : 1000000,
             thinkingLevel: (cfg && cfg.thinkingLevel) || 'medium'
           };
         }

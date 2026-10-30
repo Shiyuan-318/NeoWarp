@@ -146,7 +146,7 @@ function normalizeConfig (raw, index) {
   cfg.customEndpoint = normalizeCustomEndpoint(cfg.customEndpoint);
   if (typeof cfg.customModelId !== 'string') cfg.customModelId = '';
   const ctx = Number(cfg.customContextLimit);
-  cfg.customContextLimit = Number.isFinite(ctx) && ctx >= 1000 ? Math.floor(ctx) : 32000;
+  cfg.customContextLimit = Number.isFinite(ctx) && ctx >= 1000 ? Math.floor(ctx) : 1000000;
   if (typeof cfg.thinkingLevel !== 'string' || !cfg.thinkingLevel) cfg.thinkingLevel = 'medium';
   return cfg;
 }
@@ -169,7 +169,7 @@ function migrateLegacyAiProviders () {
     apiFormat: 'openai',
     customEndpoint: legacy.customEndpoint || '',
     customModelId: isCustom ? (legacy.model || '') : '',
-    customContextLimit: 32000,
+    customContextLimit: 1000000,
     thinkingLevel: 'medium'
   }, 0);
   settings.aiModelConfigs = [cfg];

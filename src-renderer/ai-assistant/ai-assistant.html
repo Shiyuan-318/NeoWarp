@@ -5705,6 +5705,8 @@
         if (!remoteBridge) return Promise.resolve({ ok: false, error: 'no bridge' });
         return remoteBridge.send(cmd, payload).then(function(res) {
             if (res && res.ok === false && res.error) showToast(res.error, 'error');
+            // 桌面要求刷新（如 abort 被拒绝）：说明两端状态已分叉，重拉快照自愈
+            if (res && res.refresh && remoteBridge) remoteBridge.refresh();
             return res;
         });
     }
@@ -5712,7 +5714,7 @@
     var chatHistory = [];
     var savedConfigs = [];
     var activeConfigIndex = -1;
-    var currentConfig = { apiKey: '', provider: 'openai', model: 'gpt-5.4', customEndpoint: '', customModelId: '', apiFormat: 'openai', name: '', customContextLimit: 32000, thinkingLevel: 'medium' };
+    var currentConfig = { apiKey: '', provider: 'openai', model: 'gpt-5.4', customEndpoint: '', customModelId: '', apiFormat: 'openai', name: '', customContextLimit: 1000000, thinkingLevel: 'medium' };
     var currentRequestTokens = 0;
     var historyReplayTokens = 0;
     var isLoading = false;
@@ -6555,7 +6557,7 @@
     function migrateConfigFields(cfg) {
         if (cfg.customModelId === undefined) cfg.customModelId = '';
         if (cfg.apiFormat === undefined) cfg.apiFormat = 'openai';
-        if (cfg.customContextLimit === undefined) cfg.customContextLimit = 32000;
+        if (cfg.customContextLimit === undefined) cfg.customContextLimit = 1000000;
         if (cfg.thinkingLevel === undefined) cfg.thinkingLevel = 'medium';
         // contextWindow 曾是"保留多少条历史"的设置，但从未被读取过——
         // 历史裁剪实际按 token 预算走 buildApiMessages，故清掉这个死字段。
@@ -7615,7 +7617,7 @@
     }
 
     function createDefaultConfig() {
-        return { id: 'cfg_' + Date.now(), name: 'Default', provider: 'openai', model: 'gpt-5.4', apiKey: '', customEndpoint: '', customModelId: '', apiFormat: 'openai', customContextLimit: 32000, thinkingLevel: 'medium' };
+        return { id: 'cfg_' + Date.now(), name: 'Default', provider: 'openai', model: 'gpt-5.4', apiKey: '', customEndpoint: '', customModelId: '', apiFormat: 'openai', customContextLimit: 1000000, thinkingLevel: 'medium' };
     }
 
     function saveConfigs() {
@@ -7647,7 +7649,7 @@
             currentConfig.customModelId = cfg.customModelId || '';
             currentConfig.apiFormat = cfg.apiFormat || 'openai';
             currentConfig.name = cfg.name || '';
-            currentConfig.customContextLimit = cfg.customContextLimit || 32000;
+            currentConfig.customContextLimit = cfg.customContextLimit || 1000000;
             currentConfig.thinkingLevel = cfg.thinkingLevel || 'medium';
         } else {
             currentConfig.apiKey = '';
@@ -7657,7 +7659,7 @@
             currentConfig.customModelId = '';
             currentConfig.apiFormat = 'openai';
             currentConfig.name = '';
-            currentConfig.customContextLimit = 32000;
+            currentConfig.customContextLimit = 1000000;
             currentConfig.thinkingLevel = 'medium';
         }
     }
@@ -7695,9 +7697,9 @@
         // 远程端的 PROVIDERS 表可能不含桌面那边自定义的模型，直接用桌面算好的上限
         if (IS_REMOTE && remoteContextLimit) return remoteContextLimit;
         var p = PROVIDERS[currentConfig.provider];
-        if (currentConfig.provider === 'custom') return currentConfig.customContextLimit || 32000;
+        if (currentConfig.provider === 'custom') return currentConfig.customContextLimit || 1000000;
         var m = p && p.models.find(function(x) { return x.id === currentConfig.model; });
-        return (m && m.contextLimit) || 32000;
+        return (m && m.contextLimit) || 1000000;
     }
 
     function getModelMaxOutput() {
@@ -10529,12 +10531,14 @@
             if (generationAbortRequested) {
                 var abortedTypingEl = document.getElementById('typingIndicator');
                 if (abortedTypingEl) abortedTypingEl.remove();
-                phoneClearStream();
-                phonePushHistory();
+                // 先落定本地状态再推快照；若把推送放在前面，手机端会拿到
+                // loading=true 的旧快照，之后桌面转空闲却不再推送，电脑端被永远卡住
                 isLoading = false;
                 abortController = null;
                 setGeneratingConv(null);
                 notifySidebarTodoTurnEnd();
+                phoneClearStream();
+                phonePushHistory();
                 return;
             }
             var apiMessages;
@@ -10615,14 +10619,16 @@
                 }
                 finalizeProcessGroup();
                 var em = { role: 'assistant', content: 'Error: ' + (exhausted ? t('streamRetryExhausted') : '') + detail, time: formatTime(new Date()) };
-                pushGeneratingMessage(em);
-                if (isGeneratingConvVisible()) appendAIMessage(em.content, em.time, '', [], true);
-                phoneClearStream();
-                phonePushHistory();
+                // 先落定本地状态再推快照，否则手机端收到的最后一份快照仍是
+                // loading=true，会被永久卡在打字动画与停止键上（电脑端已不再推送）
                 isLoading = false;
                 abortController = null;
                 setGeneratingConv(null);
+                pushGeneratingMessage(em);
+                if (isGeneratingConvVisible()) appendAIMessage(em.content, em.time, '', [], true);
+                phoneClearStream();
                 notifySidebarTodoTurnEnd();
+                phonePushHistory();
                 scrollToBottom();
             }
 
@@ -10643,11 +10649,13 @@
                 streamingWrapper.remove();
                 var abortTypingEl = document.getElementById('typingIndicator');
                 if (abortTypingEl) abortTypingEl.remove();
-                abortStreamCleanup();
+                // 先落定本地状态；abortStreamCleanup 里的 phonePushHistory 若先执行，
+                // 手机端会拿到 loading=true 的快照并被永远卡在生成动画上
                 isLoading = false;
                 abortController = null;
                 setGeneratingConv(null);
                 notifySidebarTodoTurnEnd();
+                abortStreamCleanup();
             }
 
             function showRetryCountdown(secondsLeft) {
@@ -10825,12 +10833,13 @@
                         // 工具执行期间被叫停：结果已如实入账，但不再续跑下一轮
                         if (generationAbortRequested) {
                             finalizeProcessGroup();
-                            phoneClearStream();
-                            phonePushHistory();
+                            // 先落定状态再推快照，避免手机端收到 loading=true 的旧状态后悬停
                             isLoading = false;
                             abortController = null;
                             setGeneratingConv(null);
                             notifySidebarTodoTurnEnd();
+                            phoneClearStream();
+                            phonePushHistory();
                             return;
                         }
 
@@ -10881,13 +10890,14 @@
             var typingEl = document.getElementById('typingIndicator');
             if (typingEl) typingEl.remove();
             var em = { role: 'assistant', content: 'Error: ' + err.message, time: formatTime(new Date()) };
+            // 先落定本地状态再推快照，保证手机端最后收到的是 loading=false 的状态
+            isLoading = false;
+            setGeneratingConv(null);
             pushGeneratingMessage(em);
             if (isGeneratingConvVisible()) appendAIMessage(em.content, em.time, '', [], true);
             phoneClearStream();
-            phonePushHistory();
-            isLoading = false;
-            setGeneratingConv(null);
             notifySidebarTodoTurnEnd();
+            phonePushHistory();
         });
     }
 
@@ -11325,7 +11335,9 @@
         return {
             title: conv ? conv.title : t('appTitle'),
             messages: phoneSnapshotMessages(),
-            loading: !!isLoading,
+            // loading 只表达"正在查看的会话是否正在生成"：电脑端在别的会话里
+            // 生成时界面不出现打字动画，手机端也应如此，否则两端观感分叉
+            loading: !!isLoading && isGeneratingConvVisible(),
             generatingConvId: generatingConvId,
             stream: phoneStreamState ? JSON.parse(JSON.stringify(phoneStreamState)) : null,
             theme: document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light',
@@ -11392,10 +11404,11 @@
     }
 
     // 流式输出 → 节流推送（250ms），结束时由 phonePushHistory 收尾
-    // 生成中的会话不在当前视图时也照推 stream 事件，但 history 快照会按
-    // 当前会话重置界面，新客户端接入则由 __phoneGetSyncState 过滤
+    // 生成中的会话不在当前视图时也照推 stream 事件，但带 convId 让远程端
+    // 自行过滤；history 快照会按当前会话重置界面，新客户端接入则由
+    // __phoneGetSyncState 过滤
     function phonePushStream(content, reasoning) {
-        phoneStreamState = { content: content || '', reasoning: reasoning || '' };
+        phoneStreamState = { content: content || '', reasoning: reasoning || '', convId: generatingConvId || null };
         var now = Date.now();
         if (now - phoneLastStreamPush >= 250) {
             phoneLastStreamPush = now;
@@ -11455,7 +11468,11 @@
             case 'abort': {
                 // 没有活跃请求时也可能正卡在请求间隙/工具执行/提问等待上，
                 // 置取消标记让回合在下一次续跑前停下，而不是直接报"没有进行中的回答"
-                if (!isLoading) return { ok: false, error: '当前没有进行中的回答' };
+                if (!isLoading) {
+                    // 手机端以为还在生成才会发 abort，此时它已经和桌面状态分叉，
+                    // 让它重新拉一份完整快照立即恢复一致
+                    return { ok: false, error: '当前没有进行中的回答', refresh: true };
+                }
                 generationAbortRequested = true;
                 if (abortController) abortController.abort();
                 return { ok: true };
@@ -11666,6 +11683,9 @@
             if (kind === 'snapshot' || kind === 'history') {
                 remoteApplySnapshot(data);
             } else if (kind === 'stream') {
+                // 流式片段只属于生成中的那个会话：手机端切到别的会话时不再渲染，
+                // 也不应该强行把 loading 置 true
+                if (data && data.convId && data.convId !== activeConversationId) return;
                 isLoading = true;
                 updateSendBtn();
                 remoteRenderStream(data);
