@@ -13,14 +13,6 @@
 (function () {
   'use strict';
 
-  // 只在「手机端」激活：桌面注入的页面带 __NEOWARP_REMOTE_TOKEN__（LAN 服务），
-  // 网页版手机端通过 ?r=<房间号> 进入 WebRTC 模式；电脑端两者皆无，直接跳过，
-  // 避免 remote-mode 样式与无效的 SSE 重连影响本机使用。
-  if (!window.__NEOWARP_REMOTE_TOKEN__ &&
-      !(new URLSearchParams(window.location.search || '').get('r'))) {
-    return;
-  }
-
   var TOKEN = window.__NEOWARP_REMOTE_TOKEN__ || '';
   var BOOT = window.__NEOWARP_REMOTE_BOOT__ || {};
   var listeners = [];

@@ -18,9 +18,11 @@
   --cpu-color: #0a84ff;
   --ram-color: #bf5af2;
   --border: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.14);
   --separator: rgba(255,255,255,0.06);
   --grid-line: rgba(255,255,255,0.06);
   --grid-text: rgba(255,255,255,0.35);
+  --sprite-icon-bg: rgba(10,132,255,0.10);
   --shadow-card: 0 0.5px 0 rgba(255,255,255,0.06) inset, 0 2px 10px rgba(0,0,0,0.35);
   --radius: 14px;
   --radius-sm: 8px;
@@ -38,9 +40,11 @@
   --cpu-color: #007aff;
   --ram-color: #af52de;
   --border: rgba(0,0,0,0.05);
+  --border-strong: rgba(0,0,0,0.10);
   --separator: rgba(0,0,0,0.06);
   --grid-line: rgba(0,0,0,0.05);
   --grid-text: rgba(0,0,0,0.35);
+  --sprite-icon-bg: rgba(0,122,255,0.08);
   --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 6px 20px rgba(0,0,0,0.05);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -58,7 +62,7 @@ body {
 .header {
   display: flex;
   align-items: center;
-  padding: 14px 18px;
+  padding: 13px 18px;
   background: var(--bg-header);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
@@ -74,12 +78,33 @@ body {
   gap: 8px;
 }
 .header h1 svg { width: 17px; height: 17px; opacity: 0.85; }
+.live {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cpu-color);
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
 
 .content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px;
+  padding: 14px 14px 16px;
 }
 .content::-webkit-scrollbar { width: 6px; }
 .content::-webkit-scrollbar-track { background: transparent; }
@@ -90,22 +115,25 @@ body {
 .stats-row {
   display: flex;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .stat-card {
   flex: 1;
   background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 15px 16px 14px;
   box-shadow: var(--shadow-card);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
-.stat-card:hover { transform: translateY(-1px); }
+.stat-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
 .stat-card .label {
   font-size: 12px;
   font-weight: 500;
   color: var(--text-dim);
-  margin-bottom: 6px;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -115,17 +143,42 @@ body {
   width: 8px; height: 8px; border-radius: 50%; display: inline-block;
 }
 .stat-card .value {
-  font-size: 28px;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin: 3px 0 10px;
+  line-height: 1.1;
+}
+.stat-card .value .num {
+  font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.8px;
-  line-height: 1.15;
   font-variant-numeric: tabular-nums;
+}
+.stat-card .value .unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.2px;
 }
 .stat-card .sub {
   font-size: 12px;
   color: var(--text-dim);
-  margin-top: 4px;
   font-variant-numeric: tabular-nums;
+  margin-bottom: 10px;
+}
+.stat-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-inset);
+  overflow: hidden;
+}
+.stat-bar {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  transition: width 0.45s ease;
 }
 .cpu-dot { background: var(--cpu-color); box-shadow: 0 0 8px rgba(10,132,255,0.55); }
 .ram-dot { background: var(--ram-color); box-shadow: 0 0 8px rgba(191,90,242,0.55); }
@@ -133,20 +186,23 @@ body {
 :root.light .ram-dot { box-shadow: 0 0 8px rgba(175,82,222,0.4); }
 .cpu-value { color: var(--cpu-color); }
 .ram-value { color: var(--ram-color); }
+.stat-bar.cpu { background: var(--cpu-color); }
+.stat-bar.ram { background: var(--ram-color); }
 
 /* 图表区域 */
 .chart-section {
   background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px 18px;
-  margin-bottom: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
   box-shadow: var(--shadow-card);
 }
 .chart-section .chart-title {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.1px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -161,14 +217,17 @@ body {
 .chart-legend span {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
-.chart-legend .leg-dot {
-  width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+.chart-legend .leg-line {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
 }
 #chart-canvas {
   width: 100%;
-  height: 140px;
+  height: 148px;
   display: block;
   border-radius: var(--radius-sm);
 }
@@ -176,6 +235,7 @@ body {
 /* 角色列表 */
 .sprite-section {
   background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
   overflow: hidden;
@@ -183,13 +243,14 @@ body {
 .sprite-header {
   display: flex;
   align-items: center;
-  padding: 11px 18px;
+  padding: 10px 16px;
   background: var(--bg-inset);
   border-bottom: 0.5px solid var(--separator);
   font-size: 11px;
   font-weight: 600;
   color: var(--text-dim);
   letter-spacing: 0.3px;
+  font-variant-numeric: tabular-nums;
 }
 .sprite-header .col {
   cursor: pointer;
@@ -197,23 +258,25 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  border-radius: 4px;
+  padding: 2px 0;
 }
 .sprite-header .col:hover { color: var(--text); }
 .sprite-header .col.active { color: var(--accent); }
-.sprite-header .col .sort-arrow {
-  font-size: 8px;
+.sort-arrow {
+  display: inline-flex;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, transform 0.15s;
 }
 .sprite-header .col.active .sort-arrow { opacity: 1; }
+.sort-arrow svg { display: block; width: 9px; height: 6px; }
+.sprite-header .col.desc .sort-arrow { transform: rotate(180deg); }
 
-.col-name { flex: 1; min-width: 0; }
-.col-threads { width: 56px; text-align: center; }
-.col-cpu { width: 72px; text-align: center; }
-.col-mem { width: 80px; text-align: center; }
-.col-blocks { width: 56px; text-align: center; }
-.col-costumes { width: 56px; text-align: center; }
+.col-name { flex: 1; min-width: 0; margin-left: 36px; }
+.col-threads { width: 44px; justify-content: flex-end; }
+.col-cpu { width: 96px; justify-content: flex-end; }
+.col-mem { width: 78px; justify-content: flex-end; }
+.col-blocks { width: 50px; justify-content: flex-end; }
+.col-costumes { width: 50px; justify-content: flex-end; }
 
 .sprite-list {
   max-height: 280px;
@@ -225,7 +288,7 @@ body {
 .sprite-item {
   display: flex;
   align-items: center;
-  padding: 9px 18px;
+  padding: 9px 16px;
   border-bottom: 0.5px solid var(--separator);
   transition: background 0.12s;
   font-size: 13px;
@@ -233,21 +296,24 @@ body {
 }
 .sprite-item:last-child { border-bottom: none; }
 .sprite-item:hover { background: var(--bg-card-hover); }
-.sprite-item.is-stage { opacity: 0.55; }
+.sprite-item.is-stage .sprite-name { font-weight: 450; }
 
 .sprite-icon {
   width: 26px;
   height: 26px;
-  border-radius: 7px;
+  border-radius: 8px;
   margin-right: 10px;
-  background: var(--bg-inset);
-  border: 0.5px solid var(--separator);
+  background: var(--sprite-icon-bg);
+  color: var(--cpu-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
   flex-shrink: 0;
-  overflow: hidden;
+}
+.sprite-icon svg { width: 14px; height: 14px; display: block; }
+.sprite-item.is-stage .sprite-icon {
+  color: var(--text-dim);
+  background: var(--bg-inset);
 }
 .sprite-name {
   flex: 1;
@@ -258,21 +324,21 @@ body {
   font-weight: 500;
   letter-spacing: -0.1px;
 }
-.sprite-threads { width: 56px; text-align: center; color: var(--text-dim); }
-.sprite-cpu { width: 72px; text-align: center; font-size: 12px; }
-.sprite-mem { width: 80px; text-align: center; color: var(--text-dim); }
-.sprite-blocks { width: 56px; text-align: center; color: var(--text-dim); }
-.sprite-costumes { width: 56px; text-align: center; color: var(--text-dim); }
+.sprite-threads { width: 44px; text-align: right; color: var(--text-dim); }
+.sprite-cpu { width: 96px; display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 12px; font-weight: 500; }
+.sprite-mem { width: 78px; text-align: right; color: var(--text-dim); }
+.sprite-blocks { width: 50px; text-align: right; color: var(--text-dim); }
+.sprite-costumes { width: 50px; text-align: right; color: var(--text-dim); }
 
 .cpu-bar {
   display: inline-block;
-  width: 34px;
+  width: 32px;
   height: 4px;
   background: var(--bg-inset);
   border-radius: 2px;
-  margin-right: 5px;
   vertical-align: middle;
   overflow: hidden;
+  flex-shrink: 0;
 }
 .cpu-bar-fill {
   display: block;
@@ -281,14 +347,27 @@ body {
   background: var(--cpu-color);
   transition: width 0.35s ease;
 }
+.num-col { color: var(--text); }
 
 .empty-state {
-  padding: 36px 18px;
-  text-align: center;
+  padding: 40px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0.1px;
 }
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--bg-inset);
+  border-top-color: var(--cpu-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
     <script src="../assets/nw-core.js"></script>
     <script src="../assets/shims/misc.js"></script>
@@ -297,14 +376,15 @@ body {
 
 <div class="header">
   <h1>
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="1" width="5" height="5" rx="1"/>
-      <rect x="10" y="1" width="5" height="5" rx="1"/>
-      <rect x="1" y="10" width="5" height="5" rx="1"/>
-      <rect x="10" y="10" width="5" height="5" rx="1"/>
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+      <rect x="1" y="1" width="5" height="5" rx="1.2"/>
+      <rect x="10" y="1" width="5" height="5" rx="1.2"/>
+      <rect x="1" y="10" width="5" height="5" rx="1.2"/>
+      <rect x="10" y="10" width="5" height="5" rx="1.2"/>
     </svg>
     任务管理器
   </h1>
+  <div class="live"><span class="live-dot"></span>实时</div>
 </div>
 
 <div class="content">
@@ -312,13 +392,15 @@ body {
   <div class="stats-row">
     <div class="stat-card">
       <div class="label"><span class="dot cpu-dot"></span>CPU</div>
-      <div class="value cpu-value" id="cpu-value">0%</div>
+      <div class="value cpu-value"><span class="num" id="cpu-value">0</span><span class="unit">%</span></div>
       <div class="sub" id="cpu-sub">0 核心 / 0 线程</div>
+      <div class="stat-track"><span class="stat-bar cpu" id="cpu-bar"></span></div>
     </div>
     <div class="stat-card">
       <div class="label"><span class="dot ram-dot"></span>RAM</div>
-      <div class="value ram-value" id="ram-value">0 MB</div>
+      <div class="value ram-value"><span class="num" id="ram-value">0</span><span class="unit" id="ram-unit">MB</span></div>
       <div class="sub" id="ram-sub">共 0 MB</div>
+      <div class="stat-track"><span class="stat-bar ram" id="ram-bar"></span></div>
     </div>
   </div>
 
@@ -327,8 +409,8 @@ body {
     <div class="chart-title">
       资源使用趋势
       <div class="chart-legend">
-        <span><span class="leg-dot" style="background:var(--cpu-color)"></span>CPU</span>
-        <span><span class="leg-dot" style="background:var(--ram-color)"></span>RAM</span>
+        <span><span class="leg-line" style="background:var(--cpu-color)"></span>CPU</span>
+        <span><span class="leg-line" style="background:var(--ram-color)"></span>RAM</span>
       </div>
     </div>
     <canvas id="chart-canvas"></canvas>
@@ -337,15 +419,27 @@ body {
   <!-- 角色列表 -->
   <div class="sprite-section">
     <div class="sprite-header">
-      <div class="col col-name active" data-sort="name">名称 <span class="sort-arrow">▲</span></div>
-      <div class="col col-threads" data-sort="threads">线程 <span class="sort-arrow">▲</span></div>
-      <div class="col col-cpu" data-sort="cpu">CPU <span class="sort-arrow">▲</span></div>
-      <div class="col col-mem" data-sort="mem">内存 <span class="sort-arrow">▲</span></div>
-      <div class="col col-blocks" data-sort="blocks">积木 <span class="sort-arrow">▲</span></div>
-      <div class="col col-costumes" data-sort="costumes">造型 <span class="sort-arrow">▲</span></div>
+      <div class="col col-name active" data-sort="name">名称
+        <span class="sort-arrow"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5l4-4 4 4"/></svg></span>
+      </div>
+      <div class="col col-threads" data-sort="threads">线程
+        <span class="sort-arrow"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5l4-4 4 4"/></svg></span>
+      </div>
+      <div class="col col-cpu" data-sort="cpu">CPU
+        <span class="sort-arrow"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5l4-4 4 4"/></svg></span>
+      </div>
+      <div class="col col-mem" data-sort="mem">内存
+        <span class="sort-arrow"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5l4-4 4 4"/></svg></span>
+      </div>
+      <div class="col col-blocks" data-sort="blocks">积木
+        <span class="sort-arrow"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5l4-4 4 4"/></svg></span>
+      </div>
+      <div class="col col-costumes" data-sort="costumes">造型
+        <span class="sort-arrow"><svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5l4-4 4 4"/></svg></span>
+      </div>
     </div>
     <div class="sprite-list" id="sprite-list">
-      <div class="empty-state">加载中...</div>
+      <div class="empty-state"><span class="spinner"></span><span>加载中</span></div>
     </div>
   </div>
 </div>
@@ -356,18 +450,26 @@ body {
   var MAX_HISTORY = 60;
   var cpuHistory = [];
   var ramHistory = [];
-  var timeLabels = [];
   var currentSort = 'name';
   var sortAsc = true;
   var spriteData = [];
+  var spriteDataReady = false;
   var cpuCores = 0;
   var isDark = true;
+
+  // 图标（内联 SVG，替代 emoji）
+  var iconSprite = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="4.8" r="2.7"/><path d="M2.6 14.2c.6-3 2.8-4.7 5.4-4.7s4.8 1.7 5.4 4.7"/></svg>';
+  var iconStage = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="2.6" width="12.8" height="8.6" rx="1.8"/><path d="M5.4 13.4h5.2"/></svg>';
 
   // DOM 元素
   var cpuValueEl = document.getElementById('cpu-value');
   var cpuSubEl = document.getElementById('cpu-sub');
+  var cpuBarEl = document.getElementById('cpu-bar');
   var ramValueEl = document.getElementById('ram-value');
+  var ramUnitEl = document.getElementById('ram-unit');
   var ramSubEl = document.getElementById('ram-sub');
+  var ramBarEl = document.getElementById('ram-bar');
+  var ramCardEl = ramBarEl.closest('.stat-card');
   var spriteListEl = document.getElementById('sprite-list');
   var canvas = document.getElementById('chart-canvas');
   var ctx = canvas.getContext('2d');
@@ -392,7 +494,8 @@ body {
   }
 
   // 排序
-  document.querySelectorAll('.sprite-header .col').forEach(function(col) {
+  var sortCols = document.querySelectorAll('.sprite-header .col');
+  sortCols.forEach(function(col) {
     col.addEventListener('click', function() {
       var sort = col.dataset.sort;
       if (currentSort === sort) {
@@ -401,13 +504,31 @@ body {
         currentSort = sort;
         sortAsc = sort === 'name';
       }
-      document.querySelectorAll('.sprite-header .col').forEach(function(c) { c.classList.remove('active'); });
+      sortCols.forEach(function(c) { c.classList.remove('active'); });
       col.classList.add('active');
-      var arrow = col.querySelector('.sort-arrow');
-      arrow.textContent = sortAsc ? '▲' : '▼';
+      col.classList.toggle('desc', !sortAsc);
       renderSpriteList();
     });
   });
+
+  // 内存格式化：GB 保留一位小数更精确
+  function fmtMem(mb) {
+    if (mb >= 1024) {
+      return { num: (mb / 1024).toFixed(1), unit: 'GB' };
+    }
+    return { num: String(mb), unit: 'MB' };
+  }
+
+  // 空状态
+  var lastEmptyKey = null;
+  function showEmpty(msg, loading) {
+    var key = msg + (loading ? ' (loading)' : '');
+    if (key === lastEmptyKey) return;
+    lastEmptyKey = key;
+    spriteListEl.innerHTML = '<div class="empty-state">' +
+      (loading ? '<span class="spinner"></span>' : '') +
+      '<span>' + msg + '</span></div>';
+  }
 
   // 图表绘制
   function drawChart() {
@@ -419,126 +540,150 @@ body {
 
     var w = rect.width;
     var h = rect.height;
-    var padTop = 8;
-    var padBottom = 20;
-    var padLeft = 36;
-    var padRight = 12;
+    var padTop = 10;
+    var padBottom = 22;
+    var padLeft = 38;
+    var padRight = 10;
     var chartW = w - padLeft - padRight;
     var chartH = h - padTop - padBottom;
 
     ctx.clearRect(0, 0, w, h);
 
-    var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
-    var textColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
+    var gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+    var textColor = isDark ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.4)';
+    var baselineColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
 
-    // 网格线
-    ctx.strokeStyle = gridColor;
+    // 虚线网格
     ctx.lineWidth = 1;
-    for (var i = 0; i <= 4; i++) {
+    for (var i = 0; i < 4; i++) {
       var y = padTop + (chartH / 4) * i;
       ctx.beginPath();
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = gridColor;
       ctx.moveTo(padLeft, y);
       ctx.lineTo(w - padRight, y);
       ctx.stroke();
     }
+    ctx.setLineDash([]);
+    // 底部基准线
+    ctx.beginPath();
+    ctx.strokeStyle = baselineColor;
+    ctx.moveTo(padLeft, padTop + chartH);
+    ctx.lineTo(w - padRight, padTop + chartH);
+    ctx.stroke();
 
     // Y 轴标签
     ctx.fillStyle = textColor;
-    ctx.font = '9px -apple-system, sans-serif';
+    ctx.font = '10px -apple-system, "Segoe UI", sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     for (var i = 0; i <= 4; i++) {
       var y = padTop + (chartH / 4) * i;
       var val = 100 - i * 25;
-      ctx.fillText(val + '%', padLeft - 6, y);
+      ctx.fillText(val + '%', padLeft - 7, y);
     }
 
-    // 绘制线条函数
+    var step = chartW / (MAX_HISTORY - 1);
+    var baselineY = padTop + chartH;
+
+    // 平滑曲线路径
+    function pathThrough(pts) {
+      if (pts.length < 2) return false;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      if (pts.length === 2) {
+        ctx.lineTo(pts[1].x, pts[1].y);
+        return true;
+      }
+      for (var i = 1; i < pts.length - 1; i++) {
+        var xc = (pts[i].x + pts[i + 1].x) / 2;
+        var yc = (pts[i].y + pts[i + 1].y) / 2;
+        ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+      }
+      ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      return true;
+    }
+
+    // 绘制线条
     function drawLine(data, color, fillColor) {
       if (data.length < 2) return;
-      var step = chartW / (MAX_HISTORY - 1);
+      var pts = data.map(function(d, i) {
+        var v = Math.min(d.v, 100);
+        return {
+          x: padLeft + (MAX_HISTORY - data.length + i) * step,
+          y: baselineY - (v / 100) * chartH
+        };
+      });
 
       // 填充区域
-      ctx.beginPath();
-      ctx.moveTo(padLeft + (MAX_HISTORY - data.length) * step, padTop + chartH);
-      for (var i = 0; i < data.length; i++) {
-        var x = padLeft + (MAX_HISTORY - data.length + i) * step;
-        var y = padTop + chartH - (data[i].v / 100) * chartH;
-        ctx.lineTo(x, y);
-      }
-      ctx.lineTo(padLeft + (MAX_HISTORY - 1) * step, padTop + chartH);
+      ctx.save();
+      pathThrough(pts);
+      ctx.lineTo(pts[pts.length - 1].x, baselineY);
+      ctx.lineTo(pts[0].x, baselineY);
       ctx.closePath();
-      var grad = ctx.createLinearGradient(0, padTop, 0, padTop + chartH);
+      var grad = ctx.createLinearGradient(0, padTop, 0, baselineY);
       grad.addColorStop(0, fillColor);
       grad.addColorStop(1, isDark ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0)');
       ctx.fillStyle = grad;
       ctx.fill();
+      ctx.restore();
 
       // 线条
-      ctx.beginPath();
-      for (var i = 0; i < data.length; i++) {
-        var x = padLeft + (MAX_HISTORY - data.length + i) * step;
-        var y = padTop + chartH - (data[i].v / 100) * chartH;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
+      pathThrough(pts);
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // 最后一个点
-      if (data.length > 0) {
-        var lastX = padLeft + (MAX_HISTORY - 1) * step;
-        var lastY = padTop + chartH - (data[data.length - 1].v / 100) * chartH;
-        ctx.beginPath();
-        ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(lastX, lastY, 1.8, 0, Math.PI * 2);
-        ctx.fillStyle = isDark ? '#1c1c1e' : '#ffffff';
-        ctx.fill();
-      }
+      // 终点光晕
+      var last = pts[pts.length - 1];
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 9;
+      ctx.beginPath();
+      ctx.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(last.x, last.y, 1.6, 0, Math.PI * 2);
+      ctx.fillStyle = isDark ? '#1c1c1e' : '#ffffff';
+      ctx.fill();
     }
 
     // RAM 百分比
     var ramPercents = ramHistory.map(function(r) { return { v: r.percent, t: r.t }; });
     var cpuColor = isDark ? '#0a84ff' : '#007aff';
     var ramColor = isDark ? '#bf5af2' : '#af52de';
-    var cpuFill = isDark ? 'rgba(10,132,255,0.16)' : 'rgba(0,122,255,0.12)';
-    var ramFill = isDark ? 'rgba(191,90,242,0.10)' : 'rgba(175,82,222,0.08)';
+    var cpuFill = isDark ? 'rgba(10,132,255,0.20)' : 'rgba(0,122,255,0.12)';
+    var ramFill = isDark ? 'rgba(191,90,242,0.14)' : 'rgba(175,82,222,0.10)';
     drawLine(cpuHistory, cpuColor, cpuFill);
     drawLine(ramPercents, ramColor, ramFill);
 
-    // X 轴时间标签 - 基于 CPU 数据点的实际时间戳
-    ctx.fillStyle = textColor;
-    ctx.font = '9px -apple-system, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
+    // X 轴时间标签 - 基于数据点的实际时间戳
+    if (cpuHistory.length > 0) {
+      ctx.fillStyle = textColor;
+      ctx.font = '10px -apple-system, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
 
-    var now = Date.now();
-    var labelPositions = [0, 0.5, 1]; // 左、中、右
-    for (var i = 0; i < labelPositions.length; i++) {
-      var pos = labelPositions[i];
-      var dataIdx = Math.round(pos * (cpuHistory.length - 1));
-      if (cpuHistory.length === 0) continue;
-      var x = padLeft + pos * chartW;
-      var secAgo = 0;
-      if (pos < 1) {
-        secAgo = Math.round((now - cpuHistory[dataIdx].t) / 1000);
-      }
-      if (secAgo <= 0) {
-        ctx.fillText('现在', x, padTop + chartH + 5);
-      } else {
-        ctx.fillText('-' + secAgo + 's', x, padTop + chartH + 5);
+      var now = Date.now();
+      var positions = [0, cpuHistory.length >= 10 ? 0.5 : null, 1];
+      for (var i = 0; i < positions.length; i++) {
+        if (positions[i] === null) continue;
+        var pos = positions[i];
+        var dataIdx = Math.min(Math.round(pos * (cpuHistory.length - 1)), cpuHistory.length - 1);
+        var x = padLeft + pos * chartW;
+        var secAgo = Math.round((now - cpuHistory[dataIdx].t) / 1000);
+        ctx.fillText(secAgo <= 0 ? '现在' : '-' + secAgo + 's', x, baselineY + 6);
       }
     }
   }
 
   // 渲染角色列表
   function renderSpriteList() {
+    lastEmptyKey = null;
     var sorted = spriteData.slice().sort(function(a, b) {
       var va, vb;
       switch (currentSort) {
@@ -557,7 +702,7 @@ body {
     });
 
     if (sorted.length === 0) {
-      spriteListEl.innerHTML = '<div class="empty-state">暂无角色数据</div>';
+      showEmpty('暂无角色数据', false);
       return;
     }
 
@@ -570,12 +715,12 @@ body {
         ? (s.memEstimateKB / 1024).toFixed(1) + ' MB'
         : s.memEstimateKB + ' KB';
       return '<div class="sprite-item' + (s.isStage ? ' is-stage' : '') + '">' +
-        '<div class="sprite-icon">' + (s.isStage ? '🎬' : '🐱') + '</div>' +
+        '<div class="sprite-icon">' + (s.isStage ? iconStage : iconSprite) + '</div>' +
         '<div class="sprite-name" title="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</div>' +
         '<div class="sprite-threads">' + s.threads + '</div>' +
         '<div class="sprite-cpu">' +
           '<span class="cpu-bar"><span class="cpu-bar-fill" style="width:' + cpuPercent + '%;background:' + cpuColor + '"></span></span>' +
-          cpuPercent.toFixed(1) + '%' +
+          '<span>' + cpuPercent.toFixed(1) + '%</span>' +
         '</div>' +
         '<div class="sprite-mem">' + memStr + '</div>' +
         '<div class="sprite-blocks">' + s.blockCount + '</div>' +
@@ -594,16 +739,23 @@ body {
     if (!window.TaskManagerPreload) return;
 
     window.TaskManagerPreload.getSystemStats().then(function(stats) {
-      cpuValueEl.textContent = stats.cpuPercent + '%';
+      cpuValueEl.textContent = stats.cpuPercent;
+      cpuBarEl.style.width = stats.cpuPercent + '%';
       cpuSubEl.textContent = (cpuCores || '?') + ' 核心 / ' + lastTotalThreads + ' 线程';
-      ramValueEl.textContent = stats.ramUsedMB + ' MB';
-      ramSubEl.textContent = '共 ' + stats.ramTotalMB + ' MB';
+
+      var used = fmtMem(stats.ramUsedMB);
+      var total = fmtMem(stats.ramTotalMB);
+      ramValueEl.textContent = used.num;
+      ramUnitEl.textContent = used.unit;
+      ramSubEl.textContent = '共 ' + total.num + ' ' + total.unit;
+      ramCardEl.title = stats.ramUsedMB + ' MB / ' + stats.ramTotalMB + ' MB';
 
       var now = Date.now();
       cpuHistory.push({ v: stats.cpuPercent, t: now });
       if (cpuHistory.length > MAX_HISTORY) cpuHistory.shift();
 
-      var ramPercent = stats.ramTotalMB > 0 ? (stats.ramUsedMB / stats.ramTotalMB * 100) : 0;
+      var ramPercent = stats.ramTotalMB > 0 ? Math.min((stats.ramUsedMB / stats.ramTotalMB * 100), 100) : 0;
+      ramBarEl.style.width = ramPercent.toFixed(1) + '%';
       ramHistory.push({ percent: ramPercent, usedMB: stats.ramUsedMB, totalMB: stats.ramTotalMB, t: now });
       if (ramHistory.length > MAX_HISTORY) ramHistory.shift();
 
@@ -619,10 +771,11 @@ body {
       }
       if (spriteStats && spriteStats.sprites && spriteStats.sprites.length > 0) {
         spriteData = spriteStats.sprites;
+        spriteDataReady = true;
         renderSpriteList();
-      } else if (spriteData.length === 0) {
-        // 首次加载无数据时显示提示
-        spriteListEl.innerHTML = '<div class="empty-state">暂无角色数据</div>';
+      } else if (!spriteDataReady) {
+        // 首次加载
+        if (!spriteData.length) showEmpty('获取角色数据中', true);
       }
       // 如果之前有数据但现在获取失败，保留上次的数据
     }).catch(function(e) {

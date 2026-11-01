@@ -199,6 +199,7 @@
     requestSpriteLibrary: [],
     aiToolCall: [],
     spriteStats: [],
+    importCostume: [],
     requestTheme: [],
     addExtension: [],
     myExtensionsUpsert: [],
@@ -423,11 +424,24 @@
     return out;
   }
 
+  /** 判断 GUI 传来的是否已是内含素材的 sb3 载荷（{format:'sb3',data:<base64>}） */
+  function isSb3Payload (value) {
+    if (value && typeof value === 'object') {
+      return value.format === 'sb3' && !!value.data;
+    }
+    if (typeof value !== 'string') return false;
+    // 便宜的前缀判断，避免为大字符串做一次完整 JSON.parse
+    return /^\s*\{\s*"format"\s*:\s*"sb3"/.test(value);
+  }
+
   /** 发送项目 + 素材（blob 分块）；target 传名字则定向，否则广播 */
   function sendProjectPayload (links, json) {
+    var alreadyHasAssets = isSb3Payload(json);
+    var projectStr = typeof json === 'string' ? json : JSON.stringify(json);
     var payload = JSON.stringify({
-      project: typeof json === 'string' ? json : JSON.stringify(json),
-      assets: collectVmAssets()
+      project: projectStr,
+      // sb3 载荷已内含全部素材，无需再单独传一遍
+      assets: alreadyHasAssets ? [] : collectVmAssets()
     });
     links.forEach(function (link) {
       link.sendBlob('collab-project', strToBuf(payload));
@@ -450,6 +464,19 @@
     }
   }
 
+  /** 请求 GUI 导出当前项目（含全部素材）并推送给指定成员。
+   *  直接调用 GUI 注册的回调，避免 awaitCallback 无人 resolve 造成 60s 后误报。 */
+  function requestProjectFromGui (targetName) {
+    var list = callbacks.collabRequestProjectJSON;
+    if (!list || !list.length) return;
+    var requestId = 'nw-editor-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    list.forEach(function (cb) {
+      try {
+        cb({requestId: requestId, targetUsername: targetName});
+      } catch (e) { void e; }
+    });
+  }
+
   function hostOnData (link, obj) {
     if (!obj) return;
     switch (obj.t) {
@@ -461,15 +488,12 @@
         collab.state.onlineCount = collab.roster.length;
         pushCollabState();
         util.toast('「' + link.meta.name + '」加入了协作');
+        // 新成员加入：立刻把当前项目（含角色/背景/造型/音乐等素材）推给它
+        requestProjectFromGui(link.meta.name);
         break;
       }
       case 'project-request': {
-        // GUI 侧 vm.toJSON() 后回 sendCollabProjectJSON(json, targetUsername)
-        awaitCallback('collabRequestProjectJSON', function (requestId) {
-          return {requestId: requestId, targetUsername: link.meta.name};
-        }, 60000).catch(function () {
-          util.toast('协作：生成项目数据失败');
-        });
+        requestProjectFromGui(link.meta.name);
         break;
       }
       case 'bye': {
@@ -986,7 +1010,16 @@
         memory: { used: usedMemory, total: totalMemory }
       };
     },
-    getTopBarDeviceStats: () => storage.getSettings().topBarDeviceStats === true,
+    getTopBarDeviceStats: () => storage.getSettings().topBarDeviceStats !== false,
+    // 顶栏设备占用开关：本地存储变化或跨窗口广播时推进菜单栏实时显隐
+    onTopBarDeviceStatsChanged: (callback) => {
+      storage.onSettingsChanged(function (key, value) {
+        if (key === 'topBarDeviceStats') callback(value);
+      });
+      util.onBroadcast(function (message) {
+        if (message.type === 'topBarDeviceStats') callback(message.data && message.data.enabled);
+      });
+    },
     getAISystemInfo: async () => {
       var stats = await EditorPreload.getSystemStats();
       return {
@@ -1031,6 +1064,21 @@
       });
     },
 
+    // 顶部工具栏高度（normal / narrow）。同步返回：需要在 React 渲染前
+    // 拿到值，让 Blockly 首次注入时就按正确高度测量代码区。
+    getToolbarHeight: () => {
+      var value = storage.getSettings().toolbarHeight;
+      return value === 'narrow' ? 'narrow' : 'normal';
+    },
+    onToolbarHeightChanged: (callback) => {
+      storage.onSettingsChanged(function (key, value) {
+        if (key === 'toolbarHeight') callback(value);
+      });
+      util.onBroadcast(function (message) {
+        if (message.type === 'toolbarHeight') callback(message.data && message.data.height);
+      });
+    },
+
     /* ---- AI / 扩展协作回调 ---- */
     onRequestProjectJSON: (cb) => { callbacks.requestProjectJSON.push(cb); },
     sendProjectJSON: (data) => {
@@ -1057,13 +1105,18 @@
     notifyThemeChanged: (theme) => { if (NW.host) NW.host.notifyAppearanceChanged(); },
     onRequestSpriteStats: (cb) => { callbacks.spriteStats.push(cb); },
     sendSpriteStats: (data) => { resolveRequest(data && data.requestId, data); },
+    // 图片编辑器「导出到 Scratch 项目」：把图片导入为造型 / 新角色
+    onImportCostume: (cb) => { callbacks.importCostume.push(cb); },
+    sendImportCostumeResult: (data) => { resolveRequest(data && data.requestId, data); },
     removeAllAIListeners: () => {
       callbacks.requestProjectJSON.length = 0;
       callbacks.applyProject.length = 0;
       callbacks.applySprite.length = 0;
       callbacks.aiToolCall.length = 0;
       callbacks.requestTheme.length = 0;
-      callbacks.spriteStats.length = 0;
+      // 注意：不清空 spriteStats —— GUI 在调用 removeAllAIListeners 之前注册
+      // onRequestSpriteStats（见 desktop-hoc.jsx 注释），清掉会让角色统计/列表失效
+      callbacks.importCostume.length = 0;
     },
 
     onAddExtension: (cb) => { callbacks.addExtension.push(cb); },
@@ -1176,6 +1229,10 @@
         }, 30000).catch(function () { return { sprites: [], totalThreads: 0 }; });
       },
 
+      importCostume: function (targetId, name, dataUrl, asNewSprite) {
+        return importCostumeLocal(targetId, name, dataUrl, asNewSprite);
+      },
+
       getSystemStats: EditorPreload.getSystemStats,
 
       listProjects: function () {
@@ -1224,16 +1281,67 @@
       }
     });
 
-    /* 编辑器开/关要广播出去：扩展编辑器据此显示「添加到项目 / 添加到我的扩展」。
-       跨标签页场景靠 BroadcastChannel 送达，与页内窗口共用同一套事件名。 */
+    /** 把图片导入本编辑器：targetId 有值 → 追加为该角色的造型；为空或 asNewSprite → 新建角色 */
+    function importCostumeLocal (targetId, name, dataUrl, asNewSprite) {
+      return awaitCallback('importCostume', function (requestId) {
+        return {
+          requestId: requestId,
+          targetId: targetId || null,
+          name: name,
+          dataUrl: dataUrl,
+          asNewSprite: !!asNewSprite
+        };
+      }, 60000).then(function (result) {
+        return result || { success: false, error: '编辑器未响应' };
+      }, function (error) {
+        return { success: false, error: (error && error.message) || String(error) };
+      });
+    }
+
+    /* 编辑器开/关要广播出去：扩展编辑器据此显示「添加到项目 / 添加到我的扩展」，
+       图片编辑器据此显示「导出到 Scratch 项目」。跨标签页场景靠 BroadcastChannel
+       送达，与页内窗口共用同一套事件名。带上角色列表供图片编辑器选择导入目标。 */
     function announceProjects () {
       if (!NW.host || !NW.host.emit) return;
-      NW.host.emit('editor', 'projectsChanged', [{ id: WINDOW_ID, title: global.document.title || '项目' }]);
+      var title = global.document.title || '项目';
+      var emitList = function (sprites) {
+        NW.host.emit('editor', 'projectsChanged', [{ id: WINDOW_ID, title: title, sprites: sprites || [] }]);
+      };
+      if (callbacks.spriteStats.length) {
+        awaitCallback('spriteStats', function (requestId) {
+          return { requestId: requestId };
+        }, 5000).then(function (data) {
+          emitList(data && data.sprites);
+        }, function () {
+          emitList([]);
+        });
+      } else {
+        emitList([]);
+      }
     }
 
     global.setTimeout(announceProjects, 1200);
     global.addEventListener('pagehide', function () {
       if (NW.host && NW.host.emit) NW.host.emit('editor', 'projectsChanged', []);
     });
+
+    // 图片编辑器广播「请求项目列表」→ 回报本项目的角色；广播「导入造型」→ 只有匹配的编辑器响应
+    if (NW.rpc && NW.rpc.on) {
+      NW.rpc.on('editor', 'requestProjectsChanged', function () {
+        announceProjects();
+      });
+      NW.rpc.on('editor', 'importCostumeFor', function (data) {
+        if (!data || data.editorId !== WINDOW_ID) return;
+        importCostumeLocal(data.targetId, data.name, data.dataUrl, data.asNewSprite).then(function (res) {
+          if (!NW.host || !NW.host.emit) return;
+          NW.host.emit('editor', 'importCostumeResult', {
+            requestId: data.requestId,
+            editorId: WINDOW_ID,
+            success: !!(res && res.success),
+            error: (res && res.error) || null
+          });
+        });
+      });
+    }
   }
 })(window);

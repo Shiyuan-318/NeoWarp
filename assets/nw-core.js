@@ -1,6 +1,6 @@
 /* NeoWarp Web Runtime — 由 web/build.mjs 自动生成，请勿直接修改 */
 (function () {
-  window.NW_VERSION = "2.0.0";
+  window.NW_VERSION = "2.2.0";
   window.NW_MONACO_CDNS = ["https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs","https://unpkg.com/monaco-editor@0.52.2/min/vs"];
 })();
 /* ===== 00-util.js ===== */
@@ -609,6 +609,7 @@
   var DEFAULT_SETTINGS = {
     updateChecker: 'startup',
     uiTheme: 'system',
+    toolbarHeight: 'normal',
     microphone: null,
     camera: null,
     hardwareAcceleration: true,
@@ -618,7 +619,7 @@
     exitFullscreenOnEscape: true,
     richPresence: false,
     showRecentProjects: true,
-    topBarDeviceStats: false,
+    topBarDeviceStats: true,
     homeLogoText: 'NeoWarp'
   };
 
@@ -675,7 +676,7 @@
     if (typeof cfg.customEndpoint !== 'string') cfg.customEndpoint = '';
     if (typeof cfg.customModelId !== 'string') cfg.customModelId = '';
     var contextLimit = Number(cfg.customContextLimit);
-    cfg.customContextLimit = isFinite(contextLimit) && contextLimit >= 1000 ? Math.floor(contextLimit) : 32000;
+    cfg.customContextLimit = isFinite(contextLimit) && contextLimit >= 1000 ? Math.floor(contextLimit) : 1000000;
     if (typeof cfg.thinkingLevel !== 'string' || !cfg.thinkingLevel) cfg.thinkingLevel = 'medium';
     return cfg;
   }

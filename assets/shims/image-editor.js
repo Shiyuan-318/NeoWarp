@@ -139,6 +139,98 @@
     return rpc.call('desktop', 'themeApplied', [theme]).catch(function () { return true; });
   }
 
+  /* ===================== 导出到已打开的 Scratch 项目 =====================
+   * 网页版里每个编辑器是独立标签页，没有中心注册表；这里用 BroadcastChannel
+   * 广播事件：向所有标签页要「项目 + 角色」，并定向把图片发给某个编辑器导入。
+   * BroadcastChannel 不可用时退化为 rpc.call('editor', ...)（只覆盖单个编辑器）。 */
+  var projectRegistry = Object.create(null);
+  var importWaiters = Object.create(null);
+  var projectsChangedCallbacks = [];
+  var collecting = false;
+
+  function broadcast (name, data) {
+    if (rpc && typeof rpc.channelPost === 'function') {
+      try { rpc.channelPost({ t: 'evt', ns: 'editor', n: name, d: data }); return true; } catch (e) { /* 忽略 */ }
+    }
+    return false;
+  }
+
+  if (rpc && typeof rpc.on === 'function') {
+    // 编辑器主动广播项目变化（打开/关闭）→ 记录并通知页面刷新
+    rpc.on('editor', 'projectsChanged', function (list) {
+      if (!Array.isArray(list) || !list.length) return;
+      list.forEach(function (p) {
+        if (p && p.id) projectRegistry[p.id] = { id: p.id, title: p.title || '项目', sprites: p.sprites || [] };
+      });
+      if (!collecting) projectsChangedCallbacks.forEach(function (cb) { try { cb(); } catch (e) { /* 忽略 */ } });
+    });
+    // 导入结果回执
+    rpc.on('editor', 'importCostumeResult', function (res) {
+      if (!res || !res.requestId) return;
+      var waiter = importWaiters[res.requestId];
+      if (waiter) {
+        delete importWaiters[res.requestId];
+        waiter({ success: !!res.success, error: res.error || null });
+      }
+    });
+  }
+
+  function fallbackListProjects () {
+    return rpc.call('editor', 'listProjects', [], 8000).then(function (list) {
+      return rpc.call('editor', 'getSpriteStats', [], 8000).then(function (stats) {
+        var sprites = (stats && stats.sprites) || [];
+        return (Array.isArray(list) ? list : []).map(function (p) {
+          return { id: p.id, title: p.title, sprites: sprites };
+        });
+      });
+    }).catch(function () { return []; });
+  }
+
+  function listProjects () {
+    if (!rpc.isAvailable() || typeof rpc.channelPost !== 'function') return fallbackListProjects();
+    projectRegistry = Object.create(null);
+    collecting = true;
+    broadcast('requestProjectsChanged', {});
+    return new Promise(function (resolve) {
+      global.setTimeout(function () {
+        collecting = false;
+        resolve(Object.keys(projectRegistry).map(function (k) { return projectRegistry[k]; }));
+      }, 500);
+    });
+  }
+
+  function importToProject (payload) {
+    payload = payload || {};
+    var req = {
+      editorId: payload.projectId,
+      targetId: payload.spriteId || null,
+      name: payload.name,
+      dataUrl: payload.dataUrl,
+      asNewSprite: !!payload.asNewSprite
+    };
+    if (rpc.isAvailable() && typeof rpc.channelPost === 'function') {
+      return new Promise(function (resolve) {
+        var requestId = 'nw-import-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+        var settled = false;
+        importWaiters[requestId] = function (res) { settled = true; resolve(res); };
+        req.requestId = requestId;
+        if (!broadcast('importCostumeFor', req)) {
+          delete importWaiters[requestId];
+          resolve({ success: false, error: '当前环境不支持导出到 Scratch 项目' });
+          return;
+        }
+        global.setTimeout(function () {
+          if (settled) return;
+          delete importWaiters[requestId];
+          resolve({ success: false, error: '导入超时：目标项目未响应' });
+        }, 30000);
+      });
+    }
+    return rpc.call('editor', 'importCostume', [req.targetId, req.name, req.dataUrl, req.asNewSprite], 60000)
+      .then(function (res) { return res || { success: false, error: '编辑器未响应' }; })
+      .catch(function (error) { return { success: false, error: (error && error.message) || String(error) }; });
+  }
+
   global.ImageEditorPreload = {
     getTheme: function () {
       if (rpc.isAvailable()) {
@@ -169,6 +261,14 @@
           util.toast('保存失败：' + (error && error.message ? error.message : error));
           return null;
         });
+    },
+
+    listProjects: listProjects,
+
+    importToProject: importToProject,
+
+    onProjectsChanged: function (callback) {
+      if (typeof callback === 'function') projectsChangedCallbacks.push(callback);
     }
   };
 })(window);

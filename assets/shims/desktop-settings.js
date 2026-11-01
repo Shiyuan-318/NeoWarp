@@ -46,6 +46,7 @@
       updateCheckerAllowed: true,
       updateChecker: stored.updateChecker,
       uiTheme: stored.uiTheme,
+      toolbarHeight: stored.toolbarHeight === 'narrow' ? 'narrow' : 'normal',
       microphone: stored.microphone,
       camera: stored.camera,
       hardwareAcceleration: true,
@@ -126,6 +127,16 @@
 
     setUpdateChecker: function (value) { storage.setSetting('updateChecker', value); return Promise.resolve(null); },
 
+    // 顶部工具栏高度：storage 的变更事件会带动编辑器立即切换
+    setToolbarHeight: function (toolbarHeight) {
+      if (toolbarHeight !== 'normal' && toolbarHeight !== 'narrow') {
+        return Promise.resolve(null);
+      }
+      storage.setSetting('toolbarHeight', toolbarHeight);
+      util.broadcast('toolbarHeight', { height: toolbarHeight });
+      return Promise.resolve(null);
+    },
+
     checkForUpdates: function () {
       return checkUpdatesViaGitHub().catch(function (error) {
         return { error: (error && error.message) || String(error) };
@@ -151,7 +162,12 @@
     setSpellchecker: function (value) { storage.setSetting('spellchecker', value); return Promise.resolve(null); },
     setExitFullscreenOnEscape: function (value) { storage.setSetting('exitFullscreenOnEscape', value); return Promise.resolve(null); },
     setRichPresence: function (value) { storage.setSetting('richPresence', value); return Promise.resolve(null); },
-    setTopBarDeviceStats: function (value) { storage.setSetting('topBarDeviceStats', value); return Promise.resolve(null); },
+    setTopBarDeviceStats: function (value) {
+      storage.setSetting('topBarDeviceStats', value === true);
+      // 广播给其它打开的窗口，菜单栏即时显隐（与 toolbarHeight 一致）
+      util.broadcast('topBarDeviceStats', { enabled: value === true });
+      return Promise.resolve(null);
+    },
     setShowRecentProjects: function (value) { storage.setSetting('showRecentProjects', value); return Promise.resolve(null); },
 
     openUserData: function () {

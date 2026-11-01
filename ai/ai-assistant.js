@@ -6,39 +6,48 @@
       name: 'OpenAI', logo: '#10a37f', logoText: 'O',
       endpoint: 'https://api.openai.com/v1/chat/completions',
       models: [
-        { id: 'gpt-4.1', name: 'GPT-4.1', supportsReasoning: true },
-        { id: 'gpt-4o', name: 'GPT-4o', supportsReasoning: false },
-        { id: 'gpt-4o-mini', name: 'GPT-4o Mini', supportsReasoning: false },
-        { id: 'o3-mini', name: 'o3-mini', supportsReasoning: true }
+        { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', supportsReasoning: true },
+        { id: 'gpt-6-sol', name: 'GPT-6 Sol', supportsReasoning: true },
+        { id: 'gpt-6-luna', name: 'GPT-6 Luna', supportsReasoning: true },
+        { id: 'gpt-6-astra', name: 'GPT-6 Astra', supportsReasoning: true },
+        { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', supportsReasoning: true },
+        { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', supportsReasoning: true },
+        { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna', supportsReasoning: true },
+        { id: 'gpt-5.5', name: 'GPT-5.5', supportsReasoning: true },
+        { id: 'gpt-5.4', name: 'GPT-5.4', supportsReasoning: true },
+        { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', supportsReasoning: true },
+        { id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano', supportsReasoning: true },
+        { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex', supportsReasoning: true }
       ],
-      defaultModel: 'gpt-4o'
+      defaultModel: 'gpt-6.1-sol'
     },
     deepseek: {
       name: 'DeepSeek', logo: '#4f46e5', logoText: 'D',
-      endpoint: 'https://api.deepseek.com/v1/chat/completions',
+      endpoint: 'https://api.deepseek.com/chat/completions',
       models: [
-        { id: 'deepseek-chat', name: 'DeepSeek V3', supportsReasoning: false },
-        { id: 'deepseek-reasoner', name: 'DeepSeek R1', supportsReasoning: true }
+        { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', supportsReasoning: true },
+        { id: 'deepseek-flash', name: 'DeepSeek Flash', supportsReasoning: true }
       ],
-      defaultModel: 'deepseek-chat'
+      defaultModel: 'deepseek-v4-pro'
     },
     glm: {
       name: 'Zhipu GLM', logo: '#3859ff', logoText: 'Z',
       endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
       models: [
-        { id: 'glm-4-plus', name: 'GLM-4 Plus', supportsReasoning: false },
-        { id: 'glm-4-flash', name: 'GLM-4 Flash', supportsReasoning: false }
+        { id: 'glm-5.3', name: 'GLM-5.3', supportsReasoning: true },
+        { id: 'glm-5.3-flash', name: 'GLM-5.3 Flash', supportsReasoning: true },
+        { id: 'glm-5.3-flashx', name: 'GLM-5.3 FlashX', supportsReasoning: true },
+        { id: 'glm-5.2', name: 'GLM-5.2', supportsReasoning: true }
       ],
-      defaultModel: 'glm-4-plus'
+      defaultModel: 'glm-5.3'
     },
     kimi: {
       name: 'Kimi (Moonshot)', logo: '#10b981', logoText: 'K',
       endpoint: 'https://api.moonshot.cn/v1/chat/completions',
       models: [
         { id: 'kimi-k3', name: 'Kimi K3', supportsReasoning: true },
-        { id: 'moonshot-v1-8k', name: 'Kimi 8K', supportsReasoning: false },
-        { id: 'moonshot-v1-32k', name: 'Kimi 32K', supportsReasoning: false },
-        { id: 'moonshot-v1-128k', name: 'Kimi 128K', supportsReasoning: false }
+        { id: 'kimi-k2.7-code', name: 'Kimi K2.7 Code', supportsReasoning: true },
+        { id: 'kimi-k2.6', name: 'Kimi K2.6', supportsReasoning: false }
       ],
       defaultModel: 'kimi-k3'
     },
@@ -46,25 +55,25 @@
       name: 'Xiaomi MiMo', logo: '#ff6900', logoText: 'M',
       endpoint: 'https://api.xiaomimimo.com/v1/chat/completions',
       models: [
-        { id: 'mimo-v2.5-pro', name: 'MiMo V2.5 Pro', supportsReasoning: true },
-        { id: 'mimo-v2.5-pro-ultraspeed', name: 'MiMo V2.5 Pro UltraSpeed', supportsReasoning: true },
-        { id: 'mimo-v2.5', name: 'MiMo V2.5', supportsReasoning: true }
+        { id: 'mimo-v2.6-pro', name: 'MiMo V2.6 Pro', supportsReasoning: true },
+        { id: 'mimo-v2.6-pro-ultraspeed', name: 'MiMo V2.6 Pro UltraSpeed', supportsReasoning: true },
+        { id: 'mimo-v2.6-flash', name: 'MiMo V2.6 Flash', supportsReasoning: true }
       ],
-      defaultModel: 'mimo-v2.5-pro'
+      defaultModel: 'mimo-v2.6-pro'
     },
     qwen: {
       name: 'Qwen (通义千问)', logo: '#6366f1', logoText: 'Q',
       endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
       models: [
-        { id: 'qwen3.8-max-preview', name: 'Qwen3.8 Max Preview', supportsReasoning: true },
-        { id: 'qwen3.7-max', name: 'Qwen3.7 Max', supportsReasoning: true },
+        { id: 'qwen3.8-max', name: 'Qwen3.8 Max', supportsReasoning: true },
+        { id: 'qwen3.8-flash', name: 'Qwen3.8 Flash', supportsReasoning: true },
         { id: 'qwen3.7-plus', name: 'Qwen3.7 Plus', supportsReasoning: true },
-        { id: 'qwen3.6-flash', name: 'Qwen3.6 Flash', supportsReasoning: true }
+        { id: 'qwen3.7-flash', name: 'Qwen3.7 Flash', supportsReasoning: true }
       ],
       defaultModel: 'qwen3.7-plus'
     },
     custom: {
-      name: 'Custom', logo: '#888', logoText: '?',
+      name: 'Custom', nameEn: 'Custom', nameZh: '自定义', logo: '#888', logoText: '?',
       endpoint: '',
       models: [{ id: 'custom', name: 'Custom Model', supportsReasoning: false }],
       defaultModel: 'custom',
@@ -107,13 +116,30 @@
   var modelDropdown_inSettings = $('modelDropdown_inSettings');
 
   var chatHistory = [];
-  var currentConfig = { apiKey: '', provider: 'openai', model: 'gpt-4o', customEndpoint: '' };
+  var currentConfig = { apiKey: '', provider: 'openai', model: 'gpt-6.1-sol', customEndpoint: '' };
   var isLoading = false;
   var settingsOpen = false;
   var modelDropdownOpen = false;
   var toastTimer = null;
   var abortController = null;
   var projectCodeCache = null;
+
+  /**
+   * 规范化自定义端点：兼容用户填 base URL 或完整端点两种习惯。
+   * - 补协议（https://）；末尾去斜杠
+   * - 不以 /chat/completions 结尾时自动补上（只补 /chat/completions，绝不补 /v1）
+   * Anthropic（…/v1/messages）与 Ollama（…/api/chat）样式的完整端点原样返回。
+   * 与主进程 ai-model-configs.js 保持同一实现（设置侧保存时规范化，这里双保险）
+   */
+  function normalizeCustomEndpoint (url) {
+    var u = String(url || '').trim();
+    if (!u) return u;
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    u = u.replace(/\/+$/, '');
+    if (/\/(v1\/messages|api\/chat)$/i.test(u)) return u;
+    if (!/\/chat\/completions$/i.test(u)) u += '/chat/completions';
+    return u;
+  }
 
   function init () {
     loadConfig();
@@ -275,7 +301,7 @@
     var apiKey = apiKeyInput.value.trim();
     if (!apiKey) { showToast('Please enter API Key', 'error'); apiKeyInput.focus(); return; }
     currentConfig.apiKey = apiKey;
-    currentConfig.customEndpoint = customEndpointInput.value.trim();
+    currentConfig.customEndpoint = normalizeCustomEndpoint(customEndpointInput.value);
     saveConfig();
     updateModelDisplay();
     updateSettingDot();
@@ -1371,7 +1397,7 @@
     showTypingIndicator();
 
     var provider = PROVIDERS[currentConfig.provider];
-    var endpoint = provider.isCustom ? (currentConfig.customEndpoint || provider.endpoint) : provider.endpoint;
+    var endpoint = provider.isCustom ? normalizeCustomEndpoint(currentConfig.customEndpoint || provider.endpoint) : provider.endpoint;
     var modelInfo = getModelInfo();
 
     fetchProjectCode().then(function() {
