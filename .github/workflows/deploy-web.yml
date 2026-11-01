@@ -14,7 +14,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 30
     steps:
       - name: Checkout main
         id: main-checkout
@@ -23,80 +23,14 @@ jobs:
           ref: main
           persist-credentials: false
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Sanitize patch files (runner-local fix, main untouched)
-        run: |
-          cat > /tmp/fix-patches.cjs <<'PATCHFIX'
-          const fs = require('fs');
-          const HUNK_RE = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
-          function sanitize (content) {
-            const lines = content.split('\n');
-            const out = [];
-            let inHunk = false, oc = 0, nc = 0, oldN = 0, newN = 0;
-            let removed = 0, restored = 0;
-            for (let idx = 0; idx < lines.length; idx++) {
-              const line = lines[idx];
-              const isLast = idx === lines.length - 1;
-              if (HUNK_RE.test(line)) {
-                inHunk = true;
-                const m = line.match(HUNK_RE);
-                oldN = m[2] !== undefined ? parseInt(m[2], 10) : 1;
-                newN = m[4] !== undefined ? parseInt(m[4], 10) : 1;
-                oc = 0; nc = 0;
-                out.push(line);
-                continue;
-              }
-              if (inHunk) {
-                if (oc < oldN || nc < newN) {
-                  if (line === '') { out.push(' '); restored++; oc++; nc++; continue; }
-                  const c = line.charAt(0);
-                  if (c === '-') oc++;
-                  else if (c === '+') nc++;
-                  else if (c === ' ') { oc++; nc++; }
-                  else if (c === '\\') { /* no-newline marker */ }
-                  else throw new Error('unexpected hunk line: ' + JSON.stringify(line.slice(0, 80)));
-                  out.push(line);
-                } else if (line === '' && !isLast) {
-                  removed++;
-                } else {
-                  inHunk = false;
-                  out.push(line);
-                }
-                continue;
-              }
-              out.push(line);
-            }
-            return { content: out.join('\n'), removed, restored };
-          }
-          const dir = process.argv[2] || 'patches';
-          for (const f of fs.readdirSync(dir).filter(n => n.endsWith('.patch'))) {
-            const p = dir + '/' + f;
-            const raw = fs.readFileSync(p, 'utf-8');
-            const r = sanitize(raw);
-            let outTxt = r.content;
-            if (!outTxt.endsWith('\n')) outTxt += '\n';
-            fs.writeFileSync(p, outTxt, 'utf-8');
-            console.log(`${f}: removed ${r.removed} stray line(s), restored ${r.restored} context line(s)`);
-          }
-          PATCHFIX
-          node /tmp/fix-patches.cjs patches
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Prepare extensions
-        run: node scripts/prepare-extensions.mjs
-
-      - name: Compile (production)
-        run: npm run webpack:prod
-
       - name: Assemble web site
-        run: node web/build.mjs --gui dist-renderer-webpack/editor --out dist-web --cname neowarp.sy1.top
+        # web/build.mjs 是纯 Node 脚本，无需 npm install / webpack。
+        # 传入空的 --gui 目录：跳过编辑器 webpack bundle 的复制（该 bundle 依赖
+        # 本机未提交的 scratch-gui 私有改动，无法在 CI 复现，保留现有部署版本），
+        # 但仍会从当前源码重建 gui/gui.html 与 migrate-helper.html。
+        run: |
+          mkdir -p .keep-gui-empty
+          node web/build.mjs --gui .keep-gui-empty --out dist-web --cname neowarp.sy1.top
 
       - name: Checkout gh-pages
         uses: actions/checkout@v4
@@ -105,12 +39,13 @@ jobs:
           path: gh-pages
 
       - name: Sync site to gh-pages
+        # 保留 gui/（编辑器 webpack bundle 维持现有部署版本），其余全部以 main 重建产物替换
         run: |
           cd gh-pages
-          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-          cp -r ../dist-web/* .
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'gui' -exec rm -rf {} +
+          cp -a ../dist-web/. .
           git config user.name "Shiyuan-318"
           git config user.email "Shiyuan-318@users.noreply.github.com"
           git add -A
-          git commit -m "deploy: 同步 main@${{ steps.main-checkout.outputs.commit }} 的网页版构建产物" || echo "nothing to commit"
+          git commit -m "deploy: 同步 main@${{ steps.main-checkout.outputs.commit }} 的网页版构建产物（编辑器 bundle 保持现有版本）" || echo "nothing to commit"
           git push origin gh-pages
