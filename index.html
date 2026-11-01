@@ -2935,5 +2935,147 @@
       // 调试/预览入口：控制台执行 NeoWarpFestive.replay()
       window.NeoWarpFestive = Festive;
     </script>
+
+    <!-- ===== 网页版使用提示（每次打开主页均显示，无记忆逻辑） ===== -->
+    <style>
+      .nw-notice-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: var(--overlay-bg, rgba(0, 0, 0, 0.45));
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .nw-notice-overlay.open { display: flex; }
+      .nw-notice-card {
+        width: 420px;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 30px 26px 20px;
+        border-radius: 22px;
+        border: 1px solid var(--modal-border);
+        background: var(--modal-bg);
+        box-shadow: var(--modal-shadow);
+        text-align: center;
+        animation: nw-notice-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      @keyframes nw-notice-in {
+        from { opacity: 0; transform: translateY(16px) scale(0.97); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      .nw-notice-icon {
+        width: 52px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 2px;
+        border-radius: 15px;
+        background: rgba(255, 76, 76, 0.14);
+        color: #ff6b6b;
+      }
+      .nw-notice-card h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        color: var(--text);
+      }
+      .nw-notice-card p {
+        margin: 0 0 6px;
+        font-size: 13.5px;
+        line-height: 1.75;
+        letter-spacing: 0.3px;
+        color: var(--text-dim);
+      }
+      .nw-notice-primary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        margin-top: 4px;
+        padding: 13px 16px;
+        border-radius: 14px;
+        background: var(--accent);
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        text-decoration: none;
+        transition: filter 0.15s ease, transform 0.1s ease;
+      }
+      .nw-notice-primary:hover { filter: brightness(1.08); }
+      .nw-notice-primary:active { transform: scale(0.985); }
+      .nw-notice-primary:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+      }
+      .nw-notice-cancel {
+        appearance: none;
+        border: none;
+        outline: none;
+        width: 100%;
+        margin-top: 2px;
+        padding: 11px;
+        border-radius: 13px;
+        background: transparent;
+        color: var(--text-dim);
+        font-family: inherit;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      .nw-notice-cancel:hover {
+        background: var(--card-hover);
+        color: var(--text);
+      }
+      .nw-notice-cancel:focus-visible {
+        outline: 2px solid var(--focus-ring);
+        outline-offset: 2px;
+      }
+    </style>
+    <div class="nw-notice-overlay open" id="nw-notice-overlay" role="dialog" aria-modal="true" aria-labelledby="nw-notice-title">
+      <div class="nw-notice-card">
+        <div class="nw-notice-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M12 7.4v5.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="16.4" r="1.2" fill="currentColor"/>
+          </svg>
+        </div>
+        <h2 id="nw-notice-title">建议使用离线版</h2>
+        <p>我们十分不推荐您使用网页版，存在不稳定性且功能受限，如您介意这些问题，请您使用离线版。</p>
+        <a class="nw-notice-primary" href="https://github.com/Shiyuan-318/NeoWarp/releases" target="_blank" rel="noopener noreferrer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 4v10m0 0 4.2-4.2M12 14 7.8 9.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4.5 17.5v1a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          获取离线版
+        </a>
+        <button class="nw-notice-cancel" id="nw-notice-close" type="button">继续使用网页版</button>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var overlay = document.getElementById('nw-notice-overlay');
+        if (!overlay) return;
+        function close () { overlay.classList.remove('open'); }
+        document.getElementById('nw-notice-close').addEventListener('click', close);
+        overlay.addEventListener('click', function (event) {
+          if (event.target === overlay) close();
+        });
+        document.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape' && overlay.classList.contains('open')) close();
+        });
+      })();
+    </script>
   </body>
 </html>
