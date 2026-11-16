@@ -110,7 +110,7 @@
   function pickProjectFile () {
     if (global.showOpenFilePicker) {
       return global.showOpenFilePicker({
-        types: [{ description: '项目文件', accept: { 'application/json': ['.sb3', '.np1', '.npnp', '.viewsb3', '.sb2', '.sb'] } }],
+        types: [{ description: '项目文件', accept: { 'application/json': ['.sb3', '.np1', '.npnp', '.viewsb3'] } }],
         multiple: false
       }).then(function (handles) {
         var handle = handles[0];
@@ -127,7 +127,7 @@
     return new Promise(function (resolve) {
       var input = global.document.createElement('input');
       input.type = 'file';
-      input.accept = '.sb3,.np1,.npnp,.viewsb3,.sb2,.sb';
+      input.accept = '.sb3,.np1,.npnp,.viewsb3';
       input.addEventListener('change', function () {
         var file = input.files && input.files[0];
         if (!file) { resolve(false); return; }

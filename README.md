@@ -148,8 +148,6 @@
 | `.npnp` | NeoWarp 加密项目（AES-256-GCM + PBKDF2 密码加密） |
 | `.viewsb3` | NeoWarp 只读项目（加密，仅供查看，适合分享展示） |
 | `.sb3` | Scratch 3 Project |
-| `.sb2` | Scratch 2 Project |
-| `.sb` | Scratch 1 Project |
 | `.js` | NeoWarp 扩展（由扩展编辑器打开） |
 
 ---

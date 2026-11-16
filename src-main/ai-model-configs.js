@@ -19,108 +19,56 @@ const CONFIG_FIELDS = [
 
 /**
  * 规范化自定义端点：兼容用户填 base URL（如 https://api.siliconflow.cn/v1）
- * 或完整端点两种习惯。
- * - 补协议（https://）
- * - 末尾去斜杠
- * - 不以 /chat/completions 结尾时自动补上（只补 /chat/completions，绝不补 /v1；
- *   不同厂商路径前缀不同，自动补 /v1 会弄坏 DeepSeek/Groq 这类端点）
- * Anthropic（…/v1/messages）与 Ollama（…/api/chat）样式的完整端点已带明确的
- * 请求路径，原样返回，避免在其后追加聊天路径。
+ * 或完整端点两种习惯。补全的路径由 API 格式决定，三种格式各有一套：
+ * - openai / custom：…/chat/completions（只补这一段，绝不补 /v1；不同厂商
+ *   路径前缀不同，自动补 /v1 会弄坏 DeepSeek/Groq 这类端点）
+ * - anthropic：…/v1/messages
+ * - ollama：…/api/chat
+ * 已经带对应聊天路径的完整端点原样返回。
  * @param {string} url
+ * @param {'openai'|'anthropic'|'ollama'|'custom'} [apiFormat]
  * @returns {string}
  */
-function normalizeCustomEndpoint (url) {
+function normalizeCustomEndpoint (url, apiFormat) {
   let u = String(url || '').trim();
   if (!u) return u;
   if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
   u = u.replace(/\/+$/, '');
+  if (apiFormat === 'anthropic') {
+    if (/\/v1\/messages$/i.test(u)) return u;
+    if (/\/v1$/i.test(u)) return u + '/messages';
+    return u + '/v1/messages';
+  }
+  if (apiFormat === 'ollama') {
+    if (/\/api\/chat$/i.test(u)) return u;
+    if (!/\/api$/i.test(u)) u += '/api';
+    return u + '/chat';
+  }
   if (/\/(v1\/messages|api\/chat)$/i.test(u)) return u;
   if (!/\/chat\/completions$/i.test(u)) u += '/chat/completions';
   return u;
 }
 
-// ── 官方免费模型 ─────────────────────────────────────────────
-// 通过 NeoWarp 中转站免费提供的模型（OpenAI 兼容）。免费配置由主进程在
-// 读取时动态注入、保存时剥离：API Key 只存在于本文件，绝不写入
-// tw_config.json，也不落任何渲染端存储。
-const FREE_MODEL_ENDPOINT = 'https://api.sy1.top/v1/chat/completions';
-const FREE_MODEL_API_KEY = 'sk-5oRtURJhbXZ1FyqFq0apMQEnwTSCNTqOGXp3HNZb0Ip7R6Lm';
-// 全部免费模型统一 1M 上下文 / 65K 最大输出
-const FREE_MODEL_CONTEXT_LIMIT = 1000000;
-// 免费模型展示总开关：false 时主进程不再注入免费配置，所有界面
-// （AI 助手 / SOLO / 扩展编辑器 / 桌面设置 / 手机远程端）都不再展示与可选。
-// 指向免费模型的历史激活项由 resolveActiveConfigId 自动回落到用户配置。
-const FREE_MODELS_ENABLED = false;
-// 免费活动截止：2026-11-30 12:00:00（UTC+8）＝ 04:00 UTC
-const FREE_MODEL_END_AT = Date.UTC(2026, 10, 30, 4, 0, 0);
-// id 必须带 free_ 前缀且跨版本稳定：持久化的 activeAiModelConfigId 会引用它
-const FREE_MODELS = [
-  {id: 'free_deepseek-v4.1-flash', model: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash'},
-  {id: 'free_glm-5.3-flash', model: 'glm-5.3-flash', name: 'GLM-5.3 Flash'},
-  {id: 'free_sensenova-6.8-flash-lite', model: 'sensenova-6.8-flash-lite', name: 'SenseNova 6.8 Flash Lite'},
-  {id: 'free_glm-5.2', model: 'glm-5.2', name: 'GLM-5.2'}
-];
-
+// ── 内置免费模型（已下线）─────────────────────────────────────
+// 历史版本在源码里硬编码了一个官方中转站的免费模型 API Key。硬编码进源码的
+// 密钥等同于公开分发（clone 仓库即可白嫖额度），已整体移除：不再注入任何
+// 免费配置，也不再保留密钥常量。
+// 存量数据兼容：旧版在读取时动态注入 free_* 配置、保存时剥离，理论上没落盘，
+// 但不排除用户手动改过 tw_config.json 或旧版本写进过 localStorage，因此读取
+// 与保存两侧都再过滤一次，避免旧密钥继续生效。
 const isFreeConfigId = (id) => typeof id === 'string' && id.indexOf('free_') === 0;
-const isFreeActivityOver = () => Date.now() >= FREE_MODEL_END_AT;
+const isLegacyFreeConfig = (cfg) => !!cfg && (cfg.isFree === true || isFreeConfigId(cfg.id));
 
 /**
- * 生成免费模型配置列表（不持久化）。
- * 活动结束后仍返回列表：各界面要继续展示并灰显“免费使用活动已结束”，
- * 此时带 freeExpired 标记；是否可选中由各界面按本地时间与 freeExpired 判定。
- * @returns {Array<object>}
- */
-function freeModelConfigs () {
-  // 总开关关闭时不注入：各界面拿到的列表里没有免费模型，
-  // 分组标题、卡片、下拉项都因空数组保护而不再渲染
-  if (!FREE_MODELS_ENABLED) return [];
-  const expired = isFreeActivityOver();
-  return FREE_MODELS.map((m) => ({
-    id: m.id,
-    name: m.name,
-    provider: 'free',
-    model: m.model,
-    apiKey: FREE_MODEL_API_KEY,
-    apiFormat: 'openai',
-    customEndpoint: '',
-    customModelId: '',
-    customContextLimit: FREE_MODEL_CONTEXT_LIMIT,
-    thinkingLevel: 'medium',
-    isFree: true,
-    freeExpired: expired
-  }));
-}
-
-/**
- * 计算激活配置 id：优先沿用调用方传入值；指向免费模型且活动已结束时，
- * 回落到第一条普通配置（避免活动结束后仍默认使用免费中转）。
+ * 计算激活配置 id：沿用调用方传入值，失效时回落到第一条配置。
  * @param {string|null} activeId
- * @param {Array<object>} own 普通配置
- * @param {Array<object>} combined 免费配置在前的完整列表
+ * @param {Array<object>} configs
  * @returns {string|null}
  */
-function resolveActiveConfigId (activeId, own, combined) {
-  let id = typeof activeId === 'string' ? activeId : null;
-  if (id && isFreeConfigId(id) && isFreeActivityOver()) id = null;
-  if (id && combined.some((cfg) => cfg.id === id)) return id;
-  if (own.length) return own[0].id;
-  return combined.length ? combined[0].id : null;
-}
-
-/**
- * 免费模型列表 + 过期时间点，供界面展示“活动截止”等文案。
- * @returns {{models: Array<object>, endAt: number, expired: boolean}}
- */
-function getFreeModelActivity () {
-  if (!FREE_MODELS_ENABLED) {
-    return {models: [], endAt: FREE_MODEL_END_AT, endpoint: FREE_MODEL_ENDPOINT, expired: true};
-  }
-  return {
-    models: FREE_MODELS.map(({id, model, name}) => ({id, model, name})),
-    endAt: FREE_MODEL_END_AT,
-    endpoint: FREE_MODEL_ENDPOINT,
-    expired: isFreeActivityOver()
-  };
+function resolveActiveConfigId (activeId, configs) {
+  const id = typeof activeId === 'string' ? activeId : null;
+  if (id && configs.some((cfg) => cfg.id === id)) return id;
+  return configs.length ? configs[0].id : null;
 }
 
 function normalizeConfig (raw, index) {
@@ -142,8 +90,9 @@ function normalizeConfig (raw, index) {
     cfg.apiFormat = 'openai';
   }
   if (typeof cfg.customEndpoint !== 'string') cfg.customEndpoint = '';
-  // 保存入口单点收口：base URL 与完整端点两种填法都规范化成完整端点落盘
-  cfg.customEndpoint = normalizeCustomEndpoint(cfg.customEndpoint);
+  // 保存入口单点收口：base URL 与完整端点两种填法都规范化成完整端点落盘；
+  // 补什么路径取决于 API 格式（/chat/completions、/v1/messages、/api/chat）
+  cfg.customEndpoint = normalizeCustomEndpoint(cfg.customEndpoint, cfg.apiFormat);
   if (typeof cfg.customModelId !== 'string') cfg.customModelId = '';
   const ctx = Number(cfg.customContextLimit);
   cfg.customContextLimit = Number.isFinite(ctx) && ctx >= 1000 ? Math.floor(ctx) : 1000000;
@@ -179,16 +128,23 @@ function migrateLegacyAiProviders () {
 }
 
 /**
- * 读取配置列表与激活项；免费模型动态注入在最前，激活项失效时回落。
+ * 读取配置列表与激活项；激活项失效时回落到第一条。
  * @returns {{configs: Array<object>, activeId: string|null}}
  */
 function getModelConfigs () {
   // load 路径同样跑一遍规范化（旧数据兼容）：存量用户保存过的 base URL
   // 不改配置也能在测试连接/对话里自动取到补全后的端点，
   // 下次任意一侧保存时会随 normalizeConfig 落盘。
-  let configs = (Array.isArray(settings.aiModelConfigs) ? settings.aiModelConfigs : [])
+  const stored = Array.isArray(settings.aiModelConfigs) ? settings.aiModelConfigs : [];
+  let configs = stored
     .map(normalizeConfig)
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((cfg) => !isLegacyFreeConfig(cfg));
+  // 存量数据里若还留有下线的免费配置（含旧内置密钥），顺手从磁盘清掉
+  if (configs.length !== stored.length) {
+    settings.aiModelConfigs = configs;
+    settings.save().catch(() => {});
+  }
   let activeId = settings.activeAiModelConfigId;
   if (!configs.length) {
     const migrated = migrateLegacyAiProviders();
@@ -197,15 +153,11 @@ function getModelConfigs () {
       activeId = migrated.id;
     }
   }
-  const free = freeModelConfigs();
-  const combined = free.concat(configs);
-  return {configs: combined, activeId: resolveActiveConfigId(activeId, configs, combined)};
+  return {configs, activeId: resolveActiveConfigId(activeId, configs)};
 }
 
 /**
  * 保存配置列表与激活项，并广播给所有 AI 相关窗口。
- * 渲染端回传的列表会包含动态注入的免费配置：剥离后再持久化，
- * 保证免费 API Key 不落盘；激活项允许指向免费模型（活动内）。
  * @param {Array<object>} configs
  * @param {string|null} activeId
  * @param {Electron.WebContents|null} sender 发起方的 webContents，广播时跳过
@@ -219,16 +171,14 @@ async function saveModelConfigs (configs, activeId, sender) {
   const normalized = (Array.isArray(list) ? list : [])
     .map(normalizeConfig)
     .filter(Boolean)
-    // 免费模型不入库：主进程读取时重新注入（防 Key 落盘，也便于活动下线）
-    .filter((cfg) => !cfg.isFree && !isFreeConfigId(cfg.id));
-  const free = freeModelConfigs();
-  const combined = free.concat(normalized);
-  const id = resolveActiveConfigId(activeId, normalized, combined);
+    // 已下线的内置免费模型不入库（旧渲染端仍可能带着它们回传）
+    .filter((cfg) => !isLegacyFreeConfig(cfg));
+  const id = resolveActiveConfigId(activeId, normalized);
   settings.aiModelConfigs = normalized;
   settings.activeAiModelConfigId = id;
   await settings.save();
   broadcastAiModelConfigsChanged(sender || null);
-  return {configs: combined, activeId: id};
+  return {configs: normalized, activeId: id};
 }
 
 /**
@@ -287,7 +237,7 @@ function registerAiModelConfigIpc (ipc) {
 module.exports = {
   getModelConfigs,
   saveModelConfigs,
-  getFreeModelActivity,
+  normalizeCustomEndpoint,
   broadcastAiModelConfigsChanged,
   registerAiModelConfigIpc
 };

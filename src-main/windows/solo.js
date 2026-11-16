@@ -281,7 +281,7 @@ class SoloWindow extends AIAssistantWindow {
       filters: [
         isJs
           ? {name: 'JavaScript', extensions: ['js']}
-          : {name: 'Scratch Project', extensions: ['sb3', 'np1', 'sb2', 'sb']}
+          : {name: 'Scratch Project', extensions: ['sb3', 'np1']}
       ]
     });
     if (result.canceled || !result.filePaths.length) {

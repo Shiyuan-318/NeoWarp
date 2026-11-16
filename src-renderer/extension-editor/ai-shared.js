@@ -332,19 +332,30 @@
       ],
       defaultModel: 'qwen3.7-plus'
     },
-    // NeoWarp 官方免费中转：配置由主进程动态注入（密钥不落盘），
-    // 模型与截止时间须与 src-main/ai-model-configs.js 保持一致。
-    free: {
-      name: 'NeoWarp Free',
-      endpoint: 'https://api.sy1.top/v1/chat/completions',
-      isFree: true,
+    // Anthropic 原生协议：请求体/鉴权头/流式事件都与 OpenAI 不同
+    anthropic: {
+      name: 'Anthropic',
+      endpoint: 'https://api.anthropic.com/v1/messages',
+      apiFormat: 'anthropic',
       models: [
-        {id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash'},
-        {id: 'glm-5.3-flash', name: 'GLM-5.3 Flash'},
-        {id: 'sensenova-6.8-flash-lite', name: 'SenseNova 6.8 Flash Lite'},
-        {id: 'glm-5.2', name: 'GLM-5.2'}
+        {id: 'claude-opus-4-5', name: 'Claude Opus 4.5'},
+        {id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5'},
+        {id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5'}
       ],
-      defaultModel: 'deepseek-v4.1-flash'
+      defaultModel: 'claude-sonnet-4-5'
+    },
+    // Ollama 本地推理（/api/chat）
+    ollama: {
+      name: 'Ollama',
+      endpoint: 'http://localhost:11434/api/chat',
+      apiFormat: 'ollama',
+      models: [
+        {id: 'llama3.3', name: 'Llama 3.3'},
+        {id: 'qwen3', name: 'Qwen3'},
+        {id: 'deepseek-r1', name: 'DeepSeek R1'},
+        {id: 'gemma3', name: 'Gemma 3'}
+      ],
+      defaultModel: 'llama3.3'
     },
     custom: {
       name: 'Custom',
@@ -620,18 +631,124 @@
       });
     }
 
+    /**
+     * 端点规范化：补什么路径取决于 API 格式。OpenAI 兼容只补
+     * /chat/completions（绝不补 /v1），Anthropic 补 /v1/messages，
+     * Ollama 补 /api/chat；已带对应聊天路径的端点原样返回。
+     * @param {string} url
+     * @param {'openai'|'anthropic'|'ollama'} apiFormat
+     * @returns {string}
+     */
+    function normalizeEndpoint (url, apiFormat) {
+      var u = String(url || '').trim();
+      if (!u) return u;
+      if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+      u = u.replace(/\/+$/, '');
+      if (apiFormat === 'anthropic') {
+        if (/\/v1\/messages$/i.test(u)) return u;
+        if (/\/v1$/i.test(u)) return u + '/messages';
+        return u + '/v1/messages';
+      }
+      if (apiFormat === 'ollama') {
+        if (/\/api\/chat$/i.test(u)) return u;
+        if (!/\/api$/i.test(u)) u += '/api';
+        return u + '/chat';
+      }
+      if (/\/(v1\/messages|api\/chat)$/i.test(u)) return u;
+      if (!/\/chat\/completions$/i.test(u)) u += '/chat/completions';
+      return u;
+    }
+
     function getRequestTarget () {
-      var provider = PROVIDERS[aiConfig.provider];
+      var provider = PROVIDERS[aiConfig.provider] || {};
+      // 服务商预设自带格式（Anthropic / Ollama）优先，其次是配置里选定的格式
+      var apiFormat = provider.apiFormat === 'anthropic' || provider.apiFormat === 'ollama'
+        ? provider.apiFormat
+        : (aiConfig.apiFormat === 'anthropic' || aiConfig.apiFormat === 'ollama' ? aiConfig.apiFormat : 'openai');
+      var rawEndpoint = aiConfig.customEndpoint || provider.endpoint || '';
       return {
-        endpoint: provider.isCustom ? (aiConfig.customEndpoint || provider.endpoint) : provider.endpoint,
+        endpoint: normalizeEndpoint(rawEndpoint, apiFormat),
         model: getEffectiveModelId(),
-        apiKey: aiConfig.apiKey
+        apiKey: aiConfig.apiKey,
+        apiFormat: apiFormat
       };
     }
 
+    /** 按格式生成鉴权头（Anthropic 用 x-api-key + anthropic-version） */
+    function buildAuthHeaders (target) {
+      var headers = {'Content-Type': 'application/json'};
+      if (target.apiFormat === 'anthropic') {
+        if (target.apiKey) headers['x-api-key'] = target.apiKey;
+        headers['anthropic-version'] = '2023-06-01';
+        headers['anthropic-dangerous-direct-browser-access'] = 'true';
+      } else if (target.apiKey) {
+        headers['Authorization'] = 'Bearer ' + target.apiKey;
+      }
+      return headers;
+    }
+
+    /** 内部 OpenAI 风格消息 → Anthropic 的 {system, messages} */
+    function toAnthropicPayload (apiMessages) {
+      var systemParts = [];
+      var messages = [];
+      (apiMessages || []).forEach(function (m) {
+        if (!m || !m.role) return;
+        var text = typeof m.content === 'string' ? m.content : String(m.content == null ? '' : m.content);
+        if (m.role === 'system') {
+          if (text) systemParts.push(text);
+          return;
+        }
+        if (!text) return;
+        var role = m.role === 'assistant' ? 'assistant' : 'user';
+        var last = messages[messages.length - 1];
+        // Anthropic 要求 user / assistant 交替，相邻同角色合并
+        if (last && last.role === role) last.content += '\n\n' + text;
+        else messages.push({role: role, content: text});
+      });
+      if (messages.length && messages[0].role !== 'user') {
+        messages.unshift({role: 'user', content: 'Continue.'});
+      }
+      return {system: systemParts.join('\n\n'), messages: messages};
+    }
+
+    function toOllamaMessages (apiMessages) {
+      return (apiMessages || []).map(function (m) {
+        return {
+          role: m.role,
+          content: typeof m.content === 'string' ? m.content : String(m.content == null ? '' : m.content)
+        };
+      });
+    }
+
+    /** 按格式组装请求体 */
+    function buildRequestBody (target, apiMessages) {
+      if (target.apiFormat === 'anthropic') {
+        var payload = toAnthropicPayload(apiMessages);
+        var body = {
+          model: target.model,
+          max_tokens: 4096,
+          stream: true,
+          messages: payload.messages
+        };
+        if (payload.system) body.system = payload.system;
+        return body;
+      }
+      if (target.apiFormat === 'ollama') {
+        return {
+          model: target.model,
+          messages: toOllamaMessages(apiMessages),
+          stream: true,
+          options: {num_predict: 4096}
+        };
+      }
+      return {model: target.model, messages: apiMessages, stream: true};
+    }
+
     function sendChat (text) {
-      var provider = PROVIDERS[aiConfig.provider];
-      if (!aiConfig.apiKey) {
+      var provider = PROVIDERS[aiConfig.provider] || {};
+      // Ollama 本地服务默认不校验 Key，不能因为没填 Key 就把对话拦住
+      var needsKey = provider.apiFormat !== 'ollama' && aiConfig.apiFormat !== 'ollama';
+      if (!aiConfig.apiKey && needsKey) {
         showToast(strings.noApiKey);
         $('ai-settings').classList.add('open');
         return;
@@ -686,15 +803,8 @@
       };
       aiFetch(target.endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + target.apiKey
-        },
-        body: JSON.stringify({
-          model: target.model,
-          messages: apiMessages,
-          stream: true
-        }),
+        headers: buildAuthHeaders(target),
+        body: JSON.stringify(buildRequestBody(target, apiMessages)),
         signal: abortController.signal
       }).then(function (response) {
         if (!response.ok) {
@@ -711,14 +821,15 @@
             ? '端点返回了网页而非对话接口（HTTP 200 + text/html）。One API / New API 类中转的接口地址应带 /v1，例如 https://主机/v1/chat/completions'
             : 'Endpoint returned a webpage instead of a chat API (HTTP 200 + text/html). One API / New API relay endpoints need /v1, e.g. https://host/v1/chat/completions');
         }
-        if (/json/i.test(respCT)) {
+        // Ollama 的流式响应是 application/x-ndjson，不能按 application/json 判错
+        if (target.apiFormat !== 'ollama' && /^application\/json/i.test(respCT)) {
           return response.json().then(function (j) {
             var msg = (j && j.error && (j.error.message || j.error.type)) ||
-              (lang === 'zh' ? '端点返回了 JSON 而非 SSE 流（HTTP 200），请核对接口地址' : 'Endpoint returned JSON instead of an SSE stream (HTTP 200); check the endpoint');
+              (lang === 'zh' ? '端点返回了 JSON 而非流式响应（HTTP 200），请核对接口地址与 API 格式' : 'Endpoint returned JSON instead of a stream (HTTP 200); check the endpoint and API format');
             throw new Error(msg);
           });
         }
-        return readSseStream(response.body.getReader(), function (delta) {
+        return readChatStream(response.body.getReader(), target.apiFormat, function (delta) {
           fullText += delta;
           if (!cursor) onFirstDelta();
           renderAssistantContent(bubble, fullText, cursor);
@@ -748,7 +859,16 @@
       });
     }
 
-    function readSseStream (reader, onDelta) {
+    /**
+     * 读取流式响应，按格式取出正文增量。
+     * - OpenAI 兼容：SSE，data: {...} 里 choices[0].delta.content
+     * - Anthropic：SSE，content_block_delta 里 delta.text（thinking_delta 忽略）
+     * - Ollama：NDJSON，每行一个 {message:{content}, done}
+     * @param {ReadableStreamDefaultReader} reader
+     * @param {'openai'|'anthropic'|'ollama'} apiFormat
+     * @param {(delta: string) => void} onDelta
+     */
+    function readChatStream (reader, apiFormat, onDelta) {
       var decoder = new TextDecoder();
       var buffer = '';
 
@@ -760,16 +880,45 @@
           buffer = lines.pop();
           for (var i = 0; i < lines.length; i++) {
             var line = lines[i].trim();
+            if (!line) continue;
+            if (apiFormat === 'ollama') {
+              var chunk;
+              try {
+                chunk = JSON.parse(line);
+              } catch (e) {
+                continue;
+              }
+              if (chunk.error) throw new Error(String(chunk.error));
+              if (chunk.message && chunk.message.content) onDelta(chunk.message.content);
+              if (chunk.done) return;
+              continue;
+            }
             if (line.indexOf('data:') !== 0) continue;
             var data = line.slice(5).trim();
+            if (!data) continue;
             if (data === '[DONE]') return;
+            var json;
             try {
-              var json = JSON.parse(data);
-              var delta = json.choices && json.choices[0] && json.choices[0].delta;
-              if (delta && delta.content) onDelta(delta.content);
+              json = JSON.parse(data);
             } catch (e) {
-              // 半截 JSON 等下一批拼上再说不了（SSE 按行分割，容错跳过即可）
+              // 半截 JSON 等下一批拼上再说（SSE 按行分割，容错跳过即可）
+              continue;
             }
+            if (apiFormat === 'anthropic') {
+              if (json.type === 'error') {
+                throw new Error((json.error && (json.error.message || json.error.type)) || 'Anthropic API error');
+              }
+              if (json.type === 'content_block_start' && json.content_block && json.content_block.type === 'text') {
+                if (json.content_block.text) onDelta(json.content_block.text);
+              } else if (json.type === 'content_block_delta' && json.delta && json.delta.type === 'text_delta') {
+                if (json.delta.text) onDelta(json.delta.text);
+              } else if (json.type === 'message_stop') {
+                return;
+              }
+              continue;
+            }
+            var delta = json.choices && json.choices[0] && json.choices[0].delta;
+            if (delta && delta.content) onDelta(delta.content);
           }
           return pump();
         });

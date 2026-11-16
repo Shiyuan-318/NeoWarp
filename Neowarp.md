@@ -48,8 +48,6 @@
 | `.npnp` | NeoWarp Project（加密保存的项目） |
 | `.np1` | NeoWarp Project（未压缩工程） |
 | `.sb3` | Scratch 3 Project |
-| `.sb2` | Scratch 2 Project |
-| `.sb` | Scratch 1 Project |
 
 ---
 

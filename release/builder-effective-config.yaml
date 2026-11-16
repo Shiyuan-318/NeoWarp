@@ -104,14 +104,4 @@ fileAssociations:
     description: Scratch 3 Project
     role: Editor
     mimeType: application/x.scratch.sb3
-  - ext: sb2
-    name: Scratch 2 Project
-    description: Scratch 2 Project
-    role: Editor
-    mimeType: application/x.scratch.sb2
-  - ext: sb
-    name: Scratch 1 Project
-    description: Scratch 1 Project
-    role: Editor
-    mimeType: application/x.scratch.sb
 electronVersion: 41.1.0

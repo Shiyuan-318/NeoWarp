@@ -1,4 +1,5 @@
 const http = require('http');
+const crypto = require('crypto');
 const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
@@ -6,6 +7,13 @@ const fsPromises = require('fs/promises');
 
 // 手机预览：在局域网上开一个只读的 HTTP 服务，把当前项目导出成 sb3 发给手机，
 // 手机端用 scaffolding（TurboWarp 的独立运行时）自己跑一份，不与编辑器内的舞台联动。
+//
+// - GET /?token=...             手机端播放页（响应里种下令牌 Cookie）
+// - GET /scaffolding.js         运行时脚本，页面内相对请求，靠 Cookie 带令牌
+// - GET /project.sb3            当前项目导出，靠 Cookie 带令牌
+// - GET /api/info               项目标题，靠 Cookie 带令牌
+//
+// 所有路由都要求令牌（每次启动随机生成），否则同网段任意设备都能直接拖走工程源码。
 
 const PLAYER_HTML = path.resolve(__dirname, '../src-renderer/mobile-preview/player.html');
 const SCAFFOLDING_JS = path.resolve(
@@ -52,6 +60,12 @@ class MobilePreviewServer {
     this.server = null;
     this.port = null;
     this.addresses = [];
+    /**
+     * 访问令牌：手机扫码拿到的链接带 ?token=，页面内的相对子请求没法逐个塞查询串，
+     * 由页面响应种下的 Cookie 携带。每次 start() 重新生成。
+     * @type {string}
+     */
+    this.token = crypto.randomBytes(16).toString('hex');
     /** @type {Buffer | null} */
     this.scaffoldingCache = null;
     /** @type {Buffer | null} */
@@ -70,12 +84,12 @@ class MobilePreviewServer {
   getURL () {
     if (!this.port) return null;
     const host = this.addresses[0] || '127.0.0.1';
-    return `http://${host}:${this.port}/`;
+    return `http://${host}:${this.port}/?token=${this.token}`;
   }
 
   getAllURLs () {
     if (!this.port) return [];
-    return this.addresses.map(address => `http://${address}:${this.port}/`);
+    return this.addresses.map(address => `http://${address}:${this.port}/?token=${this.token}`);
   }
 
   async start (preferredPort) {
@@ -83,6 +97,8 @@ class MobilePreviewServer {
       return {success: true, port: this.port, url: this.getURL()};
     }
 
+    // 每次开启服务都换新令牌，之前分享出去的链接和二维码随即失效
+    this.token = crypto.randomBytes(16).toString('hex');
     this.addresses = getLocalIPv4Addresses();
 
     const server = http.createServer((req, res) => {
@@ -158,10 +174,37 @@ class MobilePreviewServer {
   }
 
   /**
+   * 令牌校验：手机扫到的链接带 ?token=，页面内发出的相对子请求（scaffolding.js /
+   * project.sb3 / api/info）没法逐个塞查询串，只带页面响应种下的 Cookie。
+   * @param {URL} url
+   * @param {http.IncomingMessage} req
+   */
+  checkToken (url, req) {
+    if (url.searchParams.get('token') === this.token) return true;
+    const cookie = (req && req.headers.cookie) || '';
+    return cookie.split(';').some(part => part.trim() === `nw_preview_token=${this.token}`);
+  }
+
+  /**
    * @param {http.IncomingMessage} req
    * @param {http.ServerResponse} res
    */
   async handleRequest (req, res) {
+    let requestUrl;
+    try {
+      requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+    } catch (e) {
+      requestUrl = new URL('/', 'http://localhost');
+    }
+    const pathname = requestUrl.pathname;
+
+    // 浏览器会自行请求 /favicon.ico，它不带令牌也不包含任何项目内容
+    if (pathname !== '/favicon.ico' && !this.checkToken(requestUrl, req)) {
+      res.writeHead(403, {'Content-Type': 'text/plain; charset=utf-8'});
+      res.end('无访问权限，请扫描手机预览窗口中的二维码');
+      return;
+    }
+
     // 只读服务：除了取页面和项目之外什么都不做
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405, {'Content-Type': 'text/plain; charset=utf-8'});
@@ -169,14 +212,10 @@ class MobilePreviewServer {
       return;
     }
 
-    let pathname = '/';
-    try {
-      pathname = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname;
-    } catch (e) {
-      pathname = '/';
-    }
-
     if (pathname === '/' || pathname === '/index.html') {
+      // 页面内的资源请求都是相对 URL，用 Cookie 把令牌续给它们
+      res.setHeader('Set-Cookie',
+        `nw_preview_token=${this.token}; Path=/; HttpOnly; SameSite=Lax`);
       const html = await fsPromises.readFile(PLAYER_HTML);
       this.sendBuffer(req, res, html, 'text/html; charset=utf-8', {compress: true, cache: false});
       return;
@@ -230,7 +269,9 @@ class MobilePreviewServer {
   sendBuffer (req, res, buffer, contentType, {compress, cache, gzipCacheKey} = {}) {
     const headers = {
       'Content-Type': contentType,
-      'X-Content-Type-Options': 'nosniff'
+      'X-Content-Type-Options': 'nosniff',
+      // 播放页 URL 里带令牌，别让页面内加载的外部资源通过 Referer 把令牌带出去
+      'Referrer-Policy': 'no-referrer'
     };
     headers['Cache-Control'] = cache ? 'public, max-age=3600' : 'no-store';
 

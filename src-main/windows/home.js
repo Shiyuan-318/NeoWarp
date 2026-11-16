@@ -67,7 +67,7 @@ class HomeWindow extends AbstractWindow {
           },
           {
             name: 'Scratch Project',
-            extensions: ['sb3', 'np1', 'sb2', 'sb', 'npnp', 'viewsb3']
+            extensions: ['sb3', 'np1', 'npnp', 'viewsb3']
           },
           {
             name: 'JavaScript',
@@ -128,7 +128,7 @@ class HomeWindow extends AbstractWindow {
         filters: [
           {
             name: 'Scratch Project',
-            extensions: ['sb3', 'np1', 'sb2', 'sb', 'npnp', 'viewsb3']
+            extensions: ['sb3', 'np1', 'npnp', 'viewsb3']
           }
         ]
       });

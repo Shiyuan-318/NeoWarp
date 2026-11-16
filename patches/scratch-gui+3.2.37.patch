@@ -3793,8 +3793,8 @@ index 9136001..e7f426e 100644
      // only parse title with valid scratch project extensions
 -    // (.sb, .sb2, and .sb3)
 -    const matches = fileInputFilename.match(/^(.*)\.sb[23]?$/);
-+    // (.sb, .sb2, .sb3, .np1, .npnp, .viewsb3)
-+    const matches = fileInputFilename.match(/^(.*)\.(?:sb[23]?|np1|npnp|viewsb3)$/);
++    // (.sb3, .np1, .npnp, .viewsb3)
++    const matches = fileInputFilename.match(/^(.*)\.(?:sb3|np1|npnp|viewsb3)$/);
      if (!matches) return '';
      return matches[1].substring(0, 100); // truncate project title to max 100 chars
  };
@@ -4329,7 +4329,7 @@ index 8b707bd..fcac301 100644
                                          // type here. Otherwise some users just won't be able to load files for no
                                          // fault of their own.
 -                                        '*/*': ['.sb', '.sb2', '.sb3']
-+                                        '*/*': ['.sb', '.sb2', '.sb3', '.np1', '.npnp', '.viewsb3']
++                                        '*/*': ['.sb3', '.np1', '.npnp', '.viewsb3']
                                      }
                                  }
                              ]
@@ -4338,7 +4338,7 @@ index 8b707bd..fcac301 100644
                  // create <input> element and add it to DOM
                  this.inputElement = document.createElement('input');
 -                this.inputElement.accept = '.sb,.sb2,.sb3';
-+                this.inputElement.accept = '.sb,.sb2,.sb3,.np1,.npnp,.viewsb3';
++                this.inputElement.accept = '.sb3,.np1,.npnp,.viewsb3';
                  this.inputElement.style = 'display: none;';
                  this.inputElement.type = 'file';
                  this.inputElement.onchange = this.handleChange; // connects to step 3

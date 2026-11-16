@@ -14,19 +14,6 @@
     <acronym>SB3</acronym>
     <generic-icon name="org.neowarp.NeoWarp" />
   </mime-type>
-  <mime-type type="application/x.scratch.sb2">
-    <sub-class-of type="application/zip"/>
-    <glob pattern="*.sb2" />
-    <comment>Scratch 2 Project</comment>
-    <acronym>SB2</acronym>
-    <generic-icon name="org.neowarp.NeoWarp" />
-  </mime-type>
-  <mime-type type="application/x.scratch.sb">
-    <glob pattern="*.sb" />
-    <comment>Scratch 1 Project</comment>
-    <acronym>SB</acronym>
-    <generic-icon name="org.neowarp.NeoWarp" />
-  </mime-type>
   <mime-type type="application/x.neowarp.npnp">
     <glob pattern="*.npnp" />
     <comment>NeoWarp Encrypted Project</comment>

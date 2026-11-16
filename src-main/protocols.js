@@ -20,6 +20,34 @@ const {getExpandsRoots} = require('./neowarp-expands');
  * @property {string} [csp] Defaults to none
  */
 
+// 含 AI 的页面（助手 / SOLO / 扩展编辑器 / 桌面设置）允许直连的唯一域名白名单。
+//
+// 这里以前是 `connect-src *`：页面里任何一个被注入的脚本（AI 返回内容渲染、
+// 扩展代码、上游 CDN 脚本）都能把对话内容或 API Key 静默 POST 到任意域名。
+// 自定义端点不需要直连——页面统一走 tw-ai-proxy:// 由主进程转发（不受 CORS
+// 限制），因此直连只保留内置服务商与本地推理服务。
+const AI_CONNECT_SRC = [
+  "'self'",
+  'tw-ai-proxy:',
+  // 内置服务商，须与 ai-assistant.html 的 PROVIDERS / desktop-settings.html 的 AI_PROVIDERS 一致
+  'https://api.openai.com',
+  'https://api.anthropic.com',
+  'https://api.deepseek.com',
+  'https://open.bigmodel.cn',
+  'https://api.moonshot.cn',
+  'https://api.xiaomimimo.com',
+  'https://api.huaweicloud.com',
+  'https://dashscope.aliyuncs.com',
+  // 本地推理（Ollama / LM Studio / llama.cpp）走回环地址，不经过代理也能用
+  'http://localhost:*',
+  'http://127.0.0.1:*',
+  'http://[::1]:11434'
+].join(' ');
+
+// AI 页面的统一收尾指令：禁止被 iframe 嵌套（点击劫持/读屏外传）、禁止 <base>
+// 改写相对地址（把 'self' 脚本指到外部域）、禁止表单外提。
+const AI_EXTRA_CSP = "object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
 /** @type {Record<string, Metadata>} */
 const FILE_SCHEMES = {
   'tw-editor': {
@@ -31,9 +59,10 @@ const FILE_SCHEMES = {
   },
   'tw-desktop-settings': {
     root: path.resolve(__dirname, '../src-renderer/desktop-settings'),
-    // connect-src 放开是为了「AI 模型」页的测试连接（tw-ai-proxy 转发，直连回退）
+    // connect-src 只放开内置 AI 端点与 tw-ai-proxy（「AI 模型」页的测试连接与拉取模型列表）
     // img-src 放开 http/https：主页自定义 HTML Logo 可能引用网络图片，设置页预览需保持一致
-    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data: http: https:; connect-src * tw-ai-proxy:"
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data: http: https:; connect-src " +
+      AI_CONNECT_SRC + '; ' + AI_EXTRA_CSP
   },
   'tw-privacy': {
     root: path.resolve(__dirname, '../src-renderer/privacy'),
@@ -103,7 +132,8 @@ const FILE_SCHEMES = {
     root: path.resolve(__dirname, '../src-renderer/ai-assistant'),
     standard: true,
     secure: true,
-    csp: "default-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src * tw-ai-proxy:; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net"
+    csp: "default-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src " +
+      AI_CONNECT_SRC + "; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net; " + AI_EXTRA_CSP
   },
   // SOLO 与 AI 助手共用同一套页面文件，但协议不同源：
   // localStorage 隔离，SOLO 拥有独立的会话记录与免责声明状态
@@ -111,7 +141,8 @@ const FILE_SCHEMES = {
     root: path.resolve(__dirname, '../src-renderer/ai-assistant'),
     standard: true,
     secure: true,
-    csp: "default-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src * tw-ai-proxy:; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net"
+    csp: "default-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; connect-src " +
+      AI_CONNECT_SRC + "; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net; " + AI_EXTRA_CSP
   },
   // SOLO 舞台窗口：展示后台编辑器 VM 的舞台画面（帧由主进程推送）
   'tw-solo-stage': {
@@ -160,8 +191,9 @@ const FILE_SCHEMES = {
     supportFetch: true,
     secure: true,
     // Monaco 的脚本/字体/Worker 全部同源（页面内 vs/ 目录），仅样式需要内联；
-    // connect-src 放开是为了直连自定义 AI 端点（tw-ai-proxy 不可用时回退）
-    csp: "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; worker-src 'self' blob:; connect-src * tw-ai-proxy:"
+    // connect-src 只放开内置 AI 端点与 tw-ai-proxy（自定义端点经主进程转发）
+    csp: "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; worker-src 'self' blob:; connect-src " +
+      AI_CONNECT_SRC + '; ' + AI_EXTRA_CSP
   },
   // nw-expands 由 createExpandsProtocolHandler 处理（根目录运行时才确定），
   // 不走下面的静态 FILE_SCHEMES 流程
@@ -527,12 +559,83 @@ const readProtocolRequestBody = async (request) => {
     const {done, value} = await reader.read();
     if (done) break;
     total += value.byteLength;
-    if (total > 64 * 1024 * 1024) {
+    // 对话请求带上截图也远小于 16MB；限制体积避免代理被当作大文件上传通道
+    if (total > 16 * 1024 * 1024) {
       throw new Error('AI proxy request body too large');
     }
     chunks.push(Buffer.from(value));
   }
   return Buffer.concat(chunks);
+};
+
+// 只有这些 AI 相关页面可以用转发协议。tw-ai-proxy 注册时带 bypassCSP，
+// 也就是说任何窗口的脚本都能绕过自己页面的 connect-src 访问它——如果这里
+// 不校验来源，它就退化成"任意域名 + 任意请求头"的外传通道。
+const AI_PROXY_ALLOWED_ORIGINS = [
+  'tw-ai-assistant://',
+  'tw-solo://',
+  'tw-extension-editor://',
+  'tw-desktop-settings://'
+];
+
+// 允许页面透传的请求头白名单。Cookie / Host / Proxy-* / Sec-* 等一律丢弃，
+// 既防借代理发送带凭据的请求，也防污染主进程发起的连接。
+const AI_PROXY_ALLOWED_HEADERS = new Set([
+  'content-type',
+  'accept',
+  'accept-language',
+  'authorization',
+  'api-key',
+  'x-api-key',
+  'x-goog-api-key',
+  'anthropic-version',
+  'anthropic-beta',
+  'anthropic-dangerous-direct-browser-access',
+  'openai-organization',
+  'openai-project',
+  'x-requested-with'
+]);
+
+const forbiddenProxyError = () => {
+  const error = new Error('AI proxy caller not allowed');
+  error.forbidden = true;
+  return error;
+};
+
+/**
+ * 校验调用方来源。能拿到 Origin / Referer 时必须属于 AI 页面；
+ * 拿不到（旧版 Electron 或非标准 scheme 不发送来源头）时放行，否则会
+ * 直接把正常对话打死——这与改造前的行为一致，靠 CSP 收紧兜住其余窗口。
+ * @param {Request} request
+ * @returns {boolean}
+ */
+const isAiProxyCallerAllowed = (request) => {
+  const origin = String((request.headers && request.headers.get('origin')) || '').toLowerCase();
+  const referrer = String(request.referrer || '').toLowerCase();
+  const candidates = [];
+  if (origin && origin !== 'null') candidates.push(origin);
+  if (referrer) candidates.push(referrer);
+  if (!candidates.length) return true;
+  return candidates.some((value) => AI_PROXY_ALLOWED_ORIGINS.some((allowed) => value.startsWith(allowed)));
+};
+
+/**
+ * 解析页面编码进 &h= 的请求头，并按白名单过滤。
+ * @param {string|null} headersParam
+ * @returns {Record<string, string>}
+ */
+const sanitizeProxyHeaders = (headersParam) => {
+  const raw = headersParam ?
+    JSON.parse(Buffer.from(headersParam, 'base64url').toString('utf8')) :
+    {};
+  const headers = {};
+  if (!raw || typeof raw !== 'object') return headers;
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value !== 'string') continue;
+    if (!AI_PROXY_ALLOWED_HEADERS.has(key.toLowerCase())) continue;
+    headers[key] = value;
+  }
+  return headers;
 };
 
 /**
@@ -541,6 +644,9 @@ const readProtocolRequestBody = async (request) => {
  */
 const createAIProxyHandler = () => async (request) => {
   try {
+    if (!isAiProxyCallerAllowed(request)) {
+      throw forbiddenProxyError();
+    }
     const parsed = new URL(request.url);
     if (parsed.host !== 'request') {
       throw new Error('Invalid AI proxy URL');
@@ -550,14 +656,20 @@ const createAIProxyHandler = () => async (request) => {
     if (!target || !/^https?:\/\//i.test(target)) {
       throw new Error('Invalid AI proxy target');
     }
-    const headers = headersParam ?
-      JSON.parse(Buffer.from(headersParam, 'base64url').toString('utf8')) :
-      {};
+    const targetURL = new URL(target);
+    // 云厂商元数据地址是 SSRF 的经典目标，不可能是用户配置的模型端点
+    if (/^169\.254\./.test(targetURL.hostname) || targetURL.hostname === 'metadata.google.internal') {
+      throw new Error('AI proxy target blocked');
+    }
+    const headers = sanitizeProxyHeaders(headersParam);
     const body = await readProtocolRequestBody(request);
     const response = await net.fetch(target, {
       method: request.method,
       headers,
-      body
+      body,
+      // 绝不携带目标站点的 Cookie：代理必须是无凭据的裸请求，否则页面脚本
+      // 可以借它读走用户在任何已登录网站里的私有数据。
+      credentials: 'omit'
     });
     const responseHeaders = {};
     response.headers.forEach((value, key) => {
@@ -571,10 +683,11 @@ const createAIProxyHandler = () => async (request) => {
     });
   } catch (error) {
     console.error('[ai-proxy]', error);
+    const status = error && error.forbidden ? 403 : 502;
     return new Response(JSON.stringify({
       error: {message: String((error && error.message) || error)}
     }), {
-      status: 502,
+      status,
       headers: {
         'content-type': 'application/json',
         'access-control-allow-origin': '*'

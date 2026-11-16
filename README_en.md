@@ -148,8 +148,6 @@ Natively opens / associates with the following formats:
 | `.npnp` | NeoWarp Encrypted Project (AES-256-GCM + PBKDF2 password encryption) |
 | `.viewsb3` | NeoWarp View-only Project (encrypted, view-only, for sharing and showcase) |
 | `.sb3` | Scratch 3 Project |
-| `.sb2` | Scratch 2 Project |
-| `.sb` | Scratch 1 Project |
 | `.js` | NeoWarp Extension (opened by the Extension Editor) |
 
 ---

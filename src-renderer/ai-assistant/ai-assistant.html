@@ -5533,7 +5533,7 @@
 
     // 服务商品牌 LOGO（24×24，currentColor 填充，白色显示在品牌色方块上）。
     // 来源：@lobehub/icons-static-svg（OpenAI/DeepSeek/Zhipu/Kimi/Huawei/Qwen/SenseNova）、
-    // simple-icons（Xiaomi）；free/custom 为通用图标（Material Symbols, Apache-2.0）。
+    // simple-icons（Xiaomi）；custom 为通用图标（Material Symbols, Apache-2.0）。
     var AI_LOGO_SVG = {
         openai: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"></path></svg>',
         deepseek: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23.748 4.482c-.254-.124-.364.113-.512.234-.051.039-.094.09-.137.136-.372.397-.806.657-1.373.626-.829-.046-1.537.214-2.163.848-.133-.782-.575-1.248-1.247-1.548-.352-.156-.708-.311-.955-.65-.172-.241-.219-.51-.305-.774-.055-.16-.11-.323-.293-.35-.2-.031-.278.136-.356.276-.313.572-.434 1.202-.422 1.84.027 1.436.633 2.58 1.838 3.393.137.093.172.187.129.323-.082.28-.18.552-.266.833-.055.179-.137.217-.329.14a5.526 5.526 0 01-1.736-1.18c-.857-.828-1.631-1.742-2.597-2.458a11.365 11.365 0 00-.689-.471c-.985-.957.13-1.743.388-1.836.27-.098.093-.432-.779-.428-.872.004-1.67.295-2.687.684a3.055 3.055 0 01-.465.137 9.597 9.597 0 00-2.883-.102c-1.885.21-3.39 1.102-4.497 2.623C.082 8.606-.231 10.684.152 12.85c.403 2.284 1.569 4.175 3.36 5.653 1.858 1.533 3.997 2.284 6.438 2.14 1.482-.085 3.133-.284 4.994-1.86.47.234.962.327 1.78.397.63.059 1.236-.03 1.705-.128.735-.156.684-.837.419-.961-2.155-1.004-1.682-.595-2.113-.926 1.096-1.296 2.746-2.642 3.392-7.003.05-.347.007-.565 0-.845-.004-.17.035-.237.23-.256a4.173 4.173 0 001.545-.475c1.396-.763 1.96-2.015 2.093-3.517.02-.23-.004-.467-.247-.588zM11.581 18c-2.089-1.642-3.102-2.183-3.52-2.16-.392.024-.321.471-.235.763.09.288.207.486.371.739.114.167.192.416-.113.603-.673.416-1.842-.14-1.897-.167-1.361-.802-2.5-1.86-3.301-3.307-.774-1.393-1.224-2.887-1.298-4.482-.02-.386.093-.522.477-.592a4.696 4.696 0 011.529-.039c2.132.312 3.946 1.265 5.468 2.774.868.86 1.525 1.887 2.202 2.891.72 1.066 1.494 2.082 2.48 2.914.348.292.625.514.891.677-.802.09-2.14.11-3.054-.614zm1-6.44a.306.306 0 01.415-.287.302.302 0 01.2.288.306.306 0 01-.31.307.303.303 0 01-.304-.308zm3.11 1.596c-.2.081-.399.151-.59.16a1.245 1.245 0 01-.798-.254c-.274-.23-.47-.358-.552-.758a1.73 1.73 0 01.016-.588c.07-.327-.008-.537-.239-.727-.187-.156-.426-.199-.688-.199a.559.559 0 01-.254-.078c-.11-.054-.2-.19-.114-.358.028-.054.16-.186.192-.21.356-.202.767-.136 1.146.016.352.144.618.408 1.001.782.391.451.462.576.685.914.176.265.336.537.445.848.067.195-.019.354-.25.452z"></path></svg>',
@@ -5543,7 +5543,6 @@
         huaweipangu: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.341 17.042s.062-.061 0-.061C7.516 10.902 3.646 6.22 3.646 6.22S1.557 8.168 1.68 10.174c.061 1.52 1.228 2.37 1.228 2.37 1.843 1.763 6.266 4.012 7.31 4.499h.123zm-.737 1.52c0-.061-.123-.061-.123-.061l-7.371.243c.798 1.398 2.15 2.492 3.563 2.188.983-.243 3.194-1.763 3.87-2.25.123-.12.061-.12.061-.12zm.123-.67c.062-.06 0-.12 0-.12C6.471 15.581.206 12.3.206 12.3c-.553 1.763.184 3.161.184 3.161.798 1.702 2.334 2.189 2.334 2.189.676.303 1.413.303 1.413.303h5.529c.061 0 .061-.06.061-.06zm.492-14.831c-.308 0-1.168.243-1.168.243-1.965.486-2.395 2.249-2.395 2.249-.369 1.094 0 2.31 0 2.31.675 2.857 3.87 7.598 4.545 8.57l.062.062c.061 0 .061-.061.061-.061C12.43 5.796 10.22 3.06 10.22 3.06zm2.457 13.373c.061 0 .123-.061.123-.061.737-1.033 3.87-5.714 4.545-8.57 0 0 .369-1.399 0-2.31 0 0-.491-1.764-2.457-2.25 0 0-.553-.121-1.167-.243 0 0-2.211 2.796-1.106 13.312 0 .122.062.122.062.122zm1.72 2.067s-.062 0-.062.06v.122c.738.486 2.826 2.006 3.87 2.249 0 0 1.905.669 3.563-2.188l-7.371-.243zm9.398-6.261s-6.265 3.343-9.521 5.531c0 0-.062.06-.062.122 0 0 0 .06.062.06h5.651s.553 0 1.29-.303c0 0 1.536-.487 2.396-2.25 0-.06.737-1.458.184-3.16zM13.66 17.042s.061.06.122 0c1.045-.547 5.468-2.736 7.31-4.499 0 0 1.168-.911 1.23-2.37.122-2.067-1.967-3.951-1.967-3.951s-3.87 4.559-6.695 10.698c0 0-.062.06 0 .122z"></path></svg>',
         qwen: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.604 1.34c.393.69.784 1.382 1.174 2.075a.18.18 0 00.157.091h5.552c.174 0 .322.11.446.327l1.454 2.57c.19.337.24.478.024.837-.26.43-.513.864-.76 1.3l-.367.658c-.106.196-.223.28-.04.512l2.652 4.637c.172.301.111.494-.043.77-.437.785-.882 1.564-1.335 2.34-.159.272-.352.375-.68.37-.777-.016-1.552-.01-2.327.016a.099.099 0 00-.081.05 575.097 575.097 0 01-2.705 4.74c-.169.293-.38.363-.725.364-.997.003-2.002.004-3.017.002a.537.537 0 01-.465-.271l-1.335-2.323a.09.09 0 00-.083-.049H4.982c-.285.03-.553-.001-.805-.092l-1.603-2.77a.543.543 0 01-.002-.54l1.207-2.12a.198.198 0 000-.197 550.951 550.951 0 01-1.875-3.272l-.79-1.395c-.16-.31-.173-.496.095-.965.465-.813.927-1.625 1.387-2.436.132-.234.304-.334.584-.335a338.3 338.3 0 012.589-.001.124.124 0 00.107-.063l2.806-4.895a.488.488 0 01.422-.246c.524-.001 1.053 0 1.583-.006L11.704 1c.341-.003.724.032.9.34zm-3.432.403a.06.06 0 00-.052.03L6.254 6.788a.157.157 0 01-.135.078H3.253c-.056 0-.07.025-.041.074l5.81 10.156c.025.042.013.062-.034.063l-2.795.015a.218.218 0 00-.2.116l-1.32 2.31c-.044.078-.021.118.068.118l5.716.008c.046 0 .08.02.104.061l1.403 2.454c.046.081.092.082.139 0l5.006-8.76.783-1.382a.055.055 0 01.096 0l1.424 2.53a.122.122 0 00.107.062l2.763-.02a.04.04 0 00.035-.02.041.041 0 000-.04l-2.9-5.086a.108.108 0 010-.113l.293-.507 1.12-1.977c.024-.041.012-.062-.035-.062H9.2c-.059 0-.073-.026-.043-.077l1.434-2.505a.107.107 0 000-.114L9.225 1.774a.06.06 0 00-.053-.031zm6.29 8.02c.046 0 .058.02.034.06l-.832 1.465-2.613 4.585a.056.056 0 01-.05.029.058.058 0 01-.05-.029L8.498 9.841c-.02-.034-.01-.052.028-.054l.216-.012 6.722-.012z"></path></svg>',
         sensenova: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23 8.333h-7.333v7.334H23V8.333z"></path><path d="M1 1v14.667h7.333V8.333h7.334V1H1z" fill-opacity=".33"></path><path d="M14.038 4.333h.17l1.459 1.456v.17l-1.63-1.626zM13.224 4.333h.17l2.273 2.268v.17l-2.443-2.438zM12.41 4.333h.17l3.087 3.08v.17l-3.257-3.25zM11.596 4.333h.17l3.9 3.892v.108h-.06l-4.01-4zM10.782 4.333h.17l4.01 4h-.17l-4.01-4zM9.968 4.333h.17l4.009 4h-.17l-4.01-4zM9.154 4.333h.17l4.009 4h-.17l-4.01-4zM8.34 4.333h.17l4.01 4h-.17l-4.01-4zM7.521 4.333h.17l4.01 4h-.17l-4.01-4zM6.707 4.333h.17l4.01 4h-.17l-4.01-4zM5.892 4.333h.17l4.009 4h-.17l-4.01-4zM5.077 4.333h.17l4.01 4h-.17l-4.01-4zM4.333 4.403v-.07h.1l4.01 4h-.11v.06l-4-3.99zM4.333 5.215v-.17l4 3.991v.17l-4-3.99zM4.333 6.027v-.17l4 3.991v.17l-4-3.99zM4.333 6.84v-.17l4 3.99v.17l-4-3.99zM4.333 7.652v-.17l4 3.99v.17l-4-3.99zM4.333 8.464v-.17l4 3.99v.17l-4-3.99zM4.333 9.276v-.17l4 3.991v.17l-4-3.991zM4.333 10.088v-.17l4 3.991v.17l-4-3.991zM4.333 10.9v-.17l4 3.991v.17l-4-3.991zM4.333 11.712v-.17l4 3.991v.134h-.036l-3.964-3.955zM4.333 12.526v-.17l3.318 3.31h-.17l-3.148-3.14zM4.333 13.34v-.169l2.502 2.496h-.17L4.333 13.34zM4.333 14.152v-.169l1.688 1.684h-.17l-1.518-1.514zM4.333 14.965v-.17l.874.872h-.17l-.704-.702zM15.667 5.146l-.815-.813h.17l.645.644v.169z"></path><path d="M23 15.667h-7.333V23H23v-7.333z" fill-opacity=".33"></path><path d="M15.667 15.667H8.333V23h7.334v-7.333z"></path></svg>',
-        free: '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.11 0-2.08.6-2.6 1.5l-.4.67-.4-.67C11.08 2.6 10.11 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/></svg>',
         custom: '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>'
     };
 
@@ -5651,20 +5650,36 @@
             ],
             defaultModel: 'qwen3.7-plus'
         },
-        // NeoWarp 官方免费中转（OpenAI 兼容）。密钥由主进程动态注入，不落盘；
-        // 模型清单与截止时间须与 src-main/ai-model-configs.js 保持一致。
-        free: {
-            name: 'NeoWarp Free', logo: '#16a34a', logoText: 'F',
-            endpoint: 'https://api.sy1.top/v1/chat/completions',
-            supportsVision: false,
+        // Anthropic 原生协议（/v1/messages）：请求体、鉴权头与流式事件都与
+        // OpenAI 不同，见 doApiCall 里的 apiFormat 分支。
+        anthropic: {
+            name: 'Anthropic', logo: '#d97757', logoText: 'A',
+            endpoint: 'https://api.anthropic.com/v1/messages',
+            apiFormat: 'anthropic',
+            supportsVision: true,
+            defaultContextLimit: 200000,
             models: [
-                { id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65000 },
-                { id: 'glm-5.3-flash', name: 'GLM-5.3 Flash', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65000 },
-                { id: 'sensenova-6.8-flash-lite', name: 'SenseNova 6.8 Flash Lite', supportsReasoning: false, contextLimit: 1000000, maxOutput: 65000 },
-                { id: 'glm-5.2', name: 'GLM-5.2', supportsReasoning: true, contextLimit: 1000000, maxOutput: 65000 }
+                { id: 'claude-opus-4-5', name: 'Claude Opus 4.5', supportsReasoning: true, contextLimit: 200000, maxOutput: 64000 },
+                { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', supportsReasoning: true, contextLimit: 200000, maxOutput: 64000 },
+                { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', supportsReasoning: false, contextLimit: 200000, maxOutput: 32000 }
             ],
-            defaultModel: 'deepseek-v4.1-flash',
-            isFree: true
+            defaultModel: 'claude-sonnet-4-5'
+        },
+        // Ollama 本地推理（/api/chat）。模型名随用户本地已 pull 的模型变化，
+        // 这里只给几个常见默认值；未命中时按 defaultContextLimit 预算历史。
+        ollama: {
+            name: 'Ollama', logo: '#0f172a', logoText: 'O',
+            endpoint: 'http://localhost:11434/api/chat',
+            apiFormat: 'ollama',
+            supportsVision: false,
+            defaultContextLimit: 131072,
+            models: [
+                { id: 'llama3.3', name: 'Llama 3.3', supportsReasoning: false, contextLimit: 131072, maxOutput: 8192 },
+                { id: 'qwen3', name: 'Qwen3', supportsReasoning: true, contextLimit: 131072, maxOutput: 8192 },
+                { id: 'deepseek-r1', name: 'DeepSeek R1', supportsReasoning: true, contextLimit: 131072, maxOutput: 8192 },
+                { id: 'gemma3', name: 'Gemma 3', supportsReasoning: false, contextLimit: 131072, maxOutput: 8192 }
+            ],
+            defaultModel: 'llama3.3'
         },
         custom: {
             name: 'Custom', nameEn: 'Custom', nameZh: '自定义', logo: '#888', logoText: '?',
@@ -6474,6 +6489,7 @@
             streamRetrying: 'Connection lost. Retrying in {s}s ({n}/{max})',
             streamRetryExhausted: 'Auto-retry failed after 10 attempts. Last error: ',
             emptyStreamResponse: 'The model returned an empty response (the stream ended without any output).',
+            loopDetected: 'The model is stuck in a loop (the same paragraph was repeated 10 times in a row). To avoid wasting tokens, the conversation has been paused.',
             copied: 'Copied',
             copy: 'Copy',
             apply: 'Apply',
@@ -6730,6 +6746,7 @@
             streamRetrying: '连接断开，{s} 秒后自动重试（{n}/{max}）',
             streamRetryExhausted: '已自动重试 10 次仍失败，最后一次报错：',
             emptyStreamResponse: '模型返回了空响应（流已结束但没有任何输出）。',
+            loopDetected: '模型陷入循环，为了避免Token资源被浪费，对话已暂停',
             copied: '已复制',
             copy: '复制',
             apply: '应用',
@@ -7380,9 +7397,10 @@
             }
         } catch(e) { savedConfigs = []; }
         savedConfigs.forEach(migrateConfigFields);
-        // 内置免费额度已下线：剥离历史版本遗留的内置配置
+        // 内置免费额度已下线（源码里的内置 Key 已删除）：剥离历史版本遗留在
+        // localStorage 里的内置配置，避免旧密钥继续被使用
         savedConfigs = savedConfigs.filter(function(cfg) {
-            return cfg && cfg.provider !== 'neowarpfree';
+            return cfg && cfg.provider !== 'neowarpfree' && !isFreeConfig(cfg);
         });
 
         if (!window.AIAssistantPreload || !AIAssistantPreload.getModelConfigs) {
@@ -8504,8 +8522,11 @@
         if (IS_REMOTE && remoteContextLimit) return remoteContextLimit;
         var p = PROVIDERS[currentConfig.provider];
         if (currentConfig.provider === 'custom') return currentConfig.customContextLimit || 1000000;
-        var m = p && p.models.find(function(x) { return x.id === currentConfig.model; });
-        return (m && m.contextLimit) || 1000000;
+        // 模型名由用户自填（Ollama / Anthropic 预设）时按服务商默认上限预算，
+        // 不能一律回落到 1M，否则会远超本地模型的真实上下文
+        var modelId = currentConfig.model || currentConfig.customModelId;
+        var m = p && p.models.find(function(x) { return x.id === modelId; });
+        return (m && m.contextLimit) || (p && p.defaultContextLimit) || 1000000;
     }
 
     function getModelMaxOutput() {
@@ -8944,7 +8965,7 @@
         }
         modelNameDisplay.textContent = label;
         modelShortDisplay.textContent = label.length > 8 ? label.substring(0, 7) + '\u2026' : (label || 'Model');
-        modelStatusDot.style.display = currentConfig.apiKey ? 'inline-block' : 'none';
+        modelStatusDot.style.display = (currentConfig.apiKey || !configNeedsApiKey()) ? 'inline-block' : 'none';
         updateSettingDot();
         updateImageUploadVisibility();
         updateThinkingControlVisibility();
@@ -9090,7 +9111,7 @@
         function groupKeyOf(cfg) {
             var p = PROVIDERS[cfg.provider] || {};
             if (p.isCustom || cfg.customEndpoint) {
-                return 'ep:' + normalizeCustomEndpoint(cfg.customEndpoint || '');
+                return 'ep:' + normalizeCustomEndpoint(cfg.customEndpoint || '', (p.apiFormat === 'anthropic' || p.apiFormat === 'ollama') ? p.apiFormat : cfg.apiFormat);
             }
             return 'pr:' + cfg.provider;
         }
@@ -9113,7 +9134,7 @@
             var first = savedConfigs[g.idxs[0]];
             var p = PROVIDERS[first.provider] || {};
             var address = (p.isCustom || first.customEndpoint)
-                ? normalizeCustomEndpoint(first.customEndpoint || '')
+                ? normalizeCustomEndpoint(first.customEndpoint || '', (p.apiFormat === 'anthropic' || p.apiFormat === 'ollama') ? p.apiFormat : first.apiFormat)
                 : (p.endpoint || '');
             var title = '';
             for (var i = 0; i < g.idxs.length; i++) {
@@ -9220,15 +9241,25 @@
     // 主进程注册了 tw-ai-proxy 协议，在主进程侧转发请求（无 CORS 限制），
     // 目标地址与请求头编码在查询参数里，SSE 流式响应原样透传。
 
-    // 自定义端点规范化：兼容 base URL（如 https://api.siliconflow.cn/v1）与完整
-    // 端点两种填法（设置侧保存时已规范化，这里请求前双保险）。
-    // 只补 /chat/completions，绝不补 /v1；Anthropic（…/v1/messages）与
-    // Ollama（…/api/chat）样式的完整端点原样返回。
-    function normalizeCustomEndpoint(url) {
+    // 端点规范化：兼容 base URL（如 https://api.siliconflow.cn/v1）与完整端点
+    // 两种填法（设置侧保存时已规范化，这里请求前双保险）。补什么路径取决于
+    // API 格式：OpenAI 兼容补 /chat/completions（绝不补 /v1），Anthropic 补
+    // /v1/messages，Ollama 补 /api/chat；已带对应聊天路径的端点原样返回。
+    function normalizeCustomEndpoint(url, apiFormat) {
         var u = String(url || '').trim();
         if (!u) return u;
         if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
         u = u.replace(/\/+$/, '');
+        if (apiFormat === 'anthropic') {
+            if (/\/v1\/messages$/i.test(u)) return u;
+            if (/\/v1$/i.test(u)) return u + '/messages';
+            return u + '/v1/messages';
+        }
+        if (apiFormat === 'ollama') {
+            if (/\/api\/chat$/i.test(u)) return u;
+            if (!/\/api$/i.test(u)) u += '/api';
+            return u + '/chat';
+        }
         if (/\/(v1\/messages|api\/chat)$/i.test(u)) return u;
         if (!/\/chat\/completions$/i.test(u)) u += '/chat/completions';
         return u;
@@ -12098,7 +12129,9 @@
 
     function getEffectiveModelId() {
         var provider = PROVIDERS[currentConfig.provider];
-        if (provider && provider.isCustom && currentConfig.customModelId) {
+        // 自定义服务商与 Ollama 的模型名都填在 customModelId（Ollama 的 model 字段
+        // 由引导页留空，模型名走 customModelId）
+        if (currentConfig.customModelId && (!provider || provider.isCustom || !currentConfig.model)) {
             return currentConfig.customModelId;
         }
         return currentConfig.model;
@@ -12115,41 +12148,504 @@
         return true;
     }
 
-    function doApiCall(messages, callback) {
-        var provider = PROVIDERS[currentConfig.provider];
-        var endpoint = provider.isCustom ? normalizeCustomEndpoint(currentConfig.customEndpoint || provider.endpoint) : provider.endpoint;
-        var modelInfo = getModelInfo();
+    // ── 模型幻觉 / 循环输出检测 ──
+    // 正常模型不会把同一段文字原样重复输出十次；真出现了就是解码退化（幻觉），
+    // 继续生成只会白白烧 token，因此在客户端就地中止本次流。
+    var LOOP_REPEAT_THRESHOLD = 10;    // 同一文段连续出现次数
+    var LOOP_MIN_SEGMENT_CHARS = 8;    // 视为“文段”的最小非空白长度
+    var LOOP_MAX_SEGMENT_CHARS = 600;  // 单段最大长度，超出视为不同文段
+    var LOOP_MIN_TOTAL_CHARS = 160;    // 全文太短时不判定，避免误伤正常重复
 
-        var body = { model: getEffectiveModelId(), messages: messages, stream: true, tools: getActiveTools(), tool_choice: 'auto' };
+    /**
+     * 检测文本结尾是否由同一文段连续重复 LOOP_REPEAT_THRESHOLD 次构成。
+     * 只扫尾部窗口：重复块必然紧贴末尾，更早的重复在生成过程中已经被检出过。
+     * @param {string} text
+     * @returns {string|null} 命中的重复文段，未命中返回 null
+     */
+    function detectRepeatedSegment(text) {
+        if (!text) return null;
+        var s = String(text);
+        if (s.length < LOOP_MIN_TOTAL_CHARS) return null;
+        var scan = s.length > 12000 ? s.slice(-12000) : s;
+        var lastChar = scan.charAt(scan.length - 1);
+        var maxPeriod = Math.min(LOOP_MAX_SEGMENT_CHARS, Math.floor(scan.length / LOOP_REPEAT_THRESHOLD));
+        for (var p = 1; p <= maxPeriod; p++) {
+            // 末尾重复块的最后一个字符必须等于全文最后一个字符，先用它做一次
+            // 廉价剪枝，避免每个流分片都做一遍完整比较
+            if (scan.charAt(scan.length - p - 1) !== lastChar) continue;
+            var block = scan.slice(-p);
+            if (block.trim().length < LOOP_MIN_SEGMENT_CHARS) continue;
+            var repeated = true;
+            for (var i = 1; i < LOOP_REPEAT_THRESHOLD; i++) {
+                if (scan.slice(-(i + 1) * p, -i * p) !== block) { repeated = false; break; }
+            }
+            if (repeated) return block;
+        }
+        return null;
+    }
+
+    // ── API 协议适配（OpenAI / Anthropic / Ollama）──
+    // 三种格式的端点、鉴权头、请求体与流式分片结构都不同。此前整条链路只按
+    // OpenAI 组装，配置里选了 anthropic / ollama 也照样发 OpenAI 请求，必然跑不通。
+
+    /**
+     * 当前配置实际生效的 API 格式：服务商预设自带格式（Anthropic / Ollama）优先，
+     * 其次是配置里选定的格式（自定义服务商可在设置中选择）。
+     * @returns {'openai'|'anthropic'|'ollama'}
+     */
+    function getApiFormat() {
+        var provider = PROVIDERS[currentConfig.provider] || {};
+        if (provider.apiFormat === 'anthropic' || provider.apiFormat === 'ollama') {
+            return provider.apiFormat;
+        }
+        if (currentConfig.apiFormat === 'anthropic' || currentConfig.apiFormat === 'ollama') {
+            return currentConfig.apiFormat;
+        }
+        return 'openai';
+    }
+
+    function resolveEndpoint() {
+        var provider = PROVIDERS[currentConfig.provider] || {};
+        var raw = currentConfig.customEndpoint || provider.endpoint || '';
+        return normalizeCustomEndpoint(raw, getApiFormat());
+    }
+
+    /**
+     * 按格式生成鉴权头。
+     * - OpenAI 兼容：Authorization: Bearer
+     * - Anthropic：x-api-key + anthropic-version；页面源是自定义 scheme，
+     *   还要带 anthropic-dangerous-direct-browser-access 才允许浏览器直连
+     * - Ollama：本地默认无鉴权；填了 Key（反向代理场景）时带上 Bearer
+     * @param {'openai'|'anthropic'|'ollama'} apiFormat
+     * @param {string} apiKey
+     * @returns {Record<string, string>}
+     */
+    function buildAuthHeaders(apiFormat, apiKey) {
+        var headers = { 'Content-Type': 'application/json' };
+        if (apiFormat === 'anthropic') {
+            if (apiKey) headers['x-api-key'] = apiKey;
+            headers['anthropic-version'] = '2023-06-01';
+            headers['anthropic-dangerous-direct-browser-access'] = 'true';
+        } else {
+            if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+        }
+        return headers;
+    }
+
+    /** @returns {{mediaType: string, data: string}|null} */
+    function parseDataUrl(url) {
+        var m = /^data:([^;,]+);base64,(.*)$/i.exec(String(url || ''));
+        return m ? { mediaType: m[1], data: m[2] } : null;
+    }
+
+    // OpenAI 风格的消息内容（字符串 / [{type:'text'} | {type:'image_url'}]）转内容块
+    function toContentBlocks(content, allowImages) {
+        var blocks = [];
+        if (typeof content === 'string') {
+            if (content) blocks.push({ type: 'text', text: content });
+            return blocks;
+        }
+        if (!Array.isArray(content)) return blocks;
+        content.forEach(function(part) {
+            if (!part) return;
+            if (part.type === 'text') {
+                if (part.text) blocks.push({ type: 'text', text: part.text });
+            } else if (allowImages && part.type === 'image_url' && part.image_url && part.image_url.url) {
+                var img = parseDataUrl(part.image_url.url);
+                if (img) {
+                    blocks.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.data } });
+                } else {
+                    blocks.push({ type: 'text', text: '[image omitted]' });
+                }
+            }
+        });
+        return blocks;
+    }
+
+    function toToolResultContent(content) {
+        if (typeof content === 'string') return content || '(empty)';
+        var blocks = toContentBlocks(content, true);
+        return blocks.length ? blocks : '(empty)';
+    }
+
+    /**
+     * 把内部的 OpenAI 风格消息转成 Anthropic 的 {system, messages}：
+     * - system 角色单独抽到顶层 system 字段
+     * - assistant.tool_calls → tool_use 内容块
+     * - role:'tool' → user 消息里的 tool_result 内容块
+     * - 相邻同角色消息合并（Anthropic 要求 user/assistant 交替）
+     * @param {Array<object>} messages
+     * @returns {{system: string, messages: Array<object>}}
+     */
+    function toAnthropicMessages(messages) {
+        var systemParts = [];
+        var out = [];
+        function pushMessage(role, blocks) {
+            if (!blocks.length) return;
+            var last = out[out.length - 1];
+            if (last && last.role === role) {
+                last.content = last.content.concat(blocks);
+            } else {
+                out.push({ role: role, content: blocks });
+            }
+        }
+        (messages || []).forEach(function(m) {
+            if (!m || !m.role) return;
+            if (m.role === 'system') {
+                var sysText = typeof m.content === 'string'
+                    ? m.content
+                    : toContentBlocks(m.content, false).map(function(b) { return b.text || ''; }).join('\n');
+                if (sysText) systemParts.push(sysText);
+                return;
+            }
+            if (m.role === 'tool') {
+                pushMessage('user', [{
+                    type: 'tool_result',
+                    tool_use_id: m.tool_call_id || '',
+                    content: toToolResultContent(m.content)
+                }]);
+                return;
+            }
+            if (m.role === 'assistant') {
+                var blocks = [];
+                if (typeof m.content === 'string' && m.content) blocks.push({ type: 'text', text: m.content });
+                (m.tool_calls || []).forEach(function(tc) {
+                    var fn = (tc && tc.function) || {};
+                    var input = {};
+                    try { input = JSON.parse(fn.arguments || '{}') || {}; } catch (e) { input = {}; }
+                    blocks.push({
+                        type: 'tool_use',
+                        id: tc.id || ('toolu_' + Math.random().toString(36).slice(2, 12)),
+                        name: fn.name || 'unknown',
+                        input: input
+                    });
+                });
+                pushMessage('assistant', blocks);
+                return;
+            }
+            var userBlocks = toContentBlocks(m.content, true);
+            if (!userBlocks.length) userBlocks.push({ type: 'text', text: '(empty)' });
+            pushMessage('user', userBlocks);
+        });
+        // Anthropic 要求消息以 user 开头
+        if (out.length && out[0].role !== 'user') {
+            out.unshift({ role: 'user', content: [{ type: 'text', text: 'Continue.' }] });
+        }
+        return { system: systemParts.join('\n\n'), messages: out };
+    }
+
+    /**
+     * OpenAI 风格消息转 Ollama 的 messages（角色体系一致，主要差异是
+     * tool_calls 的 arguments 必须是对象、图片放在 images 数组里）。
+     */
+    function toOllamaMessages(messages) {
+        var out = [];
+        (messages || []).forEach(function(m) {
+            if (!m || !m.role) return;
+            if (m.role === 'assistant') {
+                var assistantMsg = { role: 'assistant', content: typeof m.content === 'string' ? m.content : '' };
+                if (m.tool_calls && m.tool_calls.length) {
+                    assistantMsg.tool_calls = m.tool_calls.map(function(tc) {
+                        var fn = (tc && tc.function) || {};
+                        var args = {};
+                        try { args = JSON.parse(fn.arguments || '{}') || {}; } catch (e) { args = {}; }
+                        return { function: { name: fn.name || '', arguments: args } };
+                    });
+                }
+                out.push(assistantMsg);
+                return;
+            }
+            if (m.role === 'tool') {
+                out.push({
+                    role: 'tool',
+                    content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
+                });
+                return;
+            }
+            var text = m.content;
+            var images = [];
+            if (Array.isArray(text)) {
+                var texts = [];
+                text.forEach(function(part) {
+                    if (!part) return;
+                    if (part.type === 'text') texts.push(part.text || '');
+                    else if (part.type === 'image_url' && part.image_url) {
+                        var img = parseDataUrl(part.image_url.url);
+                        if (img) images.push(img.data);
+                    }
+                });
+                text = texts.join('\n');
+            }
+            var msg = { role: m.role, content: typeof text === 'string' ? text : String(text == null ? '' : text) };
+            if (images.length) msg.images = images;
+            out.push(msg);
+        });
+        return out;
+    }
+
+    function toAnthropicTools(tools) {
+        return (tools || []).map(function(tool) {
+            var fn = (tool && tool.function) || {};
+            return {
+                name: fn.name || '',
+                description: fn.description || '',
+                input_schema: fn.parameters || { type: 'object', properties: {} }
+            };
+        });
+    }
+
+    /**
+     * 生成请求体。max_tokens 在三家都是必填/建议项，取值由上下文预算算出。
+     * @param {'openai'|'anthropic'|'ollama'} apiFormat
+     * @param {Array<object>} messages
+     * @param {number} maxTokens
+     * @param {object|null} modelInfo
+     * @returns {object}
+     */
+    function buildChatRequest(apiFormat, messages, maxTokens, modelInfo) {
+        var model = getEffectiveModelId();
+        if (apiFormat === 'anthropic') {
+            var converted = toAnthropicMessages(messages);
+            var anthropicBody = {
+                model: model,
+                max_tokens: maxTokens,
+                stream: true,
+                messages: converted.messages
+            };
+            if (converted.system) anthropicBody.system = converted.system;
+            var anthropicTools = toAnthropicTools(getActiveTools());
+            if (anthropicTools.length) anthropicBody.tools = anthropicTools;
+            return anthropicBody;
+        }
+        if (apiFormat === 'ollama') {
+            var ollamaBody = {
+                model: model,
+                messages: toOllamaMessages(messages),
+                stream: true,
+                options: { num_predict: maxTokens }
+            };
+            var ollamaTools = getActiveTools();
+            if (ollamaTools.length) ollamaBody.tools = ollamaTools;
+            return ollamaBody;
+        }
+        var body = { model: model, messages: messages, stream: true, tools: getActiveTools(), tool_choice: 'auto' };
         applyThinkingParams(body, modelInfo);
         // 让服务端在流末尾附一个 usage 分片，用量统计才有真实数字而非本地估算
         body.stream_options = { include_usage: true };
+        body.max_tokens = maxTokens;
+        return body;
+    }
+
+    function doApiCall(messages, callback) {
+        var apiFormat = getApiFormat();
+        var endpoint = resolveEndpoint();
+        var modelInfo = getModelInfo();
 
         var inputTokens = currentRequestTokens || 0;
         var ctxLimit = getContextLimit();
         var maxOut = getModelMaxOutput();
         var computedMax = Math.min(ctxLimit - inputTokens - 512, maxOut);
         if (!isFinite(computedMax) || computedMax < 1024) computedMax = 1024;
-        body.max_tokens = Math.floor(computedMax);
+        var maxTokens = Math.floor(computedMax);
+
+        // 请求体按格式组装（OpenAI / Anthropic / Ollama）
+        var body = buildChatRequest(apiFormat, messages, maxTokens, modelInfo);
 
         abortController = new AbortController();
         var fullContent = '';
         var fullReasoning = '';
         var toolCallsAccum = {};
         var hasToolCall = false;
+        var usageInfo = null;
+        var finished = false;
+        var streamReader = null;
+        var loopSegment = null;
+        var lastLoopCheckAt = 0;
 
-        var fetchHeaders = { 'Content-Type': 'application/json' };
-        fetchHeaders['Authorization'] = 'Bearer ' + currentConfig.apiKey;
+        function stopStream() {
+            if (streamReader) {
+                try { streamReader.cancel(); } catch (e) {}
+                streamReader = null;
+            }
+        }
+
+        function finish() {
+            if (finished) return;
+            finished = true;
+            stopStream();
+            recordUsage(usageInfo, inputTokens);
+            if (loopSegment) {
+                // 幻觉检测命中：把已产出的内容交回上层，由上层暂停对话并提示用户
+                callback({ type: 'loop', content: fullContent, reasoning: fullReasoning, segment: loopSegment });
+                return;
+            }
+            if (hasToolCall && Object.keys(toolCallsAccum).length > 0) {
+                var toolCalls = [];
+                Object.keys(toolCallsAccum)
+                    .sort(function(a, b) { return Number(a) - Number(b); })
+                    .forEach(function(k) { toolCalls.push(toolCallsAccum[k]); });
+                callback({ type: 'tool_calls', toolCalls: toolCalls, content: fullContent, reasoning: fullReasoning });
+            } else {
+                callback({ type: 'text', content: fullContent, reasoning: fullReasoning });
+            }
+        }
+
+        function abortWithError(err) {
+            if (finished) return;
+            finished = true;
+            stopStream();
+            callback({ type: 'error', error: err });
+        }
+
+        function accumulateToolCall(index, id, name, argsChunk) {
+            if (!toolCallsAccum[index]) {
+                toolCallsAccum[index] = { id: id || '', type: 'function', function: { name: '', arguments: '' } };
+            }
+            if (id) toolCallsAccum[index].id = id;
+            if (name) toolCallsAccum[index].function.name = name;
+            if (argsChunk) toolCallsAccum[index].function.arguments += argsChunk;
+            hasToolCall = true;
+        }
+
+        // 正文每次增长后检查是否陷入重复输出；命中即结束本次流
+        function checkRepetition() {
+            if (loopSegment || finished) return;
+            // 每 24 个字符才扫一次，避免逐字符做重复检测拖慢渲染
+            if (fullContent.length - lastLoopCheckAt < 24) return;
+            lastLoopCheckAt = fullContent.length;
+            var segment = detectRepeatedSegment(fullContent);
+            if (segment) {
+                loopSegment = segment;
+                finish();
+            }
+        }
+
+        function handleOpenAIChunk(j) {
+            // usage 分片可能单独到达（此时 choices 为空数组），要先取
+            if (j.usage) usageInfo = j.usage;
+            var delta = j.choices && j.choices[0] && j.choices[0].delta;
+            if (!delta) return;
+            if (delta.reasoning_content) fullReasoning += delta.reasoning_content;
+            if (delta.content) {
+                fullContent += delta.content;
+                checkRepetition();
+            }
+            if (delta.tool_calls) {
+                delta.tool_calls.forEach(function(tc) {
+                    accumulateToolCall(tc.index, tc.id, tc.function && tc.function.name, tc.function && tc.function.arguments);
+                });
+            }
+        }
+
+        function handleAnthropicEvent(j) {
+            if (!j || !j.type) return;
+            if (j.type === 'error') {
+                var apiErr = new Error((j.error && (j.error.message || j.error.type)) || 'Anthropic API error');
+                apiErr.noRetry = true;
+                abortWithError(apiErr);
+                return;
+            }
+            if (j.type === 'message_start') {
+                var inTokens = j.message && j.message.usage && j.message.usage.input_tokens;
+                if (inTokens) {
+                    usageInfo = { prompt_tokens: inTokens, completion_tokens: (usageInfo && usageInfo.completion_tokens) || 0 };
+                }
+                return;
+            }
+            if (j.type === 'content_block_start') {
+                var block = j.content_block || {};
+                if (block.type === 'tool_use') {
+                    accumulateToolCall(j.index, block.id || '', block.name, '');
+                } else if (block.type === 'text' && block.text) {
+                    fullContent += block.text;
+                    checkRepetition();
+                }
+                return;
+            }
+            if (j.type === 'content_block_delta') {
+                var delta = j.delta || {};
+                if (delta.type === 'text_delta' && delta.text) {
+                    fullContent += delta.text;
+                    checkRepetition();
+                } else if (delta.type === 'thinking_delta' && delta.thinking) {
+                    fullReasoning += delta.thinking;
+                } else if (delta.type === 'input_json_delta' && typeof delta.partial_json === 'string') {
+                    accumulateToolCall(j.index, '', '', delta.partial_json);
+                }
+                return;
+            }
+            if (j.type === 'message_delta') {
+                var outTokens = j.usage && j.usage.output_tokens;
+                if (outTokens) {
+                    usageInfo = usageInfo || {};
+                    usageInfo.completion_tokens = outTokens;
+                }
+                return;
+            }
+            if (j.type === 'message_stop') finish();
+        }
+
+        function handleOllamaChunk(j) {
+            if (!j) return;
+            if (j.error) {
+                var ollamaErr = new Error(String(j.error));
+                ollamaErr.noRetry = true;
+                abortWithError(ollamaErr);
+                return;
+            }
+            var msg = j.message || {};
+            if (msg.thinking) fullReasoning += msg.thinking;
+            if (msg.content) {
+                fullContent += msg.content;
+                checkRepetition();
+            }
+            if (msg.tool_calls) {
+                msg.tool_calls.forEach(function(tc) {
+                    var fn = (tc && tc.function) || {};
+                    var args = fn.arguments;
+                    accumulateToolCall(
+                        Object.keys(toolCallsAccum).length,
+                        tc && tc.id ? tc.id : '',
+                        fn.name,
+                        typeof args === 'string' ? args : JSON.stringify(args || {})
+                    );
+                });
+            }
+            if (j.done) {
+                if (typeof j.prompt_eval_count === 'number' || typeof j.eval_count === 'number') {
+                    usageInfo = { prompt_tokens: j.prompt_eval_count || 0, completion_tokens: j.eval_count || 0 };
+                }
+                finish();
+            }
+        }
+
+        function handleStreamLine(rawLine) {
+            var line = String(rawLine || '').trim();
+            if (!line) return;
+            // Ollama 是换行分隔的 JSON（NDJSON），没有 SSE 的 data: 前缀
+            if (apiFormat === 'ollama') {
+                try { handleOllamaChunk(JSON.parse(line)); } catch (e) {}
+                return;
+            }
+            if (line.indexOf('data:') !== 0) return; // Anthropic 的 event: / id: 行
+            var payload = line.slice(5).trim();
+            if (!payload) return;
+            if (payload === '[DONE]') { finish(); return; }
+            var parsed;
+            try { parsed = JSON.parse(payload); } catch (e) { return; }
+            if (apiFormat === 'anthropic') handleAnthropicEvent(parsed);
+            else handleOpenAIChunk(parsed);
+        }
 
         aiFetch(endpoint, {
             method: 'POST',
-            headers: fetchHeaders,
+            headers: buildAuthHeaders(apiFormat, currentConfig.apiKey),
             body: JSON.stringify(body),
             signal: abortController.signal
         }).then(function(resp) {
             if (!resp.ok) return resp.json().catch(function() { return {}; }).then(function(e) {
                 //带上 HTTP 状态码，断连重试要靠它区分瞬时故障（5xx/429）和明确拒绝（4xx）
-                var httpErr = new Error(e.error ? e.error.message : 'HTTP ' + resp.status);
+                var httpErr = new Error((e.error && (e.error.message || e.error.type)) || 'HTTP ' + resp.status);
                 httpErr.status = resp.status;
                 throw httpErr;
             });
@@ -12163,83 +12659,41 @@
                 htmlErr.noRetry = true;
                 throw htmlErr;
             }
-            if (/json/i.test(respCT)) {
+            // Ollama 的流式响应是 application/x-ndjson，不能按 application/json 判错
+            if (apiFormat !== 'ollama' && /^application\/json/i.test(respCT)) {
                 return resp.json().catch(function() { return {}; }).then(function(e) {
                     var jsonMsg = (e && e.error && ((e.error.message || e.error.type) || JSON.stringify(e.error))) || '';
-                    var jsonErr = new Error(jsonMsg || '端点返回了 JSON 而非 SSE 流（HTTP 200），请核对接口地址（如 https://主机名/v1/chat/completions）');
+                    var jsonErr = new Error(jsonMsg || '端点返回了 JSON 而非 SSE 流（HTTP 200），请核对接口地址与 API 格式（OpenAI / Anthropic / Ollama）');
                     jsonErr.noRetry = true;
                     throw jsonErr;
                 });
             }
-            var reader = resp.body.getReader();
+            streamReader = resp.body.getReader();
             var decoder = new TextDecoder();
             var buf = '';
             function read() {
-                reader.read().then(function(r) {
+                if (finished || !streamReader) return;
+                streamReader.read().then(function(r) {
+                    if (finished) return;
                     if (r.done) { finish(); return; }
                     buf += decoder.decode(r.value, { stream: true });
                     var lines = buf.split('\n');
                     buf = lines.pop() || '';
-                    lines.forEach(function(l) {
-                        l = l.trim();
-                        if (!l || !l.startsWith('data: ')) return;
-                        var d = l.slice(6);
-                        if (d === '[DONE]') { finish(); return; }
-                        try {
-                            var j = JSON.parse(d);
-                            // usage 分片可能单独到达（此时 choices 为空数组），要先取
-                            if (j.usage) usageInfo = j.usage;
-                            var delta = j.choices && j.choices[0] && j.choices[0].delta;
-                            if (!delta) return;
-                            if (delta.reasoning_content) {
-                                fullReasoning += delta.reasoning_content;
-                            }
-                            if (delta.content) {
-                                fullContent += delta.content;
-                            }
-                            if (delta.tool_calls) {
-                                delta.tool_calls.forEach(function(tc) {
-                                    if (!toolCallsAccum[tc.index]) {
-                                        toolCallsAccum[tc.index] = { id: tc.id || '', type: tc.type || 'function', function: { name: '', arguments: '' } };
-                                    }
-                                    if (tc.id) toolCallsAccum[tc.index].id = tc.id;
-                                    if (tc.function) {
-                                        if (tc.function.name) toolCallsAccum[tc.index].function.name = tc.function.name;
-                                        if (tc.function.arguments) toolCallsAccum[tc.index].function.arguments += tc.function.arguments;
-                                    }
-                                });
-                                hasToolCall = true;
-                            }
-                        } catch(e) {}
-                    });
+                    for (var i = 0; i < lines.length && !finished; i++) {
+                        handleStreamLine(lines[i]);
+                    }
+                    if (finished) return;
                     callback({ type: 'chunk', fullContent: fullContent, fullReasoning: fullReasoning });
                     read();
                 }).catch(function(err) {
+                    if (finished) return;
                     callback({ type: 'error', error: err });
                 });
             }
             read();
         }).catch(function(err) {
-            callback({ type: 'error', error: err });
+            abortWithError(err);
         });
-
-        var finished = false;
-        function finish() {
-            if (finished) return;
-            finished = true;
-            recordUsage(usageInfo, inputTokens);
-            if (hasToolCall && Object.keys(toolCallsAccum).length > 0) {
-                var toolCalls = [];
-                Object.keys(toolCallsAccum).sort().forEach(function(k) {
-                    toolCalls.push(toolCallsAccum[k]);
-                });
-                callback({ type: 'tool_calls', toolCalls: toolCalls, content: fullContent, reasoning: fullReasoning });
-            } else {
-                callback({ type: 'text', content: fullContent, reasoning: fullReasoning });
-            }
-        }
-
-        var usageInfo = null;
     }
 
     // sourceHistory 可选：生成回合续跑时传本回合所属会话的消息，防止用户
@@ -12306,23 +12760,52 @@
         try {
             var provider = PROVIDERS[currentConfig.provider];
             if (!provider) return;
-            var endpoint = provider.isCustom ? normalizeCustomEndpoint(currentConfig.customEndpoint || provider.endpoint) : provider.endpoint;
+            var apiFormat = getApiFormat();
+            var endpoint = resolveEndpoint();
+            if (!endpoint) return;
+            var titlePrompt = '根据用户的消息生成一个简短的对话标题，不超过12个字，直接返回标题文本，不要引号不要解释。';
+            var titleSeed = String(firstMessage || '').slice(0, 500);
             var titleMessages = [
-                { role: 'system', content: '根据用户的消息生成一个简短的对话标题，不超过12个字，直接返回标题文本，不要引号不要解释。' },
-                { role: 'user', content: String(firstMessage || '').slice(0, 500) }
+                { role: 'system', content: titlePrompt },
+                { role: 'user', content: titleSeed }
             ];
-            var body = { model: getEffectiveModelId(), messages: titleMessages, stream: false, max_tokens: 50 };
-            var headers = { 'Content-Type': 'application/json' };
-            headers['Authorization'] = 'Bearer ' + currentConfig.apiKey;
+            var body;
+            if (apiFormat === 'anthropic') {
+                // Anthropic 的 system 是顶层字段，且 max_tokens 必填
+                body = {
+                    model: getEffectiveModelId(),
+                    max_tokens: 64,
+                    system: titlePrompt,
+                    messages: [{ role: 'user', content: titleSeed }]
+                };
+            } else if (apiFormat === 'ollama') {
+                body = {
+                    model: getEffectiveModelId(),
+                    messages: titleMessages,
+                    stream: false,
+                    options: { num_predict: 64 }
+                };
+            } else {
+                body = { model: getEffectiveModelId(), messages: titleMessages, stream: false, max_tokens: 50 };
+            }
             aiFetch(endpoint, {
                 method: 'POST',
-                headers: headers,
+                headers: buildAuthHeaders(apiFormat, currentConfig.apiKey),
                 body: JSON.stringify(body)
             }).then(function(resp) {
-                if (!resp.ok) return resp.json().catch(function() { return {}; }).then(function(e) { throw new Error(e.error ? e.error.message : 'HTTP ' + resp.status); });
+                if (!resp.ok) return resp.json().catch(function() { return {}; }).then(function(e) { throw new Error((e.error && (e.error.message || e.error.type)) || 'HTTP ' + resp.status); });
                 return resp.json();
             }).then(function(data) {
-                var title = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+                var title = '';
+                if (data) {
+                    if (apiFormat === 'anthropic') {
+                        title = (data.content && data.content[0] && data.content[0].text) || '';
+                    } else if (apiFormat === 'ollama') {
+                        title = (data.message && data.message.content) || '';
+                    } else {
+                        title = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+                    }
+                }
                 if (!title) return;
                 title = String(title).trim().replace(/^["'“”‘’]+|["'“”‘’]+$/g, '').slice(0, 12);
                 if (!title) return;
@@ -12352,7 +12835,7 @@
             var remoteText = messageInput.value.trim();
             var remoteImages = pendingImages.slice();
             if (!remoteText && !remoteImages.length) return;
-            if (!currentConfig.apiKey) { showToast(t('configureApiKeyFirst'), 'error'); return; }
+            if (configNeedsApiKey() && !currentConfig.apiKey) { showToast(t('configureApiKeyFirst'), 'error'); return; }
             messageInput.value = '';
             autoResize();
             pendingImages = [];
@@ -12685,6 +13168,53 @@
                         // 服务端明确拒绝（密钥无效、请求非法等）：重试无意义，直接呈现报错
                         finishWithError(result.error.message || String(result.error), false);
                     }
+                } else if (result.type === 'loop') {
+                    // 幻觉/循环输出：模型把同一文段连续输出了 10 次。已经烧掉的
+                    // token 收不回来，这里立刻结束本回合（不重试、不续跑工具循环），
+                    // 把已产出的内容如实留档，并明确告知用户对话已暂停。
+                    streamSettled = true;
+                    clearStreamRetry();
+                    var loopTypingEl = document.getElementById('typingIndicator');
+                    if (loopTypingEl) loopTypingEl.remove();
+                    if (activeProcessBody) {
+                        activeProcessBody.querySelectorAll('.reasoning-box.is-streaming').forEach(function(el) {
+                            el.classList.remove('is-streaming');
+                            var rc = el.querySelector('.reasoning-content');
+                            if (rc) rc.classList.remove('streaming');
+                        });
+                    }
+                    finalizeProcessGroup();
+                    turnHasStreamOutput = true;
+
+                    var loopContent = result.content || '';
+                    // 重复段落可能很长，留档时截断，避免污染下一轮的上下文预算
+                    var loopStored = loopContent.length > 6000
+                        ? loopContent.slice(0, 6000) + '\n\n…（重复内容已截断）'
+                        : loopContent;
+                    var loopVisible = isGeneratingConvVisible();
+                    if (loopStored.trim()) {
+                        streamingWrapper.id = '';
+                        if (loopVisible) {
+                            if (streamingWrapper.parentNode !== chatArea) chatArea.appendChild(streamingWrapper);
+                            streamingBubble.innerHTML = formatMarkdown(loopStored) + '<div class="message-time">' + formatTime(new Date()) + '</div>';
+                        }
+                        pushGeneratingMessage({ role: 'assistant', content: loopStored, time: formatTime(new Date()), reasoning: result.reasoning || undefined });
+                    } else {
+                        streamingWrapper.remove();
+                    }
+
+                    // 暂停提示单独成条：不参与后续请求，只作为用户可见说明
+                    var loopNotice = t('loopDetected');
+                    var loopNoticeMsg = { role: 'assistant', content: loopNotice, time: formatTime(new Date()) };
+                    isLoading = false;
+                    abortController = null;
+                    pushGeneratingMessage(loopNoticeMsg);
+                    if (isGeneratingConvVisible()) appendAIMessage(loopNotice, loopNoticeMsg.time, '', [], true);
+                    setGeneratingConv(null);
+                    notifySidebarTodoTurnEnd();
+                    phoneClearStream();
+                    phonePushHistory();
+                    if (isGeneratingConvVisible() || loopVisible) scrollToBottom();
                 } else if (result.type === 'tool_calls') {
                     streamingWrapper.remove();
                     turnHasStreamOutput = true;
@@ -13443,7 +13973,7 @@
                 }) : [];
                 if (!text && !images.length) return { ok: false, error: '消息为空' };
                 if (isLoading) return { ok: false, error: '电脑端正在生成，请稍候' };
-                if (!currentConfig.apiKey) return { ok: false, error: t('configureApiKeyFirst') };
+                if (configNeedsApiKey() && !currentConfig.apiKey) return { ok: false, error: t('configureApiKeyFirst') };
                 if (phoneLinkOpen) togglePhonePopover(false);
                 messageInput.value = text;
                 pendingImages = images;
@@ -13767,7 +14297,7 @@
     init();
     updateSendBtn();
     populateModelSwitcherDropdown();
-    if (!currentConfig.apiKey) setTimeout(function() { settingDot.classList.add('visible'); }, 500);
+    if (configNeedsApiKey() && !currentConfig.apiKey) setTimeout(function() { settingDot.classList.add('visible'); }, 500);
 })();
 </script>
 </body>

@@ -669,7 +669,7 @@ class EditorWindow extends ProjectRunningWindow {
         filters: [
           {
             name: 'Scratch Project',
-            extensions: ['np1', 'sb3', 'sb2', 'sb', 'npnp', 'viewsb3'],
+            extensions: ['np1', 'sb3', 'npnp', 'viewsb3'],
           }
         ]
       });
