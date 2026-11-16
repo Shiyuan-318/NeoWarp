@@ -6556,14 +6556,17 @@
             usageResetDone: 'Usage records cleared',
             usageRemoteOnly: 'Usage records live on the computer',
             undoButton: 'Undo AI changes',
-            undoTooltip: 'Revert the project to how it was before the AI touched it in this chat',
+            undoButtonCount: 'Undo AI changes ({n})',
+            undoTooltip: 'Revert only what the AI changed in this chat — anything you edited yourself afterwards is kept',
             undoAlreadyDone: 'Changes undone',
-            undoConfirmTitle: 'Undo all AI changes in this chat?',
-            undoConfirmDetail: 'The project goes back to how it was at {time}, before the AI first changed anything in this chat. Anything you edited by hand since then is lost too, and this cannot be redone.',
+            undoConfirmTitle: 'Undo the AI changes in this chat?',
+            undoConfirmDetail: 'The AI changed {n} thing(s) in this chat. Only those changes are reverted: anything you edited yourself afterwards stays exactly as it is now.',
             undoConfirmOk: 'Undo changes',
-            undoRunning: 'Restoring the project…',
-            undoDone: 'AI changes undone',
-            undoFailed: 'Could not restore the project',
+            undoRunning: 'Reverting the AI changes…',
+            undoDone: 'Reverted {n} AI change(s)',
+            undoPartial: 'Reverted {n} AI change(s); {kept} kept because you edited them yourself',
+            undoNone: 'Nothing to revert — you already changed every part the AI touched',
+            undoFailed: 'Could not revert the AI changes',
             undoBusy: 'Wait for the current reply to finish first',
             undoRemoteOnly: 'Undo runs on the computer',
             myModelsTitle: 'My models',
@@ -6813,14 +6816,17 @@
             usageResetDone: '用量记录已清除',
             usageRemoteOnly: '用量记录保存在电脑端',
             undoButton: '撤销 AI 更改',
-            undoTooltip: '把工程恢复到本次对话中 AI 动手之前的状态',
+            undoButtonCount: '撤销 AI 更改（{n}）',
+            undoTooltip: '只回退 AI 在本次对话中做的改动，你之后自己改过的内容会保留',
             undoAlreadyDone: '已撤销',
-            undoConfirmTitle: '撤销本次对话中 AI 的全部更改？',
-            undoConfirmDetail: '工程将恢复到 {time}（AI 在本次对话中第一次改动之前）的状态。你在那之后手动做的修改也会一并丢失，且无法恢复。',
+            undoConfirmTitle: '撤销本次对话中 AI 的改动？',
+            undoConfirmDetail: 'AI 在本次对话中改动了 {n} 处内容。撤销只回退这些改动——你在那之后自己手动修改过的部分会原样保留。',
             undoConfirmOk: '撤销更改',
-            undoRunning: '正在恢复工程…',
-            undoDone: 'AI 的更改已撤销',
-            undoFailed: '恢复工程失败',
+            undoRunning: '正在回退 AI 的改动…',
+            undoDone: '已撤销 {n} 处 AI 改动',
+            undoPartial: '已撤销 {n} 处 AI 改动；另有 {kept} 处你后来改过，已保留',
+            undoNone: '没有可撤销的改动——AI 改过的地方你都已经自己重做过',
+            undoFailed: '回退 AI 改动失败',
             undoBusy: '请先等当前回答结束',
             undoRemoteOnly: '撤销操作在电脑端执行',
             myModelsTitle: '我的模型',
@@ -7145,8 +7151,8 @@
             try { loadConfigs(); } catch(e) { console.error('loadConfigs error:', e); }
             try { loadUsage(); } catch(e) { console.error('loadUsage error:', e); }
             try { loadConversations(); } catch(e) { console.error('loadConversations error:', e); }
-            // 会话里的撤销状态是持久化的，快照却随编辑器进程存亡；启动时核实一次
-            try { verifyUndoSnapshot(); } catch(e) { console.error('verifyUndoSnapshot error:', e); }
+            // 会话里的撤销计数是持久化的，改动日志却随编辑器进程存亡；启动时重新核实
+            try { refreshUndoStatus(); } catch(e) { console.error('refreshUndoStatus error:', e); }
             try { setupDisclaimer(); } catch(e) { console.error('setupDisclaimer error:', e); }
         }
         try { autoResize(); } catch(e) { console.error('autoResize error:', e); }
@@ -7616,8 +7622,8 @@
         saveConversations();
         renderConversationList();
         updateSendBtn();
-        // 会话是持久化的，快照只活在编辑器进程里；核实后再决定要不要显示撤销按钮
-        verifyUndoSnapshot();
+        // 会话是持久化的，改动日志只活在编辑器进程里；核实后再决定要不要显示撤销按钮
+        refreshUndoStatus();
         if (messageInput) messageInput.focus();
     }
 
@@ -7686,10 +7692,9 @@
             if (id === generatingConvId && isLoading) {
                 requestGenerationAbort();
             }
-            var goneConv = conversations[idx];
-            if (goneConv && goneConv.undo && goneConv.undo.snapshotId && window.AIAssistantPreload) {
-                // 快照可达几十 MB，会话都删了就没必要继续占着编辑器内存
-                window.AIAssistantPreload.callTool('dropProjectSnapshot', { snapshotId: goneConv.undo.snapshotId });
+            // 会话都删了，它对应的 AI 改动日志也就没有存在意义了
+            if (window.AIAssistantPreload) {
+                window.AIAssistantPreload.callTool('dropAIChanges', { sessionId: id });
             }
             conversations.splice(idx, 1);
             // 会话没了，侧边栏待办状态一并丢弃
@@ -9637,14 +9642,15 @@
             btn.disabled = true;
             btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle></svg>Applying...';
             // 手点 Apply 同样是把 AI 的产物落进工程，因此也要能撤销
-            ensureUndoBaseline('execute_operations').then(function() {
-            window.AIAssistantPreload.applyProject(json).then(function(result) {
+            window.AIAssistantPreload.applyProject(json, activeConversationId || 'default').then(function(result) {
                 btn.disabled = false;
                 if (result && result.success) {
                     btn.classList.add('applied');
                     btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Applied!';
                     setTimeout(function() { btn.classList.remove('applied'); btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Apply'; }, 2000);
                     showToast('Project updated successfully', 'success');
+                    // 应用之后工程里多了一批改动，撤销按钮的计数要跟上
+                    refreshUndoStatus();
                 } else {
                     btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Apply';
                     showToast('Failed to apply project', 'error');
@@ -9653,7 +9659,6 @@
                 btn.disabled = false;
                 btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Apply';
                 showToast('Failed to apply project', 'error');
-            });
             });
         } catch(e) {
             showToast('Invalid JSON in code block', 'error');
@@ -11740,16 +11745,18 @@
 
     /* ══════════════════════════════════════════════════════════════════════
        撤销 AI 更改
-       每个会话只保留一个"基线"：AI 在本次对话里第一次动手之前的完整工程快照。
-       因此每条总结上的撤销按钮语义一致——都是"回到这次对话开始前的样子"，
-       而不是逐步回退，符合"撤销此次对话中的全部更改"。
+       不保存任何工程备份。编辑器在 AI 每次改动前后各抓一次工程状态，按
+       「积木脚本 / 变量 / 角色属性 / 角色本身」这些单元记下差异并存入日志
+       （见 editor/gui/ai-undo-journal.js）。
+       撤销时做三路合并：只有"当前值仍然等于 AI 改完之后的值"才回退到改动前，
+       用户后来自己改过的单元原样保留，并在结果里如实告知保留了几处。
 
-       快照本体（sb3 压缩包，含素材）留在编辑器渲染进程，这里只持有 id；
-       它随编辑器进程存活，所以按钮渲染前要先确认快照仍然存在。
+       日志只活在编辑器内存里，所以这里只向编辑器问「能撤多少」，会话记录里
+       只存这个计数；编辑器重开过就问不到东西，按钮自然消失。
        ══════════════════════════════════════════════════════════════════════ */
 
-    // 会改动工程的工具。只读工具（get_*/list_*/搜索/待办/提问）不触发建基线，
-    // 否则用户只是让 AI"看一下"也要付一次全工程打包的开销。
+    // 会改动工程的工具。只读工具（get_*/list_*/搜索/待办/提问）不触发状态刷新，
+    // 否则用户只是让 AI"看一下"也要多走一次 IPC。
     var MUTATING_TOOLS = {
         execute_operations: 1, add_sprite: 1, add_sprite_from_url: 1, delete_sprite: 1,
         duplicate_sprite: 1, rename_sprite: 1, set_sprite_property: 1,
@@ -11758,12 +11765,11 @@
         create_list: 1, add_to_list: 1, insert_to_list: 1, set_list_item: 1,
         delete_from_list: 1, clear_list: 1,
         rename_project: 1, set_stage_size: 1,
-        develop_extension: 1, install_extension: 1,
-        // 点绿旗会跑脚本，而脚本会改变量和角色位置——那也是工程状态的变化
-        click_green_flag: 1
+        develop_extension: 1, install_extension: 1, delete_extension: 1,
+        write_js_file: 1
     };
 
-    /** 当前会话的撤销状态；随会话一起持久化，快照可用性另行核实。 */
+    /** 当前会话的撤销状态；随会话一起持久化，只放计数不放开工程内容。 */
     function currentUndoState() {
         var conv = conversations.find(function(c) { return c.id === activeConversationId; });
         return conv && conv.undo ? conv.undo : null;
@@ -11778,58 +11784,38 @@
     }
 
     /**
-     * 在第一次改动前建立基线。已有基线就直接复用——撤销的目标始终是
-     * "这次对话开始前"，不是上一轮。
+     * 向编辑器查询本会话累积的 AI 改动，并同步到会话状态 + 按钮。
+     * 撤销按钮是否出现完全取决于它：编辑器那边没有日志（比如重开过），按钮就该消失。
+     * @returns {Promise<?object>} 编辑器返回的状态
      */
-    function ensureUndoBaseline(toolName) {
-        if (IS_REMOTE) return Promise.resolve(null);
-        if (!MUTATING_TOOLS[toolName]) return Promise.resolve(null);
-        if (!window.AIAssistantPreload) return Promise.resolve(null);
-        var existing = currentUndoState();
-        if (existing && existing.snapshotId) {
-            // 上一次撤销之后工程已回到基线，这份快照仍然是正确的基线，继续用
-            if (existing.undone) {
-                existing.undone = false;
-                setUndoState(existing);
-                renderUndoButtons();
-            }
-            return Promise.resolve(existing);
-        }
-        var snapshotId = 'undo_' + (activeConversationId || 'conv') + '_' + Date.now();
-        return window.AIAssistantPreload.callTool('captureProjectSnapshot', { snapshotId: snapshotId })
+    function refreshUndoStatus() {
+        if (IS_REMOTE || !window.AIAssistantPreload) return Promise.resolve(null);
+        var convId = activeConversationId;
+        if (!convId) return Promise.resolve(null);
+        return window.AIAssistantPreload.callTool('getAIChangeStatus', { sessionId: convId })
             .then(function(res) {
-                if (!res || !res.success) {
-                    // 建基线失败就不装作能撤销：宁可没有按钮，也别给一个点了没用的
-                    console.warn('undo baseline capture failed:', res && res.error);
-                    return null;
+                if (!res || !res.success) return null;
+                var data = res.data || {};
+                var conv = conversations.find(function(c) { return c.id === convId; });
+                if (!conv) return null;
+                if (data.count > 0) {
+                    conv.undo = {
+                        count: data.count,
+                        toolCount: data.toolCount || 0,
+                        updatedAt: data.updatedAt || Date.now(),
+                        undone: false
+                    };
+                } else if (conv.undo && conv.undo.undone) {
+                    // 已经撤销过：保留「已撤销」的终态，别让按钮又冒出来
+                    conv.undo = { count: 0, undone: true };
+                } else {
+                    delete conv.undo;
                 }
-                var state = { snapshotId: res.data.snapshotId, capturedAt: Date.now(), undone: false };
-                setUndoState(state);
-                renderUndoButtons();
-                return state;
+                saveConversations();
+                if (convId === activeConversationId) renderUndoButtons();
+                return data;
             })
-            .catch(function(err) {
-                console.warn('undo baseline capture threw:', err);
-                return null;
-            });
-    }
-
-    /** 快照只活在编辑器进程里；会话是持久化的，两者可能不同步。 */
-    function verifyUndoSnapshot() {
-        var state = currentUndoState();
-        if (!state || !state.snapshotId || IS_REMOTE || !window.AIAssistantPreload) {
-            renderUndoButtons();
-            return;
-        }
-        window.AIAssistantPreload.callTool('hasProjectSnapshot', { snapshotId: state.snapshotId })
-            .then(function(res) {
-                if (res && res.success && res.data && !res.data.exists) {
-                    // 编辑器重开过，快照没了：清掉状态，按钮也就不再出现
-                    setUndoState(null);
-                }
-                renderUndoButtons();
-            })
-            .catch(function() { renderUndoButtons(); });
+            .catch(function() { return null; });
     }
 
     /**
@@ -11853,7 +11839,8 @@
         for (var i = 0; i < footers.length; i++) {
             var footer = footers[i];
             var btn = footer.querySelector('.undo-ai-btn');
-            if (!state || !state.snapshotId) {
+            // 只有「有可撤销的改动」或「已经撤销过」时才留按钮
+            if (!state || (!state.undone && !state.count)) {
                 if (btn) btn.remove();
                 continue;
             }
@@ -11866,23 +11853,26 @@
             btn.disabled = !!state.undone;
             btn.classList.toggle('is-done', !!state.undone);
             btn.title = state.undone ? t('undoAlreadyDone') : t('undoTooltip');
+            var label = state.undone
+                ? t('undoAlreadyDone')
+                : (state.count ? tf('undoButtonCount', { n: state.count }) : t('undoButton'));
             btn.innerHTML = state.undone
                 ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' +
-                  '<span>' + escapeHtml(t('undoAlreadyDone')) + '</span>'
+                  '<span>' + escapeHtml(label) + '</span>'
                 : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg>' +
-                  '<span>' + escapeHtml(t('undoButton')) + '</span>';
+                  '<span>' + escapeHtml(label) + '</span>';
         }
     }
 
-    /** 执行撤销：确认 → 恢复快照 → 更新按钮状态。 */
+    /** 执行撤销：确认 → 只回退 AI 的改动 → 更新按钮状态。 */
     function performUndo() {
         var state = currentUndoState();
-        if (!state || !state.snapshotId || state.undone) return;
+        if (!state || state.undone || !state.count) return;
         if (isLoading) { showToast(t('undoBusy'), 'error'); return; }
         if (IS_REMOTE) {
             // 手机上同样要确认；确认过后再让电脑执行，不在两端各弹一次
             customConfirm(t('undoConfirmTitle'), {
-                detail: tf('undoConfirmDetail', { time: formatTime(new Date(state.capturedAt)) }),
+                detail: tf('undoConfirmDetail', { n: state.count || 0 }),
                 confirmLabel: t('undoConfirmOk'),
                 danger: true
             }).then(function(ok) {
@@ -11892,7 +11882,7 @@
         }
 
         customConfirm(t('undoConfirmTitle'), {
-            detail: tf('undoConfirmDetail', { time: formatTime(new Date(state.capturedAt)) }),
+            detail: tf('undoConfirmDetail', { n: state.count || 0 }),
             confirmLabel: t('undoConfirmOk'),
             danger: true
         }).then(function(ok) {
@@ -11900,30 +11890,41 @@
         });
     }
 
-    /** 已确认后的恢复动作；手机端在自己那边确认过，直接走这里。 */
+    /** 已确认后的撤销动作；手机端在自己那边确认过，直接走这里。 */
     function performUndoConfirmed() {
         var state = currentUndoState();
-        if (!state || !state.snapshotId || state.undone) return;
+        if (!state || state.undone) return;
+        var convId = activeConversationId;
         showToast(t('undoRunning'), 'success');
-        window.AIAssistantPreload.callTool('restoreProjectSnapshot', { snapshotId: state.snapshotId })
+        window.AIAssistantPreload.callTool('undoAIChanges', { sessionId: convId })
             .then(function(res) {
                 if (!res || !res.success) {
                     showToast((res && res.error) || t('undoFailed'), 'error');
-                    // 快照没了就别再留着按钮骗人
-                    if (res && res.error && /no longer available/.test(res.error)) {
-                        setUndoState(null);
-                        renderUndoButtons();
-                    }
+                    refreshUndoStatus();
                     return;
                 }
-                state.undone = true;
-                setUndoState(state);
-                renderUndoButtons();
+                var data = res.data || {};
+                var reverted = data.reverted || 0;
+                var conflicts = data.conflicts || 0;
+                var conv = conversations.find(function(c) { return c.id === convId; });
+                if (conv) {
+                    // 一处都没退掉（全被用户改过）时不留「已撤销」痕迹，按钮直接消失
+                    if (reverted) conv.undo = { count: 0, undone: true, reverted: reverted, conflicts: conflicts };
+                    else delete conv.undo;
+                }
+                saveConversations();
+                if (convId === activeConversationId) renderUndoButtons();
                 // 工程内容已变，缓存的工程上下文必须失效，否则下一轮 AI 会基于旧快照推理
                 projectCodeCache = null;
                 currentContextMapping = {};
-                showToast(t('undoDone'), 'success');
+                if (!reverted) showToast(t('undoNone'), 'error');
+                else if (conflicts) showToast(tf('undoPartial', { n: reverted, kept: conflicts }), 'success');
+                else showToast(tf('undoDone', { n: reverted }), 'success');
                 phonePushHistory();
+            })
+            .catch(function(err) {
+                showToast(t('undoFailed'), 'error');
+                console.warn('undo failed:', err);
             });
     }
 
@@ -11982,6 +11983,8 @@
     function executeToolCall(toolName, params) {
         if (!window.AIAssistantPreload) return Promise.resolve({ success: false, error: 'No preload' });
         var mappedName = toolName;
+        // 会话标识随每次调用下发：编辑器按会话维护 AI 改动日志（撤销的依据）
+        var undoMeta = { sessionId: activeConversationId || 'default' };
         switch (toolName) {
             case 'get_project_info': mappedName = 'getProjectSummary'; break;
             case 'get_sprite_scripts': mappedName = 'getSpriteScripts'; break;
@@ -12085,14 +12088,10 @@
                 };
             });
         }
-        // SOLO 的 js 文件工具由主进程直接处理，没有编辑器快照可建，跳过撤销基线
-        if (IS_SOLO && (toolName === 'read_js_file' || toolName === 'write_js_file')) {
-            return window.AIAssistantPreload.callTool(mappedName, params);
-        }
-        // SOLO 建新工程：不建撤销基线（还没有工程），结果里带新工程信息时要
+        // SOLO 建新工程：还没有工程，谈不上撤销；结果里带新工程信息时要
         // 立刻同步本地状态（chip、舞台面板），后续积木/文件工具才能接着用
         if (IS_SOLO && toolName === 'create_project') {
-            return window.AIAssistantPreload.callTool(mappedName, params).then(function(res) {
+            return window.AIAssistantPreload.callTool(mappedName, params, undoMeta).then(function(res) {
                 if (res && res.success && res.data && res.data.project) {
                     soloProject = res.data.project;
                     projectCodeCache = null;
@@ -12104,9 +12103,11 @@
                 return res;
             });
         }
-        // 改动类工具执行前先建立撤销基线；只读工具不付这个开销
-        return ensureUndoBaseline(toolName).then(function() {
-            return window.AIAssistantPreload.callTool(mappedName, params);
+        // 调用带上会话标识：编辑器据此把这次的改动记进本对话的撤销日志。
+        // 改动类工具返回后刷新一次「能撤多少」，撤销按钮的计数随之更新。
+        return window.AIAssistantPreload.callTool(mappedName, params, undoMeta).then(function(res) {
+            if (MUTATING_TOOLS[toolName]) refreshUndoStatus();
+            return res;
         });
     }
 
@@ -12157,6 +12158,20 @@
     var LOOP_MIN_TOTAL_CHARS = 160;    // 全文太短时不判定，避免误伤正常重复
 
     /**
+     * 判断一段文字本身是否由更短片段重复构成（如 "----\n----\n"）。
+     * 这类“文段”是分隔线/表格之类的小片段，不该当成循环证据。
+     * @param {string} str
+     * @returns {boolean}
+     */
+    function isSelfRepeatingSegment(str) {
+        for (var q = 1; q <= str.length / 2; q++) {
+            if (str.length % q !== 0) continue;
+            if (str.slice(0, q).repeat(str.length / q) === str) return true;
+        }
+        return false;
+    }
+
+    /**
      * 检测文本结尾是否由同一文段连续重复 LOOP_REPEAT_THRESHOLD 次构成。
      * 只扫尾部窗口：重复块必然紧贴末尾，更早的重复在生成过程中已经被检出过。
      * @param {string} text
@@ -12175,6 +12190,7 @@
             if (scan.charAt(scan.length - p - 1) !== lastChar) continue;
             var block = scan.slice(-p);
             if (block.trim().length < LOOP_MIN_SEGMENT_CHARS) continue;
+            if (isSelfRepeatingSegment(block)) continue;
             var repeated = true;
             for (var i = 1; i < LOOP_REPEAT_THRESHOLD; i++) {
                 if (scan.slice(-(i + 1) * p, -i * p) !== block) { repeated = false; break; }
@@ -13861,7 +13877,7 @@
             locale: currentLocale,
             undo: (function() {
                 var u = currentUndoState();
-                return u ? { snapshotId: u.snapshotId, capturedAt: u.capturedAt, undone: !!u.undone } : null;
+                return u ? { count: u.count || 0, undone: !!u.undone } : null;
             })(),
             conversations: conversations.map(function(c) {
                 return {
@@ -14034,7 +14050,7 @@
             }
             case 'undoChanges': {
                 var undoState = currentUndoState();
-                if (!undoState || !undoState.snapshotId) return { ok: false, error: '本次对话没有可撤销的更改' };
+                if (!undoState || (!undoState.undone && !undoState.count)) return { ok: false, error: '本次对话没有可撤销的更改' };
                 if (undoState.undone) return { ok: false, error: '更改已经撤销过了' };
                 if (isLoading) return { ok: false, error: '电脑端正在生成，请稍候' };
                 // 手机上已经确认过一次，这里直接执行，不在电脑端再弹一次确认框
@@ -14090,11 +14106,12 @@
                 if (!window.AIAssistantPreload) return { ok: false, error: 'Preload 不可用' };
                 var json;
                 try { json = JSON.parse(String(msg.projectJSON || '')); } catch (e) { return { ok: false, error: '工程 JSON 无效' }; }
-                window.AIAssistantPreload.applyProject(json).then(function(r) {
+                window.AIAssistantPreload.applyProject(json, activeConversationId || 'default').then(function(r) {
                     phonePush('toast', {
                         message: r && r.success ? '工程已在电脑端应用' : '应用失败',
                         type: r && r.success ? 'success' : 'error'
                     });
+                    if (r && r.success) refreshUndoStatus();
                 });
                 return { ok: true };
             }
@@ -14127,7 +14144,7 @@
         // 撤销状态由电脑端持有，挂到当前会话上，渲染脚注时才知道要不要出按钮
         var remoteActive = conversations.find(function(c) { return c.id === activeConversationId; });
         if (remoteActive) {
-            if (snap.undo && snap.undo.snapshotId) remoteActive.undo = snap.undo;
+            if (snap.undo && (snap.undo.count || snap.undo.undone)) remoteActive.undo = snap.undo;
             else delete remoteActive.undo;
         }
         // 侧边栏待办面板跟随桌面快照（只镜像当前会话）

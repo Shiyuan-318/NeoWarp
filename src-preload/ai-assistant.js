@@ -2,8 +2,8 @@ const {contextBridge, ipcRenderer} = require('electron');
 
 contextBridge.exposeInMainWorld('AIAssistantPreload', {
   getProjectCode: () => ipcRenderer.invoke('get-project-code'),
-  applyProject: (projectJSON) => ipcRenderer.invoke('apply-project', projectJSON),
-  applySprite: (spriteJSON, targetId) => ipcRenderer.invoke('apply-sprite', spriteJSON, targetId),
+  applyProject: (projectJSON, sessionId) => ipcRenderer.invoke('apply-project', projectJSON, sessionId),
+  applySprite: (spriteJSON, targetId, sessionId) => ipcRenderer.invoke('apply-sprite', spriteJSON, targetId, sessionId),
   getSpriteLibrary: () => ipcRenderer.invoke('get-sprite-library'),
   // 统一的 AI 模型配置存储（与 SOLO、扩展编辑器、桌面设置共用）
   getModelConfigs: () => ipcRenderer.invoke('ai-get-model-configs'),
@@ -15,7 +15,8 @@ contextBridge.exposeInMainWorld('AIAssistantPreload', {
   pickWorkflowDocsDir: () => ipcRenderer.invoke('ai-pick-workflow-docs-dir'),
   saveWorkflowDoc: (payload) => ipcRenderer.invoke('ai-save-workflow-doc', payload),
   openWorkflowDocsDir: () => ipcRenderer.invoke('ai-open-workflow-docs-dir'),
-  callTool: (toolName, params) => ipcRenderer.invoke('ai-tool-call', toolName, params),
+  // meta 目前只带 {sessionId}：编辑器据此把改动记进对应对话的 AI 改动日志
+  callTool: (toolName, params, meta) => ipcRenderer.invoke('ai-tool-call', toolName, params, meta),
   webSearch: (query) => ipcRenderer.invoke('web-search', query),
   getTheme: () => ipcRenderer.invoke('ai-get-theme'),
   getLocale: () => ipcRenderer.invoke('ai-get-locale'),

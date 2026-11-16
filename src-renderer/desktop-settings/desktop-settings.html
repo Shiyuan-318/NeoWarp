@@ -3080,6 +3080,33 @@
           ],
           defaultModel: 'qwen3.7-plus'
         },
+        // Anthropic 原生协议（/v1/messages）
+        anthropic: {
+          name: 'Anthropic', logo: '#d97757', logoText: 'A',
+          endpoint: 'https://api.anthropic.com/v1/messages',
+          apiFormat: 'anthropic',
+          supportsVision: true,
+          models: [
+            { id: 'claude-opus-4-5', name: 'Claude Opus 4.5', supportsReasoning: true, contextLimit: 200000, maxOutput: 64000 },
+            { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', supportsReasoning: true, contextLimit: 200000, maxOutput: 64000 },
+            { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', supportsReasoning: false, contextLimit: 200000, maxOutput: 32000 }
+          ],
+          defaultModel: 'claude-sonnet-4-5'
+        },
+        // Ollama 本地推理（/api/chat）：模型列表可用“拉取模型”从 /api/tags 同步
+        ollama: {
+          name: 'Ollama', logo: '#0f172a', logoText: 'O',
+          endpoint: 'http://localhost:11434/api/chat',
+          apiFormat: 'ollama',
+          supportsVision: false,
+          models: [
+            { id: 'llama3.3', name: 'Llama 3.3', supportsReasoning: false, contextLimit: 131072, maxOutput: 8192 },
+            { id: 'qwen3', name: 'Qwen3', supportsReasoning: true, contextLimit: 131072, maxOutput: 8192 },
+            { id: 'deepseek-r1', name: 'DeepSeek R1', supportsReasoning: true, contextLimit: 131072, maxOutput: 8192 },
+            { id: 'gemma3', name: 'Gemma 3', supportsReasoning: false, contextLimit: 131072, maxOutput: 8192 }
+          ],
+          defaultModel: 'llama3.3'
+        },
         custom: {
           name: 'Custom', nameEn: 'Custom', nameZh: '自定义', logo: '#888', logoText: '?',
           endpoint: '',
@@ -3091,8 +3118,8 @@
 
       // API 格式：标签内直接标注请求路径；接口地址输入框下方会按所选格式
       // 动态显示完整示例 URL（endpointHint*，由 syncEndpointHint 更新）。
-      // NeoWarp 发出的都是 OpenAI 风格 chat-completions 请求：
-      // “自定义”＝ OpenAI 兼容中转/自建服务，仅不发送额外推理参数。
+      // “自定义”下可选三种格式：带 apiFormat 的服务商预设（Anthropic / Ollama）
+      // 直接使用各自的原生协议，“自定义（OpenAI 兼容）”仅不发送额外推理参数。
       const AI_API_FORMATS = {
         openai: {
           name: 'OpenAI 兼容（/v1/chat/completions 或 /chat/completions）',
@@ -3422,8 +3449,14 @@
         panel.className = 'ai-dialog';
 
         const isCustomProvider = () => !!(AI_PROVIDERS[draft.provider] || {}).isCustom;
+        // 存量配置的模型名可能不在预设表里（Ollama 本地模型、用户自填），补进列表
+        // 以便展示与保存，否则编辑这类配置会因“未选择模型”而卡住
+        const draftModelId = draft.model || draft.customModelId || '';
         let dialogModels = ((AI_PROVIDERS[draft.provider] || {}).models || []).slice();
-        let selectedModels = new Set(draft.model ? [draft.model] : []);
+        if (draftModelId && !isCustomProvider() && !dialogModels.some((m) => m.id === draftModelId)) {
+          dialogModels.push({ id: draftModelId, name: draftModelId });
+        }
+        let selectedModels = new Set(draftModelId ? [draftModelId] : []);
 
         const providerGridHtml = () => Object.keys(AI_PROVIDERS)
           // 免费模型不作为“服务商”参与添加/编辑，只在模型列表中直接选用
@@ -3624,6 +3657,10 @@
         function collect () {
           clearErrors();
           const custom = isCustomProvider();
+          // 服务商预设（Anthropic / Ollama）自带格式；自定义服务商按下拉选择
+          const providerFormat = custom
+            ? fmtSel.value
+            : ((AI_PROVIDERS[draft.provider] || {}).apiFormat || 'openai');
           let ok = true;
           const key = keyIn.value.trim();
           const endpoint = endpointIn.value.trim();
@@ -3653,7 +3690,7 @@
             ok = false;
           }
           // Ollama 本地服务默认不校验 Key；其余格式仍要求填写
-          if (!key && !(custom && fmtSel.value === 'ollama')) {
+          if (!key && providerFormat !== 'ollama') {
             setError('#aiApiKeyRow', aiS.errKeyRequired);
             ok = false;
           }
@@ -3666,8 +3703,8 @@
             name: nameIn.value.trim(),
             provider: draft.provider,
             apiKey: key,
-            apiFormat: custom ? fmtSel.value : 'openai',
-            customEndpoint: custom ? normalizeCustomEndpoint(endpoint, fmtSel.value) : '',
+            apiFormat: providerFormat,
+            customEndpoint: custom ? normalizeCustomEndpoint(endpoint, providerFormat) : '',
             customContextLimit: custom ? ctx : 1000000,
             thinkingLevel: (cfg && cfg.thinkingLevel) || 'medium'
           };
@@ -3717,7 +3754,7 @@
         const fetchModels = async (custom) => {
           const btn = $(custom ? '#aiFetchCustomModelsBtn' : '#aiFetchModelsBtn');
           const key = keyIn.value.trim();
-          const format = custom ? fmtSel.value : 'openai';
+          const format = custom ? fmtSel.value : ((AI_PROVIDERS[draft.provider] || {}).apiFormat || 'openai');
           clearErrors();
           if (format !== 'ollama' && !key) {
             setError('#aiApiKeyRow', aiS.modelsFetchKeyRequired);
@@ -3836,7 +3873,10 @@
           // 会把这种响应误报成“连接成功”，等真正聊天时才发现端点不可用。
           const contentTypeOf = (resp) => String((resp.headers && resp.headers.get('content-type')) || '');
           const isSseOrJson = (ct) => /json|event-stream/i.test(ct);
-          const v1Endpoint = endpoint.replace(/\/chat\/completions$/i, '/v1/chat/completions');
+          // /v1 兜底只对 OpenAI 兼容端点有意义（Anthropic / Ollama 路径不同）
+          const v1Endpoint = apiFormat === 'openai'
+            ? endpoint.replace(/\/chat\/completions$/i, '/v1/chat/completions')
+            : endpoint;
           const htmlHint = (zh
             ? '（返回的是网页而非对话接口；One API / New API 类中转的接口地址应带 /v1，如 https://主机/v1/chat/completions）'
             : ' (endpoint returned a webpage, not a chat API; One API / New API relays need /v1, e.g. https://host/v1/chat/completions)');

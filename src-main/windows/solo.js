@@ -160,6 +160,14 @@ class SoloWindow extends AIAssistantWindow {
     // 最近一帧舞台画面的像素尺寸（来自帧 PNG 头），决定弹出的舞台窗口比例
     this.stageFrameSize = null;
 
+    /**
+     * js 工程的 AI 写盘日志，用于「仅撤销 AI 的修改」：
+     * 每次写文件记下改动前后的完整内容；撤销时只回退「当前内容仍等于 AI 写完的版本」
+     * 的那些步骤，用户自己后来改过的内容原样保留。
+     * @type {Array<{sessionId: string, at: number, before: ?string, after: string}>}
+     */
+    this.jsWriteLog = [];
+
     this.window.setTitle('NeoWarp SOLO');
 
     this.ipc.handle('solo-get-state', () => ({
@@ -366,7 +374,8 @@ class SoloWindow extends AIAssistantWindow {
    * @param {object} params
    * @returns {Promise<object>}
    */
-  async handleAIToolCall (toolName, params) {
+  async handleAIToolCall (toolName, params, meta) {
+    const sessionId = (meta && meta.sessionId) || 'default';
     if (!this.soloProject) {
       if (toolName === 'createProject') {
         return this.createAiProject(params);
@@ -378,12 +387,114 @@ class SoloWindow extends AIAssistantWindow {
         return this.jsReadFile();
       }
       if (toolName === 'writeJsFile') {
-        return this.jsWriteFile(params && params.content);
+        return this.jsWriteFileTracked(params && params.content, sessionId);
+      }
+      // js 工程没有 Scratch VM，撤销走主进程本地维护的写盘日志
+      if (toolName === 'getAIChangeStatus') {
+        return this.jsChangeStatus(sessionId);
+      }
+      if (toolName === 'undoAIChanges') {
+        return this.jsUndoChanges(sessionId);
+      }
+      if (toolName === 'dropAIChanges') {
+        const before = this.jsWriteLog.length;
+        this.jsWriteLog = this.jsWriteLog.filter(entry => entry.sessionId !== sessionId);
+        return {success: true, data: {dropped: this.jsWriteLog.length !== before}};
       }
       // js 工程没有 Scratch VM，积木类工具必然失败，给个说得明白的错误
       return {success: false, error: 'Current project is a JavaScript file. Use read_js_file / write_js_file to work with it.'};
     }
-    return super.handleAIToolCall(toolName, params);
+    return super.handleAIToolCall(toolName, params, meta);
+  }
+
+  /**
+   * 读工程文件的完整内容（不截断）。撤销要拿它做「用户有没有再改过」的比对，
+   * jsReadFile 的截断版本不能用。
+   * @returns {Promise<?string>} 文件内容；读不到时 null
+   */
+  async jsReadRawContent () {
+    try {
+      return await fsPromises.readFile(this.soloProject.path, 'utf8');
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * 写文件并记账：记下改动前后内容，供「仅撤销 AI 的修改」使用。
+   * @param {string} content 新内容
+   * @param {string} sessionId 会话 id
+   * @returns {Promise<object>} 工具结果
+   */
+  async jsWriteFileTracked (content, sessionId) {
+    const before = await this.jsReadRawContent();
+    const result = await this.jsWriteFile(content);
+    if (result.success) {
+      this.jsWriteLog.push({sessionId, at: Date.now(), before, after: String(content)});
+      // 只留最近若干次写入，长对话不至于把源码攒满内存
+      if (this.jsWriteLog.length > 100) this.jsWriteLog.shift();
+    }
+    return result;
+  }
+
+  /**
+   * 可撤销的 AI 写文件次数。
+   * @param {string} sessionId 会话 id
+   * @returns {object} 工具结果
+   */
+  jsChangeStatus (sessionId) {
+    const entries = this.jsWriteLog.filter(entry => entry.sessionId === sessionId);
+    return {success: true, data: {
+      count: entries.length,
+      toolCount: entries.length,
+      tools: entries.length ? ['write_js_file'] : [],
+      updatedAt: entries.length ? entries[entries.length - 1].at : 0
+    }};
+  }
+
+  /**
+   * 撤销 AI 对这个 js 文件的修改：从最新一次写入往回退，只有在文件内容仍然
+   * 等于「AI 写完的那一版」时才回退到写入前的内容；用户自己改过就停下并如实上报。
+   * @param {string} sessionId 会话 id
+   * @returns {Promise<object>} 工具结果
+   */
+  async jsUndoChanges (sessionId) {
+    const entries = this.jsWriteLog.filter(entry => entry.sessionId === sessionId);
+    if (!entries.length) {
+      return {success: false, error: 'No AI changes to undo in this chat'};
+    }
+    const current = await this.jsReadRawContent();
+    if (current === null) {
+      return {success: false, error: 'Cannot read the project file'};
+    }
+
+    let working = current;
+    let reverted = 0;
+    const conflicts = [];
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const entry = entries[i];
+      if (entry.before === null) {
+        // 文件原本不存在：删掉用户磁盘上的文件太危险，交给用户自己处理
+        conflicts.push({unit: this.soloProject.name, tool: 'write_js_file'});
+        continue;
+      }
+      if (working !== entry.after) {
+        conflicts.push({unit: this.soloProject.name, tool: 'write_js_file'});
+        continue;
+      }
+      const result = await this.jsWriteFile(entry.before);
+      if (!result.success) return result;
+      working = entry.before;
+      reverted++;
+    }
+
+    this.jsWriteLog = this.jsWriteLog.filter(entry => entry.sessionId !== sessionId);
+    return {success: true, data: {
+      reverted,
+      conflicts: conflicts.length,
+      conflictDetails: conflicts.slice(0, 20),
+      tools: reverted ? ['write_js_file'] : []
+    }};
   }
 
   /**
@@ -499,6 +610,8 @@ class SoloWindow extends AIAssistantWindow {
       name: path.basename(filePath),
       path: filePath
     };
+    // 换了工程，上一份文件的改动日志不再适用
+    this.jsWriteLog = [];
 
     // 页面（以及已连接的手机）立刻同步新工程状态：chip、舞台预览等
     try {

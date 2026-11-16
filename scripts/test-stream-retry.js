@@ -83,6 +83,7 @@ var T = {
     streamRetrying: '连接断开，{s} 秒后自动重试（{n}/{max}）',
     streamRetryExhausted: '已自动重试 10 次仍失败，最后一次报错：',
     emptyStreamResponse: '模型返回了空响应（流已结束但没有任何输出）。',
+    loopDetected: '模型陷入循环，为了避免Token资源被浪费，对话已暂停',
     thinking: 'Thinking...'
 };
 
@@ -124,6 +125,7 @@ function runHarness(script) {
         'getGeneratingConv', 'pushGeneratingMessage', 'trackSidebarTodoToolCalls', 'notifySidebarTodoTurnEnd',
         'handleWorkflowTurnEnd',
         'generationAbortRequested',
+        'turnHasStreamOutput',
         'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', '__export',
         itsf + retryBlock + exportShim
     );
@@ -152,6 +154,7 @@ function runHarness(script) {
         rec('trackSidebarTodoToolCalls'),
         rec('notifySidebarTodoTurnEnd'),
         rec('handleWorkflowTurnEnd'),
+        false,
         false,
         clock.setTimeout, clock.setInterval, clock.clearTimeout, clock.clearInterval,
         function(e) { exported = e; }
@@ -290,6 +293,25 @@ async function main() {
     check('noRetry 不发起第二次请求', h10.attempts() === 1, h10.attempts());
     check('noRetry 报错直接呈现', h10.chatHistory.length === 1 && h10.chatHistory[0].content === 'Error: 端点返回了网页而非对话接口（HTTP 200 + text/html）', h10.chatHistory);
     check('noRetry 后无挂起重试任务', h10.clock.pending() === 0);
+
+    // ── S11: 连续重复输出（幻觉）→ 停止对话并提示，不进入重试 ──
+    console.log('S11: 循环输出时暂停对话');
+    var repeatedLine = '这一行是模型在反复重复输出的同一段文字。\n';
+    var h11 = runHarness([{ result: { type: 'loop', content: repeatedLine.repeat(10), reasoning: '', segment: repeatedLine } }]);
+    check('循环命中后不再发起请求或重试', h11.attempts() === 1 && h11.clock.pending() === 0, { attempts: h11.attempts(), pending: h11.clock.pending() });
+    var loopNotice = h11.chatHistory[h11.chatHistory.length - 1];
+    check('向用户明确提示对话已暂停', !!loopNotice && loopNotice.content === T.loopDetected, h11.chatHistory);
+    check('循环结束时状态收尾', h11.exported.isLoading === false && h11.exported.streamSettled === true,
+        { isLoading: h11.exported.isLoading, settled: h11.exported.streamSettled });
+    check('已产出的内容如实留档', h11.chatHistory.length === 2 && h11.chatHistory[0].content.indexOf(repeatedLine) === 0, h11.chatHistory);
+
+    // 检测函数本身（从 HTML 里切出来直接断言）
+    var detectLoop = new Function(itsf + ';return detectRepeatedSegment;')();
+    check('连续 10 次相同文段被识别', !!detectLoop(repeatedLine.repeat(10)));
+    check('仅 9 次不触发', detectLoop(repeatedLine.repeat(9)) === null);
+    check('正常长文不误报', detectLoop(Array.from({ length: 30 }, function (_, i) { return '第 ' + i + ' 段：模型输出的内容各不相同。'; }).join('\n')) === null);
+    check('分隔线这类自重复小片段不判定', detectLoop('----\n'.repeat(30)) === null);
+    check('全文过短时不做判定', detectLoop('ab'.repeat(10)) === null);
 
     console.log(failures === 0 ? '\n全部通过 ✓' : '\n失败 ' + failures + ' 项 ✗');
     process.exit(failures === 0 ? 0 : 1);

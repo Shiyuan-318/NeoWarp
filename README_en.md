@@ -41,7 +41,7 @@ An AI programming assistant deeply integrated with the editor through a dedicate
 
 - **44 built-in tools**: read the project structure, add / remove / modify block scripts, manage costumes / sounds / variables / lists, install and hot-load custom extensions, click the green flag, take stage screenshots, search the web, and more
 - **Custom block DSL**: the AI describes block scripts as `opcode argument` text, which is validated against the editor's opcode schema before being applied — supporting incremental add, insert, input modification and deletion, so changes land on exactly the right blocks
-- **One-click undo of AI changes**: a project snapshot is captured automatically before each modification, so you can always restore the pre-chat state
+- **One-click undo of AI changes**: every AI edit is journaled per unit (script, variable, sprite property, ...), so undo reverts only what the AI changed and keeps whatever you edited yourself afterwards
 - **Multimodal support**: send stage screenshots so the model can "see" how the project runs; attach images and `.md` / `.txt` / `.pdf` / `.csv` files
 - **Built-in web search**: aggregated from DuckDuckGo / Bing / Wikipedia
 - **Add assets from URL**: add costumes and sprites directly from an image URL

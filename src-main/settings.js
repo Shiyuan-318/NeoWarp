@@ -172,11 +172,18 @@ class Settings {
     this.data.microphone = microphone;
   }
 
+  /**
+   * 允许项目 / 扩展脚本读取任意 http(s) 站点的跨域响应。
+   * 这是一个高风险开关：打开后渲染层能拿到任何网站的响应体。实际生效点
+   * 在 windows/project-running-window.js —— 只作用于项目窗口、只注入脚本可
+   * 读取的资源类型，且带 Cookie（用户登录态）的请求一律不放行，避免被用来
+   * 静默外传用户在各站点已登录的数据。
+   */
   get bypassCORS () {
     return this.data.bypassCORS === true;
   }
   set bypassCORS (bypassCORS) {
-    this.data.bypassCORS = bypassCORS;
+    this.data.bypassCORS = bypassCORS === true;
   }
 
   get hardwareAcceleration () {

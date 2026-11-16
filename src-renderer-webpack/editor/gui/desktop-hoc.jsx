@@ -37,6 +37,13 @@ import sb3 from 'scratch-vm/src/serialization/sb3';
 import StageLayering from 'scratch-vm/src/engine/stage-layering';
 import Runtime from 'scratch-vm/src/engine/runtime';
 import AddonHooks from 'scratch-gui/src/addons/hooks';
+import {
+  captureProjectState,
+  recordAIChange,
+  getAIChangeStatus,
+  dropAIChanges,
+  undoAIChanges
+} from './ai-undo-journal.js';
 
 let mountedOnce = false;
 let isStageDetached = false;
@@ -527,13 +534,50 @@ const stopSoloStream = () => {
    runtime 出现原始 target：deserializeProject 一开始就清空 targets，
    全部装完才发 PROJECT_LOADED，所以"有 isOriginal 的 target"⇔ 已加载完。 */
 const AI_TOOLS_NOT_REQUIRING_PROJECT = [
-  // 这些工具不读工程数据（宿主信息 / AI 侧快照登记 / 联网搜索），不用等加载
+  // 这些工具不读工程数据（宿主信息 / 撤销日志登记 / 联网搜索），不用等加载
   'getSystemTime',
   'getSystemInfo',
   'searchExtensions',
   'getSpriteLibrary',
-  'hasProjectSnapshot',
-  'dropProjectSnapshot'
+  'getAIChangeStatus',
+  'dropAIChanges'
+];
+
+/* 会改动工程状态的 AI 工具。只有这些工具才需要在执行前后各抓一次工程状态，
+   让 ai-undo-journal 记账；读类工具（get_ 与 list_ 系列）抓了也是白抓，纯属浪费。
+   注意不含 clickGreenFlag 这类「跑工程」的动作：脚本运行带来的变化是临时的，
+   记账只会让撤销时满屏「你后来改过」的假冲突。 */
+const AI_UNDO_TRACKED_TOOLS = [
+  'setSpriteProperty',
+  'setVariable',
+  'createVariable',
+  'deleteVariable',
+  'renameVariable',
+  'createList',
+  'addToList',
+  'insertToList',
+  'setListItem',
+  'deleteFromList',
+  'clearList',
+  'deleteSprite',
+  'renameSprite',
+  'addSprite',
+  'addSpriteFromLibrary',
+  'addSpriteFromUrl',
+  'addCostumeFromLibrary',
+  'addCostumeFromUrl',
+  'searchAndAddCostume',
+  'addBackdrop',
+  'addScript',
+  'executeOperations',
+  'changeCostume',
+  'changeBackdrop',
+  'developExtension',
+  'installExtension',
+  'deleteExtension',
+  'renameProject',
+  'setStageSize',
+  'duplicateSprite'
 ];
 
 /**
@@ -2816,13 +2860,25 @@ function resolveListIndex(raw, length, opts) {
   return { index: parsed - 1, error: null };
 }
 
-/* ── AI 更改快照 ──
-   撤销功能的存储层。快照是完整的 sb3 压缩包（含资产），只存活在编辑器渲染进程的
-   内存里：不落盘是因为它只服务于"这次对话内的撤销"，用户重开编辑器后本就该失效；
-   不经 IPC 传给 AI 窗口是因为体积可达几十 MB。 */
-const aiSnapshots = new Map();
-const aiSnapshotOrder = [];
-const AI_SNAPSHOT_LIMIT = 4;
+/* ── AI 改动日志 ──
+   撤销功能的存储层见 ai-undo-journal.js：不再保存整包工程备份，而是把 AI 每次
+   改动按「积木脚本 / 变量 / 角色属性」等单元记账，撤销时只回退 AI 改过、且用户
+   没有再次修改的部分。日志同样只活在编辑器渲染进程内存里，随对话失效。 */
+
+/**
+ * 抓一份工程状态用于记账；工程还没加载好或序列化失败时返回 null（不记账，
+ * 撤销按钮自然不会出现，好过摆一个点了报错的按钮）。
+ * @param {object} vm VirtualMachine
+ * @returns {?{raw: string, state: object}}
+ */
+const captureUndoState = vm => {
+  try {
+    return captureProjectState(vm);
+  } catch (e) {
+    console.warn('AI undo: failed to capture project state', e);
+    return null;
+  }
+};
 
 // NeoWarp: 「源代码Beta」标签页面板 —— 内嵌在编辑器第 4 个 TabPanel 中，
 // 与造型/声音同级的完整区域：左侧行号、可编辑 DSL 文本、应用到积木。
@@ -3395,11 +3451,18 @@ const DesktopHOC = function (WrappedComponent) {
       });
 
       EditorPreload.onApplyProject(async (data) => {
+        const vm = this.props.vm;
+        // 手点 Apply 也是把 AI 的产物落进工程，同样要记进改动日志才撤得掉
+        const undoBefore = captureUndoState(vm);
         try {
           const projectData = typeof data.projectJSON === 'string' ? data.projectJSON : JSON.stringify(data.projectJSON);
-          await this.props.vm.loadProject(projectData);
+          await vm.loadProject(projectData);
         } catch (e) {
           console.error('Failed to apply project:', e);
+        }
+        if (undoBefore) {
+          const undoAfter = captureUndoState(vm);
+          if (undoAfter) recordAIChange(data.sessionId || 'default', 'apply_project', undoBefore, undoAfter);
         }
       });
 
@@ -3554,19 +3617,26 @@ const DesktopHOC = function (WrappedComponent) {
       }
 
       EditorPreload.onApplySprite(async (data) => {
+        const vm = this.props.vm;
+        const undoBefore = captureUndoState(vm);
         try {
           if (data.targetId) {
-            this.props.vm.deleteSprite(data.targetId);
+            vm.deleteSprite(data.targetId);
           }
           const spriteData = typeof data.spriteJSON === 'string' ? data.spriteJSON : JSON.stringify(data.spriteJSON);
-          await this.props.vm.addSprite(spriteData);
+          await vm.addSprite(spriteData);
         } catch (e) {
           console.error('Failed to apply sprite:', e);
+        }
+        if (undoBefore) {
+          const undoAfter = captureUndoState(vm);
+          if (undoAfter) recordAIChange(data.sessionId || 'default', 'apply_sprite', undoBefore, undoAfter);
         }
       });
 
       EditorPreload.onAIToolCall(async (data) => {
         const { requestId, toolName, params } = data;
+        const undoSessionId = (data.meta && data.meta.sessionId) || 'default';
         if (params) {
           // Generic snake_case → camelCase mapping for all params
           Object.keys(params).forEach(function(key) {
@@ -3577,17 +3647,20 @@ const DesktopHOC = function (WrappedComponent) {
         }
         const vm = this.props.vm;
         // 工程还没加载完时不执行 VM 类工具：等就绪或给明确报错（见 helper 注释）。
-        // 慢工具（整包快照）主进程给了 180s 预算，等待预算也放宽到 170s。
+        // 撤销要整体重载工程，主进程给了 180s 预算，等待预算也放宽到 170s。
         if (AI_TOOLS_NOT_REQUIRING_PROJECT.indexOf(toolName) === -1) {
-          const waitBudgetMs = (toolName === 'captureProjectSnapshot' || toolName === 'restoreProjectSnapshot')
-            ? 170000
-            : 25000;
+          const waitBudgetMs = (toolName === 'undoAIChanges') ? 170000 : 25000;
           const gateResult = await waitProjectReadyForTools(vm, waitBudgetMs);
           if (gateResult) {
             EditorPreload.sendAIToolResponse({ requestId, result: gateResult });
             return;
           }
         }
+        // 改动类工具在执行前后各抓一次工程状态，交给 ai-undo-journal 记账。
+        // 失败的工具也可能已经改了一半，所以不看 result.success，只看前后是否真有差异。
+        const undoBefore = AI_UNDO_TRACKED_TOOLS.indexOf(toolName) !== -1
+          ? captureUndoState(vm)
+          : null;
         let result = { success: false, error: 'Unknown tool' };
         try {
           switch (toolName) {
@@ -5740,88 +5813,33 @@ const DesktopHOC = function (WrappedComponent) {
               } catch (e) { result = { success: false, error: 'Failed to duplicate sprite: ' + e.message }; }
               break;
             }
-            case 'captureProjectSnapshot': {
-              // 撤销 AI 更改：在动手前存一份完整工程快照。
-              // 用 sb3 压缩包而非 project.json，因为恢复走的 loadProject 不带 zip 时
-              // 造型/声音只能靠 storage 缓存命中——AI 新加的素材未必在缓存里，
-              // 那样恢复出来会缺图。压缩包自带资产，恢复必然完整。
-              // ArrayBuffer 留在编辑器这一侧，AI 窗口只拿 id，避免几十 MB 走 IPC。
-              try {
-                const snapId = params.snapshotId ? String(params.snapshotId) : ('snap_' + Date.now());
-                if (aiSnapshots.has(snapId)) {
-                  result = { success: true, data: { snapshotId: snapId, existed: true, bytes: aiSnapshots.get(snapId).bytes } };
-                  break;
-                }
-                const buffer = await vm.saveProjectSb3('arraybuffer');
-                // 只保留最近若干份，免得连续多轮对话把内存吃满
-                while (aiSnapshotOrder.length >= AI_SNAPSHOT_LIMIT) {
-                  const evicted = aiSnapshotOrder.shift();
-                  aiSnapshots.delete(evicted);
-                }
-                aiSnapshots.set(snapId, {
-                  buffer: buffer,
-                  bytes: buffer.byteLength,
-                  createdAt: Date.now(),
-                  spriteCount: vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).length
-                });
-                aiSnapshotOrder.push(snapId);
-                result = { success: true, data: { snapshotId: snapId, existed: false, bytes: buffer.byteLength } };
-              } catch (e) {
-                result = { success: false, error: 'Failed to capture project snapshot: ' + (e.message || String(e)) };
-              }
+            case 'getAIChangeStatus': {
+              // 撤销按钮渲染前先问一句这个会话有哪些 AI 改动可退。
+              // 日志只活在编辑器内存里，而会话是持久化的：编辑器重开过就没有可撤销的东西了。
+              result = { success: true, data: getAIChangeStatus(String(params.sessionId || '')) };
               break;
             }
-            case 'restoreProjectSnapshot': {
-              try {
-                const restoreId = String(params.snapshotId || '');
-                const snap = aiSnapshots.get(restoreId);
-                if (!snap) {
-                  result = { success: false, error: 'Snapshot "' + restoreId + '" is no longer available. It may have been evicted, or the editor was reopened since it was taken.' };
-                  break;
-                }
-                const beforeSprites = vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).length;
-                // 先停掉正在跑的脚本：loadProject 会换掉整个 runtime，
-                // 让线程继续跑到一半再被抽走会留下悬空引用。
-                vm.stopAll();
-                await vm.loadProject(snap.buffer);
-                vm.runtime.emitProjectChanged();
-                vm.emitWorkspaceUpdate();
-                vm.emitTargetsUpdate();
-                result = { success: true, data: {
-                  snapshotId: restoreId,
-                  spriteCountBefore: beforeSprites,
-                  spriteCountAfter: vm.runtime.targets.filter(t => !t.isStage && t.isOriginal).length,
-                  capturedAt: snap.createdAt
-                } };
-              } catch (e) {
-                result = { success: false, error: 'Failed to restore project: ' + (e.message || String(e)) };
-              }
+            case 'undoAIChanges': {
+              // 只回退 AI 做过、且用户之后没有再改的部分；用户自己的修改原样保留
+              result = await undoAIChanges(vm, String(params.sessionId || ''));
               break;
             }
-            case 'hasProjectSnapshot': {
-              // 会话是从 localStorage 恢复的，快照却只活在编辑器内存里；
-              // 渲染撤销按钮前先问一句，免得摆出一个点了必然失败的按钮。
-              const askId = String(params.snapshotId || '');
-              const askSnap = aiSnapshots.get(askId);
-              result = { success: true, data: {
-                snapshotId: askId, exists: !!askSnap,
-                bytes: askSnap ? askSnap.bytes : 0,
-                capturedAt: askSnap ? askSnap.createdAt : null
-              } };
+            case 'dropAIChanges': {
+              // 会话被删掉：它对应的改动日志没有存在意义了
+              const dropped = dropAIChanges(String(params.sessionId || ''));
+              result = { success: true, data: { dropped: !!dropped } };
               break;
             }
-            case 'dropProjectSnapshot': {
-              const dropId = String(params.snapshotId || '');
-              const had = aiSnapshots.delete(dropId);
-              const orderIdx = aiSnapshotOrder.indexOf(dropId);
-              if (orderIdx >= 0) aiSnapshotOrder.splice(orderIdx, 1);
-              result = { success: true, data: { snapshotId: dropId, existed: had } };
-              break;
-            }            default:
+            default:
               result = { success: false, error: 'Unknown tool: ' + toolName };
           }
         } catch (e) {
           result = { success: false, error: e.message };
+        }
+        // 记账：只有真正的改动才会进日志（前后状态一致时 recordAIChange 直接返回）
+        if (undoBefore) {
+          const undoAfter = captureUndoState(vm);
+          if (undoAfter) recordAIChange(undoSessionId, toolName, undoBefore, undoAfter);
         }
         EditorPreload.sendAIToolResponse({ requestId, result });
       });

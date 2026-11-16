@@ -413,23 +413,24 @@ class AIAssistantWindow extends AbstractWindow {
       });
     });
 
-    this.ipc.handle('apply-project', async (event, projectJSON) => {
+    this.ipc.handle('apply-project', async (event, projectJSON, sessionId) => {
       if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
         return { success: false, error: 'Editor window not available' };
       }
-      this.editorWindow.window.webContents.send('apply-project', { projectJSON });
+      // sessionId 让编辑器把这次应用记进对应对话的 AI 改动日志（用于「仅撤销 AI 修改」）
+      this.editorWindow.window.webContents.send('apply-project', { projectJSON, sessionId });
       return { success: true };
     });
 
-    this.ipc.handle('apply-sprite', async (event, spriteJSON, targetId) => {
+    this.ipc.handle('apply-sprite', async (event, spriteJSON, targetId, sessionId) => {
       if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
         return { success: false, error: 'Editor window not available' };
       }
-      this.editorWindow.window.webContents.send('apply-sprite', { spriteJSON, targetId });
+      this.editorWindow.window.webContents.send('apply-sprite', { spriteJSON, targetId, sessionId });
       return { success: true };
     });
 
-    this.ipc.handle('ai-tool-call', (event, toolName, params) => this.handleAIToolCall(toolName, params));
+    this.ipc.handle('ai-tool-call', (event, toolName, params, meta) => this.handleAIToolCall(toolName, params, meta));
 
     // 统一的 AI 模型配置存储（与 SOLO、扩展编辑器、桌面设置共用）：
     // 读取/保存/广播 + 打开桌面设置窗口
@@ -584,19 +585,19 @@ class AIAssistantWindow extends AbstractWindow {
    * 其余仍走编辑器（隐藏的后台 EditorWindow）。
    * @param {string} toolName
    * @param {object} params
+   * @param {object} [meta] 附加信息（目前只有 {sessionId}，用于 AI 改动日志归属对话）
    * @returns {Promise<object>}
    */
-  async handleAIToolCall (toolName, params) {
+  async handleAIToolCall (toolName, params, meta) {
     if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
       return { success: false, error: 'Editor window not available' };
     }
     // 隐藏编辑器刚创建时页面可能还没挂好 AI 监听（就绪信号未到）。先等它就绪
     // 再派发，否则调用石沉大海，AI 侧只会看到 30 秒超时（"AI 读不到新工程"）。
     // 信号迟迟不来（异常/旧版本页面）也按旧行为继续派发，宁多等不误事。
-    // 打包/恢复整个工程要压缩全部素材，大工程可能远超普通工具调用的 30 秒
+    // 撤销 AI 更改要整体重载工程，大工程可能远超普通工具调用的 30 秒
     const SLOW_TOOLS = {
-      captureProjectSnapshot: 180000,
-      restoreProjectSnapshot: 180000
+      undoAIChanges: 180000
     };
     if (this.editorWindow.aiListenersReady !== true) {
       const settleBudget = SLOW_TOOLS[toolName] ? 170000 : 25000;
@@ -622,7 +623,7 @@ class AIAssistantWindow extends AbstractWindow {
         }
       };
       ipcMain.on('ai-tool-response', handler);
-      this.editorWindow.window.webContents.send('ai-tool-call', { requestId, toolName, params });
+      this.editorWindow.window.webContents.send('ai-tool-call', { requestId, toolName, params, meta });
       timer = setTimeout(() => {
         ipcMain.removeListener('ai-tool-response', handler);
         resolve({ success: false, error: 'Tool call timeout' });
