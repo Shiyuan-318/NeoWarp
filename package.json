@@ -1,7 +1,7 @@
 {
   "name": "neowarp",
   "description": "NeoWarp - Scratch mod with a compiler, dark mode, a bunch of addons, and more.",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "license": "GPL-3.0",
   "author": {
     "email": "contact@neowarp.org",
@@ -25,7 +25,6 @@
   "dependencies": {
     "@turbowarp/scaffolding": "^0.4.0",
     "html2canvas": "^1.4.1",
-    "monaco-editor": "^0.56.0",
     "qrcode-generator": "^1.4.4",
     "semver": "^7.7.3"
   },
@@ -44,6 +43,7 @@
     "electron": "^41.1.0",
     "electron-builder": "^26.8.1",
     "file-loader": "^6.2.0",
+    "monaco-editor": "^0.56.0",
     "patch-package": "^8.0.1",
     "postcss": "^8.4.13",
     "postcss-import": "^14.0.0",
@@ -77,12 +77,14 @@
     "productName": "NeoWarp",
     "files": [
       "node_modules/**/*",
+      "!node_modules/monaco-editor/**",
       "src-main/**/*",
       "src-preload/**/*",
       "src-renderer/**/*",
       "dist-renderer-webpack/**/*",
       "dist-library-files/**/*",
-      "dist-extensions/**/*"
+      "dist-extensions/**/*",
+      "!**/*.map"
     ],
     "extraResources": [
       {
