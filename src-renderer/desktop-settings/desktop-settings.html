@@ -924,6 +924,51 @@
       }
       .ai-provider-logo svg { width: 16px; height: 16px; }
 
+      /* 模型 id 命中的品牌 LOGO；命中多个品牌时在同一格里交替呼吸 */
+      .model-brand-logo {
+        position: relative;
+        overflow: hidden;
+        background: rgba(128, 128, 128, 0.35);
+      }
+      .model-brand-logo .brand-logo-layer {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: inherit;
+        opacity: 0;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        animation-fill-mode: backwards;
+        animation-delay: calc(var(--i, 0) * 2.6s);
+      }
+      .model-brand-logo .brand-logo-layer:first-child { opacity: 1; }
+      .model-brand-logo.brand-count-2 .brand-logo-layer { animation-name: brandCycle2; animation-duration: 5.2s; }
+      .model-brand-logo.brand-count-3 .brand-logo-layer { animation-name: brandCycle3; animation-duration: 7.8s; }
+      .model-brand-logo.brand-count-4 .brand-logo-layer { animation-name: brandCycle4; animation-duration: 10.4s; }
+      @keyframes brandCycle2 {
+        0% { opacity: 0; }
+        8% { opacity: 1; }
+        42% { opacity: 1; }
+        50% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      @keyframes brandCycle3 {
+        0% { opacity: 0; }
+        5% { opacity: 1; }
+        27% { opacity: 1; }
+        33.33% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      @keyframes brandCycle4 {
+        0% { opacity: 0; }
+        4% { opacity: 1; }
+        20% { opacity: 1; }
+        25% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+
       /* 状态与免费角标：柔和胶囊标签 */
       .ai-active-tag {
         display: inline-flex;
@@ -982,7 +1027,8 @@
         display: flex;
         align-items: baseline;
         gap: 10px;
-        padding: 14px 4px 8px;
+        /* 左右与 setting-row / row-button 的 16px 内边距对齐，避免标题贴住卡片边缘 */
+        padding: 14px 16px 8px;
       }
       .ai-group-title {
         font-size: 12px;
@@ -2976,6 +3022,57 @@
         custom: '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>'
       };
 
+      // 模型 ID 品牌关键词（与 AI 助手 ai-assistant.html 的 MODEL_BRAND_LOGOS 保持一致）。
+      // 命中的品牌替换模型行左侧的服务商图标；命中多个时在同一格里交替呼吸。
+      const AI_MODEL_BRAND_LOGOS = [
+        { key: 'deepseek', color: '#4d6bfe', words: ['deepseek', 'deep-seek', 'deep seek'] },
+        { key: 'qwen', color: '#615ced', words: ['qwen', 'qwq', 'tongyi', '通义'] },
+        { key: 'glm', color: '#3859ff', words: ['glm', 'zhipu', 'chatglm', '智谱'] },
+        { key: 'kimi', color: '#17181c', words: ['kimi', 'moonshot'] },
+        { key: 'mimo', color: '#ff6900', words: ['mimo', 'xiaomi', '小米'] },
+        { key: 'huaweipangu', color: '#c7000b', words: ['pangu', 'huawei', '盘古', '华为'] },
+        { key: 'sensenova', color: '#0a5cff', words: ['sensenova', 'sense-nova', '日日新'] },
+        { key: 'openai', color: '#10a37f', words: ['openai', 'open-ai', 'gpt', 'chatgpt', 'davinci'] }
+      ];
+
+      /** 按模型 ID 找出命中的品牌 LOGO（最多 4 个）。 */
+      function aiModelBrandLogos (modelId) {
+        const src = String(modelId || '').toLowerCase();
+        if (!src) return [];
+        return AI_MODEL_BRAND_LOGOS.filter((brand) =>
+          AI_LOGO_SVG[brand.key] && brand.words.some((word) => src.indexOf(word) >= 0)
+        ).slice(0, 4);
+      }
+
+      /** 配置实际使用的模型名（自定义/未知服务商取 customModelId）。 */
+      function aiModelLabel (cfg, provider) {
+        const p = provider || AI_PROVIDERS[cfg.provider] || {};
+        if (p.isCustom) return cfg.customModelId || cfg.model;
+        const m = (p.models || []).find((x) => x.id === cfg.model);
+        return (m && m.name) || cfg.model;
+      }
+
+      /** 模型行左侧图标：优先展示按模型 ID 命中的品牌 LOGO，多品牌交替呼吸。 */
+      function aiRenderModelLogo (cfg, provider, logoClass) {
+        const cls = logoClass || 'ai-provider-logo';
+        const p = provider || {};
+        const brands = aiModelBrandLogos(aiModelLabel(cfg, p));
+        if (!brands.length) {
+          return '<div class="' + cls + '" style="background:' + (p.logo || '#888') + ';">' +
+            (AI_LOGO_SVG[cfg.provider] || aiEscape(p.logoText || '?')) + '</div>';
+        }
+        if (brands.length === 1) {
+          return '<div class="' + cls + ' model-brand-logo" style="background:' + brands[0].color + ';">' +
+            AI_LOGO_SVG[brands[0].key] + '</div>';
+        }
+        const layers = brands.map((brand, i) =>
+          '<span class="brand-logo-layer" style="background:' + brand.color + ';--i:' + i + ';">' +
+          AI_LOGO_SVG[brand.key] + '</span>'
+        ).join('');
+        return '<div class="' + cls + ' model-brand-logo brand-count-' + brands.length + '">' +
+          layers + '</div>';
+      }
+
       // 模型信息更新于 2026-10，来源：各厂商官方模型/定价文档（OpenAI 部分参照
       // Azure OpenAI 模型表）。上下文与最大输出按厂商公告填写；已停售/退役的
       // 旧模型不再列出（DeepSeek v4-flash、Qwen3.7-max/Qwen3.6、MiMo V2.5 等）。
@@ -3266,9 +3363,7 @@
 
       function aiModelRow (cfg) {
         const p = AI_PROVIDERS[cfg.provider] || {};
-        const modelLabel = p.isCustom
-          ? (cfg.customModelId || cfg.model)
-          : (((p.models || []).find((m) => m.id === cfg.model) || {}).name || cfg.model);
+        const modelLabel = aiModelLabel(cfg, p);
         const isActive = cfg.id === aiActiveId;
         const isFree = aiIsFreeConfig(cfg);
         const expired = aiFreeExpired(cfg);
@@ -3277,8 +3372,7 @@
         row.className = 'setting-row ai-model-row' + (expired ? ' free-expired' : '');
         row.style.cursor = expired ? 'not-allowed' : 'pointer';
         row.innerHTML =
-          '<div class="ai-provider-logo" style="background:' + (p.logo || '#888') + ';">' +
-            (AI_LOGO_SVG[cfg.provider] || aiEscape(p.logoText || '?')) + '</div>' +
+          aiRenderModelLogo(cfg, p) +
           '<div class="setting-info">' +
             '<div class="setting-label">' + aiEscape(cfg.name || modelLabel || aiProviderName(cfg.provider) || aiS.unnamed) + '</div>' +
             '<div class="setting-desc">' + aiEscape(

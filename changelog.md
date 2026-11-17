@@ -9,6 +9,12 @@ Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **form
  - Mobile preview: each session uses a random token, so other devices on the same network can no longer fetch your project
  - AI pages now only connect directly to built-in providers and local inference servers; everything else goes through the main-process proxy
  - Added unsigned Windows, macOS, and Linux build workflows
+ - AI assistant: the settings page got a visual refresh with a dedicated card palette for light and dark mode, clearer sidebar and headers, and reduced-motion friendly transitions
+ - AI assistant: usage statistics cards, meters, and controls were restyled, with hover states and a frosted-glass usage tooltip that stays readable over chat text
+ - AI assistant: model entries now show a brand logo matched from the model ID (DeepSeek, Qwen, GLM, Kimi, MiMo, Huawei Pangu, SenseNova, OpenAI); when several brands match, their logos take turns in one slot
+ - App settings: model rows show the same brand logos matched from the model ID, and group titles align with row padding
+ - AI assistant: custom model configs now display the model ID you entered, so multiple custom configs no longer all read as "custom model"
+ - AI assistant: the workflow tab has its own subtitle and a redesigned document directory section with a status dot
 
 # 2.3.0 (2026-11-09)
 
