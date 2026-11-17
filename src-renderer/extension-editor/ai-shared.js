@@ -379,6 +379,8 @@
    * @param {{getConfigs: () => Promise<{configs: Array, activeId: string|null}>, saveActive: (activeId: string, configs: Array) => Promise<any>, onChanged: (cb: (payload: object) => void) => void, openSettings: () => void}} options.settingsApi
    *   统一模型配置存储的访问口（AI 助手 / SOLO / 桌面设置共用同一份）
    * @param {(state: {chatHistory: Array}) => void} [options.onStateChanged]
+   * @param {() => Promise<string>} [options.getProxyToken] tw-ai-proxy 转发协议的
+   *   能力令牌（主进程按窗口来源签发）；缺省走 ExtensionEditorPreload
    */
   function createNeoWarpAiPanel (options) {
     var strings = STRINGS[options.lang] || STRINGS.en;
@@ -613,22 +615,50 @@
       input.style.height = Math.min(input.scrollHeight, 120) + 'px';
     }
 
-    function buildApiProxyUrl (endpoint, headers) {
+    function buildApiProxyUrl (endpoint, headers, token) {
       var url = 'tw-ai-proxy://request/?u=' + encodeURIComponent(endpoint);
+      // 能力令牌：主进程按窗口来源签发，没有令牌的转发请求一律 403
+      if (token) url += '&k=' + encodeURIComponent(token);
       if (headers && Object.keys(headers).length) {
         url += '&h=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(headers)))));
       }
       return url;
     }
 
+    // 令牌由主进程签发（有有效期），这里缓存一份；forceRefresh 时重新取
+    var proxyTokenCache = null;
+    function getProxyToken (forceRefresh) {
+      if (forceRefresh) proxyTokenCache = null;
+      if (!proxyTokenCache) {
+        var bridge = window.ExtensionEditorPreload;
+        var getter = options.getProxyToken ||
+          (bridge && bridge.getAiProxyToken ? function () { return bridge.getAiProxyToken(); } : null);
+        if (!getter) return Promise.reject(new Error('AI proxy bridge unavailable'));
+        proxyTokenCache = Promise.resolve(getter()).catch(function (error) {
+          proxyTokenCache = null;
+          throw error;
+        });
+      }
+      return proxyTokenCache;
+    }
+
     var aiProxyBroken = false;
-    function aiFetch (endpoint, options_) {
+    async function aiFetch (endpoint, options_) {
       if (aiProxyBroken) return fetch(endpoint, options_);
-      return fetch(buildApiProxyUrl(endpoint, options_.headers), options_).catch(function (error) {
+      try {
+        var token = await getProxyToken(false);
+        var resp = await fetch(buildApiProxyUrl(endpoint, options_.headers, token), options_);
+        if (resp.status === 403) {
+          // 令牌可能已过期：作废缓存重取一次再试
+          token = await getProxyToken(true);
+          resp = await fetch(buildApiProxyUrl(endpoint, options_.headers, token), options_);
+        }
+        return resp;
+      } catch (error) {
         if (error && error.name === 'AbortError') throw error;
         aiProxyBroken = true;
         return fetch(endpoint, options_);
-      });
+      }
     }
 
     /**

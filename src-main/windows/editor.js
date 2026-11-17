@@ -34,6 +34,7 @@ const AbstractWindow = require('./abstract');
 const {scanExpands} = require('../neowarp-expands');
 const editorWindowEvents = require('../editor-window-events');
 const {getEffectiveTheme} = require('../effective-theme');
+const {decryptViewSb3, encryptViewSb3, hasViewSb3Magic} = require('../viewsb3-format');
 
 const TYPE_FILE = 'file';
 const TYPE_URL = 'url';
@@ -46,65 +47,6 @@ const NPNP_SALT_LENGTH = 16;
 const NPNP_IV_LENGTH = 12; // For AES-256-GCM
 const NPNP_AUTH_TAG_LENGTH = 16;
 const NPNP_PBKDF2_ITERATIONS = 100000;
-
-// .viewsb3 encrypted file format constants (fixed-key encryption for view-only sharing)
-const VSB3_MAGIC = Buffer.from('VSB3\x01');
-const VSB3_SALT = Buffer.from('NeoWarpViewSb3FixedSalt2024', 'utf8');
-const VSB3_IV = Buffer.from('ViewSb3FixIV', 'utf8');
-const VSB3_PBKDF2_PASSWORD = 'neowarp-viewsb3-viewonly-v1';
-const VSB3_PBKDF2_ITERATIONS = 10000;
-
-/**
- * Get the fixed key for viewsb3 encryption/decryption
- * @returns {Buffer} 32-byte key
- */
-const getViewSb3Key = () => {
-  return nodeCrypto.pbkdf2Sync(VSB3_PBKDF2_PASSWORD, VSB3_SALT, VSB3_PBKDF2_ITERATIONS, 32, 'sha256');
-};
-
-/**
- * Encrypt data for .viewsb3 format using AES-256-GCM with a fixed key
- * @param {Buffer} data - The data to encrypt
- * @returns {Buffer} The encrypted data in .viewsb3 format
- */
-const encryptViewSb3 = (data) => {
-  const key = getViewSb3Key();
-  const iv = VSB3_IV;
-
-  const cipher = nodeCrypto.createCipheriv('aes-256-gcm', key, iv);
-  const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
-  const authTag = cipher.getAuthTag();
-
-  return Buffer.concat([VSB3_MAGIC, iv, authTag, encrypted]);
-};
-
-/**
- * Decrypt .viewsb3 file data
- * @param {Buffer} data - The encrypted file data
- * @returns {Buffer} The decrypted sb3 data
- * @throws {Error} If the file is not a valid .viewsb3 file
- */
-const decryptViewSb3 = (data) => {
-  if (data.length < 5 + 12 + 16 ||
-      !data.slice(0, 5).equals(VSB3_MAGIC)) {
-    throw new Error('Not a valid .viewsb3 file');
-  }
-
-  const iv = data.slice(5, 5 + 12);
-  const authTag = data.slice(5 + 12, 5 + 12 + 16);
-  const encrypted = data.slice(5 + 12 + 16);
-
-  const key = getViewSb3Key();
-
-  const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', key, iv);
-  decipher.setAuthTag(authTag);
-
-  try {
-    return Buffer.concat([decipher.update(encrypted), decipher.final()]);
-  } catch (e) {
-    throw new Error('Corrupted .viewsb3 file');
-  }
-};
 
 /**
  * Encrypt data using AES-256-GCM with a password-derived key
@@ -561,8 +503,7 @@ class EditorWindow extends ProjectRunningWindow {
       const {name, data} = await file.read();
 
       // Check if this is a .viewsb3 view-only file
-      const isViewSb3 = name.endsWith('.viewsb3') ||
-        (data && data.length >= 5 && data.slice(0, 5).equals(VSB3_MAGIC));
+      const isViewSb3 = name.toLowerCase().endsWith('.viewsb3') || hasViewSb3Magic(data);
       if (isViewSb3) {
         try {
           const decrypted = decryptViewSb3(data);

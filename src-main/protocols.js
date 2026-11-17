@@ -5,6 +5,7 @@ const {app, protocol, net} = require('electron');
 const {getDist, getPlatform} = require('./platform');
 const packageJSON = require('../package.json');
 const {getExpandsRoots} = require('./neowarp-expands');
+const aiProxy = require('./ai-proxy');
 
 /**
  * @typedef Metadata
@@ -114,7 +115,7 @@ const FILE_SCHEMES = {
   },
   'tw-update': {
     root: path.resolve(__dirname, '../src-renderer/update'),
-    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src https://desktop.turbowarp.org"
+    csp: "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src https://e.np.sy1.top"
   },
   'tw-security-prompt': {
     root: path.resolve(__dirname, '../src-renderer/security-prompt'),
@@ -258,7 +259,12 @@ protocol.registerSchemesAsPrivileged([
       supportFetchAPI: true,
       secure: true,
       stream: true,
-      bypassCSP: true
+      // 不带 bypassCSP：页面自己的 connect-src 仍然对转发协议生效。
+      // 之前的 bypassCSP 等于让所有窗口都能绕过 connect-src 访问转发协议，
+      // 而主进程侧的来源判定又是 fail-open 的——两者叠加，这条协议就是
+      // 「任意域名 + 任意请求头」的外传通道。真正把住门的是主进程侧的
+      // 能力令牌（见 ai-proxy.js），CSP 只是多一层。
+      bypassCSP: false
     }
   },
   {
@@ -316,7 +322,7 @@ const createErrorPageHTML = (request, errorMessage) => `<!DOCTYPE html>
   </head>
   <body bgcolor="white" text="black">
     <h1>Protocol handler error</h1>
-    <p>If you can see this page, <a href="https://github.com/Shiyuan-318/NeoWarp/issues" target="_blank" rel="noreferrer">please open a GitHub issue</a> or <a href="mailto:contact@neowarp.org" target="_blank" rel="noreferrer">email us</a> with all the information below.</p>
+    <p>If you can see this page, <a href="https://github.com/Shiyuan-318/NeoWarp/issues" target="_blank" rel="noreferrer">please open a GitHub issue</a> or <a href="mailto:shiyuan318@outlook.com" target="_blank" rel="noreferrer">email us</a> with all the information below.</p>
     <pre>${escapeXML(errorMessage)}</pre>
     <pre>URL: ${escapeXML(request.url)}</pre>
     <pre>Version ${escapeXML(packageJSON.version)}, Electron ${escapeXML(process.versions.electron)}, Platform ${escapeXML(getPlatform())} ${escapeXML(process.arch)}, Distribution ${escapeXML(getDist())}</pre>
@@ -568,15 +574,13 @@ const readProtocolRequestBody = async (request) => {
   return Buffer.concat(chunks);
 };
 
-// 只有这些 AI 相关页面可以用转发协议。tw-ai-proxy 注册时带 bypassCSP，
-// 也就是说任何窗口的脚本都能绕过自己页面的 connect-src 访问它——如果这里
-// 不校验来源，它就退化成"任意域名 + 任意请求头"的外传通道。
-const AI_PROXY_ALLOWED_ORIGINS = [
-  'tw-ai-assistant://',
-  'tw-solo://',
-  'tw-extension-editor://',
-  'tw-desktop-settings://'
-];
+// 只有 AI 助手 / SOLO / 扩展编辑器 / 桌面设置这几个页面可以用转发协议，
+// 见 ai-proxy.js 的 ALLOWED_CALLER_ORIGINS。
+// tw-ai-proxy 现在不再带 bypassCSP，但页面自己的 connect-src 并不是可靠的
+// 边界（没有 CSP 的页面等于全开，页面里被注入的脚本照样能发请求），所以
+// 真正把门的是主进程侧的能力令牌：令牌只签发给白名单页面（按发起窗口的
+// 真实 URL 校验），别的窗口连令牌都拿不到；令牌同时约束可访问的目标，
+// 页面里的 connect-src 白名单不再被转发协议绕过。
 
 // 允许页面透传的请求头白名单。Cookie / Host / Proxy-* / Sec-* 等一律丢弃，
 // 既防借代理发送带凭据的请求，也防污染主进程发起的连接。
@@ -596,72 +600,121 @@ const AI_PROXY_ALLOWED_HEADERS = new Set([
   'x-requested-with'
 ]);
 
-const forbiddenProxyError = () => {
-  const error = new Error('AI proxy caller not allowed');
+// 携带凭据的请求头：只允许发往 https 或回环地址，避免 API Key 明文外传
+const AI_PROXY_CREDENTIAL_HEADERS = new Set([
+  'authorization',
+  'api-key',
+  'x-api-key',
+  'x-goog-api-key'
+]);
+
+const forbiddenProxyError = (message) => {
+  const error = new Error(message || 'AI proxy caller not allowed');
   error.forbidden = true;
   return error;
 };
 
 /**
- * 校验调用方来源。能拿到 Origin / Referer 时必须属于 AI 页面；
- * 拿不到（旧版 Electron 或非标准 scheme 不发送来源头）时放行，否则会
- * 直接把正常对话打死——这与改造前的行为一致，靠 CSP 收紧兜住其余窗口。
- * @param {Request} request
- * @returns {boolean}
- */
-const isAiProxyCallerAllowed = (request) => {
-  const origin = String((request.headers && request.headers.get('origin')) || '').toLowerCase();
-  const referrer = String(request.referrer || '').toLowerCase();
-  const candidates = [];
-  if (origin && origin !== 'null') candidates.push(origin);
-  if (referrer) candidates.push(referrer);
-  if (!candidates.length) return true;
-  return candidates.some((value) => AI_PROXY_ALLOWED_ORIGINS.some((allowed) => value.startsWith(allowed)));
-};
-
-/**
  * 解析页面编码进 &h= 的请求头，并按白名单过滤。
  * @param {string|null} headersParam
+ * @param {URL} targetURL 目标地址（凭据头据此判断能不能发）
  * @returns {Record<string, string>}
  */
-const sanitizeProxyHeaders = (headersParam) => {
+const sanitizeProxyHeaders = (headersParam, targetURL) => {
   const raw = headersParam ?
     JSON.parse(Buffer.from(headersParam, 'base64url').toString('utf8')) :
     {};
   const headers = {};
   if (!raw || typeof raw !== 'object') return headers;
+  // 凭据头只在 https / 回环目标上放行：明文 http 的远端目标会直接吃掉
+  // 用户的 API Key
+  const allowCredentials = targetURL.protocol === 'https:' ||
+    aiProxy.isLoopbackHost(targetURL.hostname);
   for (const [key, value] of Object.entries(raw)) {
     if (typeof value !== 'string') continue;
-    if (!AI_PROXY_ALLOWED_HEADERS.has(key.toLowerCase())) continue;
+    const lower = key.toLowerCase();
+    if (!AI_PROXY_ALLOWED_HEADERS.has(lower)) continue;
+    if (AI_PROXY_CREDENTIAL_HEADERS.has(lower) && !allowCredentials) continue;
     headers[key] = value;
   }
   return headers;
 };
 
 /**
- * 转发 AI API 请求。只允许 http/https 目标；Authorization 等请求头
- * 由页面编码在查询参数中传过来，SSE 响应体以流的形式原样透传。
+ * 响应里的 CORS 头：回显调用方来源（已与令牌绑定来源核对过），
+ * 没有来源头时才退回到 *。
+ * @param {Request} request
+ * @returns {string}
+ */
+const getAllowedResponseOrigin = (request) => {
+  // 原样回显：CORS 校验要求与请求来源逐字一致，不能做大小写变换
+  const origin = String((request.headers && request.headers.get('origin')) || '');
+  if (!origin) return '*';
+  if (origin.toLowerCase() === 'null') return 'null';
+  return origin;
+};
+
+/**
+ * 转发 AI API 请求。
+ *
+ * 三道闸门（缺一不可）：
+ *   1. 能力令牌：没有有效令牌一律 403（不再「拿不到来源头就放行」）；
+ *   2. 来源一致：请求带 Origin / Referer 时必须与令牌绑定的页面一致；
+ *   3. 目标白名单：只允许转发到内置服务商、用户已保存的自定义端点、回环
+ *      地址，云厂商元数据地址与未授权的内网地址一律拒绝。
+ *
+ * Authorization 等请求头由页面编码在查询参数中传过来，SSE 响应体以流的
+ * 形式原样透传。
  */
 const createAIProxyHandler = () => async (request) => {
   try {
-    if (!isAiProxyCallerAllowed(request)) {
-      throw forbiddenProxyError();
-    }
     const parsed = new URL(request.url);
     if (parsed.host !== 'request') {
       throw new Error('Invalid AI proxy URL');
     }
     const target = parsed.searchParams.get('u');
     const headersParam = parsed.searchParams.get('h');
+    const token = parsed.searchParams.get('k');
+
+    // ① 能力令牌
+    const grant = aiProxy.verifyToken(token);
+    if (!grant) {
+      throw forbiddenProxyError('AI proxy token missing or expired');
+    }
+    // ② 来源一致性
+    if (!aiProxy.isCallerOriginConsistent(request, grant)) {
+      throw forbiddenProxyError('AI proxy caller origin mismatch');
+    }
+    // ③ 目标白名单
     if (!target || !/^https?:\/\//i.test(target)) {
-      throw new Error('Invalid AI proxy target');
+      throw forbiddenProxyError('Invalid AI proxy target');
     }
     const targetURL = new URL(target);
-    // 云厂商元数据地址是 SSRF 的经典目标，不可能是用户配置的模型端点
-    if (/^169\.254\./.test(targetURL.hostname) || targetURL.hostname === 'metadata.google.internal') {
-      throw new Error('AI proxy target blocked');
+    if (!aiProxy.isTargetAllowed(targetURL, grant)) {
+      throw forbiddenProxyError('AI proxy target not allowed');
     }
-    const headers = sanitizeProxyHeaders(headersParam);
+
+    const responseOrigin = getAllowedResponseOrigin(request);
+
+    // CORS 预检：直接应答，不转发给目标
+    if (request.method === 'OPTIONS') {
+      const requested = String(request.headers.get('access-control-request-headers') || '')
+        .split(',')
+        .map((value) => value.trim().toLowerCase())
+        .filter((value) => value && AI_PROXY_ALLOWED_HEADERS.has(value));
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'access-control-allow-origin': responseOrigin,
+          'access-control-allow-methods': 'GET, POST, OPTIONS',
+          'access-control-allow-headers': requested.join(', '),
+          'access-control-max-age': '600',
+          'vary': 'Origin'
+        }
+      });
+    }
+
+    const headers = sanitizeProxyHeaders(headersParam, targetURL);
     const body = await readProtocolRequestBody(request);
     const response = await net.fetch(target, {
       method: request.method,
@@ -673,24 +726,40 @@ const createAIProxyHandler = () => async (request) => {
     });
     const responseHeaders = {};
     response.headers.forEach((value, key) => {
+      // 目标站点的 Set-Cookie 不该借代理落到本地协议上
+      if (key.toLowerCase() === 'set-cookie') return;
       responseHeaders[key] = value;
     });
-    // 页面源是 tw-ai-assistant://，补一个宽松的 CORS 头以防万一
-    responseHeaders['access-control-allow-origin'] = '*';
+    responseHeaders['access-control-allow-origin'] = responseOrigin;
+    responseHeaders['vary'] = responseHeaders['vary'] ?
+      `${responseHeaders['vary']}, Origin` :
+      'Origin';
     return new Response(response.body, {
       status: response.status,
       headers: responseHeaders
     });
   } catch (error) {
-    console.error('[ai-proxy]', error);
     const status = error && error.forbidden ? 403 : 502;
+    if (error && error.forbidden) {
+      // 被拒绝的请求通常是探测行为，记警告即可，不必刷错误日志
+      console.warn('[ai-proxy]', error.message);
+    } else {
+      console.error('[ai-proxy]', error);
+    }
+    let responseOrigin = '*';
+    try {
+      responseOrigin = getAllowedResponseOrigin(request);
+    } catch (ignored) {
+      // 请求对象异常时退回 *
+    }
     return new Response(JSON.stringify({
       error: {message: String((error && error.message) || error)}
     }), {
       status,
       headers: {
         'content-type': 'application/json',
-        'access-control-allow-origin': '*'
+        'access-control-allow-origin': responseOrigin,
+        'vary': 'Origin'
       }
     });
   }

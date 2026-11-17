@@ -28,7 +28,7 @@ const writeCurrentVersion = async () => {
 };
 
 const openUpdatePage = () => {
-  openExternal('https://desktop.turbowarp.org/');
+  openExternal('https://e.np.sy1.top/');
 };
 
 /**
@@ -143,7 +143,7 @@ const migrate = async () => {
       message: translate('downgrade-warning.title'),
       detail: translate('downgrade-warning.message')
         .replace('{APP_NAME}', APP_NAME)
-        .replace('{website}', 'desktop.turbowarp.org')
+        .replace('{website}', 'e.np.sy1.top')
         .replace('{debugInfo}', changes.join(', ')),
       buttons: [
         translate('downgrade-warning.exit'),

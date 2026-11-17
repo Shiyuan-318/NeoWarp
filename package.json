@@ -4,7 +4,7 @@
   "version": "2.4.0",
   "license": "GPL-3.0",
   "author": {
-    "email": "contact@neowarp.org",
+    "email": "shiyuan318@outlook.com",
     "name": "Shiyuan"
   },
   "type": "commonjs",
@@ -62,14 +62,14 @@
       "terser-webpack-plugin": "^4.2.3"
     }
   },
-  "homepage": "https://desktop.turbowarp.org/",
+  "homepage": "https://e.np.sy1.top/",
   "repository": {
     "type": "git",
     "url": "https://github.com/Shiyuan-318/NeoWarp.git"
   },
   "bugs": {
     "url": "https://github.com/Shiyuan-318/NeoWarp/issues",
-    "email": "contact@neowarp.org"
+    "email": "shiyuan318@outlook.com"
   },
   "main": "./src-main/entrypoint.js",
   "build": {

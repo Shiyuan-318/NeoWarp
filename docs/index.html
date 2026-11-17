@@ -9,14 +9,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>NeoWarp Desktop - Better offline editor for Scratch 3</title>
-    <link rel="canonical" href="https://desktop.turbowarp.org/" />
+    <link rel="canonical" href="https://e.np.sy1.top/" />
     <meta name="description" content="NeoWarp Desktop is a better version of Scratch 3 with a compiler, dark mode, addons, packager, Linux support, and more.">
     <meta name="theme-color" content="#ff4c4c">
     <meta property="og:type" content="website" />
     <meta property="og:title" content="NeoWarp Desktop - Better offline editor for Scratch 3" />
     <meta property="og:description" content="NeoWarp Desktop is a better offline editor for Scratch 3 with a compiler, dark mode, addons, packager, Linux support, and more." />
-    <meta property="og:url" content="https://desktop.turbowarp.org/" />
-    <meta property="og:image" content="https://desktop.turbowarp.org/screenshots/windows/light.png" />
+    <meta property="og:url" content="https://e.np.sy1.top/" />
+    <meta property="og:image" content="https://e.np.sy1.top/screenshots/windows/light.png" />
     <meta property="og:image:width" content="1280" />
     <meta property="og:image:height" content="800" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -551,7 +551,7 @@
     <script type="generated-locale-names">{"en":"English","ca":"Català","de":"Deutsch","es":"Español (España)","fi":"Suomi","it":"Italiano","ja":"日本語","ko":"한국어","nb":"Norsk Bokmål","nl":"Nederlands","pt-br":"Português Brasileiro","ru":"Русский","sl":"Slovenščina","sv":"Svenska","tr":"Türkçe","uk":"Українська","zh-cn":"简体中文"}</script>
 
     <script>
-      const VERSION = '1.15.5';
+      const VERSION = '2.4.0';
 
       // OS-specific styles
       const getOS = () => {
@@ -919,6 +919,52 @@
       <h2 l10n="changelog">Changelog</h2>
       <div lang="en">
         <!-- CHANGELOG_START -->
+        <div data-version="2.4.0">
+          <h3>v2.4.0 (November 16 2026)</h3>
+          <ul>
+            <li>AI assistant: undo now works per change unit, so one undo reverts exactly one edit, with an undo journal and regression tests</li>
+            <li>AI assistant: refreshed interface and model configuration</li>
+            <li>Mobile preview: each session uses a random token, so other devices on the same network can no longer fetch your project</li>
+            <li>AI pages now only connect directly to built-in providers and local inference servers; everything else goes through the main-process proxy</li>
+            <li>Added unsigned Windows, macOS, and Linux build workflows</li>
+          </ul>
+        </div>
+        <div data-version="2.3.0">
+          <h3>v2.3.0 (November 9 2026)</h3>
+          <ul>
+            <li>AI assistant: added Plan/Spec/Goal workflow settings that save documents to disk, and the source code beta is now an editable tab</li>
+            <li>AI assistant: responses render as flat text and turn folding is easier to follow</li>
+            <li>AI assistant: model list is grouped by endpoint and collapsible, and workflow modes only apply inside conversations</li>
+            <li>AI assistant: wand icon now uses a white stroke to match the rest of the top bar</li>
+            <li>Mobile preview: fixed the sync state getting stuck while generating, and the custom context limit now defaults to 1000000</li>
+            <li>Fixed CI install failures caused by the scratch-gui patch</li>
+          </ul>
+        </div>
+        <div data-version="2.2.0">
+          <h3>v2.2.0 (October 19 2026)</h3>
+          <ul>
+            <li>Windows: added a "Windows Window Style" option in desktop settings (UI section) to merge the editor's minimize/maximize/close buttons into the top toolbar in one row; enabling it also switches the toolbar to the narrow height, and the option only affects the editor window</li>
+            <li>Collaboration: remote changes now apply incrementally instead of reloading the whole project, so other members' editors no longer reset on every edit, running scripts keep running, and the selected sprite stays put</li>
+            <li>Collaboration: code edits now appear in real time again — the script workspace refreshes right after a remote update lands instead of only after switching to the costumes tab and back</li>
+            <li>Collaboration: workspace rebuilds are batched and postponed while you are dragging a block or editing a field, so incoming edits no longer flash the code area</li>
+            <li>Collaboration: monitor changes (creating variables, dragging or toggling monitors) are applied in place instead of triggering a whole-project reload</li>
+            <li>Collaboration: edits made while a remote update is being applied are no longer silently dropped and are re-broadcast when the update settles</li>
+            <li>Collaboration: removed the firewall permission (PowerShell/UAC) prompt when starting a room; if the system firewall needs permission it will show its own standard dialog</li>
+          </ul>
+        </div>
+        <div data-version="2.0.1">
+          <h3>v2.0.1 (October 8 2026)</h3>
+          <ul>
+            <li>Added first-run onboarding guide shown to new installs and updaters: language selection, dark/light mode, and API key configuration, with per-step confirm/skip buttons</li>
+          </ul>
+        </div>
+        <div data-version="1.0.8">
+          <h3>v1.0.8 (June 16 2026)</h3>
+          <ul>
+            <li>Added ability to add costumes and sprites from URL in AI assistant</li>
+            <li>Added stage screenshot tool for multimodal AI models to visually inspect the project</li>
+          </ul>
+        </div>
         <div data-version="1.15.5">
           <h3>v1.15.5 (March 30 2026)</h3>
           <ul>
@@ -1308,7 +1354,7 @@
           </ul>
         </div>
         <div data-version="1.1.3">
-          <h3>v1.1.3 (February 21 2022)</h3>
+          <h3>v1.1.3 (February 20 2022)</h3>
           <ul>
             <li>Fixed "Mouse position" addon</li>
           </ul>
@@ -1323,7 +1369,7 @@
           </ul>
         </div>
         <div data-version="1.1.1">
-          <h3>v1.1.1 (February 13 2022)</h3>
+          <h3>v1.1.1 (February 12 2022)</h3>
           <ul>
             <li>New addon: Customizable block text style</li>
             <li>New addon: Search sprites by name</li>
@@ -1339,7 +1385,7 @@
           </ul>
         </div>
         <div data-version="1.0.0">
-          <h3>v1.0.0 (January 15 2022)</h3>
+          <h3>v1.0.0 (January 14 2022)</h3>
           <ul>
             <li>The costume editor now supports dark mode</li>
             <li>If a dark background makes it hard to edit your costumes, it's possible to change the theme of the costume editor without effecting the rest of the interface</li>

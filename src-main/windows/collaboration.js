@@ -3,6 +3,47 @@ const CollaborationServer = require('../collaboration-server');
 const {ipcMain} = require('electron');
 const os = require('os');
 const http = require('http');
+const crypto = require('crypto');
+
+// 认证为 PBKDF2 挑战-响应：密码不出本机，proof 绑定服务端一次性 nonce。
+// ws:// 没有传输层加密，因此这不是 PAKE——录下握手的人仍可按 PBKDF2
+// 成本离线猜测弱口令。真正要保护的是房间密码本身的强度。
+const AUTH_MIN_ITERATIONS = 10000;
+const AUTH_MAX_ITERATIONS = 1000000;
+const AUTH_HEX_SALT = /^[0-9a-f]{32}$/i;
+const AUTH_HEX_NONCE = /^[0-9a-f]{64}$/i;
+const AUTH_HEX_PROOF = /^[0-9a-f]{64}$/i;
+
+function computeAuthProof (password, challenge) {
+  const nonceHex = typeof challenge.nonce === 'string' ? challenge.nonce : '';
+  const saltHex = typeof challenge.salt === 'string' ? challenge.salt : '';
+  const iterations = challenge.iterations;
+  if (!AUTH_HEX_NONCE.test(nonceHex) || !AUTH_HEX_SALT.test(saltHex)) return null;
+  if (!Number.isInteger(iterations) || iterations < AUTH_MIN_ITERATIONS || iterations > AUTH_MAX_ITERATIONS) return null;
+
+  const key = crypto.pbkdf2Sync(
+    String(password == null ? '' : password),
+    Buffer.from(saltHex, 'hex'),
+    iterations,
+    32,
+    'sha256'
+  );
+  const nonce = Buffer.from(nonceHex, 'hex');
+  return {
+    key,
+    nonce,
+    proof: crypto.createHmac('sha256', key).update(nonce).digest('hex')
+  };
+}
+
+// 服务端返回的 proof 证明对端确实知道房间密码. 没有它，中间人可以只转发
+// 握手而无需知道密码就冒充主机。
+function verifyServerProof (authState, serverProof) {
+  if (!authState || typeof serverProof !== 'string' || !AUTH_HEX_PROOF.test(serverProof)) return false;
+  const expected = crypto.createHmac('sha256', authState.key).update(authState.nonce).update(':server').digest();
+  const given = Buffer.from(serverProof, 'hex');
+  return given.length === expected.length && crypto.timingSafeEqual(given, expected);
+}
 
 // Scan the local /24 subnets for collaboration hosts on the given port.
 // The joining machine's own addresses (including loopback) are scanned too,
@@ -288,6 +329,7 @@ class CollaborationWindow extends AbstractWindow {
         }
 
         let resolved = false;
+        let authState = null;
 
         const timeout = setTimeout(() => {
           if (!resolved) {
@@ -299,9 +341,9 @@ class CollaborationWindow extends AbstractWindow {
         }, 10000);
 
         ws.addEventListener('open', () => {
+          // 只发送身份信息，密码在收到 challenge 后才参与运算。
           ws.send(JSON.stringify({
-            type: 'auth',
-            password,
+            type: 'auth-init',
             nickname: this.joinNickname,
             avatar: this.joinAvatar
           }));
@@ -316,11 +358,35 @@ class CollaborationWindow extends AbstractWindow {
             return;
           }
 
+          if (message.type === 'auth-challenge') {
+            if (resolved) return;
+            authState = computeAuthProof(password, message);
+            if (!authState) {
+              resolved = true;
+              clearTimeout(timeout);
+              try { ws.close(); } catch (e) {}
+              this.sendToCollabWindow('collab-join-connected', { success: false, error: '认证协议不兼容，请升级 NeoWarp' });
+              resolve({ success: false, error: '认证协议不兼容' });
+              return;
+            }
+            ws.send(JSON.stringify({
+              type: 'auth',
+              proof: authState.proof
+            }));
+            return;
+          }
+
           if (message.type === 'auth-result') {
             if (!resolved) {
               resolved = true;
               clearTimeout(timeout);
               if (message.success) {
+                if (!verifyServerProof(authState, message.serverProof)) {
+                  try { ws.close(); } catch (e) {}
+                  this.sendToCollabWindow('collab-join-connected', { success: false, error: '房间身份校验失败，请确认网络环境' });
+                  resolve({ success: false, error: '房间身份校验失败' });
+                  return;
+                }
                 this.ws = ws;
                 this.joinUsername = message.username;
                 this.joinAvatar = message.avatar || this.joinAvatar;

@@ -36,6 +36,8 @@ contextBridge.exposeInMainWorld('ExtensionEditorPreload', {
   // 统一的 AI 模型配置存储（与 AI 助手、SOLO、桌面设置共用）
   getAiModelConfigs: () => ipcRenderer.invoke('ai-get-model-configs'),
   saveAiModelConfigs: (payload) => ipcRenderer.invoke('ai-save-model-configs', payload),
+  // tw-ai-proxy 转发协议的能力令牌（主进程按窗口来源签发，带过期时间）
+  getAiProxyToken: (targets) => ipcRenderer.invoke('ai-get-proxy-token', {targets}),
   onAiModelConfigsChanged: (callback) => {
     ipcRenderer.on('ai-model-configs-changed', (event, data) => callback(data));
   },

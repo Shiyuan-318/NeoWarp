@@ -4355,7 +4355,7 @@ index 8b707bd..fcac301 100644
                      }
  
 +                    // Handle .viewsb3 view-only mode
-+                    if (this.fileToUpload.name.endsWith('.viewsb3')) {
++                    if (this.fileToUpload.name.toLowerCase().endsWith('.viewsb3')) {
 +                        this.props.onSetViewOnly(true);
 +                        this.props.onSetFullScreen(true);
 +                    }

@@ -1,4 +1,5 @@
 const settings = require('./settings');
+const {getAllowedCallerOrigin, issueToken} = require('./ai-proxy');
 
 /**
  * 统一的 AI 模型配置存储（tw_config.json）。
@@ -231,6 +232,20 @@ function registerAiModelConfigIpc (ipc) {
     const DesktopSettingsWindow = require('./windows/desktop-settings');
     DesktopSettingsWindow.show();
     return {success: true};
+  });
+  // AI 转发协议（tw-ai-proxy）的能力令牌：转发协议是带 SSE 流的裸 HTTP
+  // 通道，必须确认调用方身份。主进程按发起窗口的真实 URL 判定，只有 AI
+  // 助手 / SOLO / 扩展编辑器 / 桌面设置这几个页面能拿到令牌；令牌同时绑定
+  // 页面来源并约束可访问的目标（见 ai-proxy.js）。
+  ipc.handle('ai-get-proxy-token', (event, payload) => {
+    const frameUrl = (event.senderFrame && event.senderFrame.url) ||
+      (event.sender && typeof event.sender.getURL === 'function' ? event.sender.getURL() : '');
+    const origin = getAllowedCallerOrigin(frameUrl);
+    if (!origin) {
+      throw new Error('AI proxy is not allowed on this page');
+    }
+    const targets = payload && Array.isArray(payload.targets) ? payload.targets : [];
+    return issueToken(origin, targets);
   });
 }
 

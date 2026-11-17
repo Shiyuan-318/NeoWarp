@@ -62,7 +62,9 @@ A "pure AI" workspace with no traditional editor UI:
 - **Permission control**: the host configures guest permissions such as "add extensions / delete extensions / delete sprites"
 - **Live chat**: a built-in iOS-style chat area, so you can communicate without leaving the editor
 - **Real-time project sync**: changes from any participant sync to everyone instantly
-- **Stable connection**: SHA-256 password check, heartbeat detection, auth timeouts, and oversize-frame protection
+- **Stable connection**: PBKDF2 challenge-response authentication (the password never leaves the machine and every handshake uses a single-use nonce), heartbeat detection, auth timeouts, and oversize-frame protection
+
+> Collaboration runs over plain `ws://` on the local network, without transport encryption. Authentication keeps the password off the wire and makes captured handshakes non-replayable, but anyone who records a handshake can still brute-force weak passwords offline at PBKDF2 cost. Use a long random passphrase and only collaborate on trusted networks.
 
 ### Mobile Programming
 

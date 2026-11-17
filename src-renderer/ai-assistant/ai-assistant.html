@@ -1505,8 +1505,9 @@
             padding: 5px 4px 0 6px;
             flex-shrink: 0;
         }
-        /* 脚注自己已经排好版，用量文本不再需要单独的内距 */
-        .msg-footer .msg-context-usage { padding: 0; }
+        /* 脚注自己已经排好版，用量文本不再需要单独的内距；
+           这里要压过 .message-wrapper.ai 的那条，否则本轮用量会跟着下移几像素 */
+        .message-wrapper.ai .msg-footer .msg-context-usage { padding: 0; }
         .undo-ai-btn {
             display: inline-flex;
             align-items: center;
@@ -1570,6 +1571,109 @@
             opacity: 0.45;
             flex-shrink: 0;
         }
+
+        /* ── 本轮用量 + 用时：跟在上下文用量右侧的脚注信息 ── */
+        .msg-turn-usage {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: -2px;
+            padding: 1px 6px;
+            border-radius: var(--radius-full);
+            font-size: 11px;
+            color: var(--text-tertiary);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            cursor: default;
+            transition: color var(--transition), background var(--transition);
+        }
+        .msg-turn-usage svg { width: 11px; height: 11px; flex-shrink: 0; opacity: 0.75; }
+        .msg-turn-usage:hover { color: var(--text-secondary); background: var(--surface-secondary); }
+        .msg-turn-time {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        /* 明细浮层：挂 body + fixed 定位，避免被聊天区的滚动容器裁掉 */
+        .turn-usage-tip {
+            position: fixed;
+            z-index: 9000;
+            width: 290px;
+            padding: 12px 14px 11px;
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            box-shadow: var(--shadow-lg);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 11.5px;
+            line-height: 1.5;
+            font-variant-numeric: tabular-nums;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 0.14s ease, transform 0.14s ease;
+        }
+        .turn-usage-tip.show { opacity: 1; transform: translateY(0); }
+        .tu-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .tu-total i { font-style: normal; font-weight: 600; color: var(--text-tertiary); margin-right: 4px; }
+        .tu-total b { font-weight: 700; }
+        .tu-row {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 1px 0;
+        }
+        .tu-row.is-sub { padding-left: 15px; }
+        .tu-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 2.5px;
+            flex-shrink: 0;
+        }
+        .tu-row.is-sub .tu-dot { width: 7px; height: 7px; }
+        .tu-label { flex: 1; min-width: 0; }
+        .tu-val { font-weight: 600; color: var(--text); }
+        .tu-row.is-sub .tu-val { font-weight: 600; }
+        .tu-sep { height: 1px; background: var(--border); margin: 9px 0 8px; }
+        .tu-rate {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text);
+            font-weight: 600;
+        }
+        .tu-rate svg { width: 12px; height: 12px; flex-shrink: 0; color: #f5a524; }
+        .tu-rate .tu-val { margin-left: auto; color: #10b981; }
+        .tu-bar {
+            display: flex;
+            height: 6px;
+            margin-top: 7px;
+            border-radius: 3px;
+            overflow: hidden;
+            background: var(--surface-tertiary);
+        }
+        .tu-bar i { display: block; height: 100%; }
+        .tu-legend {
+            display: flex;
+            gap: 12px;
+            margin-top: 7px;
+            font-size: 10.5px;
+            color: var(--text-tertiary);
+        }
+        .tu-legend span { display: inline-flex; align-items: center; gap: 4px; }
+        .tu-legend i { display: block; width: 7px; height: 7px; border-radius: 2px; }
 
         /* ── 回合过程分组：任务完成后折叠，只留最终总结 ── */
         .process-group {
@@ -6387,6 +6491,8 @@
     var currentConfig = { apiKey: '', provider: 'openai', model: 'gpt-5.4', customEndpoint: '', customModelId: '', apiFormat: 'openai', name: '', customContextLimit: 1000000, thinkingLevel: 'medium' };
     var currentRequestTokens = 0;
     var historyReplayTokens = 0;
+    // 本轮（一次提问到最终总结）的累计用量与起始时刻，脚注的"本轮 Token / 用时"用它
+    var turnUsage = null;
     var isLoading = false;
     var settingsOpen = false;
     var modelDropdownOpen = false;
@@ -6591,6 +6697,18 @@
             usageTipNone: 'No usage',
             usageFootnote: 'Counted from what the API reports for each request, stored only on this device.',
             usageFootnoteRemote: 'Counted on the computer; this page is a read-only view.',
+            turnTokensLabel: 'This turn {n} tokens',
+            turnTokensTitle: 'Token breakdown',
+            turnTokensTotal: 'Total',
+            turnTokensInput: 'Input',
+            turnCacheHit: 'Cache hit',
+            turnCacheMiss: 'Cache miss',
+            turnCacheWrite: 'Cache write',
+            turnCacheRate: 'Cache hit rate',
+            turnTokensOutput: 'Output',
+            turnReasoning: 'Reasoning',
+            turnReply: 'Reply',
+            turnElapsed: '{t} elapsed',
             groupProvider: 'Provider',
             groupModel: 'Model',
             groupEndpoint: 'Endpoint',
@@ -6851,6 +6969,18 @@
             usageTipNone: '无用量',
             usageFootnote: '数字来自接口对每次请求的回报，仅保存在本机。',
             usageFootnoteRemote: '数字在电脑端统计，本页只用于查看。',
+            turnTokensLabel: '本轮 {n} Token',
+            turnTokensTitle: 'Token 消耗明细',
+            turnTokensTotal: '总计',
+            turnTokensInput: '输入',
+            turnCacheHit: '缓存命中',
+            turnCacheMiss: '缓存未命中',
+            turnCacheWrite: '缓存写入',
+            turnCacheRate: '缓存命中率',
+            turnTokensOutput: '输出',
+            turnReasoning: '思考过程',
+            turnReply: '回复内容',
+            turnElapsed: '用时 {t}',
             groupProvider: '服务商',
             groupModel: '模型',
             groupEndpoint: '接口地址',
@@ -7857,6 +7987,20 @@
         return (isZhLocale() ? (m.nameZh || m.name) : (m.nameEn || m.name)) || '';
     }
 
+    /**
+     * 配置里真正使用的模型名。预设服务商取本地化展示名，
+     * 自定义渠道 / Ollama 取 customModelId（与 getEffectiveModelId 同一套判断）。
+     * 模型切换器里显示这个，而不是用户给渠道起的名字。
+     */
+    function configModelDisplayName(cfg) {
+        if (!cfg) return '';
+        var p = PROVIDERS[cfg.provider];
+        var m = p && (p.models || []).find(function(x) { return x.id === cfg.model; });
+        if (m) return modelNameDisplayName(m) || m.name || '';
+        if (cfg.customModelId && (!p || p.isCustom || !cfg.model)) return cfg.customModelId;
+        return cfg.model || '';
+    }
+
     function usageModelLabel(key) {
         var parts = String(key).split(':');
         var providerId = parts.shift();
@@ -7871,25 +8015,44 @@
         };
     }
     /**
+     * 把各家形态不一的 usage 解析成同一形状。
+     * Anthropic 的 input_tokens 不含缓存读写部分，需要单独加回来；
+     * OpenAI 兼容接口的 prompt_tokens 已经包含命中缓存的输入。
+     */
+    function parseUsageNumbers(usage, fallbackPrompt) {
+        var out = { prompt: 0, completion: 0, cached: 0, cacheWrite: 0, reasoning: 0, estimated: 0 };
+        if (usage && (usage.prompt_tokens || usage.completion_tokens || usage.total_tokens ||
+                      usage.input_tokens || usage.output_tokens)) {
+            var details = usage.prompt_tokens_details || {};
+            var cacheRead = usage.cache_read_input_tokens || 0;
+            var cacheWrite = usage.cache_creation_input_tokens || 0;
+            // OpenAI 在 prompt_tokens_details.cached_tokens，DeepSeek/Kimi 用
+            // prompt_cache_hit_tokens / cached_tokens，Anthropic 用 cache_read_input_tokens
+            out.cached = details.cached_tokens || usage.prompt_cache_hit_tokens || usage.cached_tokens || cacheRead || 0;
+            out.cacheWrite = details.cache_write_tokens || cacheWrite || 0;
+            out.prompt = (usage.prompt_tokens || usage.input_tokens || 0) + cacheRead + cacheWrite;
+            out.completion = usage.completion_tokens || usage.output_tokens || 0;
+            out.reasoning = (usage.completion_tokens_details || {}).reasoning_tokens || usage.reasoning_tokens || 0;
+            if (!out.prompt && usage.total_tokens) out.prompt = usage.total_tokens;
+        } else {
+            out.prompt = fallbackPrompt || 0;
+            out.estimated = 1;
+        }
+        return out;
+    }
+
+    /**
      * 记一次请求的用量。
      * @param {object|null} usage 接口返回的 usage 对象
      * @param {number} fallbackPrompt 服务端不给 usage 时的本地估算输入量
      */
     function recordUsage(usage, fallbackPrompt) {
         if (IS_REMOTE) return;
-        var prompt = 0, completion = 0, cached = 0, estimated = 0;
-        if (usage && (usage.prompt_tokens || usage.completion_tokens || usage.total_tokens)) {
-            prompt = usage.prompt_tokens || 0;
-            completion = usage.completion_tokens || 0;
-            // 各家字段名不一：OpenAI 在 prompt_tokens_details.cached_tokens，
-            // DeepSeek/Kimi 用 prompt_cache_hit_tokens / cached_tokens。
-            var details = usage.prompt_tokens_details || {};
-            cached = details.cached_tokens || usage.prompt_cache_hit_tokens || usage.cached_tokens || 0;
-            if (!prompt && usage.total_tokens) prompt = usage.total_tokens;
-        } else {
-            prompt = fallbackPrompt || 0;
-            estimated = 1;
-        }
+        var parsed = parseUsageNumbers(usage, fallbackPrompt);
+        var prompt = parsed.prompt;
+        var completion = parsed.completion;
+        var cached = parsed.cached;
+        var estimated = parsed.estimated;
         if (!prompt && !completion) return;
 
         var delta = { requests: 1, prompt: prompt, completion: completion, cached: cached, estimated: estimated };
@@ -7914,6 +8077,54 @@
         saveUsage();
         if (settingsOpen && settingsTab === 'usage') renderUsage();
         phonePushHistory();
+    }
+
+    /** 新回合开始：本轮用量清零，并记下起始时刻供"用时"计算 */
+    function resetTurnUsage() {
+        turnUsage = {
+            prompt: 0, completion: 0, cached: 0, cacheWrite: 0, reasoning: 0,
+            requests: 0, startedAt: Date.now()
+        };
+    }
+
+    /**
+     * 累加一次接口调用的用量：一轮里可能有多条请求（工具循环），
+     * 脚注上的"本轮"是它们相加的结果。
+     * 思考 Token 只有部分接口回报，没回报时按推理/正文的字符比例从输出里折算，
+     * 保证明细里"思考过程 + 回复内容 = 输出"。
+     */
+    function accumulateTurnUsage(usage, fallbackPrompt, reasoningText, contentText) {
+        if (IS_REMOTE) return;
+        if (!turnUsage) resetTurnUsage();
+        var p = parseUsageNumbers(usage, fallbackPrompt);
+        turnUsage.prompt += p.prompt || 0;
+        turnUsage.completion += p.completion || 0;
+        turnUsage.cached += p.cached || 0;
+        turnUsage.cacheWrite += p.cacheWrite || 0;
+        turnUsage.requests += 1;
+
+        var reasoning = p.reasoning || 0;
+        if (!reasoning && p.completion > 0 && reasoningText) {
+            var rTok = estimateTokens(reasoningText);
+            var cTok = estimateTokens(contentText || '');
+            if (rTok > 0) reasoning = Math.round(p.completion * rTok / (rTok + cTok));
+        }
+        turnUsage.reasoning += Math.min(reasoning, p.completion || 0);
+    }
+
+    /** 定格本轮用量的快照（含用时），既用于渲染脚注，也随消息存档供历史重放 */
+    function snapshotTurnUsage() {
+        if (!turnUsage) return null;
+        if (!turnUsage.prompt && !turnUsage.completion) return null;
+        return {
+            prompt: turnUsage.prompt,
+            completion: turnUsage.completion,
+            cached: turnUsage.cached,
+            cacheWrite: turnUsage.cacheWrite,
+            reasoning: turnUsage.reasoning,
+            requests: turnUsage.requests,
+            elapsedMs: Math.max(0, Date.now() - (turnUsage.startedAt || Date.now()))
+        };
     }
 
     /** 把一组「模型 -> bucket」合并成一个总 bucket */
@@ -8962,12 +9173,8 @@
 
     function updateModelDisplay() {
         var m = getModelInfo();
-        var label;
-        if (activeConfigIndex >= 0 && savedConfigs[activeConfigIndex]) {
-            label = savedConfigs[activeConfigIndex].name || (modelNameDisplayName(m) || 'Model');
-        } else {
-            label = modelNameDisplayName(m) || 'Model';
-        }
+        // 切换器上显示模型名，渠道名（配置名）只留在下拉项的次要文案里
+        var label = configModelDisplayName(currentConfig) || modelNameDisplayName(m) || 'Model';
         modelNameDisplay.textContent = label;
         modelShortDisplay.textContent = label.length > 8 ? label.substring(0, 7) + '\u2026' : (label || 'Model');
         modelStatusDot.style.display = (currentConfig.apiKey || !configNeedsApiKey()) ? 'inline-block' : 'none';
@@ -9270,8 +9477,10 @@
         return u;
     }
 
-    function buildAiProxyUrl(endpoint, headers) {
+    function buildAiProxyUrl(endpoint, headers, token) {
         var url = 'tw-ai-proxy://request/?u=' + encodeURIComponent(endpoint);
+        // 能力令牌：主进程按窗口来源签发，没有令牌的转发请求一律 403
+        if (token) url += '&k=' + encodeURIComponent(token);
         if (headers && Object.keys(headers).length) {
             var json = JSON.stringify(headers);
             url += '&h=' + encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
@@ -9279,15 +9488,41 @@
         return url;
     }
 
+    // 令牌由主进程签发（有有效期），这里缓存一份；forceRefresh 时重新取
+    var aiProxyTokenCache = null;
+    function getAiProxyToken(forceRefresh) {
+        if (forceRefresh) aiProxyTokenCache = null;
+        if (!aiProxyTokenCache) {
+            var bridge = window.AIAssistantPreload;
+            if (!bridge || !bridge.getAiProxyToken) {
+                return Promise.reject(new Error('AI proxy bridge unavailable'));
+            }
+            aiProxyTokenCache = bridge.getAiProxyToken().catch(function (err) {
+                aiProxyTokenCache = null;
+                throw err;
+            });
+        }
+        return aiProxyTokenCache;
+    }
+
     var aiProxyBroken = false;
-    function aiFetch(endpoint, options) {
+    async function aiFetch(endpoint, options) {
         if (aiProxyBroken) return fetch(endpoint, options);
-        return fetch(buildAiProxyUrl(endpoint, options.headers), options).catch(function(err) {
+        try {
+            var token = await getAiProxyToken(false);
+            var resp = await fetch(buildAiProxyUrl(endpoint, options.headers, token), options);
+            if (resp.status === 403) {
+                // 令牌可能已过期：作废缓存重取一次再试
+                token = await getAiProxyToken(true);
+                resp = await fetch(buildAiProxyUrl(endpoint, options.headers, token), options);
+            }
+            return resp;
+        } catch (err) {
             if (err && err.name === 'AbortError') throw err;
             // 转发协议不可用（如旧版 Electron 构建）：回退直连并记住，之后不再绕路
             aiProxyBroken = true;
             return fetch(endpoint, options);
-        });
+        }
     }
 
     function populateModelSwitcherDropdown() {
@@ -9295,7 +9530,6 @@
         var lastGroup = null;
         savedConfigs.forEach(function(cfg, idx) {
             var p = PROVIDERS[cfg.provider] || {};
-            var m = (p.models || []).find(function(x) { return x.id === cfg.model; });
             var free = isFreeConfig(cfg);
             var expired = isFreeExpired(cfg);
             // 免费模型 / 我的模型 分组标题（活动结束后免费组整体置灰）
@@ -9309,12 +9543,14 @@
             }
             var item = document.createElement('div');
             item.className = 'model-dropdown-item' + (idx === activeConfigIndex ? ' active' : '') + (expired ? ' disabled' : '');
+            // 主文案显示模型名；渠道名（配置名）退到次要文案，多个渠道用同一模型时仍能区分
+            var channelName = cfg.name || providerDisplayName(cfg.provider);
             var trailing = expired
                 ? t('freeEnded')
-                : (free ? t('freeBadge') : (!cfg.apiKey ? t('noKeyBadge') : providerDisplayName(cfg.provider)));
+                : (free ? t('freeBadge') : (cfg.apiKey ? channelName : channelName + ' · ' + t('noKeyBadge')));
             item.innerHTML = '<span class="provider-logo" style="background:' + (p.logo || '#888') + ';">' +
                 (AI_LOGO_SVG[cfg.provider] || escapeHtml(p.logoText || '?')) + '</span>' +
-                '<span>' + escapeHtml(cfg.name || (modelNameDisplayName(m) || 'Model')) + '</span>' +
+                '<span>' + escapeHtml(configModelDisplayName(cfg) || cfg.name || 'Model') + '</span>' +
                 '<span style="font-size:11px;color:var(--text-tertiary);">' +
                 escapeHtml(trailing) + '</span>' +
                 '<svg class="check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
@@ -9795,7 +10031,7 @@
             } else {
                 runningTokens += estimateMessagesTokens([{ role: 'assistant', content: msg.content }]);
                 // appendAIMessage 会按有无 toolCalls 自行决定进分组还是收尾
-                appendAIMessage(msg.content, msg.time, msg.reasoning || '', msg.toolCalls || [], false, runningTokens);
+                appendAIMessage(msg.content, msg.time, msg.reasoning || '', msg.toolCalls || [], false, runningTokens, msg.turnUsage);
             }
         });
         // 历史以工具结果结尾（无最终总结）时也要收起
@@ -10338,7 +10574,7 @@
         return card;
     }
 
-    function appendAIMessage(content, time, reasoning, toolCalls, animate, contextTokens) {
+    function appendAIMessage(content, time, reasoning, toolCalls, animate, contextTokens, turnStats) {
         welcomeMessage.style.display = 'none';
         if (typeof content !== 'string') content = content ? String(content) : '';
         var hasToolCalls = !!(toolCalls && toolCalls.length > 0);
@@ -10412,7 +10648,7 @@
         // 无工具调用 = 本回合的最终总结：收起过程，脚注（Token 用量 + 撤销）挂在底部
         finalizeProcessGroup();
         chatArea.appendChild(wrapper);
-        renderSummaryFooter(wrapper, contextTokens);
+        renderSummaryFooter(wrapper, contextTokens, turnStats);
         scrollToBottom();
     }
 
@@ -11819,17 +12055,148 @@
     }
 
     /**
-     * 总结气泡下方的脚注：Token 用量 + 撤销按钮。
+     * 总结气泡下方的脚注：上下文用量 + 本轮 Token 用量（悬停看明细）+ 用时 + 撤销按钮。
      * 两处收尾路径（流式收尾、历史重放）都走这里，保证样式一致、也不会重复插入。
      */
-    function renderSummaryFooter(wrapper, tokenCount) {
+    function renderSummaryFooter(wrapper, tokenCount, turnStats) {
         if (!wrapper || wrapper.querySelector('.msg-footer')) return;
         var footer = document.createElement('div');
         footer.className = 'msg-footer';
         var usageHtml = formatContextUsageHtml(tokenCount);
         if (usageHtml) footer.innerHTML = usageHtml;
+
+        if (turnStats && ((turnStats.prompt || 0) + (turnStats.completion || 0)) > 0) {
+            var chip = document.createElement('span');
+            chip.className = 'msg-turn-usage';
+            chip._turnUsage = turnStats;
+            chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+                'stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline></svg><span></span>';
+            chip.querySelector('span').textContent = tf('turnTokensLabel', {
+                n: ((turnStats.prompt || 0) + (turnStats.completion || 0)).toLocaleString()
+            });
+            chip.addEventListener('mouseenter', function() { showTurnUsageTip(chip); });
+            chip.addEventListener('mouseleave', hideTurnUsageTip);
+            chip.addEventListener('click', function() { showTurnUsageTip(chip); });
+            footer.appendChild(chip);
+
+            if (turnStats.elapsedMs > 0) {
+                var timeEl = document.createElement('span');
+                timeEl.className = 'msg-turn-time';
+                timeEl.textContent = tf('turnElapsed', { t: formatTurnDuration(turnStats.elapsedMs) });
+                footer.appendChild(timeEl);
+            }
+        }
+
         wrapper.appendChild(footer);
         renderUndoButtons();
+    }
+
+    // ── 本轮用量明细浮层 ──
+    // 聊天区是滚动容器，浮层放进脚注会被裁切，所以单例挂在 body 上按 fixed 定位。
+    var turnUsageTipEl = null;
+    // 与浮层里进度条一致的配色：命中 / 写入 / 未命中
+    var TURN_USAGE_COLORS = { input: '#3b82f6', hit: '#10b981', miss: '#f87171', write: '#f5c518', output: '#a78bfa' };
+
+    function ensureTurnUsageTip() {
+        if (turnUsageTipEl && turnUsageTipEl.parentNode) return turnUsageTipEl;
+        var el = document.createElement('div');
+        el.className = 'turn-usage-tip';
+        document.body.appendChild(el);
+        turnUsageTipEl = el;
+        // 聊天区滚动、窗口缩放后触发点的位置会变，浮层直接收起避免错位
+        window.addEventListener('scroll', hideTurnUsageTip, true);
+        window.addEventListener('resize', hideTurnUsageTip);
+        // 触屏没有 hover：点别处收起（捕获阶段先跑，点用量本身时随后又被展开）
+        document.addEventListener('click', function(e) {
+            var node = e.target;
+            if (node && node.closest && node.closest('.msg-turn-usage')) return;
+            hideTurnUsageTip();
+        }, true);
+        return el;
+    }
+
+    function hideTurnUsageTip() {
+        if (turnUsageTipEl) turnUsageTipEl.classList.remove('show');
+    }
+
+    /** 用时按 s/m 简写，超过一分钟才带分 */
+    function formatTurnDuration(ms) {
+        var secs = Math.max(0, ms || 0) / 1000;
+        if (secs < 60) return (secs < 10 ? Math.round(secs * 10) / 10 : Math.round(secs)) + 's';
+        var m = Math.floor(secs / 60);
+        var r = Math.round(secs % 60);
+        return m + 'm' + (r > 0 ? r + 's' : '');
+    }
+
+    /**
+     * 明细小框：输入按命中/未命中/写入拆开，输出按思考/回复拆开，
+     * 拆出的子项相加必须等于父项，读起来才对得上账。
+     */
+    function turnUsageTipHtml(s) {
+        var prompt = Math.max(0, s.prompt || 0);
+        var completion = Math.max(0, s.completion || 0);
+        var total = prompt + completion;
+        var cached = Math.min(Math.max(0, s.cached || 0), prompt);
+        var write = Math.min(Math.max(0, s.cacheWrite || 0), prompt - cached);
+        var miss = Math.max(0, prompt - cached - write);
+        var reasoning = Math.min(Math.max(0, s.reasoning || 0), completion);
+        var reply = Math.max(0, completion - reasoning);
+        var hitRate = prompt > 0 ? Math.round(cached / prompt * 1000) / 10 : 0;
+        var C = TURN_USAGE_COLORS;
+
+        function row(color, label, value, sub) {
+            return '<div class="tu-row' + (sub ? ' is-sub' : '') + '">' +
+                (color ? '<i class="tu-dot" style="background:' + color + '"></i>' : '') +
+                '<span class="tu-label">' + escapeHtml(label) + '</span>' +
+                '<span class="tu-val">' + value.toLocaleString() + '</span></div>';
+        }
+
+        var html = '<div class="tu-head"><span>' + escapeHtml(t('turnTokensTitle')) + '</span>' +
+            '<span class="tu-total"><i>' + escapeHtml(t('turnTokensTotal')) + '</i><b>' + total.toLocaleString() + '</b></span></div>';
+        html += row(C.input, t('turnTokensInput'), prompt, false);
+        html += row(C.hit, t('turnCacheHit'), cached, true);
+        html += row(C.miss, t('turnCacheMiss'), miss, true);
+        html += row(C.write, t('turnCacheWrite'), write, true);
+        html += row(C.output, t('turnTokensOutput'), completion, false);
+        html += row(null, t('turnReasoning'), reasoning, true);
+        html += row(null, t('turnReply'), reply, true);
+
+        if (prompt > 0) {
+            html += '<div class="tu-sep"></div>';
+            html += '<div class="tu-rate">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polyline></svg>' +
+                '<span>' + escapeHtml(t('turnCacheRate')) + '</span>' +
+                '<span class="tu-val">' + hitRate.toFixed(1) + '%</span></div>';
+            html += '<div class="tu-bar">';
+            if (cached) html += '<i style="width:' + (cached / prompt * 100) + '%;background:' + C.hit + '"></i>';
+            if (write) html += '<i style="width:' + (write / prompt * 100) + '%;background:' + C.write + '"></i>';
+            if (miss) html += '<i style="width:' + (miss / prompt * 100) + '%;background:' + C.miss + '"></i>';
+            html += '</div>';
+            html += '<div class="tu-legend">' +
+                '<span><i style="background:' + C.hit + '"></i>' + escapeHtml(t('turnCacheHit')) + '</span>' +
+                '<span><i style="background:' + C.write + '"></i>' + escapeHtml(t('turnCacheWrite')) + '</span>' +
+                '<span><i style="background:' + C.miss + '"></i>' + escapeHtml(t('turnCacheMiss')) + '</span></div>';
+        }
+        return html;
+    }
+
+    function showTurnUsageTip(chip) {
+        var stats = chip && chip._turnUsage;
+        if (!stats) return;
+        var el = ensureTurnUsageTip();
+        el.innerHTML = turnUsageTipHtml(stats);
+        el.classList.add('show');
+        // 先渲染再量尺寸：上方放不下时翻到触发点下方
+        var rect = chip.getBoundingClientRect();
+        var w = el.offsetWidth;
+        var h = el.offsetHeight;
+        var left = rect.left - 10;
+        if (left + w > window.innerWidth - 10) left = window.innerWidth - 10 - w;
+        if (left < 10) left = 10;
+        var top = rect.top - h - 8;
+        if (top < 10) top = rect.bottom + 8;
+        el.style.left = Math.round(left) + 'px';
+        el.style.top = Math.round(top) + 'px';
     }
 
     /** 按当前撤销状态，同步所有总结脚注里的撤销按钮。 */
@@ -12490,6 +12857,7 @@
             finished = true;
             stopStream();
             recordUsage(usageInfo, inputTokens);
+            accumulateTurnUsage(usageInfo, inputTokens, fullReasoning, fullContent);
             if (loopSegment) {
                 // 幻觉检测命中：把已产出的内容交回上层，由上层暂停对话并提示用户
                 callback({ type: 'loop', content: fullContent, reasoning: fullReasoning, segment: loopSegment });
@@ -12502,7 +12870,14 @@
                     .forEach(function(k) { toolCalls.push(toolCallsAccum[k]); });
                 callback({ type: 'tool_calls', toolCalls: toolCalls, content: fullContent, reasoning: fullReasoning });
             } else {
-                callback({ type: 'text', content: fullContent, reasoning: fullReasoning });
+                // 用量与计时在流收尾时定格，跟正文一起交回上层：之后的续跑/新回合
+                // 都不该再改动这条总结的数字
+                callback({
+                    type: 'text',
+                    content: fullContent,
+                    reasoning: fullReasoning,
+                    turnUsage: snapshotTurnUsage()
+                });
             }
         }
 
@@ -12562,9 +12937,16 @@
                 return;
             }
             if (j.type === 'message_start') {
-                var inTokens = j.message && j.message.usage && j.message.usage.input_tokens;
-                if (inTokens) {
-                    usageInfo = { prompt_tokens: inTokens, completion_tokens: (usageInfo && usageInfo.completion_tokens) || 0 };
+                var startUsage = (j.message && j.message.usage) || {};
+                if (startUsage.input_tokens) {
+                    // Anthropic 的 input_tokens 不含缓存读写，两者要一并留住，
+                    // 本轮明细才能算准命中量与命中率
+                    usageInfo = {
+                        prompt_tokens: startUsage.input_tokens,
+                        completion_tokens: (usageInfo && usageInfo.completion_tokens) || 0,
+                        cache_read_input_tokens: startUsage.cache_read_input_tokens || 0,
+                        cache_creation_input_tokens: startUsage.cache_creation_input_tokens || 0
+                    };
                 }
                 return;
             }
@@ -12878,6 +13260,8 @@
         }
 
         if (isInitial) {
+            // 新一轮提问：本轮用量与计时都从这里重新起算
+            resetTurnUsage();
             var conv = isSynthetic
                 ? conversations.find(function(c) { return c.id === (synthetic.convId || activeConversationId); })
                 : getActiveConv();
@@ -13356,6 +13740,8 @@
                     }
                     // 本回合的最终总结：先收起过程分组，再把 Token 用量挂到总结底部
                     streamingWrapper.id = '';
+                    // 用量与计时由 doApiCall 在流收尾时定格，这里只负责展示与存档
+                    var turnStats = result.turnUsage || null;
                     var summaryVisible = isGeneratingConvVisible();
                     if (summaryVisible) {
                         var finalTypingEl = document.getElementById('typingIndicator');
@@ -13370,10 +13756,17 @@
                         // 重新挂回末尾，否则最终回答留在 detach 节点上看不见
                         if (streamingWrapper.parentNode !== chatArea) chatArea.appendChild(streamingWrapper);
                         streamingBubble.innerHTML = formatMarkdown(result.content) + '<div class="message-time">' + formatTime(new Date()) + '</div>';
-                        renderSummaryFooter(streamingWrapper, currentRequestTokens);
+                        renderSummaryFooter(streamingWrapper, currentRequestTokens, turnStats);
                     }
 
-                    var aiMsg = { role: 'assistant', content: result.content, time: formatTime(new Date()), reasoning: result.reasoning || undefined };
+                    var aiMsg = {
+                        role: 'assistant',
+                        content: result.content,
+                        time: formatTime(new Date()),
+                        reasoning: result.reasoning || undefined,
+                        // 随消息存档：切走再切回、重启后历史重放仍能还原本轮用量与用时
+                        turnUsage: turnStats || undefined
+                    };
                     pushGeneratingMessage(aiMsg);
                     isLoading = false;
                     abortController = null;
@@ -13824,7 +14217,6 @@
     var phoneClientDot = document.getElementById('phoneClientDot');
     var phoneClientText = document.getElementById('phoneClientText');
     var phoneLinkOpen = false;
-    var phoneLinkLoaded = false;
     var phoneLastStreamPush = 0;
     var phoneStreamTimer = 0;
     var phoneStreamState = null;
@@ -14272,7 +14664,8 @@
         phonePopover.classList.toggle('open', phoneLinkOpen);
         if (phoneLinkBtn) phoneLinkBtn.classList.toggle('active', phoneLinkOpen);
         if (!phoneLinkOpen) return;
-        if (phoneLinkLoaded) return;
+        // 每次打开都取新连接信息：二维码里的配对码短时效且随打开而换新，
+        // 旧的作废，泄露面始终只有"此刻屏幕上这一个"
         phoneQrBox.innerHTML = '<div class="phone-qr-empty">…</div>';
         if (!window.AIAssistantPreload || !window.AIAssistantPreload.getPhoneLink) {
             phoneQrBox.innerHTML = '<div class="phone-qr-empty">' + escapeHtml(t('phoneServerOff')) + '</div>';
@@ -14283,7 +14676,6 @@
                 phoneQrBox.innerHTML = '<div class="phone-qr-empty">' + escapeHtml(t('phoneServerOff')) + '</div>';
                 return;
             }
-            phoneLinkLoaded = true;
             var url = (info.urls && info.urls[0]) || '';
             renderPhoneQr(url);
             renderPhoneUrls(info.urls || []);

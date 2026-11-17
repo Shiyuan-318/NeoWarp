@@ -3,6 +3,24 @@ const crypto = require('crypto');
 
 const MAGIC_STRING = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
+// Authentication is a PBKDF2 challenge-response exchange. The password itself
+// never crosses the wire and every proof is bound to a fresh, single-use server
+// nonce, so a captured handshake cannot be replayed. This is deliberately not a
+// PAKE: someone who records a handshake can still mount an offline dictionary
+// attack at PBKDF2 cost, and ws:// provides no transport encryption. A long,
+// random room password and a trusted LAN remain the real security boundary.
+const AUTH_PROTOCOL_VERSION = 2;
+const AUTH_KDF_ITERATIONS = 210000;
+const AUTH_NONCE_BYTES = 32;
+const AUTH_SALT_BYTES = 16;
+const AUTH_CHALLENGE_TTL_MS = 15000;
+const AUTH_MAX_INIT_PER_CONNECTION = 10;
+const AUTH_MAX_TRIES_PER_CONNECTION = 3;
+const AUTH_MAX_FAILURES_PER_IP = 5;
+const AUTH_IP_BLOCK_MS = 60000;
+const AUTH_FAILURE_DELAY_MS = 400;
+const AUTH_HEX_PROOF = /^[0-9a-f]{64}$/i;
+
 // WebSocket opcodes
 const OPCODE_CONTINUATION = 0x0;
 const OPCODE_TEXT = 0x1;
@@ -13,7 +31,7 @@ const OPCODE_PONG = 0xA;
 
 class CollaborationServer {
   constructor ({ password, port, permissions, hostName, hostAvatar, heartbeatIntervalMs, heartbeatTimeoutMs, authTimeoutMs }) {
-    this.password = password;
+    this.password = password == null ? '' : String(password);
     this.port = port;
     this.permissions = permissions;
     this.hostName = hostName || '主机';
@@ -33,6 +51,7 @@ class CollaborationServer {
     this.heartbeatTimer = null;
     this.clients = new Map(); // socket -> client info
     this.clientCounter = 0;
+    this.authFailuresByIp = new Map(); // ip -> { count, blockedUntil, lastFailure }
     this.onClientJoin = null;
     this.onClientLeave = null;
     this.onChatMessage = null;
@@ -100,6 +119,11 @@ class CollaborationServer {
 
   start () {
     return new Promise((resolve) => {
+      if (!this.password) {
+        resolve({ success: false, error: '请先设置房间密码' });
+        return;
+      }
+
       this.server = http.createServer((req, res) => {
         // Discovery endpoint: GET /discover or ?discover=1
         let pathParts = req.url || '';
@@ -182,13 +206,16 @@ class CollaborationServer {
     const client = {
       id: clientId,
       socket: socket,
+      ip: socket.remoteAddress || '',
       username: null,
       avatar: null,
       authenticated: false,
       buffer: Buffer.alloc(0),
       closed: false,
       lastSeen: Date.now(),
-      authTimeout: null
+      authTimeout: null,
+      authChallenge: null,
+      authFailures: 0
     };
 
     client.authTimeout = setTimeout(() => {
@@ -328,62 +355,15 @@ class CollaborationServer {
       return;
     }
 
+    if (message.type === 'auth-init') {
+      this.handleAuthInit(client, message);
+      return;
+    }
+
     if (message.type === 'auth') {
-      // Hash both sides so the comparison is constant-time
-      const givenHash = crypto.createHash('sha256').update(String(message.password == null ? '' : message.password)).digest();
-      const expectedHash = crypto.createHash('sha256').update(String(this.password == null ? '' : this.password)).digest();
-      if (crypto.timingSafeEqual(givenHash, expectedHash)) {
-        client.authenticated = true;
-        if (client.authTimeout) {
-          clearTimeout(client.authTimeout);
-          client.authTimeout = null;
-        }
-        const num = Math.floor(1000 + Math.random() * 9000);
-        const requestedName = String(message.nickname || '').trim();
-        client.username = this.getUniqueUsername(requestedName || `用户-${num}`);
-        client.avatar = String(message.avatar || '').trim() || '👤';
-
-        this.sendToClient(client, JSON.stringify({
-          type: 'auth-result',
-          success: true,
-          permissions: this.permissions,
-          username: client.username,
-          avatar: client.avatar,
-          onlineCount: this.getTotalOnlineCount(),
-          hostName: this.hostName,
-          hostAvatar: this.hostAvatar,
-          members: this.getRoster()
-        }));
-
-        // Tell the other clients about the new member
-        for (const otherClient of this.clients.values()) {
-          if (otherClient === client || !otherClient.authenticated) continue;
-          this.sendToClient(otherClient, JSON.stringify({
-            type: 'member-joined',
-            username: client.username,
-            avatar: client.avatar,
-            onlineCount: this.getTotalOnlineCount(),
-            members: this.getRoster()
-          }));
-        }
-
-        if (this.onClientJoin) {
-          this.onClientJoin(client.username, client.avatar);
-        }
-
-        // Request host to send current project state to the new client
-        if (this.onProjectRequest) {
-          this.onProjectRequest(client.username);
-        }
-      } else {
-        this.sendToClient(client, JSON.stringify({
-          type: 'auth-result',
-          success: false,
-          error: '密码错误',
-          permissions: this.permissions,
-          username: null
-        }));
-      }
+      // Deliberately not awaited: the KDF runs off the event loop and the
+      // socket may deliver more frames (or close) while it is computing.
+      this.handleAuthProof(client, message);
       return;
     }
 
@@ -448,6 +428,185 @@ class CollaborationServer {
     }
   }
 
+  // Step 1: the client announces itself and asks for a challenge. Nothing
+  // secret is sent here, so a passive listener learns only that a join began.
+  handleAuthInit (client, message) {
+    if (client.authenticated) return;
+
+    if (this.getAuthBlockRemaining(client.ip) > 0) {
+      this.sendAuthFailure(client, '尝试次数过多，请稍后再试', { destroy: true });
+      return;
+    }
+
+    client.authInitCount = (client.authInitCount || 0) + 1;
+    if (client.authInitCount > AUTH_MAX_INIT_PER_CONNECTION) {
+      this.sendAuthFailure(client, '认证请求过于频繁', { destroy: true });
+      return;
+    }
+
+    client.authNickname = String(message.nickname || '').trim();
+    client.authAvatar = String(message.avatar || '').trim() || '👤';
+    client.authChallenge = {
+      nonce: crypto.randomBytes(AUTH_NONCE_BYTES),
+      salt: crypto.randomBytes(AUTH_SALT_BYTES),
+      iterations: AUTH_KDF_ITERATIONS,
+      expiresAt: Date.now() + AUTH_CHALLENGE_TTL_MS
+    };
+
+    this.sendToClient(client, JSON.stringify({
+      type: 'auth-challenge',
+      version: AUTH_PROTOCOL_VERSION,
+      nonce: client.authChallenge.nonce.toString('hex'),
+      salt: client.authChallenge.salt.toString('hex'),
+      iterations: client.authChallenge.iterations
+    }));
+  }
+
+  // Step 2: verify HMAC(PBKDF2(password, salt), nonce). The challenge is
+  // consumed whether or not the proof is valid, so a captured proof can never
+  // be replayed against this connection.
+  async handleAuthProof (client, message) {
+    if (client.authenticated) return;
+
+    const challenge = client.authChallenge;
+    client.authChallenge = null;
+    if (!challenge) {
+      this.sendAuthFailure(client, '认证请求无效，请重试', { countFailure: true });
+      return;
+    }
+    if (Date.now() > challenge.expiresAt) {
+      this.sendAuthFailure(client, '认证超时，请重试', { countFailure: true });
+      return;
+    }
+
+    const proofHex = typeof message.proof === 'string' ? message.proof : '';
+    if (!AUTH_HEX_PROOF.test(proofHex)) {
+      this.sendAuthFailure(client, '密码错误', { countFailure: true });
+      return;
+    }
+
+    let key;
+    try {
+      key = await new Promise((resolve, reject) => {
+        crypto.pbkdf2(this.password, challenge.salt, challenge.iterations, 32, 'sha256', (err, derived) => {
+          if (err) reject(err); else resolve(derived);
+        });
+      });
+    } catch (e) {
+      this.sendAuthFailure(client, '认证失败');
+      return;
+    }
+
+    if (client.closed) return;
+
+    const expectedProof = crypto.createHmac('sha256', key).update(challenge.nonce).digest();
+    const givenProof = Buffer.from(proofHex, 'hex');
+    // Both operands are fixed-length HMACs bound to a single-use nonce. The
+    // constant-time compare is cheap insurance, not the security property:
+    // the password never crosses the wire and the proof cannot be replayed.
+    if (givenProof.length !== expectedProof.length || !crypto.timingSafeEqual(givenProof, expectedProof)) {
+      this.sendAuthFailure(client, '密码错误', { countFailure: true });
+      return;
+    }
+
+    this.authFailuresByIp.delete(client.ip);
+    client.authenticated = true;
+    if (client.authTimeout) {
+      clearTimeout(client.authTimeout);
+      client.authTimeout = null;
+    }
+    const num = Math.floor(1000 + Math.random() * 9000);
+    client.username = this.getUniqueUsername(client.authNickname || `用户-${num}`);
+    client.avatar = client.authAvatar || '👤';
+
+    // The client also verifies this proof, so a peer that merely relays the
+    // handshake cannot impersonate the host without knowing the password.
+    const serverProof = crypto.createHmac('sha256', key).update(challenge.nonce).update(':server').digest('hex');
+
+    this.sendToClient(client, JSON.stringify({
+      type: 'auth-result',
+      success: true,
+      serverProof,
+      permissions: this.permissions,
+      username: client.username,
+      avatar: client.avatar,
+      onlineCount: this.getTotalOnlineCount(),
+      hostName: this.hostName,
+      hostAvatar: this.hostAvatar,
+      members: this.getRoster()
+    }));
+
+    // Tell the other clients about the new member
+    for (const otherClient of this.clients.values()) {
+      if (otherClient === client || !otherClient.authenticated) continue;
+      this.sendToClient(otherClient, JSON.stringify({
+        type: 'member-joined',
+        username: client.username,
+        avatar: client.avatar,
+        onlineCount: this.getTotalOnlineCount(),
+        members: this.getRoster()
+      }));
+    }
+
+    if (this.onClientJoin) {
+      this.onClientJoin(client.username, client.avatar);
+    }
+
+    // Request host to send current project state to the new client
+    if (this.onProjectRequest) {
+      this.onProjectRequest(client.username);
+    }
+  }
+
+  // Failed attempts are delayed and eventually close the socket; repeated
+  // failures from one address are blocked for a while to slow online guessing.
+  sendAuthFailure (client, error, { destroy = false, countFailure = false } = {}) {
+    if (client.closed) return;
+
+    let failures = 0;
+    if (countFailure) {
+      client.authFailures = (client.authFailures || 0) + 1;
+      failures = client.authFailures;
+      const entry = this.authFailuresByIp.get(client.ip) || { count: 0, blockedUntil: 0, lastFailure: 0 };
+      entry.count += 1;
+      entry.lastFailure = Date.now();
+      if (entry.count >= AUTH_MAX_FAILURES_PER_IP) {
+        entry.count = 0;
+        entry.blockedUntil = Date.now() + AUTH_IP_BLOCK_MS;
+      }
+      this.authFailuresByIp.set(client.ip, entry);
+    }
+
+    const response = JSON.stringify({
+      type: 'auth-result',
+      success: false,
+      error,
+      permissions: this.permissions,
+      username: null
+    });
+
+    setTimeout(() => {
+      if (client.closed) return;
+      this.sendToClient(client, response);
+      if (destroy || failures >= AUTH_MAX_TRIES_PER_CONNECTION) {
+        // end() flushes the auth-result frame before the FIN; destroy() could
+        // drop it and leave the peer staring at a generic disconnect.
+        try { client.socket.end(); } catch (e) {}
+      }
+    }, AUTH_FAILURE_DELAY_MS);
+  }
+
+  getAuthBlockRemaining (ip) {
+    const entry = this.authFailuresByIp.get(ip);
+    if (!entry || !entry.blockedUntil) return 0;
+    const remaining = entry.blockedUntil - Date.now();
+    if (remaining <= 0) {
+      this.authFailuresByIp.delete(ip);
+      return 0;
+    }
+    return remaining;
+  }
+
   // Ensure no two members share a username, so targeted project pushes
   // (broadcastProject by username) always reach exactly one client.
   getUniqueUsername (base) {
@@ -507,6 +666,14 @@ class CollaborationServer {
     this.stopHeartbeat();
     this.heartbeatTimer = setInterval(() => {
       const now = Date.now();
+
+      // Forget stale per-IP auth failures so the map cannot grow forever.
+      for (const [ip, entry] of this.authFailuresByIp) {
+        const expired = (entry.blockedUntil || 0) <= now;
+        const idle = now - (entry.lastFailure || 0) > 10 * 60 * 1000;
+        if (expired && idle) this.authFailuresByIp.delete(ip);
+      }
+
       for (const client of Array.from(this.clients.values())) {
         if (client.closed) continue;
         if (now - client.lastSeen > this.heartbeatTimeoutMs) {
@@ -538,6 +705,7 @@ class CollaborationServer {
       clearTimeout(client.authTimeout);
       client.authTimeout = null;
     }
+    client.authChallenge = null;
 
     const wasAuthenticated = client.authenticated;
     const username = client.username;

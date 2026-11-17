@@ -2,6 +2,23 @@ This document is the authoritative source for NeoWarp's changelogs. Everything e
 
 Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **formatting** or [links](https://desktop.turbowarp.org/).
 
+# 2.4.0 (2026-11-16)
+
+ - AI assistant: undo now works per change unit, so one undo reverts exactly one edit, with an undo journal and regression tests
+ - AI assistant: refreshed interface and model configuration
+ - Mobile preview: each session uses a random token, so other devices on the same network can no longer fetch your project
+ - AI pages now only connect directly to built-in providers and local inference servers; everything else goes through the main-process proxy
+ - Added unsigned Windows, macOS, and Linux build workflows
+
+# 2.3.0 (2026-11-09)
+
+ - AI assistant: added Plan/Spec/Goal workflow settings that save documents to disk, and the source code beta is now an editable tab
+ - AI assistant: responses render as flat text and turn folding is easier to follow
+ - AI assistant: model list is grouped by endpoint and collapsible, and workflow modes only apply inside conversations
+ - AI assistant: wand icon now uses a white stroke to match the rest of the top bar
+ - Mobile preview: fixed the sync state getting stuck while generating, and the custom context limit now defaults to 1000000
+ - Fixed CI install failures caused by the scratch-gui patch
+
 # 2.2.0 (2026-10-19)
 
  - Windows: added a "Windows Window Style" option in desktop settings (UI section) to merge the editor's minimize/maximize/close buttons into the top toolbar in one row; enabling it also switches the toolbar to the narrow height, and the option only affects the editor window

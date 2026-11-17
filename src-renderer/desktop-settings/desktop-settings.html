@@ -3740,13 +3740,33 @@
         // Authorization 等请求头必须编码进 &h= 传给转发层（与 ai-assistant.html
         // 的 buildAiProxyUrl 同一套编码），否则主进程只会转发一个无鉴权的裸请求
         let aiProxyBroken = false;
-        const buildProxyUrl = (endpoint, headers) => {
+        const buildProxyUrl = (endpoint, headers, token) => {
           let url = 'tw-ai-proxy://request/?u=' + encodeURIComponent(endpoint);
+          // 能力令牌：主进程按窗口来源签发，没有令牌的转发请求一律 403
+          if (token) url += '&k=' + encodeURIComponent(token);
           if (headers && Object.keys(headers).length) {
             const json = JSON.stringify(headers);
             url += '&h=' + encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
           }
           return url;
+        };
+        // 转发协议的能力令牌：主进程按窗口来源签发，并把这里传入的端点授予为
+        // 可访问目标——设置页里正在编辑、尚未保存的自定义端点只有这一处会出现
+        const proxyTokenCache = new Map();
+        const getProxyToken = (endpoint, forceRefresh) => {
+          const key = String(endpoint || '');
+          if (forceRefresh) proxyTokenCache.delete(key);
+          if (!proxyTokenCache.has(key)) {
+            const bridge = window.DesktopSettingsPreload;
+            const promise = bridge && bridge.getAiProxyToken ?
+              bridge.getAiProxyToken(key ? [key] : []) :
+              Promise.reject(new Error('AI proxy bridge unavailable'));
+            proxyTokenCache.set(key, promise.catch((error) => {
+              proxyTokenCache.delete(key);
+              throw error;
+            }));
+          }
+          return proxyTokenCache.get(key);
         };
 
         // 获取服务商账号当前可用的模型。OpenAI 兼容接口使用 GET /models，
@@ -3786,7 +3806,8 @@
             const options = {method: 'GET', headers, signal: controller.signal};
             let response;
             try {
-              response = await fetch(buildProxyUrl(listEndpoint, headers), options);
+              const token = await getProxyToken(listEndpoint);
+              response = await fetch(buildProxyUrl(listEndpoint, headers, token), options);
             } catch (error) {
               if (error && error.name === 'AbortError') throw error;
               response = await fetch(listEndpoint, options);
@@ -3860,13 +3881,23 @@
             body: JSON.stringify(testBody),
             signal: controller.signal
           };
-          const doFetch = (url) => aiProxyBroken
-            ? fetch(url, options)
-            : fetch(buildProxyUrl(url, options.headers), options).catch((err) => {
+          const doFetch = async (url) => {
+            if (aiProxyBroken) return fetch(url, options);
+            try {
+              const token = await getProxyToken(url);
+              const resp = await fetch(buildProxyUrl(url, options.headers, token), options);
+              if (resp.status === 403) {
+                // 令牌可能已过期：作废缓存重取一次再试
+                const fresh = await getProxyToken(url, true);
+                return fetch(buildProxyUrl(url, options.headers, fresh), options);
+              }
+              return resp;
+            } catch (err) {
               if (err && err.name === 'AbortError') throw err;
               aiProxyBroken = true;
               return fetch(url, options);
-            });
+            }
+          };
           const zh = aiLang === 'zh';
           // 只认 JSON / event-stream 应答：某些中转（One API / New API 等）会把
           // 不带 /v1 的路径当成控制台首页，回 HTTP 200 + HTML；此前只看 resp.ok

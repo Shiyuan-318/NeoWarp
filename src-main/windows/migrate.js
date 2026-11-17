@@ -5,7 +5,7 @@ const {translate, getStrings, getLocale} = require('../l10n');
 const settings = require('../settings');
 const {APP_NAME} = require('../brand');
 
-const EMAIL = 'contact@neowarp.org';
+const EMAIL = 'shiyuan318@outlook.com';
 
 class MigrateWindow extends AbstractWindow {
   static LATEST_VERSION = 3;

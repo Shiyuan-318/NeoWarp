@@ -21,6 +21,9 @@ development.provisionprofile
 # Apple App Store Connect API key
 *.p8
 
+# Patch backups (patch-package only reads *.patch)
+patches/*.bak*
+
 # Local artifacts
 .dbg/
 backups/

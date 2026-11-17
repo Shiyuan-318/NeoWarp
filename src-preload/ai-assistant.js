@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('AIAssistantPreload', {
   // 统一的 AI 模型配置存储（与 SOLO、扩展编辑器、桌面设置共用）
   getModelConfigs: () => ipcRenderer.invoke('ai-get-model-configs'),
   saveModelConfigs: (payload) => ipcRenderer.invoke('ai-save-model-configs', payload),
+  // tw-ai-proxy 转发协议的能力令牌（主进程按窗口来源签发，带过期时间）
+  getAiProxyToken: (targets) => ipcRenderer.invoke('ai-get-proxy-token', {targets}),
   openDesktopSettings: () => ipcRenderer.invoke('open-desktop-settings'),
   // AI 工作流设置（Plan / Spec / Goal）：读取/保存/选目录/文档落盘
   getWorkflowSettings: () => ipcRenderer.invoke('ai-get-workflow-settings'),

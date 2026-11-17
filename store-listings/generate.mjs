@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const NUMBER_OF_ADDONS = 50;
-const CHANGELOG_LINK = 'https://desktop.turbowarp.org/?changelog';
+const CHANGELOG_LINK = 'https://e.np.sy1.top/?changelog';
 const SCREENSHOT_PROJECT_LINK = 'https://scratch.mit.edu/projects/425020125/';
 const translations = require('./imported.json');
 

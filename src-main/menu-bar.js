@@ -142,7 +142,7 @@ const rebuildMenuBar = () => {
           {
             label: translate('menu.learn-more'),
             click: () => {
-              openExternal('https://desktop.turbowarp.org/')
+              openExternal('https://e.np.sy1.top/')
             }
           }
         ]
