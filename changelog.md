@@ -2,6 +2,26 @@ This document is the authoritative source for NeoWarp's changelogs. Everything e
 
 Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **formatting** or [links](https://desktop.turbowarp.org/).
 
+# Unreleased (2026-11-19)
+
+ - Synced upstream TurboWarp Desktop from v1.15.3 to v1.17.1
+ - Security: switching or closing a project now drops the clipboard-read and notification permissions the previous project was granted
+ - Security: permission requests that are not tied to a window are now handled by a dedicated policy that only lets project-running origins request filesystem access
+ - Security: the save dialog now rejects file names that would escape the current folder, and the language switch parameter is type-checked
+ - Fixed: an extension could previously crash the whole app through an iframe
+ - Added a crash dump logging option in desktop settings (advanced section) with a button that opens the folder where dumps are stored; it is off by default and needs a restart
+ - Performance: projects run noticeably faster on average, and projects with many custom blocks no longer compile so slowly
+ - Fixed memory leaks where costumes, sounds, and sprites deleted through extensions were never released
+ - Fixed key press lag in projects that use a lot of vector costumes
+ - Fixed opening projects made with the latest version of Scratch
+ - The debugger addon now has a profiling tab that shows which blocks a project spends the most time executing
+ - Added extensions: Video Sprites, DECTalk text to speech, Tune Shark, Webhook, and Messaging Plus
+ - Fixed the animated text extension's outline color, the HTML encoding extension swapping quotes, the canvas effects extension sizing at non-100% display scale, and variable monitor errors with custom extensions
+ - The Box 2D Physics extension can now use polygon shapes, and the HTTP extension can show a response as a data: URL
+ - Fixed migrating user data from versions before v1.9.0
+ - Updated the built-in packager to 3.14.0
+ - All NeoWarp specific features and visual customizations are unchanged
+
 # 2.4.0 (2026-11-16)
 
  - AI assistant: undo now works per change unit, so one undo reverts exactly one edit, with an undo journal and regression tests

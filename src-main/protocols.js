@@ -11,13 +11,14 @@ const aiProxy = require('./ai-proxy');
  * @typedef Metadata
  * @property {string} root
  * @property {boolean} [standard] Defaults to false
+ * @property {boolean} [cors] Defaults to false
  * @property {boolean} [supportFetch] Defaults to false
  * @property {boolean} [secure] Defaults to false
  * @property {boolean} [brotli] Defaults to false
  * @property {boolean} [embeddable] Defaults to false
  * @property {boolean} [stream] Defaults to false
  * @property {string} [directoryIndex] Defaults to none
- * @property {string} [defaultExtension] Defaults to n one
+ * @property {string} [defaultExtension] Defaults to none
  * @property {string} [csp] Defaults to none
  */
 
@@ -100,12 +101,15 @@ const FILE_SCHEMES = {
   'tw-library': {
     root: path.resolve(__dirname, '../dist-library-files'),
     supportFetch: true,
+    cors: true,
     brotli: true,
     csp: "default-src 'none';"
   },
   'tw-extensions': {
     root: path.resolve(__dirname, '../dist-extensions'),
+    standard: true,
     supportFetch: true,
+    cors: true,
     brotli: true,
     embeddable: true,
     stream: true,
@@ -247,6 +251,7 @@ protocol.registerSchemesAsPrivileged([
     privileges: {
       standard: !!metadata.standard,
       supportFetchAPI: !!metadata.supportFetch,
+      corsEnabled: !!metadata.cors,
       secure: !!metadata.secure,
       stream: !!metadata.stream
     }
@@ -349,7 +354,7 @@ const getBaseProtocolHeaders = metadata => {
     result['content-security-policy'] = metadata.csp;
   }
 
-  // Don't allow things like extensiosn to embed custom protocols
+  // Don't allow things like extensions to embed custom protocols
   if (!metadata.embeddable) {
     result['x-frame-options'] = 'DENY';
   }

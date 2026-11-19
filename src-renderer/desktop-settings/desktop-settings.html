@@ -1903,9 +1903,27 @@
                 <span class="static-value version-value"></span>
               </div>
             </div>
+            <div class="setting-row" id="crashDumpsRow">
+              <div class="row-icon icon-gray">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              </div>
+              <div class="setting-info">
+                <div class="setting-label crash-dumps-label"></div>
+              </div>
+              <div class="setting-control">
+                <div class="crash-dumps-select" data-custom-select></div>
+              </div>
+            </div>
             <button class="row-button open-user-data">
               <div class="row-icon icon-gray">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+              <span class="row-text"></span>
+              <svg class="chevron" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 2 10 10 2 18"></polyline></svg>
+            </button>
+            <button class="row-button open-crash-dumps">
+              <div class="row-icon icon-gray">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><path d="M9 9h6v6H9z"></path></svg>
               </div>
               <span class="row-text"></span>
               <svg class="chevron" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 2 10 10 2 18"></polyline></svg>
@@ -2807,6 +2825,32 @@
         DesktopSettingsPreload.openUserData();
       });
       openUserData.querySelector('span').textContent = strings['desktop-settings.open-user-data'];
+
+      // ===== 崩溃转储（TurboWarp 1.17.1 新增） =====
+      // 沿用既有自绘下拉（CustomSelect），不引入原生 select 外观
+      const crashDumpsSelect = document.querySelector('.crash-dumps-select');
+      document.querySelector('.crash-dumps-label').textContent = strings['desktop-settings.crash-dumps'];
+      const crashDumpsWidget = new CustomSelect(crashDumpsSelect);
+      crashDumpsWidget.setOptions([
+        {
+          value: 'none',
+          label: strings['desktop-settings.crash-dumps-none']
+        },
+        {
+          value: 'local',
+          label: strings['desktop-settings.crash-dumps-local']
+        }
+      ]);
+      crashDumpsSelect.value = settings.crashDumps || 'none';
+      crashDumpsSelect.onchange = () => {
+        DesktopSettingsPreload.setCrashDumps(crashDumpsSelect.value);
+      };
+
+      const openCrashDumps = document.querySelector('.open-crash-dumps');
+      openCrashDumps.addEventListener('click', () => {
+        DesktopSettingsPreload.openCrashDumps();
+      });
+      openCrashDumps.querySelector('span').textContent = strings['desktop-settings.open-crash-dumps'];
 
       // ===== 文件关联 =====
       // 勾选状态始终反映注册表中的实际关联状态，而不是上次的操作结果：

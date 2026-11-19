@@ -22,6 +22,7 @@ const privilegedFetch = require('../fetch');
 const RichPresence = require('../rich-presence.js');
 const FileAccessWindow = require('./file-access-window.js');
 const ExtensionDocumentationWindow = require('./extension-documentation.js');
+const SecurityPromptWindow = require('./security-prompt');
 const DetachedStageWindow = require('./detached-stage.js');
 const AIAssistantWindow = require('./ai-assistant');
 const TodoListWindow = require('./todo-list');
@@ -139,7 +140,7 @@ class OpenedFile {
     }
 
     if (this.type === TYPE_SAMPLE) {
-      const sampleRoot = path.resolve(__dirname, '../../dist-extensions/samples/');
+      const sampleRoot = path.join(path.resolve(__dirname, '../../dist-extensions/samples'), '/');
       const resolvedPath = path.join(sampleRoot, this.path);
       if (resolvedPath.startsWith(sampleRoot)) {
         const compressedPath = `${resolvedPath}.br`;
@@ -338,6 +339,27 @@ class EditorWindow extends ProjectRunningWindow {
     ipcMain.on('editor-ai-listeners-ready', markAIListenersReady);
     this.window.on('closed', () => {
       ipcMain.removeListener('editor-ai-listeners-ready', markAIListenersReady);
+    });
+
+    // 工程加载完成信号：监听器挂好并不代表工程读完了——vm.loadProject 是
+    // 异步的，SOLO 用户选完工程立刻发消息时，request-project-json 会序列化
+    // 到一个空的/残缺的 VM（"SOLO 读不到任何工程"），工具与保存也会作用在
+    // 空工程上。渲染层在初始工程加载流程结束（成功或失败）后发来本信号，
+    // 读工程 / 工具派发 / 导出保存都等它。
+    this.projectLoadComplete = false;
+    this.projectLoadedPromise = new Promise(resolve => {
+      this.resolveProjectLoaded = resolve;
+    });
+    const markProjectLoadComplete = (event) => {
+      if (event.sender === this.window.webContents) {
+        this.projectLoadComplete = true;
+        this.resolveProjectLoaded();
+        ipcMain.removeListener('editor-project-load-complete', markProjectLoadComplete);
+      }
+    };
+    ipcMain.on('editor-project-load-complete', markProjectLoadComplete);
+    this.window.on('closed', () => {
+      ipcMain.removeListener('editor-project-load-complete', markProjectLoadComplete);
     });
 
     // 通知图片编辑器等订阅者：项目列表发生了变化
@@ -545,7 +567,7 @@ class EditorWindow extends ProjectRunningWindow {
     });
 
     this.ipc.on('set-locale', async (event, locale) => {
-      if (settings.locale !== locale) {
+      if (typeof locale === 'string' && settings.locale !== locale) {
         settings.locale = locale;
         updateLocale(locale);
 
@@ -603,6 +625,10 @@ class EditorWindow extends ProjectRunningWindow {
       this.window.setRepresentedFilename('');
     });
 
+    this.ipc.handle('drop-permissions', () => {
+      SecurityPromptWindow.dropPermissions(this.window);
+    });
+
     this.ipc.handle('show-open-file-picker', async () => {
       const result = await dialog.showOpenDialog(this.window, {
         properties: ['openFile'],
@@ -632,8 +658,12 @@ class EditorWindow extends ProjectRunningWindow {
     });
 
     this.ipc.handle('show-save-file-picker', async (event, suggestedName) => {
+      const lastDirectory = path.join(settings.lastDirectory, '/');
+      const joinedPath = path.join(lastDirectory, suggestedName);
+      const safeJoinedPath = joinedPath.startsWith(lastDirectory) ? joinedPath : lastDirectory;
+
       const result = await dialog.showSaveDialog(this.window, {
-        defaultPath: path.join(settings.lastDirectory, suggestedName),
+        defaultPath: safeJoinedPath,
         filters: [
           {
             name: 'NeoWarp Project',

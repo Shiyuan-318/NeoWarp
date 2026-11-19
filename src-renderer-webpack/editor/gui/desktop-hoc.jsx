@@ -58,6 +58,16 @@ let soloStreamActive = false;
 let soloStreamTimer = null;
 
 /**
+ * 初始工程加载完成信号（成功/失败/取消都算结束）：主进程在收到信号前
+ * 不派发读工程请求、AI 工具与导出保存，避免读到/改到加载中的空 VM。
+ */
+const notifyProjectLoadComplete = () => {
+  if (typeof EditorPreload.sendProjectLoadComplete === 'function') {
+    EditorPreload.sendProjectLoadComplete();
+  }
+};
+
+/**
  * @param {string} filename
  * @returns {string}
  */
@@ -3007,6 +3017,7 @@ const DesktopHOC = function (WrappedComponent) {
         showSourceCodeButton: true
       };
       this.handleUpdateProjectTitle = this.handleUpdateProjectTitle.bind(this);
+      this.handleRuntimeDisposed = this.handleRuntimeDisposed.bind(this);
       this.handleClickEncryptedSave = this.handleClickEncryptedSave.bind(this);
       this.handleSaveAsViewsb3 = this.handleSaveAsViewsb3.bind(this);
 
@@ -3060,6 +3071,12 @@ const DesktopHOC = function (WrappedComponent) {
           name: this.state.title,
           data: buffer
         })));
+
+      // TurboWarp 1.17.1: 运行时被销毁（切换/关闭工程）时丢弃该工程已获得的
+      // 剪贴板读取与通知授权，避免上一个工程的授权泄漏给下一个工程。
+      if (this.props.vm.runtime && typeof this.props.vm.runtime.on === 'function') {
+        this.props.vm.runtime.on('RUNTIME_DISPOSED', this.handleRuntimeDisposed);
+      }
 
       EditorPreload.onStageDetached(() => {
         isStageDetached = true;
@@ -6040,6 +6057,9 @@ const DesktopHOC = function (WrappedComponent) {
         if (id === null) {
           this.props.onHasInitialProject(false, this.props.loadingState);
           this.props.onLoadingCompleted();
+          // 没有初始文件：默认新工程由 GUI 异步加载（见 signalProjectLoadWhenReady），
+          // 这里不能立刻发工程就绪信号
+          this.signalProjectLoadWhenReady();
           return;
         }
 
@@ -6059,6 +6079,8 @@ const DesktopHOC = function (WrappedComponent) {
               this.props.onLoadedProject(this.props.loadingState, false);
               this.props.onHasInitialProject(false, this.props.loadingState);
               this.props.onRequestNewProject();
+              // 取消后走默认新工程：与上面 id === null 分支一样等 GUI 加载完成
+              this.signalProjectLoadWhenReady();
               return;
             }
             try {
@@ -6072,6 +6094,9 @@ const DesktopHOC = function (WrappedComponent) {
         }
 
         await this.props.vm.loadProject(projectData);
+        // 初始工程真正载入 VM 后才通知主进程工程就绪：读工程 / 工具派发 /
+        // 导出保存都等这个信号，否则 SOLO 会读到加载中的空工程
+        notifyProjectLoadComplete();
         this.props.onLoadingCompleted();
         this.props.onLoadedProject(this.props.loadingState, true);
 
@@ -6102,14 +6127,33 @@ const DesktopHOC = function (WrappedComponent) {
         this.props.onLoadedProject(this.props.loadingState, false);
         this.props.onHasInitialProject(false, this.props.loadingState);
         this.props.onRequestNewProject();
+        // 加载失败也要放行：VM 此后承载的是默认/空工程，主进程等待方
+        // 不能被卡住 60 秒（后续读取与旧行为一致，读到当前 VM 状态）
+        notifyProjectLoadComplete();
       });
 
       // AI 相关监听（onAIToolCall / onRequestProjectJSON / onRequestSpriteLibrary
       // / onRequestTheme 等）已在上面全部注册：通知主进程可以安全派发工具调用。
-      // Web 端 shim 没有这个方法，按旧行为处理即可。
+      // 注意这只代表"监听器就绪"，工程是否加载完要看 project-load-complete
+      // 信号。Web 端 shim 没有这个方法，按旧行为处理即可。
       if (typeof EditorPreload.sendAIListenersReady === 'function') {
         EditorPreload.sendAIListenersReady();
       }
+    }
+
+    // 默认新工程由 GUI（vm-manager-hoc）在 setProjectId 之后异步加载，
+    // 这里拿不到直接回调：轮询等 VM 装载出目标后再发工程就绪信号。
+    // 30 秒上限兜底，避免 GUI 内部异常时读工程/保存永远干等。
+    signalProjectLoadWhenReady () {
+      const startedAt = Date.now();
+      const timer = setInterval(() => {
+        const vm = this.props.vm;
+        const ready = !!(vm && vm.runtime && Array.isArray(vm.runtime.targets) && vm.runtime.targets.length > 0);
+        if (ready || Date.now() - startedAt > 30000) {
+          clearInterval(timer);
+          notifyProjectLoadComplete();
+        }
+      }, 200);
     }
     componentDidUpdate (prevProps, prevState) {
       if (this.props.projectChanged !== prevProps.projectChanged) {
@@ -6165,6 +6209,9 @@ const DesktopHOC = function (WrappedComponent) {
       stopFrameStreaming();
       stopSoloStream();
       isStageDetached = false;
+      if (this.props.vm.runtime && typeof this.props.vm.runtime.off === 'function') {
+        this.props.vm.runtime.off('RUNTIME_DISPOSED', this.handleRuntimeDisposed);
+      }
       if (this._flyoutFrostInterval) {
         clearInterval(this._flyoutFrostInterval);
         this._flyoutFrostInterval = null;
@@ -6838,6 +6885,11 @@ const DesktopHOC = function (WrappedComponent) {
         title: newTitle
       });
     }
+    handleRuntimeDisposed () {
+      if (typeof EditorPreload !== 'undefined' && EditorPreload.dropPermissions) {
+        EditorPreload.dropPermissions();
+      }
+    }
     async handleClickEncryptedSave () {
       const result = await showEncryptedSaveDialog(this.state.title);
       if (!result) return;
@@ -7132,7 +7184,11 @@ const DesktopHOC = function (WrappedComponent) {
     onShowErrorModal: PropTypes.func.isRequired,
     onViewsb3Save: PropTypes.func,
     vm: PropTypes.shape({
-      loadProject: PropTypes.func.isRequired
+      loadProject: PropTypes.func.isRequired,
+      runtime: PropTypes.shape({
+        on: PropTypes.func.isRequired,
+        off: PropTypes.func.isRequired
+      }).isRequired
     }).isRequired
   };
 

@@ -104,6 +104,13 @@ class Settings {
     this.data.updateChecker = updateChecker;
   }
 
+  get crashDumps () {
+    return this.data.crashDumps || 'none';
+  }
+  set crashDumps (crashDumps) {
+    this.data.crashDumps = crashDumps;
+  }
+
   // 全局 UI 主题：system（跟随系统/编辑器自身设置）、light、dark
   get uiTheme () {
     return this.data.uiTheme || 'system';

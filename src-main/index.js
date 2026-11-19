@@ -1,4 +1,4 @@
-const {app} = require('electron');
+const {app, crashReporter} = require('electron');
 
 // requestSingleInstanceLock() crashes the app in signed MAS builds
 // https://github.com/electron/electron/issues/15958
@@ -16,6 +16,15 @@ const {checkForUpdatesOnStartup} = require('./update-checker');
 const {tranlateOrNull} = require('./l10n');
 const migrate = require('./migrate');
 const settings = require('./settings');
+
+// Enable crash reporting as early as possible to detect as many crashes as possible.
+if (settings.crashDumps === 'local') {
+  crashReporter.start({
+    uploadToServer: false
+  });
+}
+
+const framelessPermissions = require('./frameless-permissions');
 require('./protocols');
 require('./context-menu');
 require('./menu-bar');
@@ -26,6 +35,26 @@ app.enableSandbox();
 // Allows certain versions of Scratch Link to work without an internet connection
 // https://github.com/LLK/scratch-desktop/blob/4b462212a8e406b15bcf549f8523645602b46064/src/main/index.js#L45
 app.commandLine.appendSwitch('host-resolver-rules', 'MAP device-manager.scratch.mit.edu 127.0.0.1');
+
+// Disable Chromium's "defer renderer tasks after input" to mitigate platform bug
+// that causes significant lag when processing key events in projects with many
+// SVGs.
+//
+// Every <img> with an SVG internally creates a full Chromium PageScheduler that
+// registers several task queues into the renderer-wide scheduler. For projects
+// with thousands of vector costumes, this is thousands of task queues that
+// must be updated every time the scheduler policy changes. Disabling this feature
+// prevents key events from causing these policy changes.
+//
+// The underlying issue of inert <img> creating excessive task queues remains,
+// so we can still get some stutters occasionally, but this reduces it a fair bit.
+// The possible loss in input latency is tolerable due to the performance impact.
+app.commandLine.appendSwitch('disable-features', 'DeferRendererTasksAfterInput');
+
+// Enable SharedArrayBuffer even without cross-origin isolation. Document-Isolation-Policy
+// would be less invasive, but it makes any data: iframe crash the entire app due to
+// an Electron/Chromium bug (https://github.com/TurboWarp/desktop/issues/1446).
+app.commandLine.appendSwitch('enable-features', 'SharedArrayBuffer');
 
 if (!settings.hardwareAcceleration) {
   app.disableHardwareAcceleration();
@@ -45,6 +74,9 @@ app.on('session-created', (session) => {
   // Permission requests are delegated to AbstractWindow
 
   session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    if (!webContents) {
+      return framelessPermissions.check(permission, requestingOrigin, details);
+    }
     if (!details.isMainFrame) {
       return false;
     }
@@ -57,6 +89,10 @@ app.on('session-created', (session) => {
   });
 
   session.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    if (!webContents) {
+      callback(framelessPermissions.request(permission, details));
+      return;
+    }
     if (!details.isMainFrame) {
       callback(false);
       return;

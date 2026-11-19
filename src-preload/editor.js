@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   getFile: (id) => ipcRenderer.invoke('get-file', id),
   openedFile: (id) => ipcRenderer.invoke('opened-file', id),
   closedFile: () => ipcRenderer.invoke('closed-file'),
+  dropPermissions: () => ipcRenderer.invoke('drop-permissions'),
   showSaveFilePicker: (suggestedName) => ipcRenderer.invoke('show-save-file-picker', suggestedName),
   showOpenFilePicker: () => ipcRenderer.invoke('show-open-file-picker'),
   setLocale: (locale) => ipcRenderer.sendSync('set-locale', locale),
@@ -117,6 +118,12 @@ contextBridge.exposeInMainWorld('EditorPreload', {
   // 的页面里石沉大海（AI 侧表现为整轮 30 秒超时，"AI 读不到新工程"）
   sendAIListenersReady: () => {
     ipcRenderer.send('editor-ai-listeners-ready');
+  },
+  // 初始工程加载流程结束（成功或失败）后的信号：监听器就绪 ≠ 工程就绪，
+  // vm.loadProject 是异步的；SOLO 的读工程 / 工具派发 / 导出保存等它，
+  // 否则读到的是加载中的空工程（"SOLO 读不到任何工程"）
+  sendProjectLoadComplete: () => {
+    ipcRenderer.send('editor-project-load-complete');
   },
   // 扩展编辑器「添加到项目」：主进程转来的扩展代码，由当前项目的 VM 加载
   onAddExtension: (callback) => {

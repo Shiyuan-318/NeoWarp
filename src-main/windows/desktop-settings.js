@@ -1,5 +1,6 @@
 const {app, shell, ipcMain} = require('electron');
 const fs = require('fs');
+const fsPromises = require('fs/promises');
 const path = require('path');
 const AbstractWindow = require('./abstract');
 const {translate, getStrings, getLocale, updateLocale} = require('../l10n');
@@ -56,6 +57,7 @@ class DesktopSettingsWindow extends AbstractWindow {
           exitFullscreenOnEscape: settings.exitFullscreenOnEscape,
           richPresenceAvailable: RichPresence.isAvailable(),
           richPresence: settings.richPresence,
+          crashDumps: settings.crashDumps,
           codeAreaBackgroundImage: settings.codeAreaBackgroundImage,
           stageAreaBackgroundImage: settings.stageAreaBackgroundImage,
           homeLogo: settings.homeLogo,
@@ -276,8 +278,22 @@ class DesktopSettingsWindow extends AbstractWindow {
       await settings.save();
     });
 
+    this.ipc.handle('set-crash-dumps', async (event, crashDumps) => {
+      settings.crashDumps = crashDumps;
+      await settings.save();
+    });
+
     this.ipc.handle('open-user-data', async () => {
       shell.showItemInFolder(app.getPath('userData'));
+    });
+
+    this.ipc.handle('open-crash-dumps', async () => {
+      const crashDumps = app.getPath('crashDumps');
+      // folder may not exist yet if setting was just turned on but app not restarted yet
+      await fsPromises.mkdir(crashDumps, {
+        recursive: true
+      });
+      shell.showItemInFolder(crashDumps);
     });
 
     this.ipc.handle('set-code-area-background-image', async (event, imageData) => {
