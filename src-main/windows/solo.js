@@ -315,6 +315,18 @@ class SoloWindow extends AIAssistantWindow {
     if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
       return {success: false, error: 'Project is not loaded'};
     }
+    // 工程还在加载时导出会把空工程写回源文件（覆盖用户数据），
+    // 必须等初始加载流程结束；加载失败（信号仍会到达）时导出的是
+    // VM 当前状态，与编辑器手动保存行为一致
+    if (this.editorWindow.projectLoadComplete !== true) {
+      await Promise.race([
+        this.editorWindow.projectLoadedPromise,
+        new Promise(resolve => setTimeout(resolve, 90000))
+      ]);
+      if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
+        return {success: false, error: 'Project is not loaded'};
+      }
+    }
 
     const exported = await new Promise((resolve) => {
       const requestId = Date.now().toString() + Math.random().toString(16).slice(2);
@@ -769,7 +781,8 @@ class SoloWindow extends AIAssistantWindow {
    * 舞台窗口就绪后主动问一次 VM 运行状态，让按钮摆到正确的档位。
    */
   queryStageRunState () {
-    if (!this.stageWindow || this.stageWindow.window.isDestroyed()) return;
+    const stageWindow = this.stageWindow;
+    if (!stageWindow || stageWindow.window.isDestroyed()) return;
     if (!this.editorWindow || this.editorWindow.window.isDestroyed()) return;
     const requestId = Date.now().toString() + Math.random().toString(16).slice(2);
     let timer = null;
@@ -779,10 +792,14 @@ class SoloWindow extends AIAssistantWindow {
         if (timer) clearTimeout(timer);
         const result = data.result || {};
         this.stageRunning = !!(result.data && result.data.running);
-        this.stageWindow.sendState({
-          running: this.stageRunning,
-          paused: this.stagePaused
-        });
+        // 等待响应期间舞台窗口可能已被关闭（换工程或用户手动关窗），
+        // 此时 this.stageWindow 已置空，不能再往旧引用发状态
+        if (this.stageWindow === stageWindow && !stageWindow.window.isDestroyed()) {
+          stageWindow.sendState({
+            running: this.stageRunning,
+            paused: this.stagePaused
+          });
+        }
       }
     };
     ipcMain.on('solo-stage-control-response', handler);
@@ -790,7 +807,9 @@ class SoloWindow extends AIAssistantWindow {
     timer = setTimeout(() => {
       ipcMain.removeListener('solo-stage-control-response', handler);
       // 超时也把已知状态发过去，窗口至少能正常显示
-      this.stageWindow.sendState({running: !!this.stageRunning, paused: this.stagePaused});
+      if (this.stageWindow === stageWindow && !stageWindow.window.isDestroyed()) {
+        stageWindow.sendState({running: !!this.stageRunning, paused: this.stagePaused});
+      }
     }, 3000);
   }
 

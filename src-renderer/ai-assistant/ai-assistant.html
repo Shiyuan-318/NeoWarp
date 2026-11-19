@@ -9527,7 +9527,7 @@
     }
 
     function updateSettingDot() {
-        settingDot.classList.toggle('visible', !currentConfig.apiKey);
+        settingDot.classList.toggle('visible', configNeedsApiKey() && !currentConfig.apiKey);
     }
 
     function updateImageUploadVisibility() {
@@ -9594,6 +9594,15 @@
     }
     function isFreeExpired(cfg) {
         return isFreeConfig(cfg) && (cfg.freeExpired === true || Date.now() >= FREE_MODEL_END_AT);
+    }
+
+    // 当前配置是否必须填写 API Key：Ollama 走本机服务，免费模型由 NeoWarp
+    // 提供额度，两者都不需要用户自备密钥；其余服务商必须有 Key 才能发请求。
+    function configNeedsApiKey() {
+        var cfg = savedConfigs[activeConfigIndex];
+        if (isFreeConfig(cfg)) return false;
+        var p = PROVIDERS[currentConfig.provider] || {};
+        return p.apiFormat !== 'ollama' && currentConfig.apiFormat !== 'ollama';
     }
 
     function selectConfig(idx) {
@@ -12240,7 +12249,16 @@
         }
         var ctx = { currentSprite: '', sprites: [], userRequest: userRequest || '' };
         currentContextMapping = {};
-        if (!projectCodeCache || !projectCodeCache.targets) return ctx;
+        if (!projectCodeCache || !projectCodeCache.targets) {
+            // SOLO：工程已选中但内容暂不可读（后台编辑器仍在加载或已不可用）。
+            // 如实告知模型"暂未就绪"，避免它把工程当成空的而要求重建或报"读不到"
+            if (IS_SOLO && soloProject) {
+                ctx.projectType = 'sb3';
+                ctx.projectName = soloProject.name;
+                ctx.note = 'The project "' + soloProject.name + '" is selected, but its content is not readable right now (the background editor is still loading it or temporarily unavailable). Tell the user to wait a few seconds and try again. Do NOT treat the project as empty and do NOT call create_project.';
+            }
+            return ctx;
+        }
         var targets = projectCodeCache.targets;
         var tidCounter = 0;
         function nextTid() { tidCounter++; return 'b' + tidCounter; }
@@ -13641,7 +13659,7 @@
             } else {
                 content = messageInput.value.trim();
                 if (!content && pendingImages.length === 0 && pendingFiles.length === 0) return;
-                if (!currentConfig.apiKey) { showToast('Configure API Key first', 'error'); openSettings(); return; }
+                if (configNeedsApiKey() && !currentConfig.apiKey) { showToast(t('configureApiKeyFirst'), 'error'); openSettings(); return; }
                 images = pendingImages.slice();
                 displayContent = content;
 
@@ -15071,7 +15089,7 @@
     init();
     updateSendBtn();
     populateModelSwitcherDropdown();
-    if (configNeedsApiKey() && !currentConfig.apiKey) setTimeout(function() { settingDot.classList.add('visible'); }, 500);
+    if (configNeedsApiKey() && !currentConfig.apiKey) setTimeout(updateSettingDot, 500);
 })();
 </script>
 </body>

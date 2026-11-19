@@ -378,13 +378,26 @@ class AIAssistantWindow extends AbstractWindow {
     this.window.setTitle(`AI Assistant`);
 
     this.ipc.handle('get-project-code', async () => {
-      // 编辑器页面还没挂好监听时先等就绪信号，再走原有 5 秒取码逻辑；
+      // 编辑器页面还没挂好监听时先等就绪信号，再走原有取码逻辑；
       // 否则请求落进未挂监听的页面里，AI 拿到 null 当成"工程是空的"
       if (this.editorWindow && !this.editorWindow.window.isDestroyed() &&
           this.editorWindow.aiListenersReady !== true) {
         await Promise.race([
           this.editorWindow.aiListenersReadyPromise,
           new Promise(resolve => setTimeout(resolve, 25000))
+        ]);
+        if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
+          return null;
+        }
+      }
+      // 监听就绪 ≠ 工程就绪：vm.loadProject 是异步的，SOLO 选完工程立刻
+      // 发消息时序列化到的是空/残缺 VM（"SOLO 读不到任何工程"）。等初始
+      // 工程加载流程结束再取；大工程的 toJSON 也可能很慢，超时给足。
+      if (this.editorWindow && !this.editorWindow.window.isDestroyed() &&
+          this.editorWindow.projectLoadComplete !== true) {
+        await Promise.race([
+          this.editorWindow.projectLoadedPromise,
+          new Promise(resolve => setTimeout(resolve, 60000))
         ]);
         if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
           return null;
@@ -406,10 +419,11 @@ class AIAssistantWindow extends AbstractWindow {
         };
         ipcMain.on('project-json-response', handler);
         this.editorWindow.window.webContents.send('request-project-json', { requestId });
+        // 大工程的 vm.toJSON() 同步序列化要数秒，5 秒会白白丢掉整次读取
         setTimeout(() => {
           ipcMain.removeListener('project-json-response', handler);
           resolve(null);
-        }, 5000);
+        }, 30000);
       });
     });
 
@@ -606,6 +620,17 @@ class AIAssistantWindow extends AbstractWindow {
         new Promise(resolve => setTimeout(resolve, settleBudget))
       ]);
       // 等待期间可能被换工程（旧编辑器销毁）或窗口关闭
+      if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
+        return { success: false, error: 'Editor window not available' };
+      }
+    }
+    // 工具派发同样要等工程加载完成：加载中的 VM 是空/残缺的，读工具拿到
+    // 错误数据、写工具会把改动落在空工程上（再被下一次 loadProject 覆盖）
+    if (this.editorWindow.projectLoadComplete !== true) {
+      await Promise.race([
+        this.editorWindow.projectLoadedPromise,
+        new Promise(resolve => setTimeout(resolve, 60000))
+      ]);
       if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
         return { success: false, error: 'Editor window not available' };
       }
