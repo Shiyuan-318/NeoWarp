@@ -27,6 +27,7 @@ patches/*.bak*
 # Local artifacts
 .dbg/
 backups/
+upgrade-backup-*/
 webpack-build.log
 *.log
 nul

@@ -150,6 +150,21 @@ index d5a11c2..029e8ca 100644
      updateBrowserFullscreen();
      updatePhantomHeader();
    });
+diff --git a/node_modules/scratch-gui/src/addons/api.js b/node_modules/scratch-gui/src/addons/api.js
+index 814bd6a..ef6c0b5 100644
+--- a/node_modules/scratch-gui/src/addons/api.js
++++ b/node_modules/scratch-gui/src/addons/api.js
+@@ -743,7 +743,9 @@ class AddonRunner {
+         this.resources = null;
+ 
+         this.publicAPI = {
+-            global,
++            // webpack5 会把裸 global 标识符改写为 __webpack_require__.g，
++            // 简写形式会导致 terser 报语法错误，因此显式写成键值对
++            global: global,
+             console,
+             addon: {
+                 tab: new Tab(id),
 diff --git a/node_modules/scratch-gui/src/components/blocks/blocks.css b/node_modules/scratch-gui/src/components/blocks/blocks.css
 index 583f587..9f661cb 100644
 --- a/node_modules/scratch-gui/src/components/blocks/blocks.css
@@ -432,125 +447,6 @@ index 96acba1..5f04a0f 100644
      onClickLogo: PropTypes.func,
      onCloseAccountNav: PropTypes.func,
      onExtensionButtonClick: PropTypes.func,
-diff --git a/node_modules/scratch-gui/src/components/library/library.jsx b/node_modules/scratch-gui/src/components/library/library.jsx
-index 685ccce..36cd157 100644
---- a/node_modules/scratch-gui/src/components/library/library.jsx
-+++ b/node_modules/scratch-gui/src/components/library/library.jsx
-@@ -45,6 +45,7 @@ class LibraryComponent extends React.Component {
-             'handleSelect',
-             'handleFavorite',
-             'handleTagClick',
-+            'handleContextMenu',
-             'setFilteredDataRef'
-         ]);
-         const favorites = this.readFavoritesFromStorage();
-@@ -82,8 +83,23 @@ class LibraryComponent extends React.Component {
-         }
-     }
-     handleSelect (id) {
--        this.handleClose();
--        this.props.onItemSelected(this.getFilteredData()[id]);
-+        const item = this.getFilteredData()[id];
-+        // For items that should keep the library open (e.g. "add my extension" card),
-+        // don't close the library so that subsequent modals can be rendered on top.
-+        if (item && item !== '---' && item.keepOpenOnSelect) {
-+            this.props.onItemSelected(item);
-+        } else {
-+            this.handleClose();
-+            this.props.onItemSelected(item);
-+        }
-+    }
-+    handleContextMenu (id, event) {
-+        if (this.props.onItemContextMenu) {
-+            const item = this.getFilteredData()[id];
-+            if (item && item !== '---') {
-+                this.props.onItemContextMenu(item, event);
-+            }
-+        }
-     }
-     readFavoritesFromStorage () {
-         let data;
-@@ -172,6 +188,9 @@ class LibraryComponent extends React.Component {
-         this.setState({filterQuery: ''});
-     }
-     getFilteredData () {
-+        const pinnedSet = this.props.pinnedKeys && this.props.pinnedKeys.length ?
-+            new Set(this.props.pinnedKeys) : null;
-+
-         // When no filtering, favorites get their own section
-         if (this.state.selectedTag === 'all' && !this.state.filterQuery) {
-             const favoriteItems = this.props.data
-@@ -187,9 +206,22 @@ class LibraryComponent extends React.Component {
-                 favoriteItems.push('---');
-             }
- 
-+            let dataItems = this.props.data;
-+            if (pinnedSet) {
-+                const pinnedData = dataItems.filter(dataItem => (
-+                    dataItem !== '---' && pinnedSet.has(dataItem[this.props.persistableKey])
-+                ));
-+                const unpinnedData = dataItems.filter(dataItem => (
-+                    dataItem === '---' || !pinnedSet.has(dataItem[this.props.persistableKey])
-+                ));
-+                if (pinnedData.length) {
-+                    dataItems = [...pinnedData, '---', ...unpinnedData];
-+                }
-+            }
-+
-             return [
-                 ...favoriteItems,
--                ...this.props.data
-+                ...dataItems
-             ];
-         }
- 
-@@ -215,6 +247,17 @@ class LibraryComponent extends React.Component {
-             ));
-         }
- 
-+        if (this.props.pinnedKeys && this.props.pinnedKeys.length) {
-+            const pinnedSetInner = new Set(this.props.pinnedKeys);
-+            const pinnedItems = filteredItems.filter(dataItem => (
-+                dataItem !== '---' && pinnedSetInner.has(dataItem[this.props.persistableKey])
-+            ));
-+            const unpinnedItems = filteredItems.filter(dataItem => (
-+                dataItem === '---' || !pinnedSetInner.has(dataItem[this.props.persistableKey])
-+            ));
-+            filteredItems = pinnedItems.concat(unpinnedItems);
-+        }
-+
-         if (this.state.filterQuery) {
-             filteredItems = filteredItems.filter(dataItem => {
-                 const search = [...dataItem.tags];
-@@ -299,6 +342,7 @@ class LibraryComponent extends React.Component {
-                     </div>
-                 )}
-                 <div
-+                    key={this.state.selectedTag}
-                     className={classNames(styles.libraryScrollGrid, {
-                         [styles.withFilterBar]: this.props.filterable || this.props.tags
-                     })}
-@@ -324,6 +368,7 @@ class LibraryComponent extends React.Component {
-                                 incompatibleWithScratch={dataItem.incompatibleWithScratch}
-                                 favorite={this.state.favorites.includes(dataItem[this.props.persistableKey])}
-                                 onFavorite={this.handleFavorite}
-+                                onContextMenu={this.props.onItemContextMenu ? this.handleContextMenu : null}
-                                 insetIconURL={dataItem.insetIconURL}
-                                 internetConnectionRequired={dataItem.internetConnectionRequired}
-                                 isPlaying={this.state.playingItem === index}
-@@ -388,10 +433,12 @@ LibraryComponent.propTypes = {
-     id: PropTypes.string.isRequired,
-     persistableKey: PropTypes.string,
-     intl: intlShape.isRequired,
-+    onItemContextMenu: PropTypes.func,
-     onItemMouseEnter: PropTypes.func,
-     onItemMouseLeave: PropTypes.func,
-     onItemSelected: PropTypes.func,
-     onRequestClose: PropTypes.func,
-+    pinnedKeys: PropTypes.arrayOf(PropTypes.string),
-     setStopHandler: PropTypes.func,
-     showPlayButton: PropTypes.bool,
-     tags: PropTypes.arrayOf(PropTypes.shape(TagButton.propTypes)),
 diff --git a/node_modules/scratch-gui/src/components/library-item/library-item.css b/node_modules/scratch-gui/src/components/library-item/library-item.css
 index ffa11ed..4d059d5 100644
 --- a/node_modules/scratch-gui/src/components/library-item/library-item.css
@@ -681,6 +577,125 @@ index faf55af..ba2b9b6 100644
      onFocus: PropTypes.func.isRequired,
      onKeyPress: PropTypes.func.isRequired,
      onMouseEnter: PropTypes.func.isRequired,
+diff --git a/node_modules/scratch-gui/src/components/library/library.jsx b/node_modules/scratch-gui/src/components/library/library.jsx
+index 685ccce..36cd157 100644
+--- a/node_modules/scratch-gui/src/components/library/library.jsx
++++ b/node_modules/scratch-gui/src/components/library/library.jsx
+@@ -45,6 +45,7 @@ class LibraryComponent extends React.Component {
+             'handleSelect',
+             'handleFavorite',
+             'handleTagClick',
++            'handleContextMenu',
+             'setFilteredDataRef'
+         ]);
+         const favorites = this.readFavoritesFromStorage();
+@@ -82,8 +83,23 @@ class LibraryComponent extends React.Component {
+         }
+     }
+     handleSelect (id) {
+-        this.handleClose();
+-        this.props.onItemSelected(this.getFilteredData()[id]);
++        const item = this.getFilteredData()[id];
++        // For items that should keep the library open (e.g. "add my extension" card),
++        // don't close the library so that subsequent modals can be rendered on top.
++        if (item && item !== '---' && item.keepOpenOnSelect) {
++            this.props.onItemSelected(item);
++        } else {
++            this.handleClose();
++            this.props.onItemSelected(item);
++        }
++    }
++    handleContextMenu (id, event) {
++        if (this.props.onItemContextMenu) {
++            const item = this.getFilteredData()[id];
++            if (item && item !== '---') {
++                this.props.onItemContextMenu(item, event);
++            }
++        }
+     }
+     readFavoritesFromStorage () {
+         let data;
+@@ -172,6 +188,9 @@ class LibraryComponent extends React.Component {
+         this.setState({filterQuery: ''});
+     }
+     getFilteredData () {
++        const pinnedSet = this.props.pinnedKeys && this.props.pinnedKeys.length ?
++            new Set(this.props.pinnedKeys) : null;
++
+         // When no filtering, favorites get their own section
+         if (this.state.selectedTag === 'all' && !this.state.filterQuery) {
+             const favoriteItems = this.props.data
+@@ -187,9 +206,22 @@ class LibraryComponent extends React.Component {
+                 favoriteItems.push('---');
+             }
+ 
++            let dataItems = this.props.data;
++            if (pinnedSet) {
++                const pinnedData = dataItems.filter(dataItem => (
++                    dataItem !== '---' && pinnedSet.has(dataItem[this.props.persistableKey])
++                ));
++                const unpinnedData = dataItems.filter(dataItem => (
++                    dataItem === '---' || !pinnedSet.has(dataItem[this.props.persistableKey])
++                ));
++                if (pinnedData.length) {
++                    dataItems = [...pinnedData, '---', ...unpinnedData];
++                }
++            }
++
+             return [
+                 ...favoriteItems,
+-                ...this.props.data
++                ...dataItems
+             ];
+         }
+ 
+@@ -215,6 +247,17 @@ class LibraryComponent extends React.Component {
+             ));
+         }
+ 
++        if (this.props.pinnedKeys && this.props.pinnedKeys.length) {
++            const pinnedSetInner = new Set(this.props.pinnedKeys);
++            const pinnedItems = filteredItems.filter(dataItem => (
++                dataItem !== '---' && pinnedSetInner.has(dataItem[this.props.persistableKey])
++            ));
++            const unpinnedItems = filteredItems.filter(dataItem => (
++                dataItem === '---' || !pinnedSetInner.has(dataItem[this.props.persistableKey])
++            ));
++            filteredItems = pinnedItems.concat(unpinnedItems);
++        }
++
+         if (this.state.filterQuery) {
+             filteredItems = filteredItems.filter(dataItem => {
+                 const search = [...dataItem.tags];
+@@ -299,6 +342,7 @@ class LibraryComponent extends React.Component {
+                     </div>
+                 )}
+                 <div
++                    key={this.state.selectedTag}
+                     className={classNames(styles.libraryScrollGrid, {
+                         [styles.withFilterBar]: this.props.filterable || this.props.tags
+                     })}
+@@ -324,6 +368,7 @@ class LibraryComponent extends React.Component {
+                                 incompatibleWithScratch={dataItem.incompatibleWithScratch}
+                                 favorite={this.state.favorites.includes(dataItem[this.props.persistableKey])}
+                                 onFavorite={this.handleFavorite}
++                                onContextMenu={this.props.onItemContextMenu ? this.handleContextMenu : null}
+                                 insetIconURL={dataItem.insetIconURL}
+                                 internetConnectionRequired={dataItem.internetConnectionRequired}
+                                 isPlaying={this.state.playingItem === index}
+@@ -388,10 +433,12 @@ LibraryComponent.propTypes = {
+     id: PropTypes.string.isRequired,
+     persistableKey: PropTypes.string,
+     intl: intlShape.isRequired,
++    onItemContextMenu: PropTypes.func,
+     onItemMouseEnter: PropTypes.func,
+     onItemMouseLeave: PropTypes.func,
+     onItemSelected: PropTypes.func,
+     onRequestClose: PropTypes.func,
++    pinnedKeys: PropTypes.arrayOf(PropTypes.string),
+     setStopHandler: PropTypes.func,
+     showPlayButton: PropTypes.bool,
+     tags: PropTypes.arrayOf(PropTypes.shape(TagButton.propTypes)),
 diff --git a/node_modules/scratch-gui/src/components/loader/loader.css b/node_modules/scratch-gui/src/components/loader/loader.css
 index aa18cde..f7d14fa 100644
 --- a/node_modules/scratch-gui/src/components/loader/loader.css
@@ -1529,83 +1544,14 @@ index 3b1fad6..af03e47 100644
      vm: state.scratchGui.vm
  });
  
-diff --git a/node_modules/scratch-gui/src/components/menu/menu.css b/node_modules/scratch-gui/src/components/menu/menu.css
-index c36368a..e306891 100644
---- a/node_modules/scratch-gui/src/components/menu/menu.css
-+++ b/node_modules/scratch-gui/src/components/menu/menu.css
-@@ -10,16 +10,54 @@
-     min-width: 186px;
-     overflow: visible;
-     box-shadow: 0 8px 8px 0 $shadow;
-+
-+    /* NeoWarp: animate the dropdown opening */
-+    transform-origin: top left;
-+    animation: menu-in 0.2s cubic-bezier(0.32, 0.72, 0, 1) backwards;
- }
- 
- .menu.left {
-     right: 0;
-+
-+    /* menus placed on the right side of the trigger (RTL layout) reveal from their right edge */
-+    transform-origin: top right;
- }
- 
- .menu.right {
-     left: 0;
- }
- 
-+/* NeoWarp: keep the menu mounted while it fades/shrinks out; ignore clicks meanwhile.
-+   Duration must stay <= CLOSE_DELAY_MS in containers/menu.jsx */
-+.menu.closing {
-+    pointer-events: none;
-+    animation: menu-out 0.16s cubic-bezier(0.32, 0.72, 0, 1) both;
-+}
-+
-+/* NeoWarp */
-+@keyframes menu-in {
-+    from {
-+        opacity: 0;
-+        transform: translateY(8px) scale(0.96);
-+    }
-+    to {
-+        opacity: 1;
-+        transform: translateY(0) scale(1);
-+    }
-+}
-+
-+/* NeoWarp */
-+@keyframes menu-out {
-+    from {
-+        opacity: 1;
-+        transform: translateY(0) scale(1);
-+    }
-+    to {
-+        opacity: 0;
-+        transform: translateY(8px) scale(0.96);
-+    }
-+}
-+
- .menu-item {
-     display: block;
-     line-height: 34px;
+diff --git a/node_modules/scratch-gui/src/components/loader/logo.png b/node_modules/scratch-gui/src/components/loader/logo.png
+new file mode 100644
+index 0000000..c4bea65
+Binary files /dev/null and b/node_modules/scratch-gui/src/components/loader/logo.png differ
 diff --git a/node_modules/scratch-gui/src/components/menu-bar/ai-icon.svg b/node_modules/scratch-gui/src/components/menu-bar/ai-icon.svg
 new file mode 100644
-index 0000000..3842f5f
---- /dev/null
-+++ b/node_modules/scratch-gui/src/components/menu-bar/ai-icon.svg
-@@ -0,0 +1,11 @@
-+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-+  <path d="M15 4V2"/>
-+  <path d="M15 16v-2"/>
-+  <path d="M8 9h2"/>
-+  <path d="M20 9h2"/>
-+  <path d="M17.8 11.8 19 13"/>
-+  <path d="M15 9h.01"/>
-+  <path d="M17.8 6.2 19 5"/>
-+  <path d="m3 21 9-9"/>
-+  <path d="M12.2 6.2 11 5"/>
-+</svg>
-\ No newline at end of file
+index 0000000..aad762b
+Binary files /dev/null and b/node_modules/scratch-gui/src/components/menu-bar/ai-icon.svg differ
 diff --git a/node_modules/scratch-gui/src/components/menu-bar/menu-bar.css b/node_modules/scratch-gui/src/components/menu-bar/menu-bar.css
 index 444e77c..d3eaac0 100644
 --- a/node_modules/scratch-gui/src/components/menu-bar/menu-bar.css
@@ -2263,6 +2209,65 @@ index f0611ea..9ae739f 100644
              src={dropdownCaret}
              draggable={false}
              width={8}
+diff --git a/node_modules/scratch-gui/src/components/menu/menu.css b/node_modules/scratch-gui/src/components/menu/menu.css
+index c36368a..e306891 100644
+--- a/node_modules/scratch-gui/src/components/menu/menu.css
++++ b/node_modules/scratch-gui/src/components/menu/menu.css
+@@ -10,16 +10,54 @@
+     min-width: 186px;
+     overflow: visible;
+     box-shadow: 0 8px 8px 0 $shadow;
++
++    /* NeoWarp: animate the dropdown opening */
++    transform-origin: top left;
++    animation: menu-in 0.2s cubic-bezier(0.32, 0.72, 0, 1) backwards;
+ }
+ 
+ .menu.left {
+     right: 0;
++
++    /* menus placed on the right side of the trigger (RTL layout) reveal from their right edge */
++    transform-origin: top right;
+ }
+ 
+ .menu.right {
+     left: 0;
+ }
+ 
++/* NeoWarp: keep the menu mounted while it fades/shrinks out; ignore clicks meanwhile.
++   Duration must stay <= CLOSE_DELAY_MS in containers/menu.jsx */
++.menu.closing {
++    pointer-events: none;
++    animation: menu-out 0.16s cubic-bezier(0.32, 0.72, 0, 1) both;
++}
++
++/* NeoWarp */
++@keyframes menu-in {
++    from {
++        opacity: 0;
++        transform: translateY(8px) scale(0.96);
++    }
++    to {
++        opacity: 1;
++        transform: translateY(0) scale(1);
++    }
++}
++
++/* NeoWarp */
++@keyframes menu-out {
++    from {
++        opacity: 1;
++        transform: translateY(0) scale(1);
++    }
++    to {
++        opacity: 0;
++        transform: translateY(8px) scale(0.96);
++    }
++}
++
+ .menu-item {
+     display: block;
+     line-height: 34px;
 diff --git a/node_modules/scratch-gui/src/components/modal/modal.css b/node_modules/scratch-gui/src/components/modal/modal.css
 index 5bf1e6d..0365b76 100644
 --- a/node_modules/scratch-gui/src/components/modal/modal.css
@@ -2407,13 +2412,7 @@ index a3d3c24..406c61e 100644
 diff --git a/node_modules/scratch-gui/src/components/stage-header/icon--detach.svg b/node_modules/scratch-gui/src/components/stage-header/icon--detach.svg
 new file mode 100644
 index 0000000..d4a84b2
---- /dev/null
-+++ b/node_modules/scratch-gui/src/components/stage-header/icon--detach.svg
-@@ -0,0 +1,4 @@
-+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20">
-+  <path fill="#575E75" d="M3 3h8v8H3V3zm1.5 1.5v5h5v-5h-5zM11 9h6v8h-6V9zm1.5 1.5v5h3v-5h-3z"/>
-+  <path fill="#575E75" d="M7 7l6-3v3l6-3-6 6v-3l-6 3z"/>
-+</svg>
+Binary files /dev/null and b/node_modules/scratch-gui/src/components/stage-header/icon--detach.svg differ
 diff --git a/node_modules/scratch-gui/src/components/stage-header/stage-header.jsx b/node_modules/scratch-gui/src/components/stage-header/stage-header.jsx
 index 4059478..e2b4693 100644
 --- a/node_modules/scratch-gui/src/components/stage-header/stage-header.jsx
@@ -3784,7 +3783,7 @@ index 6500fa8..c8673b4 100644
  Menu.propTypes = {
      children: PropTypes.node,
 diff --git a/node_modules/scratch-gui/src/containers/sb3-downloader.jsx b/node_modules/scratch-gui/src/containers/sb3-downloader.jsx
-index 9136001..e7f426e 100644
+index 9136001..fcf286e 100644
 --- a/node_modules/scratch-gui/src/containers/sb3-downloader.jsx
 +++ b/node_modules/scratch-gui/src/containers/sb3-downloader.jsx
 @@ -14,8 +14,8 @@ import log from '../lib/log';
@@ -4313,7 +4312,7 @@ index 8ce6ff5..dddc647 100644
 +    {tag: 'mine', intlLabel: '我的扩展'}
  ];
 diff --git a/node_modules/scratch-gui/src/lib/sb-file-uploader-hoc.jsx b/node_modules/scratch-gui/src/lib/sb-file-uploader-hoc.jsx
-index 8b707bd..fcac301 100644
+index 8b707bd..e96c957 100644
 --- a/node_modules/scratch-gui/src/lib/sb-file-uploader-hoc.jsx
 +++ b/node_modules/scratch-gui/src/lib/sb-file-uploader-hoc.jsx
 @@ -6,6 +6,7 @@ import {connect} from 'react-redux';

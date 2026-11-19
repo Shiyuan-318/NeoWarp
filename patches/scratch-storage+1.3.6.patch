@@ -1,0 +1,13 @@
+diff --git a/node_modules/scratch-storage/src/FetchWorkerTool.js b/node_modules/scratch-storage/src/FetchWorkerTool.js
+index f5a01dd..4a5ff08 100644
+--- a/node_modules/scratch-storage/src/FetchWorkerTool.js
++++ b/node_modules/scratch-storage/src/FetchWorkerTool.js
+@@ -32,7 +32,7 @@ class PrivateFetchWorkerTool {
+         try {
+             if (this.isGetSupported) {
+                 // eslint-disable-next-line global-require
+-                const FetchWorker = require('worker-loader?{"inline":true,"fallback":true}!./FetchWorkerTool.worker');
++                const FetchWorker = require('worker-loader?{"inline":"fallback"}!./FetchWorkerTool.worker');
+ 
+                 this.worker = new FetchWorker();
+ 

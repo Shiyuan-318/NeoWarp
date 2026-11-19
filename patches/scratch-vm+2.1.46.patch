@@ -12,7 +12,7 @@ index ee6a2e2..4c1e30b 100644
 +    url: 'https://github.com/Shiyuan-318/Neowarp'
  };
 diff --git a/node_modules/scratch-vm/src/extension-support/extension-manager.js b/node_modules/scratch-vm/src/extension-support/extension-manager.js
-index 5268ad9..ac8ee92 100644
+index 5268ad9..0640ebf 100644
 --- a/node_modules/scratch-vm/src/extension-support/extension-manager.js
 +++ b/node_modules/scratch-vm/src/extension-support/extension-manager.js
 @@ -189,7 +189,10 @@ class ExtensionManager {
@@ -27,6 +27,40 @@ index 5268ad9..ac8ee92 100644
              );
          } catch (e) {
              return false;
+@@ -245,7 +248,7 @@ class ExtensionManager {
+         /* eslint-disable max-len */
+         let ExtensionWorker;
+         if (sandboxMode === 'worker') {
+-            ExtensionWorker = require('worker-loader?name=js/extension-worker/extension-worker.[hash].js!./extension-worker');
++            ExtensionWorker = require('worker-loader?filename=js/extension-worker/extension-worker.[contenthash].js!./extension-worker');
+         } else if (sandboxMode === 'iframe') {
+             ExtensionWorker = (await import(/* webpackChunkName: "iframe-extension-worker" */ './tw-iframe-extension-worker')).default;
+         } else {
+diff --git a/node_modules/scratch-vm/src/extension-support/tw-load-script-as-plain-text.js b/node_modules/scratch-vm/src/extension-support/tw-load-script-as-plain-text.js
+index c93203e..a6eee74 100644
+--- a/node_modules/scratch-vm/src/extension-support/tw-load-script-as-plain-text.js
++++ b/node_modules/scratch-vm/src/extension-support/tw-load-script-as-plain-text.js
+@@ -9,12 +9,19 @@ module.exports.pitch = function (request) {
+     }
+     this.cacheable(false);
+     const callback = this.async();
+-    const compiler = this._compilation.createChildCompiler('extension worker', {});
++    // webpack5 会把子编译器的资产按文件名复制进父编译，重名会直接报 Conflict 错误；
++    // 这里只取源码字符串，给子编译器一个独立文件名，并在读取后删除无用资产
++    const compiler = this._compilation.createChildCompiler('extension worker', {
++        filename: 'js/extension-worker/plain-text.[contenthash].js'
++    });
+     new SingleEntryPlugin(this.context, `!!${request}`, 'extension worker').apply(compiler);
+     compiler.runAsChild((err, entries, compilation) => {
+         if (err) return callback(err);
+         const file = entries[0].files[0];
+         const source = `module.exports = ${JSON.stringify(compilation.assets[file].source())};`;
++        if (this._compilation && typeof this._compilation.deleteAsset === 'function') {
++            this._compilation.deleteAsset(file);
++        }
+         return callback(null, source);
+     });
+ };
 diff --git a/node_modules/scratch-vm/src/virtual-machine.js b/node_modules/scratch-vm/src/virtual-machine.js
 index 2cc5d26..b894db0 100644
 --- a/node_modules/scratch-vm/src/virtual-machine.js

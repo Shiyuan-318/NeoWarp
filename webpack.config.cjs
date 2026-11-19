@@ -6,10 +6,18 @@ const base = {
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     devtool: process.env.NODE_ENV === 'production' ? false : 'cheap-source-map',
     target: 'web',
+    resolve: {
+        fallback: {
+            // webpack4 会自动 polyfill node 核心模块，webpack5 需要显式声明；
+            // scratch-parser 内嵌的 ajv6 引用了 node 的 url，浏览器端不需要
+            url: false
+        }
+    },
     module: {
         rules: [
             {
                 test: /\.jsx?$/,
+                type: 'javascript/auto',
                 loader: 'babel-loader',
                 options: {
                     presets: ['@babel/preset-env', '@babel/preset-react']
@@ -17,10 +25,9 @@ const base = {
             },
             {
                 test: /\.(svg|png|wav|gif|jpg|mp3|woff2|hex)$/,
-                loader: 'file-loader',
-                options: {
-                    outputPath: 'static/assets/',
-                    esModule: false
+                type: 'asset/resource',
+                generator: {
+                    filename: 'static/assets/[contenthash][ext][query]'
                 }
             },
             {
@@ -32,10 +39,15 @@ const base = {
                     {
                         loader: 'css-loader',
                         options: {
-                            modules: true,
                             importLoaders: 1,
-                            localIdentName: '[name]_[local]_[hash:base64:5]',
-                            camelCase: true
+                            modules: {
+                                mode: 'local',
+                                localIdentName: '[name]_[local]_[hash:base64:5]',
+                                exportLocalsConvention: 'camelCase',
+                                // css-loader v7 默认 namedExport:true（只导出具名导出），
+                                // 而 scratch-gui 全部使用默认导入，需显式关闭
+                                namedExport: false
+                            }
                         }
                     },
                     {
@@ -43,9 +55,9 @@ const base = {
                         options: {
                             postcssOptions: {
                                 plugins: [
-                                    'postcss-import',
-                                    'postcss-simple-vars',
-                                    'autoprefixer'
+                                    require('postcss-import'),
+                                    require('postcss-simple-vars'),
+                                    require('autoprefixer')
                                 ]
                             }
                         }
@@ -94,6 +106,9 @@ module.exports = [
             })
         ],
         resolve: {
+            fallback: {
+                url: false
+            },
             alias: {
                 'scratch-gui$': path.resolve(__dirname, 'node_modules/scratch-gui/src/index.js'),
                 'scratch-render-fonts$': path.resolve(__dirname, 'node_modules/scratch-gui/src/lib/tw-scratch-render-fonts'),
