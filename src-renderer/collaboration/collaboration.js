@@ -718,6 +718,18 @@
   if (Preload.onMemberJoined) Preload.onMemberJoined(handleMemberJoined);
   if (Preload.onMemberLeft) Preload.onMemberLeft(handleMemberLeft);
 
+  // 主进程按主机设定的权限拒绝了某次工程同步（可能来自本机，也可能是别人）
+  if (Preload.onPermissionDenied) {
+    Preload.onPermissionDenied(function (data) {
+      if (!data) return;
+      var message = data.message || '项目更新被主机权限拒绝';
+      toast(message);
+      if (state.role && el.viewChat.classList.contains('visible')) {
+        addSystemMessage(message);
+      }
+    });
+  }
+
   Preload.onCollaborationEnded(function (data) {
     var reasons = {
       'host-ended': '主机已结束本次协作',

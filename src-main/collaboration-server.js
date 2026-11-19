@@ -1,5 +1,7 @@
 const http = require('http');
 const crypto = require('crypto');
+const {evaluateProjectUpdate} = require('./collaboration-project-policy');
+const {decodeProjectPayload} = require('./collaboration-project-payload');
 
 const MAGIC_STRING = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
@@ -57,6 +59,13 @@ class CollaborationServer {
     this.onChatMessage = null;
     this.onProjectRequest = null;
     this.onProjectUpdate = null;
+    this.onProjectUpdateRejected = null;
+    // 房间的权威工程状态：主机每次广播都会刷新，参与者的更新必须和它做
+    // 语义比对（见 authorizeParticipantProjectUpdate）。原始载荷延迟解码，
+    // 避免主机每次编辑都在主进程里解开一遍 sb3。
+    this.roomProjectPayload = null;
+    this.roomProject = null;
+    this.roomProjectDecodeError = null;
   }
 
   // Returns discovery metadata for LAN scanning clients
@@ -106,6 +115,7 @@ class CollaborationServer {
 
   // Host calls this to broadcast project JSON to all clients (or a specific client)
   broadcastProject (projectJson, targetUsername) {
+    this.rememberHostProject(projectJson);
     const data = JSON.stringify({
       type: 'project-update',
       project: projectJson
@@ -114,6 +124,96 @@ class CollaborationServer {
       if (!client.authenticated) continue;
       if (targetUsername && client.username !== targetUsername) continue;
       this.sendToClient(client, data);
+    }
+  }
+
+  // 主机推送的工程就是房间的权威状态。这里只记原始载荷，等参与者第一次
+  // 提交更新时再解码一次。
+  rememberHostProject (projectJson) {
+    this.roomProjectPayload = projectJson;
+    this.roomProject = null;
+    this.roomProjectDecodeError = null;
+  }
+
+  getRoomProject () {
+    if (this.roomProject) return this.roomProject;
+    if (!this.roomProjectPayload) return null;
+
+    const decoded = decodeProjectPayload(this.roomProjectPayload);
+    // 载荷可能是几十 MB 的 base64，解完就释放
+    this.roomProjectPayload = null;
+    if (decoded.error) {
+      this.roomProjectDecodeError = decoded.error;
+      console.warn('[collaboration] failed to decode host project payload:', decoded.error);
+      return null;
+    }
+    this.roomProject = decoded.projectJSON;
+    return this.roomProject;
+  }
+
+  // 参与者发来的 project-update 必须在广播给其他人、交给主机之前通过语义
+  // 权限检查：只信已认证身份是不够的，客户端可以绕过渲染层的 UI 包装直接
+  // 发送任意工程快照。
+  authorizeParticipantProjectUpdate (payload) {
+    const decoded = decodeProjectPayload(payload);
+    if (decoded.error) {
+      return {
+        allowed: false,
+        reason: 'invalid-project',
+        message: `项目数据无效：${decoded.error}`,
+        operations: [],
+        violations: []
+      };
+    }
+
+    const previous = this.getRoomProject();
+    if (!previous) {
+      return {
+        allowed: false,
+        reason: this.roomProjectDecodeError ? 'host-state-unavailable' : 'not-synchronized',
+        message: this.roomProjectDecodeError
+          ? '主机项目状态不可用，已拒绝同步'
+          : '房间项目尚未同步完成，请稍后重试',
+        operations: [],
+        violations: []
+      };
+    }
+
+    const decision = evaluateProjectUpdate({
+      previous,
+      next: decoded.projectJSON,
+      permissions: this.permissions
+    });
+    if (!decision.allowed) return decision;
+
+    // 通过检查的快照成为新的权威状态，后续更新与它比较。
+    this.roomProjectPayload = null;
+    this.roomProject = decoded.projectJSON;
+    return decision;
+  }
+
+  rejectProjectUpdate (client, decision) {
+    console.warn(
+      `[collaboration] project-update from ${client.username} rejected (${decision.reason}): ${decision.message}`
+    );
+
+    this.sendToClient(client, JSON.stringify({
+      type: 'project-update-rejected',
+      reason: decision.reason,
+      message: decision.message,
+      operations: decision.violations.map(violation => violation.operation)
+    }));
+
+    if (this.onProjectUpdateRejected) {
+      this.onProjectUpdateRejected(client.username, decision);
+    }
+
+    // 把权威工程重新推给该客户端，免得它带着被拒绝的本地状态继续广播。
+    // 每次拒绝都触发全量同步会被恶意客户端拿来放大流量，因此限流。
+    const now = Date.now();
+    if (!client.lastResyncAt || now - client.lastResyncAt > 5000) {
+      client.lastResyncAt = now;
+      if (this.onProjectRequest) this.onProjectRequest(client.username);
     }
   }
 
@@ -215,7 +315,8 @@ class CollaborationServer {
       lastSeen: Date.now(),
       authTimeout: null,
       authChallenge: null,
-      authFailures: 0
+      authFailures: 0,
+      lastResyncAt: 0
     };
 
     client.authTimeout = setTimeout(() => {
@@ -409,6 +510,15 @@ class CollaborationServer {
 
     // Project sync: a client or host broadcasts project state
     if (message.type === 'project-update') {
+      // 认证只证明对方知道房间密码，不证明它遵守主机设定的权限。渲染层对
+      // deleteSprite / loadExtensionURL 的包装可以被绕过，所以这里必须按
+      // 工程快照的语义差异再做一次判定。
+      const decision = this.authorizeParticipantProjectUpdate(message.project);
+      if (!decision.allowed) {
+        this.rejectProjectUpdate(client, decision);
+        return;
+      }
+
       // Broadcast to all OTHER authenticated clients
       const updateData = {
         type: 'project-update',
@@ -754,6 +864,9 @@ class CollaborationServer {
         }
       }
       this.clients.clear();
+      this.roomProjectPayload = null;
+      this.roomProject = null;
+      this.roomProjectDecodeError = null;
 
       if (this.server) {
         this.server.close(() => {

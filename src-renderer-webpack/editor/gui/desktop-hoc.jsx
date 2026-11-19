@@ -44,6 +44,9 @@ import {
   dropAIChanges,
   undoAIChanges
 } from './ai-undo-journal.js';
+// 协作权限的语义判定与主进程共用：服务端会在广播前检查，这里在真正写入
+// 本机 VM 之前再核对一次本地工程状态。
+import {evaluateProjectUpdate} from '../../../src-main/collaboration-project-policy';
 
 let mountedOnce = false;
 let isStageDetached = false;
@@ -6323,23 +6326,37 @@ const DesktopHOC = function (WrappedComponent) {
         });
     }
 
+    // 第二道权限防线：服务端已经按权威工程校验过一次，真正写入本机 VM 之前
+    // 再按本地工程核对一遍（也能覆盖两端 zip 解析结果不一致的极端情况）。
+    // 主机广播不带 from，视为权威状态，不做过滤。
+    collabCheckRemotePermissions (projectJSON, localJSON) {
+      if (!localJSON) return null; // VM 尚未就绪：以服务端判定为准
+      const collabState = this.state.collaborationState;
+      const decision = evaluateProjectUpdate({
+        previous: localJSON,
+        next: projectJSON,
+        permissions: collabState ? collabState.permissions : null
+      });
+      return decision.allowed ? null : decision;
+    }
+
     // Compute how to apply a remote project: a full reload, or a list of
     // per-sprite operations applied in place.
-    collabBuildApplyPlan (projectJSON, zip) {
+    collabBuildApplyPlan (projectJSON, zip, localJSON) {
       const vm = this.props.vm;
-      const localJSON = JSON.parse(vm.toJSON());
+      const localState = localJSON || JSON.parse(vm.toJSON());
       const remoteStage = (projectJSON.targets || []).find(target => target.isStage);
-      const localStage = (localJSON.targets || []).find(target => target.isStage);
+      const localStage = (localState.targets || []).find(target => target.isStage);
       if (!remoteStage || !localStage) return {fullLoad: true};
 
       const stringify = value => collabStableStringify(value);
       // Monitor differences are applied in place through the runtime monitor
       // API; deliberately NOT a full reload (the most frequent source of
       // whole-project flicker: variable creation, monitor drags, checks)
-      const monitorChanges = collabMonitorChanges(localJSON.monitors, projectJSON.monitors);
-      if (stringify(projectJSON.extensionURLs || null) !== stringify(localJSON.extensionURLs || null) ||
-          stringify(projectJSON.customFonts || null) !== stringify(localJSON.customFonts || null) ||
-          stringify(projectJSON.extensionStorage || null) !== stringify(localJSON.extensionStorage || null)) {
+      const monitorChanges = collabMonitorChanges(localState.monitors, projectJSON.monitors);
+      if (stringify(projectJSON.extensionURLs || null) !== stringify(localState.extensionURLs || null) ||
+          stringify(projectJSON.customFonts || null) !== stringify(localState.customFonts || null) ||
+          stringify(projectJSON.extensionStorage || null) !== stringify(localState.extensionStorage || null)) {
         return {fullLoad: true};
       }
 
@@ -6349,7 +6366,7 @@ const DesktopHOC = function (WrappedComponent) {
       const remoteSprites = (projectJSON.targets || []).filter(target => !target.isStage);
       const localTargets = vm.runtime.targets.filter(target => target.isSprite && target.isSprite());
       const localTargetByName = new Map(localTargets.map(target => [target.getName(), target]));
-      const localJsonByName = new Map((localJSON.targets || [])
+      const localJsonByName = new Map((localState.targets || [])
         .filter(target => !target.isStage)
         .map(target => [target.name, target]));
       const remoteNames = new Set(remoteSprites.map(target => target.name));
@@ -6393,9 +6410,25 @@ const DesktopHOC = function (WrappedComponent) {
       if (!decoded) return;
       const {raw, projectJSON, zip} = decoded;
 
+      // 来自参与者的更新（带 from）在写入本机 VM 之前按本地工程再校验一次
+      // 权限；主机广播不带 from，直接应用。
+      let localJSON = null;
+      if (data && typeof data.from === 'string' && data.from) {
+        try {
+          localJSON = JSON.parse(this.props.vm.toJSON());
+        } catch (error) {
+          localJSON = null;
+        }
+        const denial = this.collabCheckRemotePermissions(projectJSON, localJSON);
+        if (denial) {
+          console.warn('Collab: rejected remote project update', denial.reason, denial.message);
+          return;
+        }
+      }
+
       let plan = null;
       try {
-        plan = this.collabBuildApplyPlan(projectJSON, zip);
+        plan = this.collabBuildApplyPlan(projectJSON, zip, localJSON);
       } catch (error) {
         console.error('Collab: incremental diff failed, falling back to reload', error);
       }
@@ -6750,6 +6783,9 @@ const DesktopHOC = function (WrappedComponent) {
       });
     }
 
+    // 注意：这里的包装只拦本机 UI 的调用（给用户即时提示），不是安全边界。
+    // 参与者可以绕过 UI 直接发 project-update，真正的强制在协作服务端的
+    // 语义校验（collaboration-project-policy）与 collabCheckRemotePermissions。
     wrapVMWithPermissions () {
       const vm = this.props.vm;
       if (!vm) return;

@@ -269,6 +269,16 @@ class CollaborationWindow extends AbstractWindow {
         this.sendToEditor('collab-project-update', data);
       };
 
+      // 服务端按语义权限拒绝了某次 project-update（它不会广播，也不会交给
+      // 编辑器）。主机需要知道有人尝试了未授权操作。
+      this.server.onProjectUpdateRejected = (username, decision) => {
+        this.sendToCollabWindow('collab-permission-denied', {
+          scope: 'host',
+          username,
+          message: `${username} 的项目更新被拒绝：${decision.message}`
+        });
+      };
+
       const result = await this.server.start();
       if (result.success) {
         this.sendToCollabWindow('collab-host-started', {
@@ -446,6 +456,15 @@ class CollaborationWindow extends AbstractWindow {
           if (message.type === 'project-update') {
             // Forward project data to editor renderer to load into VM
             this.sendToEditor('collab-project-update', { project: message.project, from: message.from });
+            return;
+          }
+
+          if (message.type === 'project-update-rejected') {
+            // 主机（服务端）按语义权限拒绝了本机刚才发出的工程更新
+            this.sendToCollabWindow('collab-permission-denied', {
+              scope: 'self',
+              message: message.message || '项目更新被主机拒绝'
+            });
             return;
           }
 

@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('CollaborationPreload', {
   onMemberJoined: (callback) => ipcRenderer.on('collab-member-joined', (e, data) => callback(data)),
   onMemberLeft: (callback) => ipcRenderer.on('collab-member-left', (e, data) => callback(data)),
   onCollaborationEnded: (callback) => ipcRenderer.on('collab-collaboration-ended', (e, data) => callback(data)),
+  onPermissionDenied: (callback) => ipcRenderer.on('collab-permission-denied', (e, data) => callback(data)),
   onFocusChat: (callback) => ipcRenderer.on('collab-focus-chat', () => callback()),
   onEndRequested: (callback) => ipcRenderer.on('collab-end-requested', () => callback()),
   onLeaveRequested: (callback) => ipcRenderer.on('collab-leave-requested', () => callback()),
