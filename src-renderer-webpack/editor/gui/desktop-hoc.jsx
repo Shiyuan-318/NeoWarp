@@ -4586,13 +4586,32 @@ const DesktopHOC = function (WrappedComponent) {
 
                 const opResults = [];
 
-                function resolveBlockId(tid) {
+                // 优先用 contextMapping（tid → {sprite, blockId}）；查不到时把
+                // targetId 当成真实 block id 再找一遍 —— get_sprite_scripts 返回的
+                // 就是真实 id，模型经常直接把它当 targetId 传回来，旧实现只会报
+                // "tid not found"，删除/插入/修改全部失败。
+                function resolveBlockId(tid, spriteName) {
                   const entry = contextMapping[tid];
-                  if (!entry) return null;
-                  const target = vm.runtime.targets.find(t => t.getName() === entry.sprite);
-                  if (!target) return null;
-                  const block = target.blocks.getBlock(entry.blockId);
-                  return block ? { blockId: entry.blockId, target: target } : null;
+                  if (entry) {
+                    const mappedTarget = vm.runtime.targets.find(t => t.getName() === entry.sprite);
+                    if (mappedTarget && mappedTarget.blocks.getBlock(entry.blockId)) {
+                      return { blockId: entry.blockId, target: mappedTarget };
+                    }
+                  }
+                  // 指定了 sprite 时先只在该角色里找，找不到不跨角色兜底，
+                  // 避免把别的角色里碰巧相同的 id 删掉
+                  let candidates = [];
+                  if (spriteName) {
+                    const named = vm.runtime.targets.find(t => t.getName() === spriteName);
+                    if (named) candidates.push(named);
+                  }
+                  if (!candidates.length) candidates = vm.runtime.targets;
+                  for (const candidate of candidates) {
+                    if (candidate.blocks.getBlock(tid)) {
+                      return { blockId: tid, target: candidate };
+                    }
+                  }
+                  return null;
                 }
 
                 function getTarget(spriteName) {
@@ -4658,7 +4677,7 @@ const DesktopHOC = function (WrappedComponent) {
                         // Splice blocks into an existing script instead of creating a new stack.
                         const resolved = resolveBlockId(op.targetId);
                         if (!resolved) {
-                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: 'Block tid not found: ' + op.targetId + '. Use a tid from the project context.' });
+                          opResults.push({ index: opIdx, type: 'insert_blocks', success: false, error: 'Block tid not found: ' + op.targetId + '. Pass the tid from the project context or the blockId returned by get_sprite_scripts.' });
                           break;
                         }
                         const target = resolved.target;
@@ -4732,43 +4751,145 @@ const DesktopHOC = function (WrappedComponent) {
                         break;
                       }
                       case 'delete_block': {
-                        const resolved = resolveBlockId(op.targetId);
-                        if (!resolved) { opResults.push({ index: opIdx, type: 'delete_block', success: false, error: 'Block tid not found: ' + op.targetId }); break; }
+                        const resolved = resolveBlockId(op.targetId, op.sprite);
+                        if (!resolved) { opResults.push({ index: opIdx, type: 'delete_block', success: false, error: 'Block tid not found: ' + op.targetId + '. Pass the tid from the project context or the blockId returned by get_sprite_scripts.' }); break; }
                         const target = resolved.target;
                         const blockId = resolved.blockId;
-                        const block = target.blocks.getBlock(blockId);
+                        const blocks = target.blocks;
+                        const block = blocks.getBlock(blockId);
                         if (!block) { opResults.push({ index: opIdx, type: 'delete_block', success: false, error: 'Block not found' }); break; }
                         const mode = op.mode || 'with_children';
+
+                        // 找到「谁引用了这块」：父块的 next、C 块的 SUBSTACK/SUBSTACK2、
+                        // 或普通输入槽。删掉之后必须更新这些引用，否则 VM 里留下悬空
+                        // 指针，工作区重新序列化和工程保存都会断链。
+                        let parentLink = null;
+                        if (block.parent) {
+                          const parentBlock = blocks.getBlock(block.parent);
+                          if (parentBlock) {
+                            if (parentBlock.next === blockId) {
+                              parentLink = { block: parentBlock, via: 'next' };
+                            } else if (parentBlock.inputs) {
+                              for (const inputName of Object.keys(parentBlock.inputs)) {
+                                const inp = parentBlock.inputs[inputName];
+                                if (!inp || typeof inp !== 'object') continue;
+                                if (inp.block === blockId) { parentLink = { block: parentBlock, via: 'input', inputName: inputName }; break; }
+                                if (inp.shadow === blockId) { parentLink = { block: parentBlock, via: 'input', inputName: inputName, isShadow: true }; break; }
+                              }
+                            }
+                          }
+                        }
+                        function detachFromParent(replacementId) {
+                          if (!parentLink) return;
+                          if (parentLink.via === 'next') {
+                            parentLink.block.next = replacementId || null;
+                            return;
+                          }
+                          const inp = parentLink.block.inputs[parentLink.inputName];
+                          if (!inp) return;
+                          if (parentLink.isShadow) {
+                            inp.shadow = replacementId || null;
+                            return;
+                          }
+                          inp.block = replacementId || null;
+                          // 纯值槽里 block 与 shadow 是同一块（如数字槽的 "10"），
+                          // shadow 引用也要一起清，否则留下悬空指针
+                          if (inp.shadow === blockId) inp.shadow = replacementId || null;
+                        }
+
+                        // 输入槽里的值块（reporter/shadow）：只删值块本身，槽恢复成
+                        // 默认 shadow 或空。值块没有 next，vm 的递归删除只会清掉它
+                        // 自己的子输入，不会波及父块的语句链。
+                        const isValueBlock = parentLink && parentLink.via === 'input' &&
+                          parentLink.inputName !== 'SUBSTACK' && parentLink.inputName !== 'SUBSTACK2';
+
                         if (mode === 'with_children') {
-                          const idsToDelete = [];
-                          function collectChain(id) {
-                            if (!id || idsToDelete.indexOf(id) >= 0) return;
-                            idsToDelete.push(id);
-                            const b = target.blocks.getBlock(id);
-                            if (!b) return;
-                            if (b.next) collectChain(b.next);
-                            if (b.inputs && b.inputs.SUBSTACK && b.inputs.SUBSTACK.block) collectChain(b.inputs.SUBSTACK.block);
-                            if (b.inputs && b.inputs.SUBSTACK2 && b.inputs.SUBSTACK2.block) collectChain(b.inputs.SUBSTACK2.block);
-                          }
-                          collectChain(blockId);
-                          idsToDelete.forEach(function(id) { target.blocks.deleteBlock(id); });
+                          // vm 的 deleteBlock 会递归删除 next 链和所有输入子块
+                          //（包括 body 与 shadow），一步到位。
+                          detachFromParent(null);
+                          blocks.deleteBlock(blockId);
+                        } else if (isValueBlock) {
+                          detachFromParent(null);
+                          blocks.deleteBlock(blockId);
                         } else {
+                          // block_only：只删这一块，重连邻居。
+                          // vm 的 deleteBlock 是递归删除，直接调会把后面的整条链
+                          // 误删掉 —— 必须先把块从链上摘干净再删。
                           const parentId = block.parent;
-                          if (block.next) {
-                            const nextBlock = target.blocks.getBlock(block.next);
-                            if (nextBlock) nextBlock.parent = parentId;
+                          // 占位块：C 块由 body 顶替（else 分支接在 body 末尾），
+                          // 普通块由 next 顶替。
+                          let firstId = null;
+                          let lastId = null;
+                          let fromBody = false;
+                          if (block.inputs && block.inputs.SUBSTACK && block.inputs.SUBSTACK.block &&
+                              blocks.getBlock(block.inputs.SUBSTACK.block)) {
+                            firstId = block.inputs.SUBSTACK.block;
+                            fromBody = true;
+                          } else if (block.next && blocks.getBlock(block.next)) {
+                            firstId = block.next;
                           }
-                          target.blocks.deleteBlock(blockId);
+                          if (firstId) {
+                            lastId = firstId;
+                            let guard = 0;
+                            while (guard++ < 10000) {
+                              const last = blocks.getBlock(lastId);
+                              if (!last || !last.next || !blocks.getBlock(last.next)) break;
+                              lastId = last.next;
+                            }
+                            if (fromBody && block.inputs.SUBSTACK2 && block.inputs.SUBSTACK2.block &&
+                                blocks.getBlock(block.inputs.SUBSTACK2.block)) {
+                              // else 分支整条接到主 body 末尾
+                              const elseFirst = block.inputs.SUBSTACK2.block;
+                              const last = blocks.getBlock(lastId);
+                              if (last) last.next = elseFirst;
+                              blocks.getBlock(elseFirst).parent = lastId;
+                              lastId = elseFirst;
+                              guard = 0;
+                              while (guard++ < 10000) {
+                                const last2 = blocks.getBlock(lastId);
+                                if (!last2 || !last2.next || !blocks.getBlock(last2.next)) break;
+                                lastId = last2.next;
+                              }
+                            }
+                          }
+                          detachFromParent(firstId);
+                          if (firstId) {
+                            const first = blocks.getBlock(firstId);
+                            const last = blocks.getBlock(lastId);
+                            first.parent = parentId || null;
+                            // 占位链来自 body 时才需要接原 next；占位块本身就是
+                            // 原 next 时它已带着自己的链，不能自连成环
+                            if (fromBody && block.next && last) {
+                              last.next = block.next;
+                              const successor = blocks.getBlock(block.next);
+                              if (successor) successor.parent = lastId;
+                            }
+                            if (!parentId && block.topLevel) {
+                              // 被删的是 hat/顶层块：下一块提升为新的顶层块，继承画布位置
+                              first.topLevel = true;
+                              first.x = block.x;
+                              first.y = block.y;
+                              if (blocks._scripts.indexOf(firstId) < 0) blocks._scripts.push(firstId);
+                            }
+                          }
+                          // 摘除链引用后再删：此时 deleteBlock 只会清掉自身与
+                          // 残余的输入子块（未接管的 shadow 等）
+                          block.next = null;
+                          if (block.inputs) {
+                            delete block.inputs.SUBSTACK;
+                            delete block.inputs.SUBSTACK2;
+                          }
+                          blocks.deleteBlock(blockId);
                         }
                         vm.runtime.emitProjectChanged();
                         vm.emitWorkspaceUpdate();
                         vm.emitTargetsUpdate();
-                        opResults.push({ index: opIdx, type: 'delete_block', success: true });
+                        opResults.push({ index: opIdx, type: 'delete_block', success: true, mode: mode });
                         break;
                       }
                       case 'modify_input': {
                         const resolved = resolveBlockId(op.targetId);
-                        if (!resolved) { opResults.push({ index: opIdx, type: 'modify_input', success: false, error: 'Block tid not found: ' + op.targetId }); break; }
+                        if (!resolved) { opResults.push({ index: opIdx, type: 'modify_input', success: false, error: 'Block tid not found: ' + op.targetId + '. Pass the tid from the project context or the blockId returned by get_sprite_scripts.' }); break; }
                         const target = resolved.target;
                         const blockId = resolved.blockId;
                         const block = target.blocks.getBlock(blockId);
