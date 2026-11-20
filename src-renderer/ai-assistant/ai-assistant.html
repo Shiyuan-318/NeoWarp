@@ -1600,6 +1600,12 @@
             font-variant-numeric: tabular-nums;
             white-space: nowrap;
         }
+        /* 挂了速度小窗的用时：hover 提示可交互，与用量胶囊一致 */
+        .msg-turn-time.has-speed-tip {
+            cursor: default;
+            transition: color var(--transition);
+        }
+        .msg-turn-time.has-speed-tip:hover { color: var(--text-secondary); }
 
         /* 明细浮层：挂 body + fixed 定位，避免被聊天区的滚动容器裁掉 */
         .turn-usage-tip {
@@ -4576,6 +4582,60 @@
                 padding: 18px 16px 16px;
             }
         }
+
+        /* ── 导出对话：会话选择弹窗 ── */
+        .export-conv-list {
+            max-height: 320px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 5px;
+            background: var(--surface-secondary);
+        }
+        .export-conv-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+        .export-conv-item:hover {
+            background: var(--surface-hover);
+        }
+        .export-conv-item-icon {
+            width: 16px;
+            height: 16px;
+            color: var(--text-tertiary);
+            flex-shrink: 0;
+        }
+        .export-conv-item-content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .export-conv-item-title {
+            font-size: 13px;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.35;
+        }
+        .export-conv-item-meta {
+            font-size: 10.5px;
+            color: var(--text-tertiary);
+            line-height: 1.2;
+        }
+        .export-conv-empty {
+            padding: 26px 12px;
+            text-align: center;
+            font-size: 12.5px;
+            color: var(--text-tertiary);
+        }
         /* ── 手机编程弹出面板 ── */
         .phone-popover {
             position: absolute;
@@ -5822,6 +5882,14 @@
                             </svg>
                             <span class="settings-nav-label" id="settingsNavWorkflow">工作流</span>
                         </button>
+                        <button class="settings-nav-item" id="settingsTabData" type="button" role="tab" aria-selected="false" aria-controls="settingsPaneData">
+                            <svg class="settings-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 3v12"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <path d="M4 19h16"></path>
+                            </svg>
+                            <span class="settings-nav-label" id="settingsNavData">数据</span>
+                        </button>
                     </div>
                 </nav>
 
@@ -5914,6 +5982,29 @@
                                 <button class="wf-dir-btn" id="wfOpenDirBtn" type="button" style="display:none;">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                                     <span id="wfOpenDirLabel">打开目录</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-pane" id="settingsPaneData" role="tabpanel">
+                        <div class="wf-setting-section">
+                            <div class="wf-setting-heading">
+                                <div class="wf-setting-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                </div>
+                                <div class="wf-setting-copy">
+                                    <div class="wf-setting-label" id="exportJsonlLabel">导出近期对话 JSONL</div>
+                                    <div class="wf-setting-desc" id="exportJsonlDesc">选择一个近期对话，将其导出为 JSONL 文件（每行一条 JSON 记录，含元信息、对话消息与工具调用结果），保存到指定位置。</div>
+                                </div>
+                            </div>
+                            <div class="wf-dir-row">
+                                <button class="wf-dir-btn" id="exportJsonlBtn" type="button">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                    <span id="exportJsonlBtnLabel">选择对话并导出</span>
                                 </button>
                             </div>
                         </div>
@@ -7048,6 +7139,9 @@
             turnReasoning: 'Reasoning',
             turnReply: 'Reply',
             turnElapsed: '{t} elapsed',
+            turnSpeedTitle: 'Generation stats',
+            turnSpeedLabel: 'Output speed',
+            turnTtftLabel: 'First token',
             groupProvider: 'Provider',
             groupModel: 'Model',
             groupEndpoint: 'Endpoint',
@@ -7154,6 +7248,15 @@
             wfSettingsDocsDesc: 'Documents generated by Plan / Spec workflows are saved here, grouped in folders by task name, ready for version control. Leave empty to keep them in chats only.',
             wfSpecProgress: '{done}/{total} tasks',
             wfCancelConfirm: 'Cancel this workflow? Generated documents stay in the chat.',
+            tabData: 'Data',
+            dataSubtitle: 'Export your conversations as data files.',
+            exportJsonlLabel: 'Export recent conversation as JSONL',
+            exportJsonlDesc: 'Pick one of your recent conversations and save it as a JSONL file (one JSON record per line: meta, chat messages, tool calls and results) to a location you choose.',
+            exportJsonlBtn: 'Choose conversation & export',
+            exportJsonlPickTitle: 'Choose a conversation to export',
+            exportJsonlEmpty: 'No conversations with messages to export yet.',
+            exportJsonlDone: 'Conversation exported',
+            exportJsonlFail: 'Export failed',
         },
         zh: {
             appTitle: 'AI 助手',
@@ -7321,6 +7424,9 @@
             turnReasoning: '思考过程',
             turnReply: '回复内容',
             turnElapsed: '用时 {t}',
+            turnSpeedTitle: '生成统计',
+            turnSpeedLabel: 'Token 输出速度',
+            turnTtftLabel: '首字延迟',
             groupProvider: '服务商',
             groupModel: '模型',
             groupEndpoint: '接口地址',
@@ -7426,7 +7532,16 @@
             wfSettingsDocsLabel: '工作流文档保存位置',
             wfSettingsDocsDesc: 'Plan / Spec 工作流生成的文档会按任务名分文件夹保存到该目录，可纳入版本控制长期保留。留空则仅保留在当前会话中。',
             wfSpecProgress: '{done}/{total} 任务',
-            wfCancelConfirm: '取消当前工作流？已生成的文档仍保留在对话中。'
+            wfCancelConfirm: '取消当前工作流？已生成的文档仍保留在对话中。',
+            tabData: '数据',
+            dataSubtitle: '把对话导出为数据文件。',
+            exportJsonlLabel: '导出近期对话 JSONL',
+            exportJsonlDesc: '选择一个近期对话，将其导出为 JSONL 文件（每行一条 JSON 记录，含元信息、对话消息与工具调用结果），保存到指定位置。',
+            exportJsonlBtn: '选择对话并导出',
+            exportJsonlPickTitle: '选择要导出的对话',
+            exportJsonlEmpty: '还没有包含消息的对话可以导出。',
+            exportJsonlDone: '对话已导出',
+            exportJsonlFail: '导出失败'
         }
     };
     TRANSLATIONS['zh-CN'] = TRANSLATIONS.zh;
@@ -7479,9 +7594,9 @@
         if (welcomeSubtitleEl) welcomeSubtitleEl.innerHTML = t('welcomeSubtitle');
         renderWelcomeTags();
         var settingsTitleEl = document.querySelector('.settings-title');
-        if (settingsTitleEl) settingsTitleEl.textContent = settingsTab === 'usage' ? t('tabUsage') : (settingsTab === 'workflow' ? t('tabWorkflow') : t('modelSettings'));
+        if (settingsTitleEl) settingsTitleEl.textContent = settingsTab === 'usage' ? t('tabUsage') : (settingsTab === 'workflow' ? t('tabWorkflow') : (settingsTab === 'data' ? t('tabData') : t('modelSettings')));
         var settingsSubtitleEl = document.getElementById('settingsSubtitle');
-        if (settingsSubtitleEl) settingsSubtitleEl.textContent = settingsTab === 'usage' ? t(IS_REMOTE ? 'usageSubtitleRemote' : 'usageSubtitle') : (settingsTab === 'workflow' ? t('workflowSubtitle') : t('settingsSubtitle'));
+        if (settingsSubtitleEl) settingsSubtitleEl.textContent = settingsTab === 'usage' ? t(IS_REMOTE ? 'usageSubtitleRemote' : 'usageSubtitle') : (settingsTab === 'workflow' ? t('workflowSubtitle') : (settingsTab === 'data' ? t('dataSubtitle') : t('settingsSubtitle')));
         var settingsNavTitleEl = document.getElementById('settingsNavTitle');
         if (settingsNavTitleEl) settingsNavTitleEl.textContent = t('settingsNavTitle');
         // 窄屏下目录只剩图标，把文案挂到 title 上仍可读
@@ -7491,12 +7606,16 @@
         if (navUsageEl) navUsageEl.textContent = t('tabUsage');
         var navWorkflowEl = document.getElementById('settingsNavWorkflow');
         if (navWorkflowEl) navWorkflowEl.textContent = t('tabWorkflow');
+        var navDataEl = document.getElementById('settingsNavData');
+        if (navDataEl) navDataEl.textContent = t('tabData');
         var tabModelsEl = document.getElementById('settingsTabModels');
         if (tabModelsEl) tabModelsEl.title = t('tabModels');
         var tabUsageEl = document.getElementById('settingsTabUsage');
         if (tabUsageEl) tabUsageEl.title = t('tabUsage');
         var tabWorkflowEl = document.getElementById('settingsTabWorkflow');
         if (tabWorkflowEl) tabWorkflowEl.title = t('tabWorkflow');
+        var tabDataEl = document.getElementById('settingsTabData');
+        if (tabDataEl) tabDataEl.title = t('tabData');
         // 工作流设置页与设置面板标签跟随语言刷新
         var wfDocsLabelEl = document.getElementById('wfDocsLabel');
         if (wfDocsLabelEl) wfDocsLabelEl.textContent = t('wfSettingsDocsLabel');
@@ -7506,6 +7625,13 @@
         if (wfPickDirLabelEl) wfPickDirLabelEl.textContent = t('wfDirPick');
         var wfOpenDirLabelEl = document.getElementById('wfOpenDirLabel');
         if (wfOpenDirLabelEl) wfOpenDirLabelEl.textContent = t('wfDirOpen');
+        // 数据页（导出对话 JSONL）文案跟随语言刷新
+        var exportJsonlLabelEl = document.getElementById('exportJsonlLabel');
+        if (exportJsonlLabelEl) exportJsonlLabelEl.textContent = t('exportJsonlLabel');
+        var exportJsonlDescEl = document.getElementById('exportJsonlDesc');
+        if (exportJsonlDescEl) exportJsonlDescEl.textContent = t('exportJsonlDesc');
+        var exportJsonlBtnLabelEl = document.getElementById('exportJsonlBtnLabel');
+        if (exportJsonlBtnLabelEl) exportJsonlBtnLabelEl.textContent = t('exportJsonlBtn');
         renderWorkflowSettingsPane();
         renderWorkflowChip();
         if (wfPopupOpen) wfRenderPopup();
@@ -7633,6 +7759,7 @@
         // AI 工作流：读取统一设置（默认工作流 + 文档目录）、绑定设置页事件、渲染徽章
         try { loadWorkflowSettings(); } catch(e) { console.error('loadWorkflowSettings error:', e); }
         try { setupWorkflowSettingsEvents(); } catch(e) { console.error('setupWorkflowSettingsEvents error:', e); }
+        try { setupExportSettingsEvents(); } catch(e) { console.error('setupExportSettingsEvents error:', e); }
         try { renderWorkflowChip(); } catch(e) { console.error('renderWorkflowChip error:', e); }
         if (IS_SOLO) {
             try { initSolo(); } catch(e) { console.error('initSolo error:', e); }
@@ -8426,7 +8553,10 @@
     function resetTurnUsage() {
         turnUsage = {
             prompt: 0, completion: 0, cached: 0, cacheWrite: 0, reasoning: 0,
-            requests: 0, startedAt: Date.now()
+            requests: 0, startedAt: Date.now(),
+            // 首字延迟：本轮首个 token 从回合计时起点到抵达的等待时长；
+            // 输出时长：各次请求「首 token → 流结束」的纯输出时间合计（工具循环不计中间执行）
+            firstTokenMs: 0, outputMs: 0
         };
     }
 
@@ -8466,7 +8596,9 @@
             cacheWrite: turnUsage.cacheWrite,
             reasoning: turnUsage.reasoning,
             requests: turnUsage.requests,
-            elapsedMs: Math.max(0, Date.now() - (turnUsage.startedAt || Date.now()))
+            elapsedMs: Math.max(0, Date.now() - (turnUsage.startedAt || Date.now())),
+            firstTokenMs: turnUsage.firstTokenMs || 0,
+            outputMs: turnUsage.outputMs || 0
         };
     }
 
@@ -8854,11 +8986,12 @@
     }
 
     function setSettingsTab(tab) {
-        settingsTab = ['usage', 'workflow'].indexOf(tab) >= 0 ? tab : 'models';
+        settingsTab = ['usage', 'workflow', 'data'].indexOf(tab) >= 0 ? tab : 'models';
         var pairs = [
             ['settingsTabModels', 'settingsPaneModels', 'models'],
             ['settingsTabUsage', 'settingsPaneUsage', 'usage'],
-            ['settingsTabWorkflow', 'settingsPaneWorkflow', 'workflow']
+            ['settingsTabWorkflow', 'settingsPaneWorkflow', 'workflow'],
+            ['settingsTabData', 'settingsPaneData', 'data']
         ];
         pairs.forEach(function(p) {
             var btn = document.getElementById(p[0]);
@@ -8868,9 +9001,9 @@
             if (pane) pane.classList.toggle('active', on);
         });
         var titleEl = document.getElementById('settingsTitle');
-        if (titleEl) titleEl.textContent = settingsTab === 'usage' ? t('tabUsage') : (settingsTab === 'workflow' ? t('tabWorkflow') : t('modelSettings'));
+        if (titleEl) titleEl.textContent = settingsTab === 'usage' ? t('tabUsage') : (settingsTab === 'workflow' ? t('tabWorkflow') : (settingsTab === 'data' ? t('tabData') : t('modelSettings')));
         var subtitle = document.getElementById('settingsSubtitle');
-        if (subtitle) subtitle.textContent = settingsTab === 'usage' ? t(IS_REMOTE ? 'usageSubtitleRemote' : 'usageSubtitle') : (settingsTab === 'workflow' ? t('workflowSubtitle') : t('settingsSubtitle'));
+        if (subtitle) subtitle.textContent = settingsTab === 'usage' ? t(IS_REMOTE ? 'usageSubtitleRemote' : 'usageSubtitle') : (settingsTab === 'workflow' ? t('workflowSubtitle') : (settingsTab === 'data' ? t('dataSubtitle') : t('settingsSubtitle')));
         // 切换分类时内容区回到顶部，否则会停在上一页的滚动位置
         var content = document.getElementById('settingsContent');
         if (content) content.scrollTop = 0;
@@ -12213,6 +12346,218 @@
         if (tabBtn) tabBtn.addEventListener('click', function() { setSettingsTab('workflow'); });
     }
 
+    // ── AI 设置页：导出近期对话为 JSONL ──
+    // 对话记录存在渲染层 localStorage（conversations），流程：选对话 →
+    // 主进程弹保存框选位置 → 把整理好的 JSONL 文本落盘
+    function setupExportSettingsEvents() {
+        var tabBtn = document.getElementById('settingsTabData');
+        if (tabBtn) tabBtn.addEventListener('click', function() { setSettingsTab('data'); });
+        var exportBtn = document.getElementById('exportJsonlBtn');
+        if (exportBtn) exportBtn.addEventListener('click', startExportConversationJsonl);
+    }
+
+    function startExportConversationJsonl() {
+        if (IS_REMOTE || !window.AIAssistantPreload || !AIAssistantPreload.exportConversationJsonl) {
+            showToast(t('manageOnDesktop'), 'error');
+            return;
+        }
+        // 当前会话的最新消息可能还只在 chatHistory 里，先落账再选择
+        saveCurrentConversation();
+        showConversationPickerDialog().then(function(conv) {
+            if (conv) exportConversationAsJsonl(conv);
+        });
+    }
+
+    // 会话选择弹窗：按最近活动排序列出所有含消息的对话，选中后 resolve 该会话
+    function showConversationPickerDialog() {
+        return new Promise(function(resolve) {
+            var candidates = conversations
+                .filter(function(c) { return (c.messages || []).length > 0; })
+                .sort(function(a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
+            var overlay = document.createElement('div');
+            overlay.className = 'dialog-overlay confirm-overlay open';
+            overlay.style.zIndex = '300';
+            var panel = document.createElement('div');
+            panel.className = 'dialog-panel';
+            panel.style.maxWidth = '460px';
+            panel.innerHTML =
+                '<div class="dialog-title">' + escapeHtml(t('exportJsonlPickTitle')) + '</div>' +
+                '<div class="export-conv-list"></div>' +
+                '<div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">' +
+                '<button class="btn btn-secondary" data-action="cancel" style="flex:0 0 auto;padding:10px 22px;">' + t('cancel') + '</button>' +
+                '</div>';
+            var list = panel.querySelector('.export-conv-list');
+            var settled = false;
+            function close(result) {
+                if (settled) return;
+                settled = true;
+                overlay.classList.remove('open');
+                overlay.classList.remove('confirm-overlay');
+                document.removeEventListener('keydown', escHandler);
+                setTimeout(function() { if (overlay.parentNode) overlay.remove(); }, 200);
+                resolve(result);
+            }
+            function escHandler(e) {
+                if (e.key === 'Escape') {
+                    e.stopPropagation();
+                    close(null);
+                }
+            }
+            if (!candidates.length) {
+                var empty = document.createElement('div');
+                empty.className = 'export-conv-empty';
+                empty.textContent = t('exportJsonlEmpty');
+                list.appendChild(empty);
+            }
+            var isZh = (currentLocale || 'en').split('-')[0] === 'zh';
+            candidates.forEach(function(conv) {
+                var msgCount = (conv.messages || []).filter(function(m) {
+                    return m && (m.role === 'user' || (m.role === 'assistant' && m.content));
+                }).length;
+                var metaBits = [formatConversationTime(conv.updatedAt)];
+                if (msgCount > 0) metaBits.push(msgCount + (isZh ? ' 条' : (msgCount > 1 ? ' msgs' : ' msg')));
+                var item = document.createElement('div');
+                item.className = 'export-conv-item';
+                item.innerHTML =
+                    '<svg class="export-conv-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' +
+                    '<div class="export-conv-item-content">' +
+                    '<span class="export-conv-item-title">' + escapeHtml(conv.title || t('untitledChat')) + '</span>' +
+                    '<span class="export-conv-item-meta">' + escapeHtml(metaBits.join(' · ')) + '</span>' +
+                    '</div>';
+                item.addEventListener('click', function() { close(conv); });
+                list.appendChild(item);
+            });
+            panel.querySelector('[data-action="cancel"]').addEventListener('click', function() { close(null); });
+            overlay.addEventListener('click', function(e) { if (e.target === overlay) close(null); });
+            overlay.appendChild(panel);
+            document.body.appendChild(overlay);
+            document.addEventListener('keydown', escHandler);
+        });
+    }
+
+    // 会话名转安全文件名：去掉非法字符、限长（与工作流文档文件夹同规则）
+    function exportFileNameForConv(conv) {
+        var base = String((conv && conv.title) || '')
+            .replace(/[\\/:*?"<>|\x00-\x1f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 40)
+            .replace(/^\.+/, '') || 'conversation';
+        var d = new Date();
+        var pad = function(n) { return ('0' + n).slice(-2); };
+        var stamp = d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes());
+        return base + '-' + stamp + '.jsonl';
+    }
+
+    function safeParseJsonArg(str) {
+        if (typeof str !== 'string') return undefined;
+        try { return JSON.parse(str); } catch (e) { return undefined; }
+    }
+
+    function exportToolCallsOf(msg) {
+        var calls = [];
+        if (Array.isArray(msg.toolCalls)) {
+            msg.toolCalls.forEach(function(tc) {
+                if (!tc) return;
+                var args = tc.args;
+                if (args === undefined && typeof tc.raw === 'string') args = safeParseJsonArg(tc.raw);
+                calls.push({ name: tc.name || '', args: args === undefined ? null : args });
+            });
+        } else if (Array.isArray(msg.tool_calls)) {
+            msg.tool_calls.forEach(function(tc) {
+                var fn = (tc && tc.function) || {};
+                var args = safeParseJsonArg(fn.arguments);
+                calls.push({ name: fn.name || '', args: args === undefined ? null : args });
+            });
+        }
+        return calls;
+    }
+
+    // 把会话整理成 JSONL 文本：首行 meta 概览，其后按对话顺序一条消息一行。
+    // tool_result 是界面镜像（同一结果已记在 tool 行里），跳过避免重复。
+    function buildConversationJsonl(conv) {
+        var messages = (conv && conv.messages) || [];
+        var lines = [];
+        lines.push(JSON.stringify({
+            type: 'meta',
+            app: IS_SOLO ? 'NeoWarp SOLO' : 'NeoWarp AI',
+            conversationId: conv.id || '',
+            title: conv.title || '',
+            createdAt: conv.createdAt || null,
+            updatedAt: conv.updatedAt || null,
+            messageCount: messages.length,
+            exportedAt: new Date().toISOString()
+        }));
+        // tool 行本身不带调用名，从 tool_result / assistant.tool_calls 里按 id 补齐
+        var nameById = {};
+        messages.forEach(function(m) {
+            if (m && m.role === 'tool_result' && m.tool_call_id) {
+                nameById[m.tool_call_id] = m.name || '';
+            }
+        });
+        messages.forEach(function(m) {
+            if (!m || !m.role) return;
+            if (m.role === 'tool_result') return;
+            if (m.role === 'user') {
+                var rec = {
+                    type: 'message',
+                    role: 'user',
+                    time: m.time || '',
+                    text: stripBase64Data(typeof m.content === 'string' ? m.content : JSON.stringify(m.content || ''))
+                };
+                if (Array.isArray(m.images) && m.images.length) rec.imageCount = m.images.length;
+                lines.push(JSON.stringify(rec));
+            } else if (m.role === 'assistant') {
+                var rec2 = {
+                    type: 'message',
+                    role: 'assistant',
+                    time: m.time || '',
+                    text: stripBase64Data(typeof m.content === 'string' ? m.content : '')
+                };
+                if (m.reasoning) rec2.reasoning = m.reasoning;
+                var calls = exportToolCallsOf(m);
+                if (calls.length) rec2.toolCalls = calls;
+                lines.push(JSON.stringify(rec2));
+            } else if (m.role === 'tool') {
+                lines.push(JSON.stringify({
+                    type: 'tool',
+                    toolCallId: m.tool_call_id || '',
+                    name: nameById[m.tool_call_id] || '',
+                    content: stripBase64Data(typeof m.content === 'string' ? m.content : JSON.stringify(m.content || ''))
+                }));
+            } else {
+                lines.push(JSON.stringify({
+                    type: 'message',
+                    role: String(m.role),
+                    time: m.time || '',
+                    text: stripBase64Data(JSON.stringify(m.content !== undefined ? m.content : ''))
+                }));
+            }
+        });
+        return lines.join('\n') + '\n';
+    }
+
+    function exportConversationAsJsonl(conv) {
+        if (!window.AIAssistantPreload || !AIAssistantPreload.exportConversationJsonl) {
+            showToast(t('manageOnDesktop'), 'error');
+            return;
+        }
+        AIAssistantPreload.exportConversationJsonl({
+            defaultName: exportFileNameForConv(conv),
+            content: buildConversationJsonl(conv)
+        }).then(function(res) {
+            if (res && res.success) {
+                showToast(t('exportJsonlDone'), 'success');
+            } else if (res && res.canceled) {
+                // 用户取消保存框，不算失败
+            } else {
+                showToast((res && res.error) || t('exportJsonlFail'), 'error');
+            }
+        }).catch(function() {
+            showToast(t('exportJsonlFail'), 'error');
+        });
+    }
+
     function buildSystemPrompt(wfState) {
         var lang = getSystemPromptLanguage();
         var wfSection = buildWorkflowPromptSection(wfState);
@@ -12466,6 +12811,14 @@
                 var timeEl = document.createElement('span');
                 timeEl.className = 'msg-turn-time';
                 timeEl.textContent = tf('turnElapsed', { t: formatTurnDuration(turnStats.elapsedMs) });
+                // 有计时明细（输出时长 / 首字延迟）才挂悬浮小窗；旧消息没这些字段，保持原样
+                if (turnStats.outputMs > 0 || turnStats.firstTokenMs > 0) {
+                    timeEl.classList.add('has-speed-tip');
+                    timeEl._turnSpeed = turnStats;
+                    timeEl.addEventListener('mouseenter', function() { showTurnSpeedTip(timeEl); });
+                    timeEl.addEventListener('mouseleave', hideTurnUsageTip);
+                    timeEl.addEventListener('click', function() { showTurnSpeedTip(timeEl); });
+                }
                 footer.appendChild(timeEl);
             }
         }
@@ -12492,7 +12845,7 @@
         // 触屏没有 hover：点别处收起（捕获阶段先跑，点用量本身时随后又被展开）
         document.addEventListener('click', function(e) {
             var node = e.target;
-            if (node && node.closest && node.closest('.msg-turn-usage')) return;
+            if (node && node.closest && node.closest('.msg-turn-usage, .msg-turn-time')) return;
             hideTurnUsageTip();
         }, true);
         return el;
@@ -12569,8 +12922,13 @@
         var el = ensureTurnUsageTip();
         el.innerHTML = turnUsageTipHtml(stats);
         el.classList.add('show');
-        // 先渲染再量尺寸：上方放不下时翻到触发点下方
-        var rect = chip.getBoundingClientRect();
+        positionTurnTip(chip);
+    }
+
+    /** 先渲染再量尺寸：上方放不下时翻到触发点下方（用量 / 速度两个浮层共用） */
+    function positionTurnTip(anchor) {
+        var el = ensureTurnUsageTip();
+        var rect = anchor.getBoundingClientRect();
         var w = el.offsetWidth;
         var h = el.offsetHeight;
         var left = rect.left - 10;
@@ -12580,6 +12938,40 @@
         if (top < 10) top = rect.bottom + 8;
         el.style.left = Math.round(left) + 'px';
         el.style.top = Math.round(top) + 'px';
+    }
+
+    /**
+     * 用时的小框：Token 输出速度 + 首字延迟。
+     * 速度 = 输出 Token / 纯输出时长（各次请求「首 token → 流结束」之和，
+     * 不含工具执行的空档，否则工具循环会把速度严重拉低）。
+     */
+    function turnSpeedTipHtml(s) {
+        var completion = Math.max(0, s.completion || 0);
+        var outputMs = Math.max(0, s.outputMs || 0);
+        var ttftMs = Math.max(0, s.firstTokenMs || 0);
+        var tps = outputMs > 0 ? completion / (outputMs / 1000) : 0;
+        var C = TURN_USAGE_COLORS;
+
+        function row(color, label, value) {
+            return '<div class="tu-row">' +
+                (color ? '<i class="tu-dot" style="background:' + color + '"></i>' : '') +
+                '<span class="tu-label">' + escapeHtml(label) + '</span>' +
+                '<span class="tu-val">' + value + '</span></div>';
+        }
+
+        var html = '<div class="tu-head"><span>' + escapeHtml(t('turnSpeedTitle')) + '</span></div>';
+        html += row(C.output, t('turnSpeedLabel'), outputMs > 0 ? (Math.round(tps * 10) / 10).toFixed(1) + ' tok/s' : '—');
+        html += row(C.input, t('turnTtftLabel'), ttftMs > 0 ? formatTurnDuration(ttftMs) : '—');
+        return html;
+    }
+
+    function showTurnSpeedTip(el) {
+        var stats = el && el._turnSpeed;
+        if (!stats) return;
+        var tip = ensureTurnUsageTip();
+        tip.innerHTML = turnSpeedTipHtml(stats);
+        tip.classList.add('show');
+        positionTurnTip(el);
     }
 
     /** 按当前撤销状态，同步所有总结脚注里的撤销按钮。 */
@@ -13227,6 +13619,12 @@
         var streamReader = null;
         var loopSegment = null;
         var lastLoopCheckAt = 0;
+        // 本请求的计时：起点记在发出前（含建连/排队），首个产出分片到达时记首字时刻
+        var reqStartedAt = Date.now();
+        var firstTokenAt = 0;
+        function markFirstToken() {
+            if (!firstTokenAt) firstTokenAt = Date.now();
+        }
 
         function stopStream() {
             if (streamReader) {
@@ -13239,6 +13637,14 @@
             if (finished) return;
             finished = true;
             stopStream();
+            // 计时入账：输出时长按「首 token → 流结束」累计；首字延迟只记本轮第一次
+            if (firstTokenAt) {
+                if (!turnUsage) resetTurnUsage();
+                turnUsage.outputMs = (turnUsage.outputMs || 0) + Math.max(0, Date.now() - firstTokenAt);
+                if (!turnUsage.firstTokenMs) {
+                    turnUsage.firstTokenMs = Math.max(0, firstTokenAt - (turnUsage.startedAt || reqStartedAt));
+                }
+            }
             recordUsage(usageInfo, inputTokens);
             accumulateTurnUsage(usageInfo, inputTokens, fullReasoning, fullContent);
             if (loopSegment) {
@@ -13299,6 +13705,7 @@
             if (j.usage) usageInfo = j.usage;
             var delta = j.choices && j.choices[0] && j.choices[0].delta;
             if (!delta) return;
+            if (delta.content || delta.reasoning_content || delta.tool_calls) markFirstToken();
             if (delta.reasoning_content) fullReasoning += delta.reasoning_content;
             if (delta.content) {
                 fullContent += delta.content;
@@ -13334,6 +13741,7 @@
                 return;
             }
             if (j.type === 'content_block_start') {
+                markFirstToken();
                 var block = j.content_block || {};
                 if (block.type === 'tool_use') {
                     accumulateToolCall(j.index, block.id || '', block.name, '');
@@ -13344,6 +13752,7 @@
                 return;
             }
             if (j.type === 'content_block_delta') {
+                markFirstToken();
                 var delta = j.delta || {};
                 if (delta.type === 'text_delta' && delta.text) {
                     fullContent += delta.text;
@@ -13375,6 +13784,7 @@
                 return;
             }
             var msg = j.message || {};
+            if (msg.thinking || msg.content || msg.tool_calls) markFirstToken();
             if (msg.thinking) fullReasoning += msg.thinking;
             if (msg.content) {
                 fullContent += msg.content;

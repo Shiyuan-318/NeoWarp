@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('AIAssistantPreload', {
   pickWorkflowDocsDir: () => ipcRenderer.invoke('ai-pick-workflow-docs-dir'),
   saveWorkflowDoc: (payload) => ipcRenderer.invoke('ai-save-workflow-doc', payload),
   openWorkflowDocsDir: () => ipcRenderer.invoke('ai-open-workflow-docs-dir'),
+  // 导出对话 JSONL：渲染层把选中的对话整理成 JSONL 文本，主进程弹保存框落盘
+  exportConversationJsonl: (payload) => ipcRenderer.invoke('ai-export-conversation-jsonl', payload),
   // meta 目前只带 {sessionId}：编辑器据此把改动记进对应对话的 AI 改动日志
   callTool: (toolName, params, meta) => ipcRenderer.invoke('ai-tool-call', toolName, params, meta),
   webSearch: (query) => ipcRenderer.invoke('web-search', query),

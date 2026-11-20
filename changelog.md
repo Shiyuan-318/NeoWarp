@@ -10,6 +10,7 @@ Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **form
  - Security: the save dialog now rejects file names that would escape the current folder, and the language switch parameter is type-checked
  - Fixed: an extension could previously crash the whole app through an iframe
  - Added a crash dump logging option in desktop settings (advanced section) with a button that opens the folder where dumps are stored; it is off by default and needs a restart
+ - AI assistant: the settings page now has a Data tab that exports a chosen conversation as a JSONL file (one JSON record per line with metadata, chat messages, and tool calls); pick the conversation first, then pick where to save it. NeoWarp SOLO has the same setting
  - Performance: projects run noticeably faster on average, and projects with many custom blocks no longer compile so slowly
  - Fixed memory leaks where costumes, sounds, and sprites deleted through extensions were never released
  - Fixed key press lag in projects that use a lot of vector costumes

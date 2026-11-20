@@ -1,3 +1,4 @@
+const path = require('path');
 const AbstractWindow = require('./abstract');
 const {ipcMain, nativeTheme, dialog} = require('electron');
 const {translate, getLocale} = require('../l10n');
@@ -8,6 +9,7 @@ const privilegedFetch = require('../fetch');
 const phoneSync = require('../phone-sync');
 const {registerAiModelConfigIpc} = require('../ai-model-configs');
 const {registerAiWorkflowIpc} = require('../ai-workflow-settings');
+const {writeFileAtomic} = require('../atomic-write-stream');
 const https = require('https');
 const http = require('http');
 const zlib = require('zlib');
@@ -453,6 +455,34 @@ class AIAssistantWindow extends AbstractWindow {
     // AI 工作流设置（Plan / Spec / Goal 默认项与文档保存位置）：
     // 读取/保存/广播 + 选目录 + 文档落盘；SOLO 继承本窗口构造函数，自动获得
     registerAiWorkflowIpc(this.ipc);
+
+    // 导出对话 JSONL：对话内容存在渲染层 localStorage 里，渲染层负责把选中的
+    // 对话整理成 JSONL 文本；这里只负责弹保存对话框选位置，然后把文本落盘。
+    // SOLO 继承本构造函数，同样获得该通道
+    this.ipc.handle('ai-export-conversation-jsonl', async (event, payload) => {
+      const p = payload || {};
+      const suggested = typeof p.defaultName === 'string' && p.defaultName.trim() ? p.defaultName.trim() : 'conversation.jsonl';
+      const result = await dialog.showSaveDialog(this.window, {
+        title: '导出对话 / Export conversation',
+        defaultPath: suggested,
+        filters: [
+          {name: 'JSONL', extensions: ['jsonl']}
+        ]
+      });
+      if (result.canceled || !result.filePath) {
+        return {success: false, canceled: true};
+      }
+      let target = result.filePath;
+      if (path.extname(target).toLowerCase() !== '.jsonl') {
+        target += '.jsonl';
+      }
+      try {
+        await writeFileAtomic(target, String(p.content || ''));
+        return {success: true, path: target};
+      } catch (e) {
+        return {success: false, error: e.message};
+      }
+    });
 
     this.ipc.handle('get-sprite-library', async () => {
       if (!this.editorWindow || this.editorWindow.window.isDestroyed()) {
