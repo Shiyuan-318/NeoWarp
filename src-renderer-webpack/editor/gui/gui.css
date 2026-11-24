@@ -7,6 +7,61 @@
   min-width: 1024px;
   min-height: 640px;
 }
+
+/* ============================================================
+   NeoWarp: 全屏舞台布局的尺寸单一事实来源。
+   全屏舞台时 scratch-gui 的布局（stage-wrapper 的 top、screen-utils 的
+   舞台高度计算、fullscreen 插件的 100vh 偏移、舞台头部覆盖层）都依赖
+   这两个变量，档位与下方 data-toolbar-height / Windows 窗口样式一节
+   保持一致：
+
+   --neowarp-menubar-h：顶部工具栏实际高度
+     normal 3rem；窄档 2.25rem；compact 窗口样式 + 深色主题时顶栏
+     兼作标题栏，高度也是 2.25rem。
+
+   --neowarp-fullscreen-top：全屏舞台顶部偏移（相对视口）
+     默认 = 工具栏高度（工具栏保持可见，舞台紧贴其下）；
+     Windows 窗口样式关闭（normal）时全屏舞台隐藏顶栏，舞台紧贴
+     自绘标题条下方（2rem，与 #neowarp-titlebar 的 32px 一致）；
+     OS 级全屏（F11）时标题条也隐藏，偏移归零。
+
+   注意：两个变量都在每个档位显式赋值，不让 fullscreen-top 用
+   var(menubar-h) 继承，避免窄档与窗口样式叠加时优先级难以推理。
+   desktop-hoc / window-titlebar 实时维护 html 上的 data 属性。
+   ============================================================ */
+:root {
+  --neowarp-menubar-h: 3rem;
+  --neowarp-fullscreen-top: 3rem;
+}
+[data-toolbar-height="narrow"] {
+  --neowarp-menubar-h: 2.25rem;
+  --neowarp-fullscreen-top: 2.25rem;
+}
+[data-compact-window-style="compact"][data-gui-theme="dark"] {
+  --neowarp-menubar-h: 2.25rem;
+  --neowarp-fullscreen-top: 2.25rem;
+}
+/* 窗口样式关闭：全屏舞台隐藏顶栏（见下方规则），舞台让出标题条那一行 */
+[data-compact-window-style="normal"] {
+  --neowarp-fullscreen-top: 2rem;
+}
+[data-compact-window-style="normal"][data-os-fullscreen="true"] {
+  --neowarp-fullscreen-top: 0px;
+}
+
+/* NeoWarp: 全屏舞台时顶栏去阴影。
+   深色主题的顶栏是悬浮圆角胶囊（上方留 6px 边距 + 8px/28px 投影），
+   全屏舞台紧贴其下缘，投影会压住舞台顶部一条画面。 */
+:global(html:has([class*="stage-wrapper_full-screen"])) :global([class*="menu-bar_menu-bar_"]) {
+  box-shadow: none !important;
+}
+/* NeoWarp: 窗口样式关闭时，全屏舞台隐藏顶栏。
+   normal 模式下顶栏位于 #app 内（整体下移了标题条高度），而全屏舞台是
+   position: fixed 相对视口定位，两者错开会导致顶栏压住舞台顶部。
+   直接隐藏顶栏，舞台按 --neowarp-fullscreen-top 紧贴标题条下方。 */
+:global(html[data-compact-window-style="normal"]:has([class*="stage-wrapper_full-screen"])) :global([class*="menu-bar_menu-bar_"]) {
+  display: none !important;
+}
 a {
   color: #25d;
   text-decoration: underline;

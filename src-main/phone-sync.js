@@ -49,6 +49,8 @@ const PAIR_TTL_MS = 10 * 60 * 1000;
 const CMD_RATE_LIMIT = {max: 60, windowMs: 10 * 1000};
 /** 鉴权失败限流：压制对配对码/会话令牌的枚举尝试与扫描噪音 */
 const AUTH_RATE_LIMIT = {max: 30, windowMs: 10 * 1000};
+/** 扫码连接数上限硬顶：下拉只给到 5，IPC 传来更大的值也钳在这里 */
+const MAX_CLIENTS_CAP = 16;
 
 const STATIC_TYPES = {
   '.js': 'application/javascript; charset=utf-8',
@@ -220,6 +222,7 @@ class PhoneSyncServer {
     this.token = crypto.randomBytes(32).toString('hex'); // 只走 Cookie，从不进 URL
     this.pairCode = null; // 二维码里的短时效配对码
     this.pairExpiresAt = 0;
+    this.maxClients = 0; // 扫码连接数上限：0 = 不限，桌面端二维码下方可调
     this.clients = new Set(); // SSE 响应对象
     this.aiWindow = null;
     this.ipcMain = null;
@@ -296,8 +299,24 @@ class PhoneSyncServer {
       ok: true,
       port: this.port,
       urls,
-      clients: this.clients.size
+      clients: this.clients.size,
+      maxClients: this.maxClients
     };
+  }
+
+  /**
+   * 设置扫码连接数上限（0 = 不限）。只影响之后的接入，已连接的设备不掐断，
+   * 等它们自然掉线后名额即生效——避免"调小上限"变成突兀地踢人。
+   */
+  setMaxClients (value) {
+    const n = Math.floor(Number(value));
+    this.maxClients = Number.isFinite(n) && n > 0 ? Math.min(n, MAX_CLIENTS_CAP) : 0;
+    return this.maxClients;
+  }
+
+  /** 是否还有扫码名额：0 = 不限 */
+  hasClientSlot () {
+    return this.maxClients === 0 || this.clients.size < this.maxClients;
   }
 
   /** 桌面窗口的 webContents，窗口已销毁时返回 null */
@@ -438,6 +457,12 @@ class PhoneSyncServer {
         res.end('配对码无效或已过期，请在电脑端重新打开"手机编程"二维码。');
         return;
       }
+      // 名额检查放在配对码校验之后：对拿不出有效码的对端不透露"是否有设备连接"
+      if (!this.hasClientSlot()) {
+        res.writeHead(403, baseHeaders('text/plain; charset=utf-8'));
+        res.end('已达最大连接数，请断开已连接的设备，或在电脑端调大上限。');
+        return;
+      }
       res.writeHead(303, {
         ...baseHeaders('text/plain; charset=utf-8'),
         Location: '/',
@@ -480,6 +505,13 @@ class PhoneSyncServer {
     }
 
     if (req.method === 'GET' && pathname === '/api/events') {
+      // 持旧 Cookie 的设备不重扫也可能回来，这里同样要过名额闸门；
+      // 拒绝后手机端每 2.5s 自动重试，空出名额即可接上
+      if (!this.hasClientSlot()) {
+        res.writeHead(429, baseHeaders('text/plain; charset=utf-8'));
+        res.end('Device limit reached');
+        return;
+      }
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',

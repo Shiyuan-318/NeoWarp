@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('AIAssistantPreload', {
   closeWindow: () => ipcRenderer.invoke('ai-close-window'),
   // 手机编程：获取局域网链接/二维码信息
   getPhoneLink: () => ipcRenderer.invoke('ai-get-phone-link'),
+  // 手机编程：设置最大扫码连接数（0 = 不限）
+  setPhoneMaxClients: (max) => ipcRenderer.invoke('ai-set-phone-max-clients', max),
   // 手机编程：把聊天状态变化广播给已连接的手机
   phoneSyncBroadcast: (payload) => ipcRenderer.send('ai-phone-broadcast', payload),
   onPhoneClientsChanged: (callback) => {

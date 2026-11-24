@@ -4683,6 +4683,28 @@
             text-align: center;
             padding: 30px 0;
         }
+        .phone-limit {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .phone-limit-label { flex-shrink: 0; }
+        .phone-limit select {
+            flex: 1;
+            max-width: 132px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: var(--text);
+            background: var(--surface-secondary);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            outline: none;
+            cursor: pointer;
+        }
         .phone-url {
             display: flex;
             align-items: center;
@@ -5676,6 +5698,16 @@
             </div>
             <div class="phone-qr" id="phoneQrBox">
                 <div class="phone-qr-empty" id="phoneQrEmpty">正在生成二维码…</div>
+            </div>
+            <div class="phone-limit">
+                <label class="phone-limit-label" for="phoneMaxSelect" id="phoneMaxLabel">最大连接数</label>
+                <select id="phoneMaxSelect" aria-label="最大连接数">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                    <option value="0" id="phoneMaxUnlimited">不限</option>
+                </select>
             </div>
             <div id="phoneUrlList"></div>
             <div class="phone-status">
@@ -7063,6 +7095,8 @@
             phoneQrError: 'QR generation failed',
             phoneServerOff: 'Server unavailable',
             phoneLinked: 'Phone connected',
+            phoneMaxLabel: 'Max connections',
+            phoneMaxUnlimited: 'Unlimited',
             tabModels: 'Models',
             tabUsage: 'Usage',
             usageSubtitle: 'Token usage recorded on this device. Kept for 30 days.',
@@ -7348,6 +7382,8 @@
             phoneQrError: '二维码生成失败',
             phoneServerOff: '服务不可用',
             phoneLinked: '手机已连接',
+            phoneMaxLabel: '最大连接数',
+            phoneMaxUnlimited: '不限',
             tabModels: '模型',
             tabUsage: '使用统计',
             usageSubtitle: '记录在本机的 Token 用量，保留最近 30 天。',
@@ -7697,6 +7733,11 @@
         }
         var disclaimerExitBtn = document.getElementById('disclaimerExitBtn');
         if (disclaimerExitBtn) disclaimerExitBtn.textContent = t('exit');
+        // 手机编程面板：连接数上限控件文案随语言刷新（数字档位无需翻译）
+        var phoneMaxLabelEl = document.getElementById('phoneMaxLabel');
+        if (phoneMaxLabelEl) phoneMaxLabelEl.textContent = t('phoneMaxLabel');
+        var phoneMaxUnlimitedEl = document.getElementById('phoneMaxUnlimited');
+        if (phoneMaxUnlimitedEl) phoneMaxUnlimitedEl.textContent = t('phoneMaxUnlimited');
         renderConversationList();
         // 待办面板的兜底标题随语言刷新
         renderSidebarTodo();
@@ -8064,6 +8105,27 @@
         try { localStorage.setItem('neowarp_ai_models_v2', JSON.stringify(savedConfigs.filter(function(c) { return !isFreeConfig(c); }))); } catch(e) {}
     }
 
+    // 列表展示顺序：按最近活动时间倒序（与 renderConversationList 保持一致）。
+    // 删除会话、启动兜底时都按这个顺序挑下一个，界面上高亮的才会是列表最上面那条。
+    function mostRecentConversationId() {
+        var best = null;
+        conversations.forEach(function(c) {
+            if (!best || (c.updatedAt || 0) > (best.updatedAt || 0)) best = c;
+        });
+        return best ? best.id : null;
+    }
+
+    // 旧存档可能没有 nextConversationId：按已有 id 的最大序号往下排，
+    // 退回到 length + 1 会在删过会话之后生成重复 id（按 id 找会话就会拿到另一条）
+    function nextConvIdFromConversations() {
+        var max = 0;
+        conversations.forEach(function(c) {
+            var m = /^conv_(\d+)$/.exec(String((c && c.id) || ''));
+            if (m && parseInt(m[1], 10) > max) max = parseInt(m[1], 10);
+        });
+        return max + 1;
+    }
+
     function loadConversations() {
         try {
             var raw = localStorage.getItem('neowarp_ai_conversations');
@@ -8072,7 +8134,8 @@
                 if (parsed && Array.isArray(parsed.conversations)) {
                     conversations = parsed.conversations;
                     activeConversationId = parsed.activeConversationId || null;
-                    nextConversationId = parsed.nextConversationId || (conversations.length + 1);
+                    // 存档里的计数可能落后于实际 id（旧版本、异常退出），取两者的较大值兜底
+                    nextConversationId = Math.max(parsed.nextConversationId || 0, nextConvIdFromConversations());
                 }
             }
         } catch(e) { conversations = []; }
@@ -8080,7 +8143,7 @@
             createNewConversation();
         } else {
             if (!activeConversationId || !conversations.find(function(c) { return c.id === activeConversationId; })) {
-                activeConversationId = conversations[0].id;
+                activeConversationId = mostRecentConversationId() || conversations[0].id;
             }
             loadConversation(activeConversationId);
         }
@@ -8224,11 +8287,26 @@
         if (messageInput) messageInput.focus();
     }
 
+    // 两个消息数组是否装着同一批消息对象（切换会话时用来判断内容有没有真的变）
+    function sameMessages(a, b) {
+        if (a === b) return true;
+        if (!a || !b || a.length !== b.length) return false;
+        for (var i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) return false;
+        }
+        return true;
+    }
+
     function saveCurrentConversation() {
         var conv = conversations.find(function(c) { return c.id === activeConversationId; });
         if (!conv) return;
-        conv.messages = chatHistory.slice();
-        conv.updatedAt = Date.now();
+        var next = chatHistory.slice();
+        // 只有消息真的变了才更新 updatedAt。仅仅是打开/切换会话不该算“最近活动”，
+        // 否则列表会按活动时间重排：用户正要点的行被挤走，点下去打开的成了另一条对话
+        if (!sameMessages(conv.messages, next)) {
+            conv.messages = next;
+            conv.updatedAt = Date.now();
+        }
         saveConversations();
     }
 
@@ -8298,7 +8376,8 @@
             delete sidebarTodoState[id];
             if (activeConversationId === id) {
                 if (conversations.length > 0) {
-                    activeConversationId = conversations[0].id;
+                    // 切到列表最上面那条（最近活动），与界面上看到的第一行一致
+                    activeConversationId = mostRecentConversationId() || conversations[0].id;
                     loadConversation(activeConversationId);
                 } else {
                     createNewConversation();
@@ -8325,17 +8404,38 @@
         return (d.getMonth() + 1) + (isZh ? '月' : '/') + d.getDate() + (isZh ? '日' : '') + ' ' + hm;
     }
 
+    // 统一的“打开会话”入口：只认 id，不认列表位置。
+    // 列表重排后光标下的行可能已经不是刚才那条，按 id 结算才不会打开成别的对话。
+    function selectConversation(id) {
+        if (!id || id === activeConversationId) return;
+        if (!conversations.some(function(c) { return c.id === id; })) return;
+        if (IS_REMOTE) {
+            remoteSend('selectChat', { id: id });
+            closeSidebarMobile();
+            return;
+        }
+        saveCurrentConversation();
+        loadConversation(id);
+    }
+
     function renderConversationList() {
         var list = document.getElementById('chatList');
         if (!list) return;
+        // 重建列表会清空 DOM，先把滚动位置记下来，渲染完再放回去，
+        // 否则列表会跳回顶部，用户正在点的那一行被换掉
+        var prevScrollTop = list.scrollTop;
         list.innerHTML = '';
-        // 按最近活动排序，避免列表里时间戳前后颠倒
+        // 按最近活动排序，避免列表里时间戳前后颠倒。时间相同则退回创建顺序，
+        // 保证同一份数据每次渲染顺序一致（不会在两次渲染之间悄悄换位）。
         var ordered = conversations.slice().sort(function(a, b) {
-            return (b.updatedAt || 0) - (a.updatedAt || 0);
+            var diff = (b.updatedAt || 0) - (a.updatedAt || 0);
+            if (diff) return diff;
+            return (b.createdAt || 0) - (a.createdAt || 0);
         });
         ordered.forEach(function(conv) {
             var item = document.createElement('div');
             item.className = 'chat-item' + (conv.id === activeConversationId ? ' active' : '') + (conv.id === generatingConvId ? ' generating' : '');
+            item.setAttribute('data-conv-id', conv.id);
             var timeStr = formatConversationTime(conv.updatedAt);
             // 远程端拿到的是会话摘要（不含消息体），条数由桌面一并算好带过来
             var msgCount = typeof conv.messageCount === 'number' ? conv.messageCount : (conv.messages || []).filter(function(m) {
@@ -8354,15 +8454,9 @@
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>' +
                 '</button>';
             item.addEventListener('click', function(e) {
+                // 删除键在按钮自己的 handler 里处理，这里只负责切换会话
                 if (e.target.closest('.chat-item-delete')) return;
-                if (conv.id === activeConversationId) return;
-                if (IS_REMOTE) {
-                    remoteSend('selectChat', { id: conv.id });
-                    closeSidebarMobile();
-                    return;
-                }
-                saveCurrentConversation();
-                loadConversation(conv.id);
+                selectConversation(conv.id);
             });
             var delBtn = item.querySelector('.chat-item-delete');
             if (delBtn) {
@@ -8373,6 +8467,7 @@
             }
             list.appendChild(item);
         });
+        if (prevScrollTop) list.scrollTop = prevScrollTop;
     }
 
     /* ══════════════════════════════════════════════════════════════════════
@@ -15009,6 +15104,7 @@
     var phoneUrlList = document.getElementById('phoneUrlList');
     var phoneClientDot = document.getElementById('phoneClientDot');
     var phoneClientText = document.getElementById('phoneClientText');
+    var phoneMaxSelect = document.getElementById('phoneMaxSelect');
     var phoneLinkOpen = false;
     var phoneLastStreamPush = 0;
     var phoneStreamTimer = 0;
@@ -15221,7 +15317,8 @@
                 conversations.splice(delIdx, 1);
                 if (activeConversationId === delId) {
                     if (conversations.length > 0) {
-                        activeConversationId = conversations[0].id;
+                        // 与桌面端一致：切到列表最上面那条（最近活动）
+                        activeConversationId = mostRecentConversationId() || conversations[0].id;
                         loadConversation(activeConversationId);
                     } else {
                         createNewConversation();
@@ -15473,6 +15570,10 @@
             renderPhoneQr(url);
             renderPhoneUrls(info.urls || []);
             updatePhoneClientStatus(info.clients || 0);
+            // 上限以服务端为准（单例共享，桌面/SOLO 改过都能同步回来）
+            if (phoneMaxSelect) {
+                phoneMaxSelect.value = String(info.maxClients > 0 ? info.maxClients : 0);
+            }
         }).catch(function() {
             phoneQrBox.innerHTML = '<div class="phone-qr-empty">' + escapeHtml(t('phoneServerOff')) + '</div>';
         });
@@ -15484,6 +15585,11 @@
     });
     if (phoneCloseBtn) phoneCloseBtn.addEventListener('click', function() {
         togglePhonePopover(false);
+    });
+    // 最大扫码连接数：立即回传主进程；名额不足时新扫码/SSE 会被服务端拒绝
+    if (phoneMaxSelect) phoneMaxSelect.addEventListener('change', function() {
+        if (!window.AIAssistantPreload || !window.AIAssistantPreload.setPhoneMaxClients) return;
+        window.AIAssistantPreload.setPhoneMaxClients(parseInt(phoneMaxSelect.value, 10) || 0);
     });
     document.addEventListener('click', function(e) {
         if (phoneLinkOpen && phonePopover && !phonePopover.contains(e.target) && e.target !== phoneLinkBtn && !(phoneLinkBtn && phoneLinkBtn.contains(e.target))) {

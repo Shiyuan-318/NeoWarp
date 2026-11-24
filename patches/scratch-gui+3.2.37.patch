@@ -64,6 +64,52 @@ index 7eb6bef..ba3c0fa 100644
    font-size: 0.75rem;
    padding-left: 0.4em;
  }
+diff --git a/node_modules/scratch-gui/src/addons/addons/fullscreen/resizeWindow.css b/node_modules/scratch-gui/src/addons/addons/fullscreen/resizeWindow.css
+index c2f896e..8704b60 100644
+--- a/node_modules/scratch-gui/src/addons/addons/fullscreen/resizeWindow.css
++++ b/node_modules/scratch-gui/src/addons/addons/fullscreen/resizeWindow.css
+@@ -2,14 +2,16 @@
+ [class*="stage-wrapper_full-screen"] [class*="stage_stage"],
+ [class*="stage-wrapper_full-screen"] [class*="stage-header_stage-menu-wrapper"],
+ [class*="stage-wrapper_full-screen"] canvas {
+-  width: min(calc((100vh - 44px) * var(--sa-fullscreen-width) / var(--sa-fullscreen-height)), 100vw) !important;
++  /* NeoWarp: --neowarp-fullscreen-top = real stage offset from the viewport
++     top (menu bar height, or title bar height when the menu bar is hidden) */
++  width: min(calc((100vh - var(--neowarp-fullscreen-top, 48px)) * var(--sa-fullscreen-width) / var(--sa-fullscreen-height)), 100vw) !important;
+ }
+ 
+ [class*="stage-wrapper_full-screen"] [class*="stage-wrapper_stage-canvas-wrapper"],
+ [class*="stage-wrapper_full-screen"] [class*="stage_stage"],
+ [class*="stage-wrapper_full-screen"] [class*="stage_green-flag-overlay-wrapper"],
+ [class*="stage-wrapper_full-screen"] canvas {
+-  height: min(calc(100vh - 44px), calc(100vw * var(--sa-fullscreen-height) / var(--sa-fullscreen-width))) !important;
++  height: min(calc(100vh - var(--neowarp-fullscreen-top, 48px)), calc(100vw * var(--sa-fullscreen-height) / var(--sa-fullscreen-width))) !important;
+ }
+ 
+ [class*="stage-wrapper_full-screen"] {
+diff --git a/node_modules/scratch-gui/src/addons/addons/fullscreen/resizeWindow_noToolbar.css b/node_modules/scratch-gui/src/addons/addons/fullscreen/resizeWindow_noToolbar.css
+index 7f8fafc..8704b60 100644
+--- a/node_modules/scratch-gui/src/addons/addons/fullscreen/resizeWindow_noToolbar.css
++++ b/node_modules/scratch-gui/src/addons/addons/fullscreen/resizeWindow_noToolbar.css
+@@ -2,14 +2,16 @@
+ [class*="stage-wrapper_full-screen"] [class*="stage_stage"],
+ [class*="stage-wrapper_full-screen"] [class*="stage-header_stage-menu-wrapper"],
+ [class*="stage-wrapper_full-screen"] canvas {
+-  width: min(calc(100vh * var(--sa-fullscreen-width) / var(--sa-fullscreen-height)), 100vw) !important;
++  /* NeoWarp: --neowarp-fullscreen-top = real stage offset from the viewport
++     top (menu bar height, or title bar height when the menu bar is hidden) */
++  width: min(calc((100vh - var(--neowarp-fullscreen-top, 48px)) * var(--sa-fullscreen-width) / var(--sa-fullscreen-height)), 100vw) !important;
+ }
+ 
+ [class*="stage-wrapper_full-screen"] [class*="stage-wrapper_stage-canvas-wrapper"],
+ [class*="stage-wrapper_full-screen"] [class*="stage_stage"],
+ [class*="stage-wrapper_full-screen"] [class*="stage_green-flag-overlay-wrapper"],
+ [class*="stage-wrapper_full-screen"] canvas {
+-  height: min(100vh, calc(100vw * var(--sa-fullscreen-height) / var(--sa-fullscreen-width))) !important;
++  height: min(calc(100vh - var(--neowarp-fullscreen-top, 48px)), calc(100vw * var(--sa-fullscreen-height) / var(--sa-fullscreen-width))) !important;
+ }
+ 
+ [class*="stage-wrapper_full-screen"] {
 diff --git a/node_modules/scratch-gui/src/addons/addons/fullscreen/userscript.js b/node_modules/scratch-gui/src/addons/addons/fullscreen/userscript.js
 index d5a11c2..029e8ca 100644
 --- a/node_modules/scratch-gui/src/addons/addons/fullscreen/userscript.js
@@ -12997,8 +13043,66 @@ index 0000000..d4a84b2
 +  <path fill="#575E75" d="M3 3h8v8H3V3zm1.5 1.5v5h5v-5h-5zM11 9h6v8h-6V9zm1.5 1.5v5h3v-5h-3z"/>
 +  <path fill="#575E75" d="M7 7l6-3v3l6-3-6 6v-3l-6 3z"/>
 +</svg>
+diff --git a/node_modules/scratch-gui/src/components/stage-header/stage-header.css b/node_modules/scratch-gui/src/components/stage-header/stage-header.css
+index 3a38824..e251793 100644
+--- a/node_modules/scratch-gui/src/components/stage-header/stage-header.css
++++ b/node_modules/scratch-gui/src/components/stage-header/stage-header.css
+@@ -91,3 +91,53 @@
+     /* relied on by addons */
+     display: flex;
+ }
++
++/* NeoWarp: in full screen the overlay no longer covers the app menu bar.
++   It becomes a transparent, click-through layer below the menu bar and the
++   controls float as a vertical column at the top-left of the stage.
++   These rules must come after the base rules above to win the cascade. */
++.below-menu-bar {
++    /* --neowarp-fullscreen-top: real stage offset from the viewport top,
++       published by the desktop app (menu bar height normally; title bar
++       height when the menu bar is hidden in full screen) */
++    top: var(--neowarp-fullscreen-top, $menu-bar-height);
++    background-color: transparent;
++    pointer-events: none;
++}
++
++/* The anchor keeps the stage's width (inline style + margin: auto) so it
++   lines up with the stage below; it collapses to 0 height and its children
++   hang as a vertical column in the margin left of the stage. */
++.vertical-anchor {
++    flex-direction: column;
++    align-items: flex-start;
++    justify-content: flex-start;
++    row-gap: 0.25rem;
++    height: 0;
++    padding: 0;
++    overflow: visible;
++}
++
++/* Controls (green flag / pause / stop) as the top of the column.
++   translateX(-100% - 0.5rem) anchors each child's RIGHT edge 0.5rem left of
++   the stage's left edge, so the column also grows leftwards (e.g. when the
++   turbo/FPS badges widen it) instead of overlapping the stage. */
++.vertical-controls {
++    flex-direction: column;
++    align-items: center;
++    gap: 0.25rem;
++    transform: translateX(calc(-100% - 0.5rem));
++    pointer-events: auto;
++}
++
++/* Exit fullscreen button continues the column below the controls. */
++.vertical-exit-row {
++    justify-content: center;
++    transform: translateX(calc(-100% - 0.5rem));
++    pointer-events: auto;
++}
++
++[dir="rtl"] .vertical-controls,
++[dir="rtl"] .vertical-exit-row {
++    transform: translateX(calc(100% + 0.5rem));
++}
 diff --git a/node_modules/scratch-gui/src/components/stage-header/stage-header.jsx b/node_modules/scratch-gui/src/components/stage-header/stage-header.jsx
-index 40b402b..9d26b1f 100644
+index 40b402b..50aa6e6 100644
 --- a/node_modules/scratch-gui/src/components/stage-header/stage-header.jsx
 +++ b/node_modules/scratch-gui/src/components/stage-header/stage-header.jsx
 @@ -69,6 +69,7 @@ const StageHeaderComponent = function (props) {
@@ -13009,7 +13113,18 @@ index 40b402b..9d26b1f 100644
          onKeyPress,
          onSetStageFullScreen,
          onSetStageUnFullScreen,
-@@ -104,21 +105,23 @@ const StageHeaderComponent = function (props) {
+@@ -87,6 +88,10 @@ const StageHeaderComponent = function (props) {
+     const stageDimensions = getStageDimensions(stageSize, customStageSize, isFullScreen || isEmbedded);
+ 
+     if (isFullScreen || isEmbedded) {
++        // NeoWarp: in full screen the controls become a vertical column at the
++        // top-left of the stage and the app menu bar stays visible above.
++        // Embedded players keep the classic horizontal overlay header.
++        const verticalLayout = isFullScreen && !isEmbedded;
+         const settingsButton = isEmbedded && enableSettingsButton ? (
+             <div className={classNames(styles.settingsButton, styles.unselectWrapper)}>
+                 <Button
+@@ -104,21 +109,23 @@ const StageHeaderComponent = function (props) {
              </div>
          ) : null;
          const fullscreenButton = isFullScreen ? (
@@ -13048,7 +13163,42 @@ index 40b402b..9d26b1f 100644
          ) : FullscreenAPI.available() ? (
              <div className={styles.unselectWrapper}>
                  <Button
-@@ -244,6 +247,7 @@ StageHeaderComponent.propTypes = {
+@@ -138,16 +145,30 @@ const StageHeaderComponent = function (props) {
+         header = (
+             <Box
+                 className={classNames(styles.stageHeaderWrapperOverlay, {
+-                    [styles.embedded]: isEmbedded
++                    [styles.embedded]: isEmbedded,
++                    [styles.belowMenuBar]: verticalLayout
+                 })}
+             >
+                 <Box
+-                    className={styles.stageMenuWrapper}
++                    className={classNames(styles.stageMenuWrapper, {
++                        [styles.verticalAnchor]: verticalLayout
++                    })}
+                     style={{width: stageDimensions.width}}
+                 >
+-                    <Controls vm={vm} />
++                    {/* NeoWarp: Controls must stay the first child (same React
++                        tree position as the non-fullscreen header) so React
++                        reuses its DOM node across fullscreen switches; addons
++                        like "pause" insert extra buttons into this container
++                        and rely on it surviving remounts. The vertical look is
++                        done purely in CSS (.vertical-controls). */}
++                    <Controls
++                        vm={vm}
++                        className={verticalLayout ? styles.verticalControls : null}
++                    />
+                     <div
+-                        className={styles.fullscreenButtonsRow}
++                        className={classNames(styles.fullscreenButtonsRow, {
++                            [styles.verticalExitRow]: verticalLayout
++                        })}
+                         key="fullscreen" // addons require the HTML element to be not be re-used by in-editor buttons
+                     >
+                         {settingsButton}
+@@ -244,6 +265,7 @@ StageHeaderComponent.propTypes = {
      showFixedLargeSize: PropTypes.bool,
      isFullScreen: PropTypes.bool.isRequired,
      isPlayerOnly: PropTypes.bool.isRequired,
@@ -13056,6 +13206,24 @@ index 40b402b..9d26b1f 100644
      onKeyPress: PropTypes.func.isRequired,
      onSetStageFullScreen: PropTypes.func.isRequired,
      onSetStageUnFullScreen: PropTypes.func.isRequired,
+diff --git a/node_modules/scratch-gui/src/components/stage-wrapper/stage-wrapper.css b/node_modules/scratch-gui/src/components/stage-wrapper/stage-wrapper.css
+index 4fd1c54..63c2f0c 100644
+--- a/node_modules/scratch-gui/src/components/stage-wrapper/stage-wrapper.css
++++ b/node_modules/scratch-gui/src/components/stage-wrapper/stage-wrapper.css
+@@ -21,7 +21,12 @@
+ 
+ .stage-wrapper.full-screen {
+     position: fixed;
+-    top: $stage-menu-height;
++    /* NeoWarp: start at --neowarp-fullscreen-top, the real offset of the
++       stage from the viewport top: the app menu bar height while it stays
++       visible (3rem normal / 2.25rem narrow / compact dark), or the
++       self-drawn title bar height when the menu bar is hidden in full screen
++       (Windows window style off). Published by the desktop app's gui.css. */
++    top: var(--neowarp-fullscreen-top, $menu-bar-height);
+     left: 0;
+     right: 0;
+     bottom: 0;
 diff --git a/node_modules/scratch-gui/src/components/target-pane/target-pane.jsx b/node_modules/scratch-gui/src/components/target-pane/target-pane.jsx
 index 8d9a099..fa8add1 100644
 --- a/node_modules/scratch-gui/src/components/target-pane/target-pane.jsx
@@ -14869,6 +15037,21 @@ index 348e1df..55c30e2 100644
      line-height: 1.5em;
 +    font-weight: 400;
  }
+diff --git a/node_modules/scratch-gui/src/css/z-index.css b/node_modules/scratch-gui/src/css/z-index.css
+index c51346e..e61fc17 100644
+--- a/node_modules/scratch-gui/src/css/z-index.css
++++ b/node_modules/scratch-gui/src/css/z-index.css
+@@ -14,7 +14,9 @@ $z-index-stage-question: 49; /* "ask" block text input goes above monitors */
+ 
+ $z-index-card: 480;
+ $z-index-alerts: 490;
+-$z-index-menu-bar: 491; /* menu-bar should go over monitors, alerts and tutorials */
++/* NeoWarp: raised above $z-index-stage-header/$z-index-stage-wrapper-overlay (500)
++   so the menu bar and its dropdown menus stay usable over the fullscreen stage */
++$z-index-menu-bar: 501; /* menu-bar should go over monitors, alerts, tutorials and the fullscreen stage */
+ $z-index-loader: 490; /* behind menu-bar */
+ $z-index-modal: 510;
+ 
 diff --git a/node_modules/scratch-gui/src/lib/brand.js b/node_modules/scratch-gui/src/lib/brand.js
 index 8aba8e1..95663d8 100644
 --- a/node_modules/scratch-gui/src/lib/brand.js
@@ -14967,21 +15150,24 @@ index 8b707bd..e96c957 100644
      // Allow incoming props to override redux-provided props. Used to mock in tests.
      const mergeProps = (stateProps, dispatchProps, ownProps) => Object.assign(
 diff --git a/node_modules/scratch-gui/src/lib/screen-utils.js b/node_modules/scratch-gui/src/lib/screen-utils.js
-index 5bcd415..ed6834e 100644
+index 5bcd415..53a8c2f 100644
 --- a/node_modules/scratch-gui/src/lib/screen-utils.js
 +++ b/node_modules/scratch-gui/src/lib/screen-utils.js
-@@ -23,6 +23,10 @@ const STAGE_DIMENSION_DEFAULTS = {
+@@ -22,8 +22,11 @@ const STAGE_DIMENSION_DEFAULTS = {
+     //   2 * $full-screen-border-width
      fullScreenSpacingBorderAdjustment: 8,
      // referencing css/units.css,
-     // menuHeightAdjustment = $stage-menu-height
-+    // The stage header overlay is position:fixed at top:0 (44px),
-+    // and the stage wrapper starts at top:44px. Since the overlay
-+    // doesn't take up space inside the wrapper, we only need to
-+    // account for the wrapper's top offset (44px).
-     menuHeightAdjustment: 44
+-    // menuHeightAdjustment = $stage-menu-height
+-    menuHeightAdjustment: 44
++    // menuHeightAdjustment = $menu-bar-height
++    // NeoWarp: the stage wrapper starts below the app menu bar
++    // (top: $menu-bar-height = 48px) so the menu bar stays visible
++    // in full screen; account for that offset here.
++    menuHeightAdjustment: 48
  };
  
-@@ -62,6 +66,8 @@ const getStageDimensions = (stageSize, customStageSize, isFullScreen) => {
+ /**
+@@ -62,6 +65,8 @@ const getStageDimensions = (stageSize, customStageSize, isFullScreen) => {
  
          stageDimensions.width = stageDimensions.height * (customStageSize.width / customStageSize.height);
  

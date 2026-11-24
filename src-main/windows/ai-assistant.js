@@ -546,6 +546,8 @@ class AIAssistantWindow extends AbstractWindow {
       phoneSync.register(this, ipcMain);
       return phoneSync.getLinkInfo();
     });
+    // 手机编程：设置最大扫码连接数（0 = 不限）
+    this.ipc.handle('ai-set-phone-max-clients', (event, max) => phoneSync.setMaxClients(max));
     this.ipc.handle('ai-phone-get-state', () => phoneSync.getSnapshot());
     const onPhoneBroadcast = (event, payload) => {
       // 只接受 AI 窗口自身的广播
