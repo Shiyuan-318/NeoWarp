@@ -40,6 +40,10 @@ contextBridge.exposeInMainWorld('DesktopSettingsPreload', {
   onAiModelConfigsChanged: (callback) => {
     ipcRenderer.on('ai-model-configs-changed', (event, data) => callback(data));
   },
+  // 主进程请求跳转到指定设置分区（如 AI 助手 / SOLO 的“在应用设置中管理模型”直达 AI 模型页）
+  onNavigateTo: (callback) => {
+    ipcRenderer.on('ds-navigate-to', (event, data) => callback(data));
+  },
   getTheme: () => ipcRenderer.invoke('ds-get-theme'),
   onThemeChanged: (callback) => {
     ipcRenderer.on('ds-theme-changed', (event, data) => callback(data));

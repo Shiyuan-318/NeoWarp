@@ -41,7 +41,8 @@ contextBridge.exposeInMainWorld('ExtensionEditorPreload', {
   onAiModelConfigsChanged: (callback) => {
     ipcRenderer.on('ai-model-configs-changed', (event, data) => callback(data));
   },
-  openDesktopSettings: () => ipcRenderer.invoke('open-desktop-settings'),
+  // section: 打开后直达的设置分区（如 'ai' = 桌面设置的 AI 模型页）
+  openDesktopSettings: (section) => ipcRenderer.invoke('open-desktop-settings', section),
 
   // ── AI 面板弹出 / 恢复 ──
   // 编辑器侧：请求弹出（state 为交接的聊天状态，null 表示仅聚焦已有弹窗）

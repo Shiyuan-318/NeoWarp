@@ -255,9 +255,9 @@ function registerAiModelConfigIpc (ipc) {
     event.sender.send('ai-model-configs-changed', result);
     return result;
   });
-  ipc.handle('open-desktop-settings', () => {
+  ipc.handle('open-desktop-settings', (event, section) => {
     const DesktopSettingsWindow = require('./windows/desktop-settings');
-    DesktopSettingsWindow.show();
+    DesktopSettingsWindow.show(section);
     return {success: true};
   });
   // AI 转发协议（tw-ai-proxy）的能力令牌：转发协议是带 SSE 流的裸 HTTP

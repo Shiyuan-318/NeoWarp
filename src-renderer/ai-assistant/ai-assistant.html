@@ -15328,7 +15328,8 @@
                 showToast(t('manageOnDesktop'), 'error');
                 return;
             }
-            AIAssistantPreload.openDesktopSettings();
+            // 'ai'：直达桌面设置的 AI 模型页
+            AIAssistantPreload.openDesktopSettings('ai');
         });
         if (modelSelectBtn) modelSelectBtn.addEventListener('click', function(e) { e.stopPropagation(); modelDropdownOpen ? closeModelDropdown() : openModelDropdown(); });
         // 模型小窗：顶部渠道行 → 渠道列表；返回键 → 模型列表；搜索框实时过滤

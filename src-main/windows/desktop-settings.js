@@ -404,6 +404,18 @@ class DesktopSettingsWindow extends AbstractWindow {
       }
     });
 
+    // 分区跳转：其他窗口（如 AI 助手 / SOLO 的“在应用设置中管理模型”）会
+    // 以 show(section) 打开本窗口的指定分区。窗口首次加载完成前推送无人
+    // 接收，故先记录 pendingSection，待 did-finish-load 后统一推送。
+    this.ready = false;
+    this.window.webContents.on('did-start-loading', () => {
+      this.ready = false;
+    });
+    this.window.webContents.on('did-finish-load', () => {
+      this.ready = true;
+      DesktopSettingsWindow.flushPendingSection();
+    });
+
     this.loadURL('tw-desktop-settings://./desktop-settings.html');
   }
 
@@ -422,9 +434,35 @@ class DesktopSettingsWindow extends AbstractWindow {
     return true;
   }
 
-  static show () {
+  // 待跳转的设置分区（如 'ai' = AI 模型页）：show(section) 记录，
+  // 窗口就绪（did-finish-load）后经 ds-navigate-to 推送给渲染层
+  static pendingSection = null;
+
+  static show (section) {
     const window = AbstractWindow.singleton(DesktopSettingsWindow);
+    if (typeof section === 'string' && section) {
+      DesktopSettingsWindow.pendingSection = section;
+      // 窗口已就绪立即推送；否则由 did-finish-load 兜底推送
+      if (window.ready) {
+        DesktopSettingsWindow.flushPendingSection();
+      }
+    }
     window.show();
+  }
+
+  /**
+   * 把待跳转的分区推送给渲染层并清除记录。
+   * 渲染层收到 ds-navigate-to 后切换到对应分区（见 desktop-settings.html）。
+   */
+  static flushPendingSection () {
+    if (!DesktopSettingsWindow.pendingSection) return;
+    const section = DesktopSettingsWindow.pendingSection;
+    DesktopSettingsWindow.pendingSection = null;
+    for (const w of AbstractWindow.getWindowsByClass(DesktopSettingsWindow)) {
+      if (!w.window.isDestroyed() && w.ready) {
+        w.window.webContents.send('ds-navigate-to', { section });
+      }
+    }
   }
 
   /**

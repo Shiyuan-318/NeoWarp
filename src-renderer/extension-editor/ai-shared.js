@@ -14,6 +14,7 @@
       aiSettings: 'AI 设置',
       clearChat: '清空对话',
       model: '模型',
+      channel: '渠道',
       openSettings: '打开设置',
       manageHint: '模型与 API Key 在「设置 → AI 模型」中管理，与 AI 助手、NeoWarp SOLO 共用。',
       noConfigs: '还没有模型配置，点「打开设置」添加',
@@ -32,6 +33,8 @@
       copiedShort: '已复制',
       inserted: '代码已插入编辑器',
       requestFailed: '请求失败：',
+      reasoningTitle: '思考过程',
+      noAnswer: '模型没有给出最终回答，可在上方「思考过程」中查看它的推理。',
       welcomeTitle: '扩展开发助手',
       welcome: '我会自动读取编辑器里的当前代码来回答问题，也能帮你直接修改整个文件。试试下面的快捷操作：',
       quickExplain: '解释当前代码',
@@ -134,6 +137,7 @@
       aiSettings: 'AI Settings',
       clearChat: 'Clear chat',
       model: 'Model',
+      channel: 'Channel',
       openSettings: 'Open settings',
       manageHint: 'Models and API keys live in Settings → AI Models, shared with the NeoWarp AI assistant and SOLO.',
       noConfigs: 'No model configs yet — open settings to add one',
@@ -152,6 +156,8 @@
       copiedShort: 'Copied',
       inserted: 'Code inserted into editor',
       requestFailed: 'Request failed: ',
+      reasoningTitle: 'Thinking',
+      noAnswer: 'The model returned no final answer; its reasoning is shown above.',
       welcomeTitle: 'Extension Developer Assistant',
       welcome: 'I automatically read the code in the editor before answering, and I can rewrite the whole file for you. Try a quick action:',
       quickExplain: 'Explain this code',
@@ -381,7 +387,7 @@
    * @param {(code: string) => void} options.insertCode
    * @param {(code: string) => void} [options.replaceCode] 用代码替换编辑器整个文件内容（带二次确认）
    * @param {{getSettings: () => Promise<object>, saveSettings: (s: object) => Promise<any>, onChanged: (cb: (s: object) => void) => void}} [options.legacySettingsApi] 已废弃
-   * @param {{getConfigs: () => Promise<{configs: Array, activeId: string|null}>, saveActive: (activeId: string, configs: Array) => Promise<any>, onChanged: (cb: (payload: object) => void) => void, openSettings: () => void}} options.settingsApi
+   * @param {{getConfigs: () => Promise<{configs: Array, activeId: string|null}>, saveActive: (activeId: string, configs: Array) => Promise<any>, onChanged: (cb: (payload: object) => void) => void, openSettings: (section?: string) => void}} options.settingsApi
    *   统一模型配置存储的访问口（AI 助手 / SOLO / 桌面设置共用同一份）
    * @param {(state: {chatHistory: Array}) => void} [options.onStateChanged]
    * @param {() => Promise<string>} [options.getProxyToken] tw-ai-proxy 转发协议的
@@ -395,6 +401,8 @@
     // 统一存储里的全部模型配置与激活项 id
     var modelConfigs = [];
     var activeConfigId = null;
+    // 渠道下拉当前选中的 key（会话内记忆，不持久化）
+    var currentChannelKey = null;
     var chatHistory = [];
     var streaming = false;
     var abortController = null;
@@ -428,6 +436,8 @@
       $('ai-settings-btn').title = strings.aiSettings;
       $('ai-clear-btn').title = strings.clearChat;
       $('ai-model-select-label').textContent = strings.model;
+      var channelLabelEl = $('ai-channel-select-label');
+      if (channelLabelEl) channelLabelEl.textContent = strings.channel;
       $('ai-open-settings').textContent = strings.openSettings;
       $('ai-settings-hint').textContent = strings.manageHint;
       $('ai-input').placeholder = strings.inputPlaceholder;
@@ -441,6 +451,8 @@
       $('ai-model-chip').addEventListener('click', toggleSettings);
       $('ai-clear-btn').addEventListener('click', clearChat);
       $('ai-model-select').addEventListener('change', onModelSelectChanged);
+      var channelSelectEl = $('ai-channel-select');
+      if (channelSelectEl) channelSelectEl.addEventListener('change', onChannelSelectChanged);
       $('ai-open-settings').addEventListener('click', openAppSettings);
       $('ai-send').addEventListener('click', onSendClicked);
       $('ai-input').addEventListener('keydown', function (event) {
@@ -464,7 +476,8 @@
     // 模型与 API Key 的管理入口已移至应用设置（桌面设置窗口 → AI 模型）
     function openAppSettings () {
       if (options.settingsApi.openSettings) {
-        options.settingsApi.openSettings();
+        // 'ai'：直达桌面设置的 AI 模型页
+        options.settingsApi.openSettings('ai');
       }
     }
 
@@ -487,6 +500,7 @@
         activeConfigId = modelConfigs.length ? modelConfigs[0].id : null;
       }
       applyActiveToAiConfig(activeConfig());
+      fillChannelSelect();
       fillModelSelect();
       updateModelChip();
     }
@@ -507,13 +521,13 @@
     }
 
     function modelConfigLabel (cfg) {
+      // 优先显示模型 ID（与顶部徽标一致），没有再回退渠道名 / 服务商名
       var provider = PROVIDERS[cfg.provider] || {};
-      var modelLabel = provider.isCustom
+      var modelId = provider.isCustom
         ? (cfg.customModelId || cfg.model)
-        : (((provider.models || []).find(function (m) { return m.id === cfg.model; }) || {}).name || cfg.model);
-      // “自定义”服务商名称按界面语言显示（预设厂商品牌名两种语言一致）
+        : cfg.model;
       var providerLabel = (lang === 'zh' ? (provider.nameZh || provider.name) : (provider.nameEn || provider.name)) || 'Model';
-      return cfg.name || modelLabel || providerLabel;
+      return modelId || cfg.name || providerLabel;
     }
 
     // ── 免费模型活动 ──
@@ -527,11 +541,85 @@
       return isFreeModelConfig(cfg) && (cfg.freeExpired === true || Date.now() >= FREE_MODEL_END_AT);
     }
 
-    function fillModelSelect () {
-      var select = $('ai-model-select');
+    // ── 渠道分组（与 AI 助手选择器同口径）──
+    // 渠道 = 同一服务商 / 同一接口地址下的一组模型配置：自定义或带自定义
+    // 端点的配置按端点归一化后分组，预设厂商按 provider 分组。
+    function normalizeCustomEndpoint (url, apiFormat) {
+      var u = String(url || '').trim();
+      if (!u) return u;
+      if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+      u = u.replace(/\/+$/, '');
+      if (apiFormat === 'anthropic') {
+        if (/\/v1\/messages$/i.test(u)) return u;
+        if (/\/v1$/i.test(u)) return u + '/messages';
+        return u + '/v1/messages';
+      }
+      if (apiFormat === 'ollama') {
+        if (/\/api\/chat$/i.test(u)) return u;
+        if (!/\/api$/i.test(u)) u += '/api';
+        return u + '/chat';
+      }
+      if (/\/(v1\/messages|api\/chat)$/i.test(u)) return u;
+      if (!/\/chat\/completions$/i.test(u)) u += '/chat/completions';
+      return u;
+    }
+
+    function hostOfEndpoint (url) {
+      return String(url || '').replace(/^https?:\/\//i, '').split('/')[0];
+    }
+
+    function providerLabel (provider) {
+      return (lang === 'zh' ? (provider.nameZh || provider.name) : (provider.nameEn || provider.name)) || '';
+    }
+
+    function channelKeyOf (cfg) {
+      var provider = PROVIDERS[cfg.provider] || {};
+      if (provider.isCustom || cfg.customEndpoint) {
+        var apiFormat = (provider.apiFormat === 'anthropic' || provider.apiFormat === 'ollama') ? provider.apiFormat : cfg.apiFormat;
+        return 'ep:' + normalizeCustomEndpoint(cfg.customEndpoint || '', apiFormat);
+      }
+      return 'pr:' + cfg.provider;
+    }
+
+    function channelTitleOfGroup (group) {
+      for (var i = 0; i < group.configs.length; i++) {
+        if (group.configs[i].name) return group.configs[i].name;
+      }
+      var first = group.configs[0];
+      var provider = PROVIDERS[first.provider] || {};
+      if (provider.isCustom || first.customEndpoint) {
+        var apiFormat = (provider.apiFormat === 'anthropic' || provider.apiFormat === 'ollama') ? provider.apiFormat : first.apiFormat;
+        return hostOfEndpoint(normalizeCustomEndpoint(first.customEndpoint || '', apiFormat)) || providerLabel(provider) || 'API';
+      }
+      return providerLabel(provider) || 'API';
+    }
+
+    function buildChannelGroups () {
+      var groups = [];
+      var index = {};
+      modelConfigs.forEach(function (cfg) {
+        if (!cfg) return;
+        var key = channelKeyOf(cfg);
+        if (index[key] === undefined) {
+          index[key] = groups.length;
+          groups.push({key: key, configs: []});
+        }
+        groups[index[key]].configs.push(cfg);
+      });
+      return groups;
+    }
+
+    function configsOfChannel (key) {
+      var group = buildChannelGroups().find(function (g) { return g.key === key; });
+      return group ? group.configs : [];
+    }
+
+    function fillChannelSelect () {
+      var select = $('ai-channel-select');
       if (!select) return;
       select.innerHTML = '';
-      if (!modelConfigs.length) {
+      var groups = buildChannelGroups();
+      if (!groups.length) {
         var empty = document.createElement('option');
         empty.value = '';
         empty.textContent = strings.noConfigs;
@@ -541,40 +629,86 @@
         return;
       }
       select.disabled = false;
-      // 免费模型 / 我的模型 分组展示；活动结束的免费模型禁用（无法选中）
-      var freeConfigs = modelConfigs.filter(function (cfg) { return isFreeModelConfig(cfg); });
-      var ownConfigs = modelConfigs.filter(function (cfg) { return !isFreeModelConfig(cfg); });
-      function appendGroup (label, configs) {
-        if (!configs.length) return;
-        var group = document.createElement('optgroup');
-        group.label = label;
-        configs.forEach(function (cfg) {
-          var option = document.createElement('option');
-          option.value = cfg.id;
-          var expired = isFreeModelExpired(cfg);
-          option.textContent = modelConfigLabel(cfg) + (expired ? '（' + strings.freeEnded + '）' : '');
-          option.disabled = expired;
-          group.appendChild(option);
-        });
-        select.appendChild(group);
+      groups.forEach(function (group) {
+        var option = document.createElement('option');
+        option.value = group.key;
+        option.textContent = channelTitleOfGroup(group);
+        select.appendChild(option);
+      });
+      // 当前渠道失效（配置被删除 / 广播更新）时回退：优先激活配置所在渠道
+      var valid = groups.some(function (group) { return group.key === currentChannelKey; });
+      if (!valid) {
+        var activeCfg = activeConfig();
+        var activeKey = activeCfg ? channelKeyOf(activeCfg) : null;
+        currentChannelKey = groups.some(function (group) { return group.key === activeKey; }) ? activeKey : groups[0].key;
       }
-      appendGroup(strings.freeModelsTitle, freeConfigs);
-      appendGroup(strings.myModelsTitle, ownConfigs);
-      select.value = activeConfigId || '';
+      select.value = currentChannelKey;
     }
 
-    // 切换模型：立即生效并写回统一存储（列表一并传回，避免漏传被当成清空）
+    function fillModelSelect () {
+      var select = $('ai-model-select');
+      if (!select) return;
+      select.innerHTML = '';
+      var channelConfigs = configsOfChannel(currentChannelKey);
+      if (!channelConfigs.length) {
+        var empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = strings.noConfigs;
+        select.appendChild(empty);
+        select.value = '';
+        select.disabled = true;
+        return;
+      }
+      select.disabled = false;
+      // 只列当前渠道下的模型；活动结束的免费模型禁用（无法选中）
+      var usable = [];
+      channelConfigs.forEach(function (cfg) {
+        var option = document.createElement('option');
+        option.value = cfg.id;
+        var expired = isFreeModelExpired(cfg);
+        option.textContent = modelConfigLabel(cfg) + (expired ? '（' + strings.freeEnded + '）' : '');
+        option.disabled = expired;
+        select.appendChild(option);
+        if (!expired) usable.push(cfg);
+      });
+      // 优先选中激活配置；其不属于该渠道时选第一条可用项
+      // （不在此处改激活项，由渠道切换逻辑负责）
+      var activeInChannel = usable.some(function (cfg) { return cfg.id === activeConfigId; });
+      select.value = activeInChannel ? activeConfigId : (usable.length ? usable[0].id : '');
+    }
+
+    // 把激活项写回统一存储（列表一并传回，避免漏传被当成清空）
+    function persistActive () {
+      if (!options.settingsApi.saveActive) return;
+      options.settingsApi.saveActive(activeConfigId, modelConfigs).then(function () {
+        showToast(strings.saved || 'Saved');
+      });
+    }
+
+    // 切换模型：立即生效并写回统一存储
     function onModelSelectChanged () {
       var id = $('ai-model-select').value;
       if (!id || id === activeConfigId) return;
       activeConfigId = id;
       applyActiveToAiConfig(activeConfig());
       updateModelChip();
-      if (options.settingsApi.saveActive) {
-        options.settingsApi.saveActive(id, modelConfigs).then(function () {
-          showToast(strings.saved || 'Saved');
-        });
+      persistActive();
+    }
+
+    // 切换渠道：若激活配置不属于该渠道，自动切到该渠道第一条可用模型
+    function onChannelSelectChanged () {
+      currentChannelKey = $('ai-channel-select').value;
+      var usable = configsOfChannel(currentChannelKey).filter(function (cfg) {
+        return !isFreeModelExpired(cfg);
+      });
+      var activeInChannel = usable.some(function (cfg) { return cfg.id === activeConfigId; });
+      if (!activeInChannel && usable.length) {
+        activeConfigId = usable[0].id;
+        applyActiveToAiConfig(activeConfig());
+        updateModelChip();
+        persistActive();
       }
+      fillModelSelect();
     }
 
     function getEffectiveModelId () {
@@ -808,7 +942,9 @@
           });
         }
         chatHistory.slice(-10).forEach(function (message) {
-          apiMessages.push(message);
+          // 只有思考没有正文的历史项不发给模型（空 content 会被部分接口拒绝）
+          if (!message.content) return;
+          apiMessages.push({role: message.role, content: message.content});
         });
         runStream(target, apiMessages);
       };
@@ -830,12 +966,28 @@
       abortController = new AbortController();
 
       var fullText = '';
+      var fullReasoning = '';
       var cursor = null;
       var onFirstDelta = function () {
         bubble.classList.remove('thinking');
         cursor = document.createElement('span');
         cursor.className = 'ai-cursor';
       };
+      var onReasoningDelta = function (delta) {
+        if (!delta) return;
+        fullReasoning += delta;
+        bubble.classList.remove('thinking');
+        clearThinkingDots(bubble);
+        appendReasoningDelta(bubble, delta);
+        scrollMessagesToBottom();
+      };
+      // 部分模型把 <think>…</think> 混在正文里，流式拆分后再分别渲染
+      var inlineThink = createInlineThinkParser(function (delta) {
+        fullText += delta;
+        if (!cursor) onFirstDelta();
+        renderAssistantContent(bubble, fullText, cursor);
+        scrollMessagesToBottom();
+      }, onReasoningDelta);
       aiFetch(target.endpoint, {
         method: 'POST',
         headers: buildAuthHeaders(target),
@@ -865,26 +1017,30 @@
           });
         }
         return readChatStream(response.body.getReader(), target.apiFormat, function (delta) {
-          fullText += delta;
-          if (!cursor) onFirstDelta();
-          renderAssistantContent(bubble, fullText, cursor);
-          scrollMessagesToBottom();
-        });
+          inlineThink.push(delta);
+        }, onReasoningDelta).then(inlineThink.flush);
       }).then(function () {
         bubble.classList.remove('thinking');
-        if (fullText) {
-          chatHistory.push({role: 'assistant', content: fullText});
-          renderAssistantContent(bubble, fullText, null);
+        if (fullReasoning) finalizeReasoning(bubble);
+        if (fullText || fullReasoning) {
+          chatHistory.push({role: 'assistant', content: fullText, reasoning: fullReasoning || undefined});
         }
+        renderAssistantContent(bubble, fullText || (fullReasoning ? strings.noAnswer : ''), null);
       }).catch(function (error) {
         bubble.classList.remove('thinking');
         if (error && error.name === 'AbortError') {
-          renderAssistantContent(bubble, fullText, null);
-          if (fullText) chatHistory.push({role: 'assistant', content: fullText});
+          inlineThink.flush();
+          if (fullReasoning) finalizeReasoning(bubble);
+          renderAssistantContent(bubble, fullText || (fullReasoning ? strings.noAnswer : ''), null);
+          if (fullText || fullReasoning) {
+            chatHistory.push({role: 'assistant', content: fullText, reasoning: fullReasoning || undefined});
+          }
           return;
         }
         bubble.classList.add('error');
-        bubble.textContent = strings.requestFailed + String((error && error.message) || error);
+        if (fullReasoning) finalizeReasoning(bubble);
+        // 保留已经收到的思考，方便看清失败发生在哪一步
+        renderAssistantContent(bubble, strings.requestFailed + String((error && error.message) || error), null);
       }).then(function () {
         streaming = false;
         abortController = null;
@@ -894,16 +1050,98 @@
       });
     }
 
+    var OPEN_THINK_TAGS = ['<think>', '<thinking>'];
+    var CLOSE_THINK_TAGS = ['</think>', '</thinking>'];
+
+    function findTag (text, tags) {
+      var lower = text.toLowerCase();
+      var found = null;
+      tags.forEach(function (tag) {
+        var index = lower.indexOf(tag);
+        if (index !== -1 && (!found || index < found.index)) found = {index: index, tag: tag};
+      });
+      return found;
+    }
+
+    function partialTagLength (text, tags) {
+      var lower = text.toLowerCase();
+      var longest = 0;
+      tags.forEach(function (tag) {
+        for (var n = Math.min(lower.length, tag.length - 1); n > longest; n--) {
+          if (lower.slice(-n) === tag.slice(0, n)) longest = n;
+        }
+      });
+      return longest;
+    }
+
     /**
-     * 读取流式响应，按格式取出正文增量。
-     * - OpenAI 兼容：SSE，data: {...} 里 choices[0].delta.content
-     * - Anthropic：SSE，content_block_delta 里 delta.text（thinking_delta 忽略）
-     * - Ollama：NDJSON，每行一个 {message:{content}, done}
+     * 把正文里混排的 <think>…</think> 拆成思考与回答两路增量。
+     * 标签可能跨多个流分片，因此保留「可能是半个标签」的尾巴到下一次。
+     */
+    function createInlineThinkParser (onText, onReasoning) {
+      var buffer = '';
+      var inThink = false;
+      return {
+        push: function (delta) {
+          if (!delta) return;
+          buffer += delta;
+          while (buffer) {
+            if (!inThink) {
+              var open = findTag(buffer, OPEN_THINK_TAGS);
+              if (!open) {
+                var keepOpen = partialTagLength(buffer, OPEN_THINK_TAGS);
+                var textEnd = buffer.length - keepOpen;
+                if (textEnd > 0) {
+                  onText(buffer.slice(0, textEnd));
+                  buffer = buffer.slice(textEnd);
+                }
+                break;
+              }
+              if (open.index > 0) {
+                onText(buffer.slice(0, open.index));
+                buffer = buffer.slice(open.index);
+                continue;
+              }
+              inThink = true;
+              buffer = buffer.slice(open.tag.length);
+            } else {
+              var close = findTag(buffer, CLOSE_THINK_TAGS);
+              if (!close) {
+                var keepClose = partialTagLength(buffer, CLOSE_THINK_TAGS);
+                var thinkEnd = buffer.length - keepClose;
+                if (thinkEnd > 0) {
+                  onReasoning(buffer.slice(0, thinkEnd));
+                  buffer = buffer.slice(thinkEnd);
+                }
+                break;
+              }
+              if (close.index > 0) onReasoning(buffer.slice(0, close.index));
+              buffer = buffer.slice(close.index + close.tag.length);
+              inThink = false;
+            }
+          }
+        },
+        flush: function () {
+          if (!buffer) return;
+          if (inThink) onReasoning(buffer);
+          else onText(buffer);
+          buffer = '';
+          inThink = false;
+        }
+      };
+    }
+
+    /**
+     * 读取流式响应，按格式取出正文与思考增量。
+     * - OpenAI 兼容：SSE，choices[0].delta.content / reasoning_content
+     * - Anthropic：SSE，content_block_delta 的 text_delta / thinking_delta
+     * - Ollama：NDJSON，message.content / message.thinking
      * @param {ReadableStreamDefaultReader} reader
      * @param {'openai'|'anthropic'|'ollama'} apiFormat
      * @param {(delta: string) => void} onDelta
+     * @param {(delta: string) => void} onReasoning
      */
-    function readChatStream (reader, apiFormat, onDelta) {
+    function readChatStream (reader, apiFormat, onDelta, onReasoning) {
       var decoder = new TextDecoder();
       var buffer = '';
 
@@ -924,7 +1162,11 @@
                 continue;
               }
               if (chunk.error) throw new Error(String(chunk.error));
-              if (chunk.message && chunk.message.content) onDelta(chunk.message.content);
+              if (chunk.message) {
+                if (chunk.message.thinking) onReasoning(chunk.message.thinking);
+                if (chunk.message.reasoning) onReasoning(chunk.message.reasoning);
+                if (chunk.message.content) onDelta(chunk.message.content);
+              }
               if (chunk.done) return;
               continue;
             }
@@ -943,17 +1185,24 @@
               if (json.type === 'error') {
                 throw new Error((json.error && (json.error.message || json.error.type)) || 'Anthropic API error');
               }
-              if (json.type === 'content_block_start' && json.content_block && json.content_block.type === 'text') {
-                if (json.content_block.text) onDelta(json.content_block.text);
-              } else if (json.type === 'content_block_delta' && json.delta && json.delta.type === 'text_delta') {
-                if (json.delta.text) onDelta(json.delta.text);
+              if (json.type === 'content_block_start' && json.content_block) {
+                if (json.content_block.type === 'text' && json.content_block.text) onDelta(json.content_block.text);
+                if (json.content_block.type === 'thinking' && json.content_block.thinking) onReasoning(json.content_block.thinking);
+              } else if (json.type === 'content_block_delta' && json.delta) {
+                if (json.delta.type === 'text_delta' && json.delta.text) onDelta(json.delta.text);
+                else if (json.delta.type === 'thinking_delta' && json.delta.thinking) onReasoning(json.delta.thinking);
               } else if (json.type === 'message_stop') {
                 return;
               }
               continue;
             }
             var delta = json.choices && json.choices[0] && json.choices[0].delta;
-            if (delta && delta.content) onDelta(delta.content);
+            if (delta) {
+              // DeepSeek 等兼容渠道把推理放在 reasoning_content / reasoning 中
+              var reasoning = delta.reasoning_content || delta.reasoning || delta.reasoning_text;
+              if (reasoning) onReasoning(reasoning);
+              if (delta.content) onDelta(delta.content);
+            }
           }
           return pump();
         });
@@ -1038,11 +1287,62 @@
       scrollMessagesToBottom(true);
     }
 
-    function addAssistantBubble (text) {
+    // 首个思考/正文增量到来前，气泡里只有「思考中」动画点
+    function clearThinkingDots (bubble) {
+      if (bubble.querySelector('.ai-reasoning')) return;
+      var body = bubble.querySelector('.ai-msg-body');
+      if (!body || !body.childNodes.length) bubble.innerHTML = '';
+    }
+
+    function ensureAssistantBody (bubble) {
+      var body = bubble.querySelector('.ai-msg-body');
+      if (!body) {
+        body = document.createElement('div');
+        body.className = 'ai-msg-body';
+        bubble.appendChild(body);
+      }
+      return body;
+    }
+
+    function ensureReasoningBox (bubble) {
+      var box = bubble.querySelector('.ai-reasoning');
+      if (!box) {
+        box = document.createElement('details');
+        box.className = 'ai-reasoning';
+        box.open = true;
+        var summary = document.createElement('summary');
+        summary.textContent = strings.reasoningTitle;
+        var content = document.createElement('div');
+        content.className = 'ai-reasoning-text';
+        box.appendChild(summary);
+        box.appendChild(content);
+        var body = bubble.querySelector('.ai-msg-body');
+        if (body) bubble.insertBefore(box, body);
+        else bubble.appendChild(box);
+      }
+      return box;
+    }
+
+    function appendReasoningDelta (bubble, delta) {
+      var content = ensureReasoningBox(bubble).querySelector('.ai-reasoning-text');
+      content.textContent += delta;
+    }
+
+    function finalizeReasoning (bubble) {
+      var box = bubble.querySelector('.ai-reasoning');
+      if (box) box.open = false;
+    }
+
+    function addAssistantBubble (text, reasoning) {
       var bubble = document.createElement('div');
       bubble.className = 'ai-msg assistant';
       $('ai-messages').appendChild(bubble);
+      if (reasoning) {
+        appendReasoningDelta(bubble, reasoning);
+        finalizeReasoning(bubble);
+      }
       if (text) renderAssistantContent(bubble, text, null);
+      else if (reasoning) renderAssistantContent(bubble, strings.noAnswer, null);
       scrollMessagesToBottom(true);
       return bubble;
     }
@@ -1065,17 +1365,19 @@
     }
 
     function renderAssistantContent (bubble, text, cursor) {
-      bubble.innerHTML = '';
+      // 只重绘正文区域，保留旁边的思考折叠框
+      var body = ensureAssistantBody(bubble);
+      body.innerHTML = '';
       var blockRegex = /```(\w*)\n?([\s\S]*?)(?:```|$)/g;
       var lastIndex = 0;
       var match;
       while ((match = blockRegex.exec(text)) !== null) {
-        appendTextSegment(bubble, text.slice(lastIndex, match.index));
-        appendCodeBlock(bubble, match[1], match[2]);
+        appendTextSegment(body, text.slice(lastIndex, match.index));
+        appendCodeBlock(body, match[1], match[2]);
         lastIndex = blockRegex.lastIndex;
       }
-      appendTextSegment(bubble, text.slice(lastIndex));
-      if (cursor) bubble.appendChild(cursor);
+      appendTextSegment(body, text.slice(lastIndex));
+      if (cursor) body.appendChild(cursor);
     }
 
     function renderInlineMarkdown (text) {
@@ -1328,7 +1630,7 @@
         if (message.role === 'user') {
           addUserBubble(message.content);
         } else {
-          addAssistantBubble(message.content);
+          addAssistantBubble(message.content, message.reasoning);
         }
       });
     }

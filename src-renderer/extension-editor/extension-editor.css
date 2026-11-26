@@ -556,6 +556,54 @@ body {
   30% { transform: translateY(-4px); opacity: 1; }
 }
 
+/* 思考过程：流式输出时展开，结束后可折叠回看 */
+.ai-reasoning {
+  margin-bottom: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+.ai-reasoning > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.ai-reasoning > summary::-webkit-details-marker {
+  display: none;
+}
+.ai-reasoning > summary::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  transition: transform 0.15s ease;
+}
+.ai-reasoning[open] > summary::before {
+  transform: rotate(90deg);
+}
+.ai-reasoning > summary:hover {
+  color: var(--fg-bright);
+}
+.ai-reasoning-text {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0 9px 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fg-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* 欢迎卡片 */
 .ai-welcome {
   align-self: stretch;

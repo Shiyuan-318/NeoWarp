@@ -10,7 +10,8 @@ contextBridge.exposeInMainWorld('AIAssistantPreload', {
   saveModelConfigs: (payload) => ipcRenderer.invoke('ai-save-model-configs', payload),
   // tw-ai-proxy 转发协议的能力令牌（主进程按窗口来源签发，带过期时间）
   getAiProxyToken: (targets) => ipcRenderer.invoke('ai-get-proxy-token', {targets}),
-  openDesktopSettings: () => ipcRenderer.invoke('open-desktop-settings'),
+  // section: 打开后直达的设置分区（如 'ai' = 桌面设置的 AI 模型页）
+  openDesktopSettings: (section) => ipcRenderer.invoke('open-desktop-settings', section),
   // AI 工作流设置（Plan / Spec / Goal）：读取/保存/选目录/文档落盘
   getWorkflowSettings: () => ipcRenderer.invoke('ai-get-workflow-settings'),
   saveWorkflowSettings: (payload) => ipcRenderer.invoke('ai-save-workflow-settings', payload),

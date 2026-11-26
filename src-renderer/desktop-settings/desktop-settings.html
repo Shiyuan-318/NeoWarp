@@ -2240,15 +2240,23 @@
       const content = document.getElementById('content');
       const navItems = Array.from(document.querySelectorAll('.nav-item'));
       const pages = Array.from(document.querySelectorAll('.page'));
+      const selectPage = (id) => {
+        const target = navItems.find((item) => item.dataset.page === id);
+        if (!target || target.classList.contains('selected')) return;
+        navItems.forEach((other) => other.classList.toggle('selected', other === target));
+        pages.forEach((page) => page.classList.toggle('active', page.dataset.page === id));
+        content.scrollTop = 0;
+      };
       navItems.forEach((item) => {
-        item.addEventListener('click', () => {
-          if (item.classList.contains('selected')) return;
-          navItems.forEach((other) => other.classList.toggle('selected', other === item));
-          const id = item.dataset.page;
-          pages.forEach((page) => page.classList.toggle('active', page.dataset.page === id));
-          content.scrollTop = 0;
-        });
+        item.addEventListener('click', () => selectPage(item.dataset.page));
       });
+      // 来自主进程的分区跳转：AI 助手 / SOLO 的“在应用设置中管理模型”
+      // 请求直达 AI 模型页（section = 'ai'）
+      if (DesktopSettingsPreload.onNavigateTo) {
+        DesktopSettingsPreload.onNavigateTo(({section}) => {
+          if (typeof section === 'string' && section) selectPage(section);
+        });
+      }
 
       // ===== Check for updates =====
       const checkForUpdatesBtn = document.querySelector('.check-for-updates-btn');
@@ -4157,8 +4165,10 @@
         panel.innerHTML =
           '<div class="ai-dialog-head">' + aiEscape(isEdit ? (editGroupIds ? aiS.editChannelTitle : aiS.editTitle) : aiS.addTitle) + '</div>' +
           '<div class="ai-dialog-body">' +
+          // 服务商仅在添加时可选；编辑模型/渠道沿用原配置的服务商，不显示该分组
+          (isEdit ? '' :
           '<div class="form-group"><div class="form-group-label">' + aiEscape(aiS.groupProvider) + '</div>' +
-          '<div class="provider-grid" id="aiProviderGrid">' + providerGridHtml() + '</div></div>' +
+          '<div class="provider-grid" id="aiProviderGrid">' + providerGridHtml() + '</div></div>') +
           '<div class="form-group" id="aiModelGroup"><div class="form-group-heading"><div class="form-group-label">' + aiEscape(aiS.groupModel) + '</div>' +
           '<button type="button" class="ai-fetch-models-btn" id="aiFetchModelsBtn">' + aiEscape(aiS.fetchLatestModels) + '</button></div>' +
           '<div class="model-option-list" id="aiModelListDialog">' + modelListHtml() + '</div>' +
@@ -4229,7 +4239,8 @@
         }
         syncGroups();
 
-        $('#aiProviderGrid').addEventListener('click', (e) => {
+        const providerGridEl = $('#aiProviderGrid');
+        if (providerGridEl) providerGridEl.addEventListener('click', (e) => {
           const btn = e.target.closest('.provider-option');
           if (!btn) return;
           draft.provider = btn.dataset.provider;
