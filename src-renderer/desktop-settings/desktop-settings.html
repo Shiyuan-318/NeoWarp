@@ -1061,6 +1061,25 @@
         font-weight: 400;
         color: var(--text-tertiary);
       }
+      /* 渠道头上的整组操作：地址占满剩余空间，按钮贴右 */
+      .ai-ep-head .ai-group-note {
+        flex: 1;
+        min-width: 0;
+      }
+      .ai-ep-head .ai-group-title { flex-shrink: 0; }
+      .ai-ep-actions {
+        margin-left: auto;
+        align-self: center;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .ai-ep-btn {
+        font-size: 11.5px;
+        padding: 3px 10px;
+        border-radius: 7px;
+      }
       .ai-ep-group.collapsed .ai-ep-chevron { transform: rotate(-90deg); }
       .ai-ep-group.collapsed .ai-ep-body { display: none; }
       .ai-free-tag {
@@ -1291,10 +1310,270 @@
         align-items: flex-start;
         gap: 8px;
       }
-      .ai-custom-model-tools textarea {
-        min-height: 74px;
-        resize: vertical;
-        line-height: 1.55;
+      .ai-custom-model-tools .settings-input { flex: 1; }
+      .ai-custom-model-tools .ai-fetch-models-btn { height: 36px; }
+      /* 已保存的模型 ID 列表：每行右侧一个“编辑”，展开后编辑该模型的能力 */
+      .ai-model-id-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .ai-model-id-empty {
+        font-size: 11.5px;
+        color: var(--text-tertiary);
+        padding: 6px 2px;
+      }
+      .ai-model-id-item {
+        border: 1px solid var(--card-border-strong);
+        border-radius: 10px;
+        background: transparent;
+        overflow: hidden;
+      }
+      .ai-model-id-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px 8px 12px;
+      }
+      .ai-model-id-main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .ai-model-id-name {
+        font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+        font-size: 12.5px;
+        word-break: break-all;
+      }
+      .ai-model-id-edit {
+        flex-shrink: 0;
+        padding: 4px 9px;
+        border: 1px solid var(--input-border);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-secondary);
+        font: inherit;
+        font-size: 11.5px;
+        cursor: pointer;
+        transition: background 0.14s var(--ease), color 0.14s var(--ease);
+      }
+      .ai-model-id-edit:hover { background: var(--hover-bg); color: var(--text); }
+      .ai-model-id-item.editing .ai-model-id-edit {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .ai-model-caps {
+        border-top: 0.5px solid var(--card-border);
+        padding: 12px 12px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      /* 能力分组：标题 + 一行胶囊勾选（参考模型编辑器：输入类型 / 模型能力 / 推理等级） */
+      .ai-cap-section-title {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 7px;
+      }
+      .ai-cap-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .ai-cap-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 11px 5px 8px;
+        border: 1px solid var(--card-border-strong);
+        border-radius: 9px;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        font-size: 12.5px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.14s var(--ease), border-color 0.14s var(--ease);
+      }
+      .ai-cap-pill:hover { background: var(--hover-bg); }
+      .ai-cap-pill.checked {
+        background: color-mix(in srgb, var(--text) 8%, transparent);
+        border-color: color-mix(in srgb, var(--text) 26%, transparent);
+      }
+      .ai-cap-pill.locked { cursor: default; opacity: 0.75; }
+      .ai-cap-pill input {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 15px;
+        height: 15px;
+        margin: 0;
+        border: 1px solid color-mix(in srgb, var(--text) 32%, transparent);
+        border-radius: 4px;
+        background: transparent;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+      .ai-cap-pill input:checked {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .ai-cap-pill input:checked::after {
+        content: '';
+        width: 8px;
+        height: 4.5px;
+        border-left: 1.8px solid #fff;
+        border-bottom: 1.8px solid #fff;
+        transform: translateY(-1px) rotate(-45deg);
+      }
+      .ai-cap-pill input:disabled { cursor: default; }
+      .ai-cap-lock-icon {
+        width: 12px;
+        height: 12px;
+        color: var(--text-tertiary);
+        display: inline-flex;
+      }
+      /* 推理等级：可编辑的等级名胶囊 + 末尾“+”追加；每档左侧小叉删除 */
+      .ai-cap-levels {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .ai-cap-levels.disabled { opacity: 0.45; }
+      .ai-cap-levels.disabled .ai-cap-level input,
+      .ai-cap-levels.disabled .ai-cap-level-x { cursor: not-allowed; }
+      .ai-cap-level {
+        display: inline-flex;
+        align-items: center;
+        padding-left: 4px;
+        border: 1px solid var(--card-border-strong);
+        border-radius: 9px;
+        background: transparent;
+        transition: border-color 0.14s var(--ease), box-shadow 0.14s var(--ease);
+      }
+      .ai-cap-level:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-ring);
+      }
+      .ai-cap-level-x {
+        width: 18px;
+        height: 18px;
+        padding: 0;
+        border: none;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--text-tertiary);
+        font: inherit;
+        font-size: 14px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        cursor: pointer;
+        transition: color 0.14s var(--ease), background 0.14s var(--ease);
+      }
+      .ai-cap-level-x:hover {
+        color: var(--danger);
+        background: var(--danger-soft);
+      }
+      .ai-cap-level-x:disabled {
+        opacity: 0.35;
+        color: var(--text-tertiary);
+        background: none;
+        cursor: not-allowed;
+      }
+      .ai-cap-level input {
+        width: clamp(56px, 8vw, 94px);
+        padding: 5px 8px 5px 3px;
+        border: none;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        font-size: 12.5px;
+        text-align: center;
+        outline: none;
+      }
+      .ai-cap-level-add {
+        width: 36px;
+        height: 31px;
+        border: 1px dashed var(--card-border-strong);
+        border-radius: 9px;
+        background: transparent;
+        color: var(--text-secondary);
+        font: inherit;
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background 0.14s var(--ease), color 0.14s var(--ease);
+      }
+      .ai-cap-level-add:hover { background: var(--hover-bg); color: var(--text); }
+      .ai-cap-level-add:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      /* 每个模型独立的上下文上限 / 最大输出 Token */
+      .ai-cap-limits {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+      }
+      .ai-cap-limit {
+        flex: 1 1 180px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .ai-cap-limit > span {
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+      .ai-cap-limit input {
+        width: 100%;
+        padding: 7px 10px;
+        font-size: 13px;
+      }
+      .ai-cap-limit-hint {
+        margin-top: 6px;
+        font-size: 11.5px;
+        color: var(--text-tertiary);
+      }
+      .ai-model-caps-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 2px;
+      }
+      .ai-cap-remove {
+        border: none;
+        background: none;
+        padding: 2px 0;
+        color: var(--danger);
+        font: inherit;
+        font-size: 11.5px;
+        cursor: pointer;
+      }
+      .ai-cap-remove:hover { text-decoration: underline; }
+      .ai-cap-done {
+        padding: 4px 12px;
+        border: 1px solid var(--input-border);
+        border-radius: 8px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font: inherit;
+        font-size: 11.5px;
+        cursor: pointer;
       }
       .ai-field-row { margin-bottom: 12px; }
       .ai-field-label {
@@ -2920,13 +3199,16 @@
           noKey: '未填 API Key',
           addTitle: '添加模型',
           editTitle: '编辑模型',
+          editChannelTitle: '编辑渠道',
+          deleteChannelConfirm: '删除渠道「{name}」及其下所有模型？',
+          channelDeleted: '已删除渠道 {name}',
           groupProvider: '服务商',
           groupModel: '模型（可多选）',
           fetchLatestModels: '获取最新模型',
           fetchAvailableModels: '获取可用模型',
           fetchingModels: '正在获取模型…',
           modelsFetched: '已获取 {count} 个模型，请勾选后保存',
-          customModelsFetched: '已获取并填入 {count} 个模型 ID',
+          customModelsFetched: '已获取并保存 {count} 个模型 ID',
           modelsFetchFail: '获取模型失败',
           modelsFetchEmpty: '接口未返回可用模型',
           modelsFetchKeyRequired: '获取模型前请填写 API Key',
@@ -2936,9 +3218,28 @@
           fieldEndpoint: '接口地址',
           endpointAutoHint: '填 base URL 或完整端点均可，会自动补全 /chat/completions',
           fieldModelId: '模型 ID',
-          fieldModelIdHint: '每行填写一个模型 ID，也可用逗号分隔；同一接口地址的模型会归为一组展示',
+          fieldModelIdHint: '输入模型 ID 后点击“保存模型ID”，再在下方列表里编辑每个模型的能力；同一接口地址的模型会归为一组展示',
+          saveModelId: '保存模型ID',
+          modelIdSaved: '已保存 {count} 个模型 ID',
+          modelIdListEmpty: '还没有保存的模型 ID',
+          modelIdPlaceholder: '输入模型 ID，如 deepseek-v3.2',
+          capThinking: '思考',
+          capImage: '图片',
+          capVideo: '视频',
+          capPdf: 'PDF',
+          capText: '文本',
+          gradeInputTypes: '输入类型',
+          gradeCapabilities: '模型能力',
+          reasoningLevels: '推理等级（从低到高）',
+          addReasoningLevel: '添加等级',
+          removeReasoningLevel: '删除等级',
+          thinkingLevelsUnit: '档',
+          removeModelId: '移除',
+          doneEdit: '完成',
+          capLimits: '上下文与输出',
           fieldContextLimit: '上下文上限（tokens）',
           fieldContextLimitHint: '用于在对话超长前裁剪历史',
+          fieldMaxOutput: '最大输出 Token（tokens）',
           fieldApiKey: 'API Key',
           fieldApiKeyHint: '密钥只保存在本机的 tw_config.json 中',
           fieldName: '备注名称',
@@ -2959,7 +3260,7 @@
           errEndpointInvalid: '接口地址不能包含空格',
           errModelIdRequired: '请填写至少一个模型 ID',
           errModelRequired: '请至少选择一个模型',
-          errContextLimit: '上下文上限至少为 1000',
+          errTokenLimits: '上下文上限至少为 1000，最大输出需为大于 0 的整数',
           errKeyRequired: '请填写 API Key',
           configSaved: '已保存',
           modelAdded: '模型已添加',
@@ -2986,13 +3287,16 @@
           noKey: 'No API key',
           addTitle: 'Add Model',
           editTitle: 'Edit Model',
+          editChannelTitle: 'Edit Channel',
+          deleteChannelConfirm: 'Delete channel "{name}" and all its models?',
+          channelDeleted: 'Deleted channel {name}',
           groupProvider: 'Provider',
           groupModel: 'Models (multiple selection)',
           fetchLatestModels: 'Fetch latest models',
           fetchAvailableModels: 'Fetch available models',
           fetchingModels: 'Fetching models…',
           modelsFetched: 'Fetched {count} models. Select models and save.',
-          customModelsFetched: 'Fetched and filled in {count} model IDs',
+          customModelsFetched: 'Fetched and saved {count} model IDs',
           modelsFetchFail: 'Failed to fetch models',
           modelsFetchEmpty: 'The endpoint returned no available models',
           modelsFetchKeyRequired: 'Enter an API Key before fetching models',
@@ -3002,9 +3306,28 @@
           fieldEndpoint: 'Endpoint',
           endpointAutoHint: 'Accepts a base URL or a full endpoint URL — /chat/completions is appended automatically',
           fieldModelId: 'Model IDs',
-          fieldModelIdHint: 'Enter one model ID per line or separate IDs with commas; models on the same endpoint are grouped together in the list',
+          fieldModelIdHint: 'Enter a model ID, click "Save model ID", then edit each model’s capabilities in the list below; models on the same endpoint are grouped together',
+          saveModelId: 'Save model ID',
+          modelIdSaved: 'Saved {count} model IDs',
+          modelIdListEmpty: 'No model IDs saved yet',
+          modelIdPlaceholder: 'Enter a model ID, e.g. deepseek-v3.2',
+          capThinking: 'Thinking',
+          capImage: 'Images',
+          capVideo: 'Video',
+          capPdf: 'PDF',
+          capText: 'Text',
+          gradeInputTypes: 'Input types',
+          gradeCapabilities: 'Model capabilities',
+          reasoningLevels: 'Reasoning levels (low → high)',
+          addReasoningLevel: 'Add level',
+          removeReasoningLevel: 'Remove level',
+          thinkingLevelsUnit: 'levels',
+          removeModelId: 'Remove',
+          doneEdit: 'Done',
+          capLimits: 'Context & output',
           fieldContextLimit: 'Context limit (tokens)',
           fieldContextLimitHint: 'Used to trim conversation history before it gets too long',
+          fieldMaxOutput: 'Max output tokens',
           fieldApiKey: 'API Key',
           fieldApiKeyHint: 'The key is stored locally in tw_config.json',
           fieldName: 'Name',
@@ -3025,7 +3348,7 @@
           errEndpointInvalid: 'Endpoint must not contain spaces',
           errModelIdRequired: 'Enter at least one model ID',
           errModelRequired: 'Select at least one model',
-          errContextLimit: 'Context limit must be at least 1000',
+          errTokenLimits: 'Context limit must be at least 1000; max output must be a positive integer',
           errKeyRequired: 'API Key is required',
           configSaved: 'Saved',
           modelAdded: 'Model added',
@@ -3052,14 +3375,14 @@
       // 与 AI 助手一致的服务商/模型表（含上下文规模与能力标签）
       // 服务商品牌 LOGO（24×24，currentColor 填充，白色显示在品牌色方块上）。
       // 来源：@lobehub/icons-static-svg（OpenAI/DeepSeek/Zhipu/Kimi/Huawei/Qwen/SenseNova）、
-      // simple-icons（Xiaomi）；custom 为通用图标（Material Symbols, Apache-2.0）。
+      // simple-icons（Google Gemini）；custom 为通用图标（Material Symbols, Apache-2.0）。
       // 与 AI 助手（ai-assistant.html）中的 AI_LOGO_SVG 保持一致。
       const AI_LOGO_SVG = {
         openai: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"></path></svg>',
         deepseek: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23.748 4.482c-.254-.124-.364.113-.512.234-.051.039-.094.09-.137.136-.372.397-.806.657-1.373.626-.829-.046-1.537.214-2.163.848-.133-.782-.575-1.248-1.247-1.548-.352-.156-.708-.311-.955-.65-.172-.241-.219-.51-.305-.774-.055-.16-.11-.323-.293-.35-.2-.031-.278.136-.356.276-.313.572-.434 1.202-.422 1.84.027 1.436.633 2.58 1.838 3.393.137.093.172.187.129.323-.082.28-.18.552-.266.833-.055.179-.137.217-.329.14a5.526 5.526 0 01-1.736-1.18c-.857-.828-1.631-1.742-2.597-2.458a11.365 11.365 0 00-.689-.471c-.985-.957.13-1.743.388-1.836.27-.098.093-.432-.779-.428-.872.004-1.67.295-2.687.684a3.055 3.055 0 01-.465.137 9.597 9.597 0 00-2.883-.102c-1.885.21-3.39 1.102-4.497 2.623C.082 8.606-.231 10.684.152 12.85c.403 2.284 1.569 4.175 3.36 5.653 1.858 1.533 3.997 2.284 6.438 2.14 1.482-.085 3.133-.284 4.994-1.86.47.234.962.327 1.78.397.63.059 1.236-.03 1.705-.128.735-.156.684-.837.419-.961-2.155-1.004-1.682-.595-2.113-.926 1.096-1.296 2.746-2.642 3.392-7.003.05-.347.007-.565 0-.845-.004-.17.035-.237.23-.256a4.173 4.173 0 001.545-.475c1.396-.763 1.96-2.015 2.093-3.517.02-.23-.004-.467-.247-.588zM11.581 18c-2.089-1.642-3.102-2.183-3.52-2.16-.392.024-.321.471-.235.763.09.288.207.486.371.739.114.167.192.416-.113.603-.673.416-1.842-.14-1.897-.167-1.361-.802-2.5-1.86-3.301-3.307-.774-1.393-1.224-2.887-1.298-4.482-.02-.386.093-.522.477-.592a4.696 4.696 0 011.529-.039c2.132.312 3.946 1.265 5.468 2.774.868.86 1.525 1.887 2.202 2.891.72 1.066 1.494 2.082 2.48 2.914.348.292.625.514.891.677-.802.09-2.14.11-3.054-.614zm1-6.44a.306.306 0 01.415-.287.302.302 0 01.2.288.306.306 0 01-.31.307.303.303 0 01-.304-.308zm3.11 1.596c-.2.081-.399.151-.59.16a1.245 1.245 0 01-.798-.254c-.274-.23-.47-.358-.552-.758a1.73 1.73 0 01.016-.588c.07-.327-.008-.537-.239-.727-.187-.156-.426-.199-.688-.199a.559.559 0 01-.254-.078c-.11-.054-.2-.19-.114-.358.028-.054.16-.186.192-.21.356-.202.767-.136 1.146.016.352.144.618.408 1.001.782.391.451.462.576.685.914.176.265.336.537.445.848.067.195-.019.354-.25.452z"></path></svg>',
         glm: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.991 23.503a.24.24 0 00-.244.248.24.24 0 00.244.249.24.24 0 00.245-.249.24.24 0 00-.22-.247l-.025-.001zM9.671 5.365a1.697 1.697 0 011.099 2.132l-.071.172-.016.04-.018.054c-.07.16-.104.32-.104.498-.035.71.47 1.279 1.186 1.314h.366c1.309.053 2.338 1.173 2.286 2.523-.052 1.332-1.152 2.38-2.478 2.327h-.174c-.715.018-1.274.64-1.239 1.368 0 .124.018.23.053.337.209.373.54.658.96.8.75.23 1.517-.125 1.9-.782l.018-.035c.402-.64 1.17-.96 1.92-.711.854.284 1.378 1.226 1.099 2.167a1.661 1.661 0 01-2.077 1.102 1.711 1.711 0 01-.907-.711l-.017-.035c-.2-.323-.463-.58-.851-.711l-.056-.018a1.646 1.646 0 00-1.954.746 1.66 1.66 0 01-1.065.764 1.677 1.677 0 01-1.989-1.279c-.209-.906.332-1.83 1.257-2.043a1.51 1.51 0 01.296-.035h.018c.68-.071 1.151-.622 1.116-1.333a1.307 1.307 0 00-.227-.693 2.515 2.515 0 01-.366-1.403 2.39 2.39 0 01.366-1.208c.14-.195.21-.444.227-.693.018-.71-.506-1.261-1.186-1.332l-.07-.018a1.43 1.43 0 01-.299-.07l-.05-.019a1.7 1.7 0 01-1.047-2.114 1.68 1.68 0 012.094-1.101zm-5.575 10.11c.26-.264.639-.367.994-.27.355.096.633.379.728.74.095.362-.007.748-.267 1.013-.402.41-1.053.41-1.455 0a1.062 1.062 0 010-1.482zm14.845-.294c.359-.09.738.024.992.297.254.274.344.665.237 1.025-.107.36-.396.634-.756.718-.551.128-1.1-.22-1.23-.781a1.05 1.05 0 01.757-1.26zm-.064-4.39c.314.32.49.753.49 1.206 0 .452-.176.886-.49 1.206-.315.32-.74.5-1.185.5-.444 0-.87-.18-1.184-.5a1.727 1.727 0 010-2.412 1.654 1.654 0 012.369 0zm-11.243.163c.364.484.447 1.128.218 1.691a1.665 1.665 0 01-2.188.923c-.855-.36-1.26-1.358-.907-2.228a1.68 1.68 0 011.33-1.038c.593-.08 1.183.169 1.547.652zm11.545-4.221c.368 0 .708.2.892.524.184.324.184.724 0 1.048a1.026 1.026 0 01-.892.524c-.568 0-1.03-.47-1.03-1.048 0-.579.462-1.048 1.03-1.048zm-14.358 0c.368 0 .707.2.891.524.184.324.184.724 0 1.048a1.026 1.026 0 01-.891.524c-.569 0-1.03-.47-1.03-1.048 0-.579.461-1.048 1.03-1.048zm10.031-1.475c.925 0 1.675.764 1.675 1.706s-.75 1.705-1.675 1.705-1.674-.763-1.674-1.705c0-.942.75-1.706 1.674-1.706zm-2.626-.684c.362-.082.653-.356.761-.718a1.062 1.062 0 00-.238-1.028 1.017 1.017 0 00-.996-.294c-.547.14-.881.7-.752 1.257.13.558.675.907 1.225.783zm0 16.876c.359-.087.644-.36.75-.72a1.062 1.062 0 00-.237-1.019 1.018 1.018 0 00-.985-.301 1.037 1.037 0 00-.762.717c-.108.361-.017.754.239 1.028.245.263.606.377.953.305l.043-.01zM17.19 3.5a.631.631 0 00.628-.64c0-.355-.279-.64-.628-.64a.631.631 0 00-.628.64c0 .355.28.64.628.64zm-10.38 0a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64a.631.631 0 00-.628.64c0 .355.279.64.628.64zm-5.182 7.852a.631.631 0 00-.628.64c0 .354.28.639.628.639a.63.63 0 00.627-.606l.001-.034a.62.62 0 00-.628-.64zm5.182 9.13a.631.631 0 00-.628.64c0 .355.279.64.628.64a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64zm10.38.018a.631.631 0 00-.628.64c0 .355.28.64.628.64a.631.631 0 00.628-.64c0-.355-.279-.64-.628-.64zm5.182-9.148a.631.631 0 00-.628.64c0 .354.279.639.628.639a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64zm-.384-4.992a.24.24 0 00.244-.249.24.24 0 00-.244-.249.24.24 0 00-.244.249c0 .142.122.249.244.249zM11.991.497a.24.24 0 00.245-.248A.24.24 0 0011.99 0a.24.24 0 00-.244.249c0 .133.108.236.223.247l.021.001zM2.011 6.36a.24.24 0 00.245-.249.24.24 0 00-.244-.249.24.24 0 00-.244.249.24.24 0 00.244.249zm0 11.263a.24.24 0 00-.243.248.24.24 0 00.244.249.24.24 0 00.244-.249.252.252 0 00-.244-.248zm19.995-.018a.24.24 0 00-.245.248.24.24 0 00.245.25.24.24 0 00.244-.25.252.252 0 00-.244-.248z"></path></svg>',
         kimi: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.846 0a1.923 1.923 0 110 3.846H20.15a.226.226 0 01-.227-.226V1.923C19.923.861 20.784 0 21.846 0z"></path><path d="M11.065 11.199l7.257-7.2c.137-.136.06-.41-.116-.41H14.3a.164.164 0 00-.117.051l-7.82 7.756c-.122.12-.302.013-.302-.179V3.82c0-.127-.083-.23-.185-.23H3.186c-.103 0-.186.103-.186.23V19.77c0 .128.083.23.186.23h2.69c.103 0 .186-.102.186-.23v-3.25c0-.069.025-.135.069-.178l2.424-2.406a.158.158 0 01.205-.023l6.484 4.772a7.677 7.677 0 003.453 1.283c.108.012.2-.095.2-.23v-3.06c0-.117-.07-.212-.164-.227a5.028 5.028 0 01-2.027-.807l-5.613-4.064c-.117-.078-.132-.279-.028-.381z"></path></svg>',
-        mimo: '<svg aria-hidden="true" focusable="false" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C8.016 0 4.756.255 2.493 2.516.23 4.776 0 8.033 0 12.012c0 3.98.23 7.235 2.494 9.497C4.757 23.77 8.017 24 12 24c3.983 0 7.243-.23 9.506-2.491C23.77 19.247 24 15.99 24 12.012c0-3.984-.233-7.243-2.502-9.504C19.234.252 15.978 0 12 0zM4.906 7.405h5.624c1.47 0 3.007.068 3.764.827.746.746.827 2.233.83 3.676v4.54a.15.15 0 0 1-.152.147h-1.947a.15.15 0 0 1-.152-.148V11.83c-.002-.806-.048-1.634-.464-2.051-.358-.36-1.026-.441-1.72-.458H7.158a.15.15 0 0 0-.151.147v6.98a.15.15 0 0 1-.152.148H4.906a.15.15 0 0 1-.15-.148V7.554a.15.15 0 0 1 .15-.149zm12.131 0h1.949a.15.15 0 0 1 .15.15v8.892a.15.15 0 0 1-.15.148h-1.949a.15.15 0 0 1-.151-.148V7.554a.15.15 0 0 1 .151-.149zM8.92 10.948h2.046c.083 0 .15.066.15.147v5.352a.15.15 0 0 1-.15.148H8.92a.15.15 0 0 1-.152-.148v-5.352a.15.15 0 0 1 .152-.147Z"/></svg>',
+        gemini: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0c0 6.627 5.373 12 12 12-6.627 0-12 5.373-12 12 0-6.627-5.373-12-12-12 6.627 0 12-5.373 12-12z"></path></svg>',
         huaweipangu: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.341 17.042s.062-.061 0-.061C7.516 10.902 3.646 6.22 3.646 6.22S1.557 8.168 1.68 10.174c.061 1.52 1.228 2.37 1.228 2.37 1.843 1.763 6.266 4.012 7.31 4.499h.123zm-.737 1.52c0-.061-.123-.061-.123-.061l-7.371.243c.798 1.398 2.15 2.492 3.563 2.188.983-.243 3.194-1.763 3.87-2.25.123-.12.061-.12.061-.12zm.123-.67c.062-.06 0-.12 0-.12C6.471 15.581.206 12.3.206 12.3c-.553 1.763.184 3.161.184 3.161.798 1.702 2.334 2.189 2.334 2.189.676.303 1.413.303 1.413.303h5.529c.061 0 .061-.06.061-.06zm.492-14.831c-.308 0-1.168.243-1.168.243-1.965.486-2.395 2.249-2.395 2.249-.369 1.094 0 2.31 0 2.31.675 2.857 3.87 7.598 4.545 8.57l.062.062c.061 0 .061-.061.061-.061C12.43 5.796 10.22 3.06 10.22 3.06zm2.457 13.373c.061 0 .123-.061.123-.061.737-1.033 3.87-5.714 4.545-8.57 0 0 .369-1.399 0-2.31 0 0-.491-1.764-2.457-2.25 0 0-.553-.121-1.167-.243 0 0-2.211 2.796-1.106 13.312 0 .122.062.122.062.122zm1.72 2.067s-.062 0-.062.06v.122c.738.486 2.826 2.006 3.87 2.249 0 0 1.905.669 3.563-2.188l-7.371-.243zm9.398-6.261s-6.265 3.343-9.521 5.531c0 0-.062.06-.062.122 0 0 0 .06.062.06h5.651s.553 0 1.29-.303c0 0 1.536-.487 2.396-2.25 0-.06.737-1.458.184-3.16zM13.66 17.042s.061.06.122 0c1.045-.547 5.468-2.736 7.31-4.499 0 0 1.168-.911 1.23-2.37.122-2.067-1.967-3.951-1.967-3.951s-3.87 4.559-6.695 10.698c0 0-.062.06 0 .122z"></path></svg>',
         qwen: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.604 1.34c.393.69.784 1.382 1.174 2.075a.18.18 0 00.157.091h5.552c.174 0 .322.11.446.327l1.454 2.57c.19.337.24.478.024.837-.26.43-.513.864-.76 1.3l-.367.658c-.106.196-.223.28-.04.512l2.652 4.637c.172.301.111.494-.043.77-.437.785-.882 1.564-1.335 2.34-.159.272-.352.375-.68.37-.777-.016-1.552-.01-2.327.016a.099.099 0 00-.081.05 575.097 575.097 0 01-2.705 4.74c-.169.293-.38.363-.725.364-.997.003-2.002.004-3.017.002a.537.537 0 01-.465-.271l-1.335-2.323a.09.09 0 00-.083-.049H4.982c-.285.03-.553-.001-.805-.092l-1.603-2.77a.543.543 0 01-.002-.54l1.207-2.12a.198.198 0 000-.197 550.951 550.951 0 01-1.875-3.272l-.79-1.395c-.16-.31-.173-.496.095-.965.465-.813.927-1.625 1.387-2.436.132-.234.304-.334.584-.335a338.3 338.3 0 012.589-.001.124.124 0 00.107-.063l2.806-4.895a.488.488 0 01.422-.246c.524-.001 1.053 0 1.583-.006L11.704 1c.341-.003.724.032.9.34zm-3.432.403a.06.06 0 00-.052.03L6.254 6.788a.157.157 0 01-.135.078H3.253c-.056 0-.07.025-.041.074l5.81 10.156c.025.042.013.062-.034.063l-2.795.015a.218.218 0 00-.2.116l-1.32 2.31c-.044.078-.021.118.068.118l5.716.008c.046 0 .08.02.104.061l1.403 2.454c.046.081.092.082.139 0l5.006-8.76.783-1.382a.055.055 0 01.096 0l1.424 2.53a.122.122 0 00.107.062l2.763-.02a.04.04 0 00.035-.02.041.041 0 000-.04l-2.9-5.086a.108.108 0 010-.113l.293-.507 1.12-1.977c.024-.041.012-.062-.035-.062H9.2c-.059 0-.073-.026-.043-.077l1.434-2.505a.107.107 0 000-.114L9.225 1.774a.06.06 0 00-.053-.031zm6.29 8.02c.046 0 .058.02.034.06l-.832 1.465-2.613 4.585a.056.056 0 01-.05.029.058.058 0 01-.05-.029L8.498 9.841c-.02-.034-.01-.052.028-.054l.216-.012 6.722-.012z"></path></svg>',
         sensenova: '<svg aria-hidden="true" focusable="false" fill="currentColor" fill-rule="evenodd" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23 8.333h-7.333v7.334H23V8.333z"></path><path d="M1 1v14.667h7.333V8.333h7.334V1H1z" fill-opacity=".33"></path><path d="M14.038 4.333h.17l1.459 1.456v.17l-1.63-1.626zM13.224 4.333h.17l2.273 2.268v.17l-2.443-2.438zM12.41 4.333h.17l3.087 3.08v.17l-3.257-3.25zM11.596 4.333h.17l3.9 3.892v.108h-.06l-4.01-4zM10.782 4.333h.17l4.01 4h-.17l-4.01-4zM9.968 4.333h.17l4.009 4h-.17l-4.01-4zM9.154 4.333h.17l4.009 4h-.17l-4.01-4zM8.34 4.333h.17l4.01 4h-.17l-4.01-4zM7.521 4.333h.17l4.01 4h-.17l-4.01-4zM6.707 4.333h.17l4.01 4h-.17l-4.01-4zM5.892 4.333h.17l4.009 4h-.17l-4.01-4zM5.077 4.333h.17l4.01 4h-.17l-4.01-4zM4.333 4.403v-.07h.1l4.01 4h-.11v.06l-4-3.99zM4.333 5.215v-.17l4 3.991v.17l-4-3.99zM4.333 6.027v-.17l4 3.991v.17l-4-3.99zM4.333 6.84v-.17l4 3.99v.17l-4-3.99zM4.333 7.652v-.17l4 3.99v.17l-4-3.99zM4.333 8.464v-.17l4 3.99v.17l-4-3.99zM4.333 9.276v-.17l4 3.991v.17l-4-3.991zM4.333 10.088v-.17l4 3.991v.17l-4-3.991zM4.333 10.9v-.17l4 3.991v.17l-4-3.991zM4.333 11.712v-.17l4 3.991v.134h-.036l-3.964-3.955zM4.333 12.526v-.17l3.318 3.31h-.17l-3.148-3.14zM4.333 13.34v-.169l2.502 2.496h-.17L4.333 13.34zM4.333 14.152v-.169l1.688 1.684h-.17l-1.518-1.514zM4.333 14.965v-.17l.874.872h-.17l-.704-.702zM15.667 5.146l-.815-.813h.17l.645.644v.169z"></path><path d="M23 15.667h-7.333V23H23v-7.333z" fill-opacity=".33"></path><path d="M15.667 15.667H8.333V23h7.334v-7.333z"></path></svg>',
@@ -3073,7 +3396,7 @@
         { key: 'qwen', color: '#615ced', words: ['qwen', 'qwq', 'tongyi', '通义'] },
         { key: 'glm', color: '#3859ff', words: ['glm', 'zhipu', 'chatglm', '智谱'] },
         { key: 'kimi', color: '#17181c', words: ['kimi', 'moonshot'] },
-        { key: 'mimo', color: '#ff6900', words: ['mimo', 'xiaomi', '小米'] },
+        { key: 'gemini', color: '#4285f4', words: ['gemini', 'google'] },
         { key: 'huaweipangu', color: '#c7000b', words: ['pangu', 'huawei', '盘古', '华为'] },
         { key: 'sensenova', color: '#0a5cff', words: ['sensenova', 'sense-nova', '日日新'] },
         { key: 'openai', color: '#10a37f', words: ['openai', 'open-ai', 'gpt', 'chatgpt', 'davinci'] }
@@ -3117,18 +3440,22 @@
           layers + '</div>';
       }
 
-      // 模型信息更新于 2026-10，来源：各厂商官方模型/定价文档（OpenAI 部分参照
+      // 模型信息更新于 2026-11，来源：各厂商官方模型/定价文档（OpenAI 部分参照
       // Azure OpenAI 模型表）。上下文与最大输出按厂商公告填写；已停售/退役的
-      // 旧模型不再列出（DeepSeek v4-flash、Qwen3.7-max/Qwen3.6、MiMo V2.5 等）。
+      // 旧模型不再列出（DeepSeek v4-flash、Qwen3.7-max/Qwen3.6 等）。
       const AI_PROVIDERS = {
         openai: {
           name: 'OpenAI', logo: '#10a37f', logoText: 'O',
           endpoint: 'https://api.openai.com/v1/chat/completions',
           supportsVision: true,
+          // GPT-6.2（2026-11）：Astra 面向高难度长周期项目与科研，Sol 面向日常
+          // 编码、写作与多步 Agent 工作流，均为 1.05M 上下文 / 128K 输出。
           // GPT-6.x/5.5/5.4 为 1.05M 上下文 / 128K 输出，5.4-mini/nano 与
           // 5.3-codex 为 400K / 128K。早期无后缀的 gpt-5.6 已拆分为
           // sol/terra/luna 变体，按官方 ID 收录。
           models: [
+            { id: 'gpt-6.2-sol', name: 'GPT-6.2 Sol', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
+            { id: 'gpt-6.2-astra', name: 'GPT-6.2 Astra', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
             { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
             { id: 'gpt-6-sol', name: 'GPT-6 Sol', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
             { id: 'gpt-6-luna', name: 'GPT-6 Luna', supportsReasoning: true, contextLimit: 1050000, maxOutput: 131072 },
@@ -3142,7 +3469,7 @@
             { id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano', supportsReasoning: true, contextLimit: 400000, maxOutput: 131072 },
             { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex', supportsReasoning: true, contextLimit: 400000, maxOutput: 131072 }
           ],
-          defaultModel: 'gpt-6.1-sol'
+          defaultModel: 'gpt-6.2-sol'
         },
         deepseek: {
           name: 'DeepSeek', logo: '#4f46e5', logoText: 'D',
@@ -3161,42 +3488,48 @@
           name: 'Zhipu GLM', logo: '#3859ff', logoText: 'Z',
           endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
           supportsVision: true,
-          // 参数来自智谱开放文档：5.3 系列均为 1M 上下文 / 128K 输出；
-          // GLM-5.3 为纯文本，多模态的是 GLM-5.3-Flash / FlashX；
-          // GLM-5.2 最大输出由 16K 修正为 128K。
+          // 参数来自智谱开放文档：GLM-5.4（2026-11）采用 Loop Transformer 架构，
+          // 新增视觉理解能力，1M 上下文 / 128K 输出；GLM-5.3 系列同样 1M / 128K，
+          // 多模态的是 GLM-5.3-Flash / FlashX。
+          // GLM-5.4 已向 GLM Coding Plan 全量开放，API 待安全评估完成后开放。
           // alwaysThinking：思考常开，请求里传 disabled 会直接报错。
           models: [
+            { id: 'glm-5.4', name: 'GLM-5.4', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 },
             { id: 'glm-5.3', name: 'GLM-5.3', supportsReasoning: true, supportsVision: false, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
             { id: 'glm-5.3-flash', name: 'GLM-5.3 Flash', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
             { id: 'glm-5.3-flashx', name: 'GLM-5.3 FlashX', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
             { id: 'glm-5.2', name: 'GLM-5.2', supportsReasoning: true, supportsVision: false, contextLimit: 1000000, maxOutput: 131072 }
           ],
-          defaultModel: 'glm-5.3'
+          defaultModel: 'glm-5.4'
         },
         kimi: {
           name: 'Kimi (Moonshot)', logo: '#10b981', logoText: 'K',
           endpoint: 'https://api.moonshot.cn/v1/chat/completions',
           supportsVision: true,
           models: [
+            // K3.1 系列（2026-11）由 K3 后训练而来，原生多模态，1M 上下文；
+            // K3.1 Pro 思考常开，max_completion_tokens 默认 131072、最大 1048576，
+            // Highspeed 为 2-3 倍速档。
+            { id: 'kimi-k3.1-pro', name: 'Kimi K3.1 Pro', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 1048576 },
+            { id: 'kimi-k3.1-pro-highspeed', name: 'Kimi K3.1 Pro Highspeed', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 1048576 },
             // K3 始终开启思考模式（无法关闭），max_completion_tokens 默认 131072
             { id: 'kimi-k3', name: 'Kimi K3', supportsReasoning: true, supportsVision: true, alwaysThinking: true, contextLimit: 1000000, maxOutput: 131072 },
             { id: 'kimi-k2.7-code', name: 'Kimi K2.7 Code', supportsReasoning: true, supportsVision: true, contextLimit: 262144, maxOutput: 16384 },
             { id: 'kimi-k2.6', name: 'Kimi K2.6', supportsReasoning: false, contextLimit: 262144, maxOutput: 16384 }
           ],
-          defaultModel: 'kimi-k3'
+          defaultModel: 'kimi-k3.1-pro'
         },
-        mimo: {
-          name: 'Xiaomi MiMo', logo: '#ff6900', logoText: 'M',
-          endpoint: 'https://api.xiaomimimo.com/v1/chat/completions',
+        gemini: {
+          name: 'Google Gemini', logo: '#4285f4', logoText: 'G',
+          endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
           supportsVision: true,
-          // 2026-09 起 V2.6 系列全面替代 V2.5（官方已停售 V2.5 型号），
-          // 全系原生多模态，1M 上下文；UltraSpeed 为 20 倍速高速档。
+          // Gemini 4 Argon（2026-10）为旗舰推理模型，1M 统一上下文，同步输出
+          // 上限 64K（long decode 可扩展至 1M）；3.8 Flash 为上一代稳定 Flash。
           models: [
-            { id: 'mimo-v2.6-pro', name: 'MiMo V2.6 Pro', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 },
-            { id: 'mimo-v2.6-pro-ultraspeed', name: 'MiMo V2.6 Pro UltraSpeed', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 },
-            { id: 'mimo-v2.6-flash', name: 'MiMo V2.6 Flash', supportsReasoning: true, supportsVision: true, contextLimit: 1000000, maxOutput: 131072 }
+            { id: 'gemini-4-argon', name: 'Gemini 4 Argon', supportsReasoning: true, contextLimit: 1048576, maxOutput: 65536 },
+            { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', supportsReasoning: true, contextLimit: 1048576, maxOutput: 65536 }
           ],
-          defaultModel: 'mimo-v2.6-pro'
+          defaultModel: 'gemini-4-argon'
         },
         huaweipangu: {
           name: 'Huawei Pangu', logo: '#cf0a2c', logoText: 'H',
@@ -3227,12 +3560,15 @@
           endpoint: 'https://api.anthropic.com/v1/messages',
           apiFormat: 'anthropic',
           supportsVision: true,
+          // Claude Fable 5 / Opus 5 / Sonnet 5（2026 年）均为 1M 上下文 / 128K 输出，
+          // 支持自适应思考；Haiku 4.5 为 200K / 64K。
           models: [
-            { id: 'claude-opus-4-5', name: 'Claude Opus 4.5', supportsReasoning: true, contextLimit: 200000, maxOutput: 64000 },
-            { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', supportsReasoning: true, contextLimit: 200000, maxOutput: 64000 },
-            { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', supportsReasoning: false, contextLimit: 200000, maxOutput: 32000 }
+            { id: 'claude-fable-5', name: 'Claude Fable 5', supportsReasoning: true, contextLimit: 1000000, maxOutput: 128000 },
+            { id: 'claude-opus-5', name: 'Claude Opus 5', supportsReasoning: true, contextLimit: 1000000, maxOutput: 128000 },
+            { id: 'claude-sonnet-5', name: 'Claude Sonnet 5', supportsReasoning: true, contextLimit: 1000000, maxOutput: 128000 },
+            { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', supportsReasoning: false, contextLimit: 200000, maxOutput: 64000 }
           ],
-          defaultModel: 'claude-sonnet-4-5'
+          defaultModel: 'claude-sonnet-5'
         },
         // Ollama 本地推理（/api/chat）：模型列表可用“拉取模型”从 /api/tags 同步
         ollama: {
@@ -3354,7 +3690,9 @@
           return (m >= 10 ? Math.round(m) : Math.round(m * 10) / 10) + 'M';
         }
         if (n >= 1000) {
-          return Math.round(n / (n % 1024 === 0 ? 1024 : 1000)) + 'K';
+          // 1024 倍数按二进制单位（131072 → 128K）；像 128000 这种十进制整数
+          // 恰好也能被 1024 整除，按 1000 换算才显示成用户预期的 128K
+          return Math.round(n / (n % 1024 === 0 && n % 1000 !== 0 ? 1024 : 1000)) + 'K';
         }
         return String(n);
       };
@@ -3370,7 +3708,7 @@
         renderAiModelList();
         const cfg = aiConfigs.find((c) => c.id === id);
         aiSaveConfigs();
-        showToastTransient(aiS.switchedTo.replace('{name}', (cfg && cfg.name) || aiS.unnamed));
+        showToastTransient(aiS.switchedTo.replace('{name}', (cfg && (aiModelLabel(cfg, AI_PROVIDERS[cfg.provider]) || cfg.name)) || aiS.unnamed));
       };
 
       // 复用页面上的轻量反馈：AI 行内不引入新 toast 样式，临时挂起即撤
@@ -3405,7 +3743,7 @@
         return head;
       }
 
-      function aiModelRow (cfg) {
+      function aiModelRow (cfg, channelLabel) {
         const p = AI_PROVIDERS[cfg.provider] || {};
         const modelLabel = aiModelLabel(cfg, p);
         const isActive = cfg.id === aiActiveId;
@@ -3415,14 +3753,19 @@
         const row = document.createElement('div');
         row.className = 'setting-row ai-model-row' + (expired ? ' free-expired' : '');
         row.style.cursor = expired ? 'not-allowed' : 'pointer';
+        // 行标题放模型 ID/名称，副标题放渠道名——渠道由多条配置共享，
+        // 把模型名放主位才好一眼区分同渠道下的不同模型
+        const providerLabel = aiProviderName(cfg.provider);
+        const endpointHost = String(cfg.customEndpoint || '').replace(/^https?:\/\//i, '').split('/')[0];
+        const channelName = channelLabel || cfg.name || endpointHost || providerLabel || aiS.unnamed;
         row.innerHTML =
           aiRenderModelLogo(cfg, p) +
           '<div class="setting-info">' +
-            '<div class="setting-label">' + aiEscape(cfg.name || modelLabel || aiProviderName(cfg.provider) || aiS.unnamed) + '</div>' +
+            '<div class="setting-label">' + aiEscape(modelLabel || channelName) + '</div>' +
             '<div class="setting-desc">' + aiEscape(
               isFree
-                ? aiProviderName(cfg.provider) + ' · 1M ' + aiS.ctxSuffix
-                : aiProviderName(cfg.provider) + (modelLabel ? ' · ' + modelLabel : '')) +
+                ? providerLabel + ' · 1M ' + aiS.ctxSuffix
+                : (channelName !== providerLabel ? providerLabel + ' · ' + channelName : channelName)) +
               (!isFree && !cfg.apiKey ? ' · ' + aiEscape(aiS.noKey) : '') + '</div>' +
           '</div>' +
           '<div class="setting-control">' +
@@ -3522,11 +3865,25 @@
             '<svg class="ai-ep-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
             '<span class="ai-group-title">' + aiEscape(title) +
             '<span class="ai-ep-count">' + aiEscape(aiS.epGroupModels.replace('{n}', String(g.idxs.length))) + '</span></span>' +
-            '<span class="ai-group-note">' + aiEscape(address) + '</span>';
+            '<span class="ai-group-note">' + aiEscape(address) + '</span>' +
+            '<span class="ai-ep-actions">' +
+            '<button type="button" class="ai-row-btn ai-ep-btn ai-ep-edit">' + aiEscape(aiS.edit) + '</button>' +
+            '<button type="button" class="ai-row-btn ai-ep-btn danger ai-ep-delete">' + aiEscape(aiS.delete) + '</button>' +
+            '</span>';
           const body = document.createElement('div');
           body.className = 'ai-ep-body';
-          g.idxs.forEach((cfg) => body.appendChild(aiModelRow(cfg)));
+          g.idxs.forEach((cfg) => body.appendChild(aiModelRow(cfg, title)));
           head.addEventListener('click', () => wrap.classList.toggle('collapsed'));
+          // 渠道级操作：编辑整组（共享名称/端点/密钥 + 全部模型能力），
+          // 或整组删除；按钮自己吃掉点击，避免顺带折叠分组
+          head.querySelector('.ai-ep-edit').addEventListener('click', (e) => {
+            e.stopPropagation();
+            openAiModelDialog(first.id, g.idxs.map((c) => c.id));
+          });
+          head.querySelector('.ai-ep-delete').addEventListener('click', (e) => {
+            e.stopPropagation();
+            aiDeleteChannel(g.idxs.map((c) => c.id), title);
+          });
           wrap.appendChild(head);
           wrap.appendChild(body);
           list.appendChild(wrap);
@@ -3562,10 +3919,35 @@
         showToastTransient(aiS.modelDeleted.replace('{name}', name));
       }
 
-      // 新增/编辑共用对话框；id 为 null 表示新增
-      function openAiModelDialog (id) {
+      // 整组删除一个渠道（同请求地址下的全部模型配置）
+      function aiDeleteChannel (ids, name) {
+        const targetIds = new Set(ids);
+        const count = aiConfigs.filter((c) => targetIds.has(c.id)).length;
+        if (!count) return;
+        if (aiConfigs.length <= count) {
+          showToastTransient(aiS.keepOneConfig);
+          return;
+        }
+        if (!confirm(aiS.deleteChannelConfirm.replace('{name}', name || aiS.unnamed))) return;
+        const firstIdx = aiConfigs.findIndex((c) => targetIds.has(c.id));
+        aiConfigs = aiConfigs.filter((c) => !targetIds.has(c.id));
+        if (targetIds.has(aiActiveId)) {
+          aiActiveId = aiConfigs.length ? aiConfigs[Math.min(firstIdx, aiConfigs.length - 1)].id : null;
+        }
+        renderAiModelList();
+        aiSaveConfigs();
+        showToastTransient(aiS.channelDeleted.replace('{name}', name || aiS.unnamed));
+      }
+
+      // 新增/编辑共用对话框；id 为 null 表示新增。
+      // groupIds 用于渠道级编辑：同组的多条配置一起载入，保存时整组替换。
+      function openAiModelDialog (id, groupIds) {
         const isEdit = typeof id === 'string';
         const cfg = isEdit ? aiConfigs.find((c) => c.id === id) : null;
+        const editGroupIds = Array.isArray(groupIds) && groupIds.length > 1 ? groupIds.slice() : null;
+        const groupCfgs = editGroupIds
+          ? editGroupIds.map((gid) => aiConfigs.find((c) => c.id === gid)).filter(Boolean)
+          : (cfg ? [cfg] : []);
         const draft = {
           name: (cfg && cfg.name) || '',
           provider: (cfg && cfg.provider) || 'openai',
@@ -3573,8 +3955,7 @@
           apiFormat: (cfg && cfg.apiFormat) || 'openai',
           customEndpoint: (cfg && cfg.customEndpoint) || '',
           customModelId: (cfg && cfg.customModelId) || '',
-          apiKey: (cfg && cfg.apiKey) || '',
-          customContextLimit: (cfg && cfg.customContextLimit) || 1000000
+          apiKey: (cfg && cfg.apiKey) || ''
         };
         if (!draft.model) {
           const firstModel = ((AI_PROVIDERS[draft.provider] || {}).models || [])[0];
@@ -3588,13 +3969,147 @@
 
         const isCustomProvider = () => !!(AI_PROVIDERS[draft.provider] || {}).isCustom;
         // 存量配置的模型名可能不在预设表里（Ollama 本地模型、用户自填），补进列表
-        // 以便展示与保存，否则编辑这类配置会因“未选择模型”而卡住
+        // 以便展示与保存，否则编辑这类配置会因“未选择模型”而卡住。
+        // 渠道级编辑时把所有同组模型一并补进列表并勾选。
         const draftModelId = draft.model || draft.customModelId || '';
+        const groupModelIds = isCustomProvider()
+          ? []
+          : groupCfgs.map((c) => c.model).filter(Boolean);
         let dialogModels = ((AI_PROVIDERS[draft.provider] || {}).models || []).slice();
         if (draftModelId && !isCustomProvider() && !dialogModels.some((m) => m.id === draftModelId)) {
           dialogModels.push({ id: draftModelId, name: draftModelId });
         }
-        let selectedModels = new Set(draftModelId ? [draftModelId] : []);
+        groupModelIds.forEach((mid) => {
+          if (!dialogModels.some((m) => m.id === mid)) dialogModels.push({ id: mid, name: mid });
+        });
+        let selectedModels = new Set(
+          isCustomProvider() ? (draftModelId ? [draftModelId] : []) : groupModelIds
+        );
+
+        // 自定义服务商：模型 ID 先“保存”进下面的列表，再逐个编辑能力。
+        // 每个模型的能力最终落在它对应的那条配置上（supportsReasoning 等字段）。
+        // 推理等级按参考编辑器的做法存成一串有序名称，可自行增删改名。
+        const DEFAULT_REASONING_LEVELS = ['low', 'medium', 'high', 'xhigh'];
+        const MAX_REASONING_LEVELS = 8;
+        const defaultModelCaps = (id) => ({
+          id: id,
+          // 新模型默认开启思考，图片/视频/PDF 默认关闭（需要时再勾选）
+          supportsReasoning: true,
+          supportsVision: false,
+          supportsVideo: false,
+          supportsPdf: false,
+          reasoningLevels: DEFAULT_REASONING_LEVELS.slice(),
+          // 上下文上限与最大输出按模型单独配置，不再由渠道共享
+          contextLimit: 1000000,
+          maxOutput: 128000
+        });
+        const normalizeReasoningLevels = (model) => {
+          const cleaned = (model.reasoningLevels || [])
+            .map((name) => String(name == null ? '' : name).trim())
+            .filter(Boolean)
+            .slice(0, MAX_REASONING_LEVELS);
+          const unique = Array.from(new Set(cleaned));
+          model.reasoningLevels = unique.length ? unique : DEFAULT_REASONING_LEVELS.slice();
+          return model.reasoningLevels;
+        };
+        const seedReasoningLevels = (config) => {
+          if (config && Array.isArray(config.reasoningLevels) && config.reasoningLevels.length) {
+            return config.reasoningLevels.slice(0, MAX_REASONING_LEVELS);
+          }
+          return DEFAULT_REASONING_LEVELS.slice();
+        };
+        let customModelCaps = isCustomProvider() && groupCfgs.length
+          ? groupCfgs.map((c) => ({
+            id: c.customModelId || c.model,
+            // 未声明的能力按默认值展示：思考开、图片/视频/PDF 关
+            supportsReasoning: typeof c.supportsReasoning !== 'boolean' ? true : c.supportsReasoning,
+            supportsVision: typeof c.supportsVision !== 'boolean' ? false : c.supportsVision,
+            supportsVideo: typeof c.supportsVideo !== 'boolean' ? false : c.supportsVideo,
+            supportsPdf: typeof c.supportsPdf !== 'boolean' ? false : c.supportsPdf,
+            reasoningLevels: seedReasoningLevels(c),
+            // 存量配置回落到原渠道级上限，最大输出未填过的给默认值
+            contextLimit: Number(c.contextLimit) > 0
+              ? Math.floor(Number(c.contextLimit))
+              : (Number(c.customContextLimit) > 0 ? Math.floor(Number(c.customContextLimit)) : 1000000),
+            maxOutput: Number(c.maxOutput) > 0 ? Math.floor(Number(c.maxOutput)) : 128000
+          }))
+          : [];
+        let customCapsEditing = -1;
+
+        function customCapsHtml () {
+          return customModelCaps.map((m, i) => {
+            const tags = [];
+            if (m.supportsReasoning) {
+              const count = (m.reasoningLevels || []).filter(Boolean).length;
+              tags.push(aiS.capThinking + ' · ' + count + (aiLang === 'zh' ? '' : ' ') + aiS.thinkingLevelsUnit);
+            }
+            if (m.supportsVision) tags.push(aiS.capImage);
+            if (m.supportsVideo) tags.push(aiS.capVideo);
+            if (m.supportsPdf) tags.push(aiS.capPdf);
+            if (m.contextLimit) tags.push(aiFormatTokenCount(m.contextLimit) + ' ' + aiS.ctxSuffix);
+            if (m.maxOutput) tags.push(aiFormatTokenCount(m.maxOutput) + ' ' + aiS.outSuffix);
+            const editing = customCapsEditing === i;
+            let editor = '';
+            if (editing) {
+              const levels = m.reasoningLevels || [];
+              // 每个等级胶囊前带小叉：删掉这一档（至少保留一档）
+              const levelInputs = levels.map((name, li) =>
+                '<span class="ai-cap-level">' +
+                '<button type="button" class="ai-cap-level-x" data-remove-level="' + li + '" title="' +
+                aiEscape(aiS.removeReasoningLevel) + '"' +
+                (m.supportsReasoning && levels.length > 1 ? '' : ' disabled') + '>\u00d7</button>' +
+                '<input type="text" class="ai-cap-level-input" data-level="' + li + '" value="' + aiEscape(name) + '"' +
+                (m.supportsReasoning ? '' : ' disabled') + ' spellcheck="false" autocomplete="off">' +
+                '</span>').join('');
+              const pill = (cap, label, checked, locked) =>
+                '<label class="ai-cap-pill' + (checked ? ' checked' : '') + (locked ? ' locked' : '') + '">' +
+                '<input type="checkbox"' + (cap ? ' data-cap="' + cap + '"' : '') + (checked ? ' checked' : '') +
+                (locked ? ' disabled' : '') + '>' +
+                '<span>' + aiEscape(label) + '</span>' +
+                (locked ? '<span class="ai-cap-lock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 018 0v3"></path></svg></span>' : '') +
+                '</label>';
+              editor = '<div class="ai-model-caps">' +
+                '<div><div class="ai-cap-section-title">' + aiEscape(aiS.gradeInputTypes) + '</div>' +
+                '<div class="ai-cap-pills">' +
+                pill('', aiS.capText, true, true) +
+                pill('supportsVision', aiS.capImage, m.supportsVision) +
+                pill('supportsVideo', aiS.capVideo, m.supportsVideo) +
+                pill('supportsPdf', aiS.capPdf, m.supportsPdf) +
+                '</div></div>' +
+                '<div><div class="ai-cap-section-title">' + aiEscape(aiS.gradeCapabilities) + '</div>' +
+                '<div class="ai-cap-pills">' + pill('supportsReasoning', aiS.capThinking, m.supportsReasoning) + '</div></div>' +
+                '<div><div class="ai-cap-section-title">' + aiEscape(aiS.reasoningLevels) + '</div>' +
+                '<div class="ai-cap-levels' + (m.supportsReasoning ? '' : ' disabled') + '">' + levelInputs +
+                '<button type="button" class="ai-cap-level-add" data-add-level title="' + aiEscape(aiS.addReasoningLevel) + '"' +
+                (m.supportsReasoning && levels.length < MAX_REASONING_LEVELS ? '' : ' disabled') + '>+</button>' +
+                '</div></div>' +
+                // 上下文与输出按模型单独配置
+                '<div><div class="ai-cap-section-title">' + aiEscape(aiS.capLimits) + '</div>' +
+                '<div class="ai-cap-limits">' +
+                '<label class="ai-cap-limit"><span>' + aiEscape(aiS.fieldContextLimit) + '</span>' +
+                '<input type="text" inputmode="numeric" class="settings-input ai-cap-limit-input" data-ctx value="' + aiEscape(String(m.contextLimit)) + '" spellcheck="false" autocomplete="off"></label>' +
+                '<label class="ai-cap-limit"><span>' + aiEscape(aiS.fieldMaxOutput) + '</span>' +
+                '<input type="text" inputmode="numeric" class="settings-input ai-cap-limit-input" data-out value="' + aiEscape(String(m.maxOutput)) + '" spellcheck="false" autocomplete="off"></label>' +
+                '</div>' +
+                '<div class="ai-cap-limit-hint">' + aiEscape(aiS.fieldContextLimitHint) + '</div></div>' +
+                '<div class="ai-model-caps-foot">' +
+                '<button type="button" class="ai-cap-remove" data-remove>' + aiEscape(aiS.removeModelId) + '</button>' +
+                '<button type="button" class="ai-cap-done" data-done>' + aiEscape(aiS.doneEdit) + '</button>' +
+                '</div></div>';
+            }
+            return '<div class="ai-model-id-item' + (editing ? ' editing' : '') + '" data-index="' + i + '">' +
+              '<div class="ai-model-id-row">' +
+              '<div class="ai-model-id-main"><span class="ai-model-id-name">' + aiEscape(m.id) + '</span>' +
+              tags.map((t) => '<span class="model-cap-tag">' + aiEscape(t) + '</span>').join('') +
+              '</div>' +
+              '<button type="button" class="ai-model-id-edit" data-edit>' + aiEscape(aiS.edit) + '</button>' +
+              '</div>' + editor + '</div>';
+          }).join('') || ('<div class="ai-model-id-empty">' + aiEscape(aiS.modelIdListEmpty) + '</div>');
+        }
+        function renderCustomCaps () {
+          const host = document.getElementById('aiModelIdList');
+          if (host) host.innerHTML = customCapsHtml();
+        }
 
         const providerGridHtml = () => Object.keys(AI_PROVIDERS)
           // 免费模型不作为“服务商”参与添加/编辑，只在模型列表中直接选用
@@ -3640,7 +4155,7 @@
           '</div>';
 
         panel.innerHTML =
-          '<div class="ai-dialog-head">' + aiEscape(isEdit ? aiS.editTitle : aiS.addTitle) + '</div>' +
+          '<div class="ai-dialog-head">' + aiEscape(isEdit ? (editGroupIds ? aiS.editChannelTitle : aiS.editTitle) : aiS.addTitle) + '</div>' +
           '<div class="ai-dialog-body">' +
           '<div class="form-group"><div class="form-group-label">' + aiEscape(aiS.groupProvider) + '</div>' +
           '<div class="provider-grid" id="aiProviderGrid">' + providerGridHtml() + '</div></div>' +
@@ -3655,14 +4170,14 @@
             '<input type="text" id="aiEndpoint" class="settings-input settings-input-mono" placeholder="https://api.example.com/v1" value="' + aiEscape(draft.customEndpoint) + '">' +
             '<div class="ai-field-hint" id="aiEndpointHint"></div>') +
           fieldRow('aiModelIdRow', aiS.fieldModelId,
-            '<div class="ai-custom-model-tools"><textarea id="aiModelId" class="settings-input settings-input-mono" placeholder="gpt-6.1-sol&#10;deepseek-flash" spellcheck="false">' + aiEscape(draft.customModelId) + '</textarea>' +
-            '<button type="button" class="ai-fetch-models-btn" id="aiFetchCustomModelsBtn">' + aiEscape(aiS.fetchAvailableModels) + '</button></div>',
+            '<div class="ai-custom-model-tools">' +
+            '<input type="text" id="aiModelId" class="settings-input settings-input-mono" placeholder="' + aiEscape(aiS.modelIdPlaceholder) + '" spellcheck="false" autocomplete="off">' +
+            '<button type="button" class="ai-fetch-models-btn" id="aiAddModelIdBtn">' + aiEscape(aiS.saveModelId) + '</button>' +
+            '<button type="button" class="ai-fetch-models-btn" id="aiFetchCustomModelsBtn">' + aiEscape(aiS.fetchAvailableModels) + '</button></div>' +
+            '<div class="ai-model-id-list" id="aiModelIdList"></div>',
             aiS.fieldModelIdHint) +
-          fieldRow('aiCtxLimitRow', aiS.fieldContextLimit,
-            '<input type="text" inputmode="numeric" id="aiCtxLimit" class="settings-input" placeholder="1000000" value="' + aiEscape(String(draft.customContextLimit)) + '">',
-            aiS.fieldContextLimitHint) +
           '</div>' +
-          '<div class="form-group"><div class="form-group-label">' + aiEscape(aiS.groupCredentials) + '</div>' +
+          '<div class="form-group" id="aiCredentialsGroup"><div class="form-group-label">' + aiEscape(aiS.groupCredentials) + '</div>' +
           fieldRow('aiApiKeyRow', aiS.fieldApiKey,
             '<div class="settings-input-group">' +
             '<input type="password" id="aiApiKey" class="settings-input settings-input-mono" placeholder="sk-..." value="' + aiEscape(draft.apiKey) + '" autocomplete="off" spellcheck="false">' +
@@ -3697,7 +4212,6 @@
         const endpointIn = $('#aiEndpoint');
         const modelIdIn = $('#aiModelId');
         const keyIn = $('#aiApiKey');
-        const ctxIn = $('#aiCtxLimit');
         const nameIn = $('#aiName');
         const testResult = $('#aiTestResult');
 
@@ -3705,6 +4219,12 @@
           const custom = isCustomProvider();
           $('#aiModelGroup').style.display = custom ? 'none' : '';
           $('#aiEndpointGroup').style.display = custom ? '' : 'none';
+          // API Key 跟在接口地址下面（自定义渠道），不再落到模型列表之后；
+          // 内置服务商没有接口地址，仍留在凭据分组里
+          const keyRow = $('#aiApiKeyRow');
+          if (custom) $('#aiEndpointGroup').insertBefore(keyRow, $('#aiModelIdRow'));
+          else $('#aiCredentialsGroup').insertBefore(keyRow, $('#aiNameRow'));
+          if (custom) renderCustomCaps();
           nameIn.placeholder = aiProviderName(draft.provider);
         }
         syncGroups();
@@ -3716,6 +4236,8 @@
           dialogModels = ((AI_PROVIDERS[draft.provider] || {}).models || []).slice();
           selectedModels = new Set(dialogModels[0] ? [dialogModels[0].id] : []);
           draft.model = dialogModels[0] ? dialogModels[0].id : '';
+          customModelCaps = [];
+          customCapsEditing = -1;
           panel.querySelectorAll('.provider-option').forEach((b) => {
             b.classList.toggle('selected', b.dataset.provider === draft.provider);
           });
@@ -3739,6 +4261,121 @@
           btn.setAttribute('aria-pressed', String(selectedModels.has(modelId)));
           $('#aiModelSelectionError').textContent = '';
           setTestResult('', '');
+        });
+
+        // ── 自定义模型 ID：先保存进列表，再逐条编辑能力 ──
+        const addModelIdsFromInput = () => {
+          const ids = Array.from(new Set(modelIdIn.value
+            .split(/[\s,，;；]+/)
+            .map((v) => v.trim())
+            .filter(Boolean)));
+          if (!ids.length) {
+            setError('#aiModelIdRow', aiS.errModelIdRequired);
+            return;
+          }
+          let added = 0;
+          ids.forEach((modelId) => {
+            if (customModelCaps.some((m) => m.id === modelId)) return;
+            customModelCaps.push(defaultModelCaps(modelId));
+            added++;
+          });
+          modelIdIn.value = '';
+          customCapsEditing = -1;
+          clearErrors();
+          renderCustomCaps();
+          if (added) showToastTransient(aiS.modelIdSaved.replace('{count}', added));
+        };
+        $('#aiAddModelIdBtn').addEventListener('click', addModelIdsFromInput);
+        modelIdIn.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            addModelIdsFromInput();
+          }
+        });
+        $('#aiModelIdList').addEventListener('click', (e) => {
+          const item = e.target.closest('.ai-model-id-item');
+          if (!item) return;
+          const index = parseInt(item.dataset.index, 10);
+          const model = customModelCaps[index];
+          if (!model) return;
+          if (e.target.closest('[data-edit]')) {
+            normalizeReasoningLevels(model);
+            customCapsEditing = customCapsEditing === index ? -1 : index;
+            renderCustomCaps();
+            return;
+          }
+          if (e.target.closest('[data-done]')) {
+            normalizeReasoningLevels(model);
+            customCapsEditing = -1;
+            renderCustomCaps();
+            return;
+          }
+          if (e.target.closest('[data-remove]')) {
+            customModelCaps.splice(index, 1);
+            customCapsEditing = -1;
+            renderCustomCaps();
+            return;
+          }
+          if (e.target.closest('[data-remove-level]')) {
+            const levelIndex = parseInt(e.target.closest('[data-remove-level]').dataset.removeLevel, 10);
+            if (!model.supportsReasoning) return;
+            if (!Array.isArray(model.reasoningLevels) || model.reasoningLevels.length <= 1) return;
+            if (isNaN(levelIndex) || levelIndex < 0 || levelIndex >= model.reasoningLevels.length) return;
+            model.reasoningLevels.splice(levelIndex, 1);
+            renderCustomCaps();
+            // 重绘后旧节点已脱离文档，按 index 重新取这一行并聚焦相邻等级
+            const freshItem = document.querySelectorAll('#aiModelIdList .ai-model-id-item')[index];
+            if (freshItem) {
+              const inputs = freshItem.querySelectorAll('.ai-cap-level-input');
+              const target = inputs[Math.min(levelIndex, inputs.length - 1)];
+              if (target) target.focus();
+            }
+            return;
+          }
+          if (e.target.closest('[data-add-level]')) {
+            if (!model.supportsReasoning) return;
+            if (!Array.isArray(model.reasoningLevels)) model.reasoningLevels = [];
+            if (model.reasoningLevels.length >= MAX_REASONING_LEVELS) return;
+            model.reasoningLevels.push('');
+            renderCustomCaps();
+            const freshItem = document.querySelectorAll('#aiModelIdList .ai-model-id-item')[index];
+            if (freshItem) {
+              const inputs = freshItem.querySelectorAll('.ai-cap-level-input');
+              const last = inputs[inputs.length - 1];
+              if (last) last.focus();
+            }
+          }
+        });
+        $('#aiModelIdList').addEventListener('change', (e) => {
+          const input = e.target.closest('input[data-cap]');
+          if (!input) return;
+          const item = e.target.closest('.ai-model-id-item');
+          const model = customModelCaps[parseInt(item.dataset.index, 10)];
+          if (!model) return;
+          model[input.dataset.cap] = input.checked;
+          renderCustomCaps();
+        });
+        // 等级名与上下文/输出就地编辑：只更新数据，不重绘，避免输入时丢焦点
+        $('#aiModelIdList').addEventListener('input', (e) => {
+          const limitInput = e.target.closest('.ai-cap-limit-input');
+          if (limitInput) {
+            const item = e.target.closest('.ai-model-id-item');
+            const model = customModelCaps[parseInt(item.dataset.index, 10)];
+            if (!model) return;
+            const digits = limitInput.value.replace(/[^\d]/g, '');
+            if (digits !== limitInput.value) limitInput.value = digits;
+            const num = digits ? parseInt(digits, 10) : 0;
+            if (limitInput.hasAttribute('data-ctx')) model.contextLimit = num;
+            else model.maxOutput = num;
+            return;
+          }
+          const input = e.target.closest('.ai-cap-level-input');
+          if (!input) return;
+          const item = e.target.closest('.ai-model-id-item');
+          const model = customModelCaps[parseInt(item.dataset.index, 10)];
+          if (!model) return;
+          if (!Array.isArray(model.reasoningLevels)) model.reasoningLevels = [];
+          model.reasoningLevels[parseInt(input.dataset.level, 10)] = input.value;
         });
 
         // 接口地址输入框下方的示例 URL 跟随所选 API 格式变化；
@@ -3802,8 +4439,20 @@
           let ok = true;
           const key = keyIn.value.trim();
           const endpoint = endpointIn.value.trim();
-          const modelIds = Array.from(new Set(modelIdIn.value.split(/[\s,，;；]+/).map((id) => id.trim()).filter(Boolean)));
-          const ctx = parseInt(ctxIn.value.replace(/[^\d]/g, ''), 10);
+          // 输入框里还没点“保存模型ID”的内容也算数，避免保存时丢掉刚填的 ID
+          if (custom) {
+            const pending = modelIdIn.value.split(/[\s,，;；]+/).map((id) => id.trim()).filter(Boolean);
+            let added = 0;
+            pending.forEach((modelId) => {
+              if (customModelCaps.some((m) => m.id === modelId)) return;
+              customModelCaps.push(defaultModelCaps(modelId));
+              added++;
+            });
+            if (added) {
+              modelIdIn.value = '';
+              renderCustomCaps();
+            }
+          }
 
           if (custom) {
             if (!endpoint) {
@@ -3814,12 +4463,17 @@
               setError('#aiEndpointRow', aiS.errEndpointInvalid);
               ok = false;
             }
-            if (!modelIds.length) {
+            if (!customModelCaps.length) {
               setError('#aiModelIdRow', aiS.errModelIdRequired);
               ok = false;
             }
-            if (isNaN(ctx) || ctx < 1000) {
-              setError('#aiCtxLimitRow', aiS.errContextLimit);
+            const badLimits = customModelCaps.some((m) => {
+              const c = parseInt(String(m.contextLimit).replace(/[^\d]/g, ''), 10);
+              const o = parseInt(String(m.maxOutput).replace(/[^\d]/g, ''), 10);
+              return isNaN(c) || c < 1000 || isNaN(o) || o <= 0;
+            });
+            if (badLimits) {
+              setError('#aiModelIdRow', aiS.errTokenLimits);
               ok = false;
             }
           }
@@ -3843,17 +4497,44 @@
             apiKey: key,
             apiFormat: providerFormat,
             customEndpoint: custom ? normalizeCustomEndpoint(endpoint, providerFormat) : '',
-            customContextLimit: custom ? ctx : 1000000,
+            customContextLimit: 1000000,
             thinkingLevel: (cfg && cfg.thinkingLevel) || 'medium'
           };
-          return (custom ? modelIds : dialogModels.filter((m) => selectedModels.has(m.id)).map((m) => m.id)).map((modelId) => {
-            const model = dialogModels.find((m) => m.id === modelId);
-            return Object.assign({}, base, {
-              name: base.name || (custom ? modelId : ((model && model.name) || aiProviderName(draft.provider) || 'Model')),
-              model: custom ? 'custom' : modelId,
-              customModelId: custom ? modelId : ''
+          // 渠道级编辑会一次性重写整组配置：每个模型沿用自己原来的思考档位，
+          // 不能被第一条配置的档位覆盖
+          const thinkingLevelFor = (predicate) => {
+            const src = groupCfgs.find(predicate);
+            return (src && src.thinkingLevel) || base.thinkingLevel;
+          };
+          if (custom) {
+            return customModelCaps.map((m) => {
+              const ctxLimit = Math.floor(parseInt(String(m.contextLimit).replace(/[^\d]/g, ''), 10));
+              const maxOut = Math.floor(parseInt(String(m.maxOutput).replace(/[^\d]/g, ''), 10));
+              return Object.assign({}, base, {
+                name: base.name || m.id,
+                model: 'custom',
+                customModelId: m.id,
+                thinkingLevel: thinkingLevelFor((c) => (c.customModelId || c.model) === m.id),
+                // 上下文上限与最大输出按模型单独落盘；customContextLimit 同步成
+                // 同一数值，兼容仍读旧字段的逻辑
+                contextLimit: ctxLimit,
+                maxOutput: maxOut,
+                customContextLimit: ctxLimit,
+                // 每个模型自己的能力声明，随配置一起落盘（AI 助手按它判断滑块/附图）
+                supportsReasoning: !!m.supportsReasoning,
+                supportsVision: !!m.supportsVision,
+                supportsVideo: !!m.supportsVideo,
+                supportsPdf: !!m.supportsPdf,
+                reasoningLevels: normalizeReasoningLevels(m)
+              });
             });
-          });
+          }
+          return dialogModels.filter((m) => selectedModels.has(m.id)).map((model) => Object.assign({}, base, {
+            name: base.name || (model.name || aiProviderName(draft.provider) || 'Model'),
+            model: model.id,
+            customModelId: '',
+            thinkingLevel: thinkingLevelFor((c) => c.model === model.id)
+          }));
         }
 
         function close () {
@@ -3958,10 +4639,16 @@
             const ids = Array.from(new Set(rawModels.map((m) => typeof m === 'string' ? m : (m.id || m.name || m.model)).filter(Boolean)));
             if (!ids.length) throw new Error(aiS.modelsFetchEmpty);
             if (custom) {
-              const existing = modelIdIn.value.split(/[\s,，;；]+/).map((id) => id.trim()).filter(Boolean);
-              const merged = Array.from(new Set(existing.concat(ids)));
-              modelIdIn.value = merged.join('\n');
-              setTestResult('ok', aiS.customModelsFetched.replace('{count}', ids.length));
+              // 拉到的模型直接并入下面的列表，保留已声明过的能力设置
+              let added = 0;
+              ids.forEach((modelId) => {
+                if (customModelCaps.some((m) => m.id === modelId)) return;
+                customModelCaps.push(defaultModelCaps(modelId));
+                added++;
+              });
+              modelIdIn.value = '';
+              renderCustomCaps();
+              setTestResult('ok', aiS.customModelsFetched.replace('{count}', added || ids.length));
             } else {
               const known = (AI_PROVIDERS[draft.provider] || {}).models || [];
               dialogModels = ids.map((id) => Object.assign({}, known.find((m) => m.id === id) || {id, name: id}));
@@ -4105,19 +4792,44 @@
         $('#aiSaveBtn').addEventListener('click', () => {
           const configs = collect();
           if (!configs) return;
-          if (isEdit) {
+          const stamp = Date.now();
+          const activeBefore = aiConfigs.find((c) => c.id === aiActiveId) || null;
+          const modelKeyOf = (c) => (c.provider === 'custom' ? c.customModelId : c.model);
+          const activeKey = activeBefore ? modelKeyOf(activeBefore) : null;
+          if (isEdit && editGroupIds) {
+            // 渠道级编辑：整组替换，沿用首条 id，其余重新分配；
+            // 新配置插回原位置，避免编辑后整个渠道在列表里跳到末尾
+            const removed = new Set(editGroupIds);
+            const firstIdx = aiConfigs.findIndex((c) => removed.has(c.id));
+            configs.forEach((data, index) => {
+              data.id = index === 0 ? editGroupIds[0] : 'cfg_' + stamp + '_' + index;
+            });
+            const rest = aiConfigs.filter((c) => !removed.has(c.id));
+            rest.splice(firstIdx < 0 ? rest.length : firstIdx, 0, ...configs);
+            aiConfigs = rest;
+            const stillActive = activeKey
+              ? configs.find((data) => modelKeyOf(data) === activeKey)
+              : null;
+            if (stillActive) aiActiveId = stillActive.id;
+            else if (!aiConfigs.some((c) => c.id === aiActiveId)) {
+              aiActiveId = configs.length ? configs[0].id : (aiConfigs[0] ? aiConfigs[0].id : null);
+            }
+          } else if (isEdit) {
             Object.assign(cfg, configs[0]);
             configs.slice(1).forEach((data, index) => {
-              data.id = 'cfg_' + Date.now() + '_' + index;
+              data.id = 'cfg_' + stamp + '_' + index;
               aiConfigs.push(data);
             });
+            if (!aiConfigs.some((c) => c.id === aiActiveId)) {
+              aiActiveId = aiConfigs.length ? aiConfigs[0].id : null;
+            }
           } else {
             configs.forEach((data, index) => {
-              data.id = 'cfg_' + Date.now() + '_' + index;
+              data.id = 'cfg_' + stamp + '_' + index;
               aiConfigs.push(data);
             });
+            aiActiveId = configs[configs.length - 1].id;
           }
-          aiActiveId = configs[configs.length - 1].id;
           renderAiModelList();
           aiSaveConfigs();
           close();

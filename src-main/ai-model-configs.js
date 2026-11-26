@@ -8,14 +8,18 @@ const {getAllowedCallerOrigin, issueToken} = require('./ai-proxy');
  * 激活项；任何一侧保存后广播给其余窗口实时同步。配置对象形状与 AI 助手
  * 原有的 savedConfigs 条目一致：
  * {id, name, provider, model, apiKey, apiFormat, customEndpoint,
- *  customModelId, customContextLimit, thinkingLevel}
+ *  customModelId, customContextLimit, contextLimit, maxOutput, thinkingLevel}
  *
  * 旧版把扩展编辑器的单条配置存在 settings.aiProviders，首次读取时迁移。
  */
 
 const CONFIG_FIELDS = [
   'id', 'name', 'provider', 'model', 'apiKey', 'apiFormat',
-  'customEndpoint', 'customModelId', 'customContextLimit', 'thinkingLevel'
+  'customEndpoint', 'customModelId', 'customContextLimit', 'thinkingLevel',
+  // 自定义模型在桌面设置里手工声明的能力（覆盖内置目录判断）
+  'supportsReasoning', 'supportsVision', 'supportsVideo', 'supportsPdf', 'reasoningLevels',
+  // 每个模型独立的上下文上限与最大输出 Token
+  'contextLimit', 'maxOutput'
 ];
 
 /**
@@ -97,7 +101,30 @@ function normalizeConfig (raw, index) {
   if (typeof cfg.customModelId !== 'string') cfg.customModelId = '';
   const ctx = Number(cfg.customContextLimit);
   cfg.customContextLimit = Number.isFinite(ctx) && ctx >= 1000 ? Math.floor(ctx) : 1000000;
+  // 每个模型的上下文上限与最大输出（未声明时删除，由使用侧回落到默认值）
+  const modelCtx = Number(cfg.contextLimit);
+  if (Number.isFinite(modelCtx) && modelCtx >= 1000) cfg.contextLimit = Math.floor(modelCtx);
+  else delete cfg.contextLimit;
+  const maxOut = Number(cfg.maxOutput);
+  if (Number.isFinite(maxOut) && maxOut > 0) cfg.maxOutput = Math.floor(maxOut);
+  else delete cfg.maxOutput;
   if (typeof cfg.thinkingLevel !== 'string' || !cfg.thinkingLevel) cfg.thinkingLevel = 'medium';
+  // 能力开关只接受布尔值（未声明时保持 undefined，让内置目录的判断生效）
+  for (const key of ['supportsReasoning', 'supportsVision', 'supportsVideo', 'supportsPdf']) {
+    if (typeof cfg[key] !== 'boolean') delete cfg[key];
+  }
+  // 推理等级（从低到高）：去空白、去重，最多 8 档；空数组视为未声明
+  if (cfg.reasoningLevels !== undefined) {
+    const levels = Array.isArray(cfg.reasoningLevels) ? cfg.reasoningLevels : [];
+    const cleaned = [];
+    for (const item of levels) {
+      const name = String(item == null ? '' : item).trim().slice(0, 32);
+      if (name && !cleaned.includes(name)) cleaned.push(name);
+      if (cleaned.length >= 8) break;
+    }
+    if (cleaned.length) cfg.reasoningLevels = cleaned;
+    else delete cfg.reasoningLevels;
+  }
   return cfg;
 }
 

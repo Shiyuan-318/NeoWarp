@@ -37,7 +37,7 @@ const AI_CONNECT_SRC = [
   'https://api.deepseek.com',
   'https://open.bigmodel.cn',
   'https://api.moonshot.cn',
-  'https://api.xiaomimimo.com',
+  'https://generativelanguage.googleapis.com',
   'https://api.huaweicloud.com',
   'https://dashscope.aliyuncs.com',
   // 本地推理（Ollama / LM Studio / llama.cpp）走回环地址，不经过代理也能用

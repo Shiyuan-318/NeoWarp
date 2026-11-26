@@ -289,8 +289,8 @@ class Settings {
   /**
    * 统一的 AI 模型配置列表（AI 助手 / SOLO / 扩展编辑器 / 桌面设置共用）。
    * 每项形状：{id, name, provider, model, apiKey, apiFormat, customEndpoint,
-   * customModelId, customContextLimit, thinkingLevel}，与 AI 助手原有
-   * savedConfigs 一致。
+   * customModelId, customContextLimit, contextLimit, maxOutput, thinkingLevel}，
+   * 与 AI 助手原有 savedConfigs 一致。
    */
   get aiModelConfigs () {
     return Array.isArray(this.data.aiModelConfigs) ? this.data.aiModelConfigs : [];

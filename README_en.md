@@ -121,7 +121,7 @@ A standalone, Photoshop-style layered image editor: a menu bar, a tool options b
 
 ### AI Model Support
 
-- Supports **OpenAI / Anthropic / Ollama / custom** API formats, with presets for DeepSeek, Zhipu GLM, Kimi, Xiaomi MiMo, Huawei Pangu, Qwen, SenseNova and more
+- Supports **OpenAI / Anthropic / Ollama / custom** API formats, with presets for DeepSeek, Zhipu GLM, Kimi, Google Gemini, Huawei Pangu, Qwen, SenseNova and more
 - API keys are stored only in the local `tw_config.json`; AI requests are proxied through the main process and never touch a third-party server
 - The AI Assistant / SOLO / Extension Editor **share one model configuration**, managed centrally in Desktop Settings
 

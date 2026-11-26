@@ -250,13 +250,15 @@
   };
 
   // 与 NeoWarp AI 助手（ai-assistant.html）一致的完整服务商/模型表
-  // 模型信息更新于 2026-10，来源：各厂商官方模型/定价文档；已停售/退役的
-  // 旧模型不再列出（DeepSeek v4-flash、Qwen3.7-max/Qwen3.6、MiMo V2.5 等）。
+  // 模型信息更新于 2026-11，来源：各厂商官方模型/定价文档；已停售/退役的
+  // 旧模型不再列出（DeepSeek v4-flash、Qwen3.7-max/Qwen3.6 等）。
   var PROVIDERS = {
     openai: {
       name: 'OpenAI',
       endpoint: 'https://api.openai.com/v1/chat/completions',
       models: [
+        {id: 'gpt-6.2-sol', name: 'GPT-6.2 Sol'},
+        {id: 'gpt-6.2-astra', name: 'GPT-6.2 Astra'},
         {id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol'},
         {id: 'gpt-6-sol', name: 'GPT-6 Sol'},
         {id: 'gpt-6-luna', name: 'GPT-6 Luna'},
@@ -270,7 +272,7 @@
         {id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano'},
         {id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex'}
       ],
-      defaultModel: 'gpt-6.1-sol'
+      defaultModel: 'gpt-6.2-sol'
     },
     deepseek: {
       name: 'DeepSeek',
@@ -285,32 +287,34 @@
       name: 'Zhipu GLM',
       endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
       models: [
+        {id: 'glm-5.4', name: 'GLM-5.4'},
         {id: 'glm-5.3', name: 'GLM-5.3'},
         {id: 'glm-5.3-flash', name: 'GLM-5.3 Flash'},
         {id: 'glm-5.3-flashx', name: 'GLM-5.3 FlashX'},
         {id: 'glm-5.2', name: 'GLM-5.2'}
       ],
-      defaultModel: 'glm-5.3'
+      defaultModel: 'glm-5.4'
     },
     kimi: {
       name: 'Kimi (Moonshot)',
       endpoint: 'https://api.moonshot.cn/v1/chat/completions',
       models: [
+        {id: 'kimi-k3.1-pro', name: 'Kimi K3.1 Pro'},
+        {id: 'kimi-k3.1-pro-highspeed', name: 'Kimi K3.1 Pro Highspeed'},
         {id: 'kimi-k3', name: 'Kimi K3'},
         {id: 'kimi-k2.7-code', name: 'Kimi K2.7 Code'},
         {id: 'kimi-k2.6', name: 'Kimi K2.6'}
       ],
-      defaultModel: 'kimi-k3'
+      defaultModel: 'kimi-k3.1-pro'
     },
-    mimo: {
-      name: 'Xiaomi MiMo',
-      endpoint: 'https://api.xiaomimimo.com/v1/chat/completions',
+    gemini: {
+      name: 'Google Gemini',
+      endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
       models: [
-        {id: 'mimo-v2.6-pro', name: 'MiMo V2.6 Pro'},
-        {id: 'mimo-v2.6-pro-ultraspeed', name: 'MiMo V2.6 Pro UltraSpeed'},
-        {id: 'mimo-v2.6-flash', name: 'MiMo V2.6 Flash'}
+        {id: 'gemini-4-argon', name: 'Gemini 4 Argon'},
+        {id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash'}
       ],
-      defaultModel: 'mimo-v2.6-pro'
+      defaultModel: 'gemini-4-argon'
     },
     huaweipangu: {
       name: 'Huawei Pangu',
@@ -338,11 +342,12 @@
       endpoint: 'https://api.anthropic.com/v1/messages',
       apiFormat: 'anthropic',
       models: [
-        {id: 'claude-opus-4-5', name: 'Claude Opus 4.5'},
-        {id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5'},
+        {id: 'claude-fable-5', name: 'Claude Fable 5'},
+        {id: 'claude-opus-5', name: 'Claude Opus 5'},
+        {id: 'claude-sonnet-5', name: 'Claude Sonnet 5'},
         {id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5'}
       ],
-      defaultModel: 'claude-sonnet-4-5'
+      defaultModel: 'claude-sonnet-5'
     },
     // Ollama 本地推理（/api/chat）
     ollama: {

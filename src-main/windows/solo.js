@@ -176,6 +176,10 @@ class SoloWindow extends AIAssistantWindow {
 
     this.ipc.handle('solo-pick-project', (event, type) => this.pickProject(type));
 
+    // 会话切换：渲染层按对话记录的工程路径恢复 / 清空工作区
+    this.ipc.handle('solo-adopt-project', (event, payload) => this.adoptProjectByPath(payload));
+    this.ipc.handle('solo-clear-project', () => this.clearProject());
+
     this.ipc.handle('solo-save-project', () => this.saveSb3Project());
 
     // 侧边栏预览区域点击 → 弹出舞台窗口
@@ -630,6 +634,76 @@ class SoloWindow extends AIAssistantWindow {
       this.window.webContents.send('solo-project-changed', {project: this.soloProject});
     } catch (e) {
       // Window might be closing
+    }
+  }
+
+  /**
+   * 会话切换：按对话记录的工程路径把工程换回来。
+   * 换走之前把当前 sb3 工程的 VM 状态尽力落盘一次——AI 在 VM 里的积木改动
+   * 只存在于隐藏编辑器，若不保存，切走再切回来会从磁盘旧版本重载，改动全丢。
+   * 落盘限时且失败不阻塞（fail-open），工程文件缺失时返回明确错误。
+   * @param {{path: string, type: 'sb3'|'js'}} payload
+   */
+  async adoptProjectByPath (payload) {
+    const filePath = payload && typeof payload.path === 'string' ? payload.path : '';
+    const type = payload && payload.type === 'js' ? 'js' : 'sb3';
+    if (!filePath) {
+      return {success: false, error: 'Missing project path'};
+    }
+    try {
+      await fsPromises.access(filePath, fsPromises.constants.R_OK);
+    } catch (error) {
+      return {success: false, error: 'Project file not found: ' + filePath};
+    }
+    // 同一工程不重复挂载（窗口重载后渲染层状态为空时会请求一次恢复）
+    if (this.soloProject && this.soloProject.type === type && this.soloProject.path === filePath &&
+        (type === 'js' || this.editorWindow)) {
+      return {success: true, project: {...this.soloProject}};
+    }
+    await this.persistCurrentProjectBeforeSwitch();
+    try {
+      await this.adoptProject(filePath, type);
+      return {success: true, project: {...this.soloProject}};
+    } catch (error) {
+      return {success: false, error: String((error && error.message) || error)};
+    }
+  }
+
+  /**
+   * 会话切换到“没绑工程的对话”：清空工作区。
+   * 同样先尽力落盘 sb3 的 VM 状态，然后关编辑器、停帧流并广播空工程。
+   */
+  async clearProject () {
+    await this.persistCurrentProjectBeforeSwitch();
+    this.disposeEditor();
+    this.stageRunning = false;
+    this.stagePaused = false;
+    this.stageFrameSize = null;
+    this.soloProject = null;
+    this.jsWriteLog = [];
+    try {
+      this.window.webContents.send('solo-project-changed', {project: null});
+    } catch (e) {
+      // Window might be closing
+    }
+    return {success: true};
+  }
+
+  /**
+   * 换工程前把当前 sb3 的 VM 状态写回源文件（与保存按钮同一套导出逻辑）。
+   * 限时 8s：导出卡死也不能阻塞会话切换；js 工程的内容本来就在磁盘上，无需处理。
+   */
+  async persistCurrentProjectBeforeSwitch () {
+    if (!this.soloProject || this.soloProject.type !== 'sb3') return;
+    if (!this.editorWindow || this.editorWindow.window.isDestroyed()) return;
+    if (this.editorWindow.projectLoadComplete !== true) return;
+    try {
+      await Promise.race([
+        this.saveSb3Project(),
+        new Promise((resolve) => setTimeout(resolve, 8000))
+      ]);
+    } catch (e) {
+      // 尽力而为：保存失败不阻塞切换
     }
   }
 

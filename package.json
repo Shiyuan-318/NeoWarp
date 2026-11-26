@@ -3,10 +3,7 @@
   "description": "NeoWarp - Scratch mod with a compiler, dark mode, a bunch of addons, and more.",
   "version": "2.4.0",
   "license": "GPL-3.0",
-  "author": {
-    "email": "shiyuan318@outlook.com",
-    "name": "Shiyuan"
-  },
+  "author": "Shiyuan <shiyuan318@outlook.com>",
   "type": "commonjs",
   "scripts": {
     "fetch": "node scripts/download-library-files.mjs && node scripts/download-packager.mjs && node scripts/prepare-extensions.mjs",
@@ -66,7 +63,7 @@
   "homepage": "https://e.np.sy1.top/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Shiyuan-318/NeoWarp.git"
+    "url": "git+https://github.com/Shiyuan-318/NeoWarp.git"
   },
   "bugs": {
     "url": "https://github.com/Shiyuan-318/NeoWarp/issues",
@@ -247,5 +244,9 @@
       }
     ]
   },
-  "private": true
+  "private": true,
+  "directories": {
+    "doc": "docs"
+  },
+  "keywords": []
 }

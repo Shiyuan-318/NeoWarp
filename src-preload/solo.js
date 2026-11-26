@@ -62,6 +62,9 @@ contextBridge.exposeInMainWorld('AIAssistantPreload', {
 contextBridge.exposeInMainWorld('SoloPreload', {
   getState: () => ipcRenderer.invoke('solo-get-state'),
   pickProject: (type) => ipcRenderer.invoke('solo-pick-project', type),
+  // 会话切换：按对话记录的路径恢复工程 / 清空工作区
+  adoptProject: (payload) => ipcRenderer.invoke('solo-adopt-project', payload),
+  clearProject: () => ipcRenderer.invoke('solo-clear-project'),
   saveProject: () => ipcRenderer.invoke('solo-save-project'),
   // 侧边栏舞台预览点击 → 弹出该对话工程的舞台窗口（绿旗/暂停）
   openStageWindow: () => ipcRenderer.invoke('solo-open-stage-window'),

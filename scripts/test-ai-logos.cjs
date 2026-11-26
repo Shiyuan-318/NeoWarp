@@ -25,7 +25,7 @@ for (const file of [
 ]) {
   const logos = extractLogoSvg(file);
   // free（内置免费中转）已随内置密钥一起下线，不再保留 logo
-  const expected = ['openai', 'deepseek', 'glm', 'kimi', 'mimo', 'huaweipangu', 'qwen', 'sensenova', 'custom'];
+  const expected = ['openai', 'deepseek', 'glm', 'kimi', 'gemini', 'huaweipangu', 'qwen', 'sensenova', 'custom'];
   assert.deepStrictEqual(Object.keys(logos).sort(), [...expected].sort(), file + ': provider keys');
   for (const [key, svg] of Object.entries(logos)) {
     assert.ok(svg.startsWith('<svg'), key + ' starts with <svg');

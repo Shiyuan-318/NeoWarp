@@ -121,7 +121,7 @@
 
 ### AI 模型支持
 
-- 支持 **OpenAI / Anthropic / Ollama / 自定义** API 格式，预设 DeepSeek、智谱 GLM、Kimi、小米 MiMo、华为盘古、通义千问、SenseNova 等品牌
+- 支持 **OpenAI / Anthropic / Ollama / 自定义** API 格式，预设 DeepSeek、智谱 GLM、Kimi、Google Gemini、华为盘古、通义千问、SenseNova 等品牌
 - API Key 仅保存在本地 `tw_config.json`，AI 请求经主进程代理转发，不经过第三方服务器
 - AI 助手 / SOLO / 扩展编辑器**共享同一套模型配置**，在桌面设置中统一管理
 

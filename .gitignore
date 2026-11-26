@@ -39,3 +39,6 @@ __pycache__/
 
 # ZCode session artifacts
 .zcode/
+
+# Local CI trial checkout (contains its own .git, never commit)
+.ci-test/
