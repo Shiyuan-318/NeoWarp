@@ -33,7 +33,15 @@
       emptyHint: '按 Ctrl+T 新建标签页，或 Ctrl+O 打开文件',
       inserted: '代码已插入编辑器',
       replaced: '已替换编辑器全部内容（Ctrl+Z 可撤销）',
+      aiEditApplied: 'AI 修改已写入编辑器（Ctrl+Z 可撤销）',
+      aiEditFailed: 'AI 修改写入失败：',
+      aiPatchNotFound: 'AI 修改失败：未找到要替换的原代码',
       popout: '弹出为独立窗口',
+      blocksPreview: '积木预览',
+      blocksRefresh: '刷新',
+      blocksNoBlocks: '未检测到积木',
+      blocksNoTab: '编辑器无可用标签',
+      blocksErrorPrefix: '无法解析扩展代码：',
       statusNotSaved: '尚未保存',
       spaces: '空格：',
       newFileTemplate: [
@@ -93,7 +101,15 @@
       emptyHint: 'Press Ctrl+T for a new tab, or Ctrl+O to open the file',
       inserted: 'Code inserted into editor',
       replaced: 'Editor content replaced (Ctrl+Z to undo)',
+      aiEditApplied: 'AI edit applied (Ctrl+Z to undo)',
+      aiEditFailed: 'Failed to apply AI edit: ',
+      aiPatchNotFound: 'AI edit failed: original snippet not found',
       popout: 'Pop out to separate window',
+      blocksPreview: 'Blocks Preview',
+      blocksRefresh: 'Refresh',
+      blocksNoBlocks: 'No blocks found',
+      blocksNoTab: 'No active tab in the editor',
+      blocksErrorPrefix: 'Failed to parse extension code: ',
       statusNotSaved: 'Not saved yet',
       spaces: 'Spaces: ',
       newFileTemplate: [
@@ -445,6 +461,7 @@
     applyStrings();
     initEditor(initial);
     initAiPanel();
+    initBlocksPanel();
   }).catch(function (error) {
     document.body.textContent = 'Failed to initialize: ' + error;
   });
@@ -463,6 +480,11 @@
     $('btn-open-file').title = strings.openFiles;
     $('ai-popout-btn').title = strings.popout;
     $('activity-ai').title = 'AI';
+    $('activity-blocks').title = strings.blocksPreview;
+    $('blocks-title').textContent = strings.blocksPreview;
+    $('blocks-popout-btn').title = strings.popout;
+    $('blocks-refresh-btn').title = strings.blocksRefresh;
+    $('blocks-close-btn').title = strings.close;
     $('status-lang').textContent = 'JavaScript';
     $('status-indent').textContent = strings.spaces + '2';
     $('status-cursor').textContent = 'Ln 1, Col 1';
@@ -820,6 +842,49 @@
     showToast(strings.replaced);
   }
 
+  /** 应用 AI 编辑指令：replace / insert / patch，均通过 Monaco 编辑事务，可撤销 */
+  function applyAiEdit (edit) {
+    var model = editor && editor.getModel();
+    if (!model || !edit) return false;
+    var action = edit.action;
+    var text = typeof edit.code === 'string' ? edit.code : '';
+    try {
+      if (action === 'replace') {
+        editor.executeEdits('ai-edit-replace', [{
+          range: model.getFullModelRange(),
+          text: text,
+          forceMoveMarkers: true
+        }]);
+      } else if (action === 'insert') {
+        editor.executeEdits('ai-edit-insert', [{
+          range: editor.getSelection() || new window.monaco.Range(1, 1, 1, 1),
+          text: text,
+          forceMoveMarkers: true
+        }]);
+      } else if (action === 'patch') {
+        var find = String(edit.find || '');
+        var matches = model.findMatches(find, false, false, true, null, false, 1);
+        if (!matches.length) {
+          showToast(strings.aiPatchNotFound);
+          return false;
+        }
+        editor.executeEdits('ai-edit-patch', [{
+          range: matches[0].range,
+          text: typeof edit.with === 'string' ? edit.with : '',
+          forceMoveMarkers: true
+        }]);
+      } else {
+        return false;
+      }
+      editor.focus();
+      showToast(strings.aiEditApplied);
+      return true;
+    } catch (error) {
+      showToast(strings.aiEditFailed + String((error && error.message) || error));
+      return false;
+    }
+  }
+
   // ── AI 面板（逻辑在 ai-shared.js；此处负责停靠/弹出接线） ───
   var aiPanel = null;
   var aiPoppedOut = false;
@@ -833,6 +898,7 @@
       },
       insertCode: insertIntoEditor,
       replaceCode: replaceIntoEditor,
+      applyEdit: applyAiEdit,
       settingsApi: {
         getConfigs: P.getAiModelConfigs,
         saveActive: function (activeId, configs) {
@@ -877,6 +943,8 @@
       } else if (data.type === 'replace-code') {
         replaceIntoEditor(data.payload);
         result = true;
+      } else if (data.type === 'apply-edit') {
+        result = applyAiEdit(data.payload);
       }
       P.sendEditorResponse(data.requestId, result);
     });
@@ -903,5 +971,98 @@
     setAiPanelOpen(false);
     $('activity-ai').classList.remove('active');
     $('activity-ai').classList.add('popped-out');
+  }
+
+  // ── 积木预览面板（停靠/弹出接线，渲染在 blocks-render.js） ──
+  var blocksPoppedOut = false;
+  var blocksRequestSeq = 0;
+
+  function initBlocksPanel () {
+    $('activity-blocks').addEventListener('click', function () {
+      if (blocksPoppedOut) {
+        // 已弹出时点击侧栏图标：聚焦独立窗口
+        P.popoutBlocks();
+        return;
+      }
+      toggleBlocksPanel();
+    });
+    $('blocks-close-btn').addEventListener('click', function () {
+      setBlocksPanelOpen(false);
+    });
+    $('blocks-popout-btn').addEventListener('click', popoutBlocks);
+    $('blocks-refresh-btn').addEventListener('click', function () {
+      refreshBlocksPanel();
+    });
+
+    // 独立窗口关闭：重新停靠回侧栏并刷新
+    P.onBlocksPopoutClosed(function () {
+      blocksPoppedOut = false;
+      $('activity-blocks').classList.remove('popped-out');
+      setBlocksPanelOpen(true);
+    });
+  }
+
+  function setBlocksPanelOpen (open) {
+    $('blocks-panel').classList.toggle('closed', !open);
+    $('activity-blocks').classList.toggle('active', open);
+    if (open) {
+      refreshBlocksPanel();
+    }
+  }
+
+  function toggleBlocksPanel () {
+    setBlocksPanelOpen($('blocks-panel').classList.contains('closed'));
+  }
+
+  function popoutBlocks () {
+    if (blocksPoppedOut) {
+      // 已弹出：聚焦现有独立窗口
+      P.popoutBlocks();
+      return;
+    }
+    blocksPoppedOut = true;
+    P.popoutBlocks();
+    setBlocksPanelOpen(false);
+    $('activity-blocks').classList.remove('active');
+    $('activity-blocks').classList.add('popped-out');
+  }
+
+  // 面板收起时跳过请求；序号防止旧请求覆盖新结果
+  function refreshBlocksPanel () {
+    if (!P.getBlocksInfo) return;
+    if ($('blocks-panel').classList.contains('closed')) return;
+    var seq = ++blocksRequestSeq;
+    P.getBlocksInfo().then(function (res) {
+      if (seq !== blocksRequestSeq) return;
+      if ($('blocks-panel').classList.contains('closed')) return;
+      renderBlocksPanel(res);
+    }, function () {
+      if (seq !== blocksRequestSeq) return;
+      renderBlocksPanel(null);
+    });
+  }
+
+  function renderBlocksPanel (res) {
+    var body = $('blocks-body');
+    if (!body) return;
+    var R = window.NeoWarpBlocksRender;
+    if (res && res.ok) {
+      var extensions = res.extensions || [];
+      if (!extensions.length) {
+        body.innerHTML = '<div class="blocks-state">' + R.escapeXml(strings.blocksNoBlocks) + '</div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < extensions.length; i++) {
+        html += R.buildExtensionSection(extensions[i], lang);
+      }
+      body.innerHTML = html;
+      return;
+    }
+    var error = res && res.error;
+    var message = error === 'no-tab' ?
+      strings.blocksNoTab :
+      strings.blocksErrorPrefix + (error || '');
+    body.innerHTML = '<div class="blocks-state">' + R.escapeXml(message) + '</div>';
   }
 })();

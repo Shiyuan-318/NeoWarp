@@ -1,0 +1,166 @@
+/* NeoWarp 扩展编辑器 —— 积木预览弹窗（blocks-preview.html 专用样式）
+ * 独立 BrowserWindow 经 tw-extension-editor:// 协议加载，
+ * 样式自包含（变量与通用样式复制自 extension-editor.css）。 */
+
+:root {
+  --bg-editor: #1e1e1e;
+  --bg-side: #252526;
+  --bg-activity: #2d2d30;
+  --bg-title: #2d2d30;
+  --bg-tab-active: #1e1e1e;
+  --bg-input: #3c3c3c;
+  --border: #3c3c3c;
+  --border-soft: #2b2b2b;
+  --accent: #007acc;
+  --accent-hover: #1c8ad9;
+  --accent-soft: rgba(0, 122, 204, 0.16);
+  --fg: #cccccc;
+  --fg-bright: #ffffff;
+  --fg-dim: #858585;
+  --green: #4ec9b0;
+  --orange: #ce9178;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+body {
+  font-family: "HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  background: var(--bg-side);
+  color: var(--fg);
+  overflow: hidden;
+  user-select: none;
+}
+
+#blocks-app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.spacer { flex: 1; }
+
+/* ── 顶部标题栏 ────────────────────────────────────────────── */
+#blocks-header {
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+#blocks-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--fg);
+  text-transform: uppercase;
+}
+.icon-btn {
+  appearance: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--fg-dim);
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg-bright);
+}
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* ── 积木列表区 ────────────────────────────────────────────── */
+#blocks-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 12px 14px;
+  display: flex;
+  flex-direction: column;
+}
+.blocks-group {
+  margin-bottom: 14px;
+}
+.blocks-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg-bright);
+  padding: 2px 0 4px;
+}
+/* 积木色小圆点：颜色由 JS 内联 style 注入 */
+.blocks-group-title .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--accent);
+}
+.blocks-group-title .ext-id {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--fg-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.blocks-row {
+  display: flex;
+  align-items: center;
+  margin: 6px 0;
+}
+.blocks-row svg {
+  max-width: 100%;
+  height: auto;
+}
+/* label 类型的「积木」：一行普通文字 */
+.blocks-label {
+  color: var(--fg);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+/* 空态 / 错误态：垂直水平居中 */
+.blocks-state {
+  margin: auto;
+  color: var(--fg-dim);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px;
+  word-break: break-word;
+}
+
+/* 滚动条（与编辑器一致，贴近 VS Code） */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(121, 121, 121, 0.4);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(121, 121, 121, 0.7);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

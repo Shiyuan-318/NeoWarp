@@ -164,6 +164,26 @@ class AbstractWindow {
     return '#ffffff';
   }
 
+  /**
+   * 应用窗口图标路径（Windows/Linux 用；macOS 由 app bundle 处理）。
+   * 打包后取 resources/icon.png，开发模式取 art/icon.png。
+   * @returns {string|undefined}
+   */
+  static getIconPath () {
+    if (process.platform === 'darwin') {
+      return undefined;
+    }
+    const prodIconPath = path.resolve(__dirname, '../../../icon.png');
+    const devIconPath = path.resolve(__dirname, '../../art/icon.png');
+    if (fs.existsSync(prodIconPath)) {
+      return prodIconPath;
+    }
+    if (fs.existsSync(devIconPath)) {
+      return devIconPath;
+    }
+    return undefined;
+  }
+
   getWindowOptions () {
     /** @type {Electron.BrowserWindowConstructorOptions} */
     const options = {};
@@ -190,14 +210,9 @@ class AbstractWindow {
     options.backgroundColor = this.getBackgroundColor();
 
     // Set window icon for Windows and Linux (macOS handles it via app bundle)
-    if (process.platform !== 'darwin') {
-      const prodIconPath = path.resolve(__dirname, '../../../icon.png');
-      const devIconPath = path.resolve(__dirname, '../../art/icon.png');
-      if (fs.existsSync(prodIconPath)) {
-        options.icon = prodIconPath;
-      } else if (fs.existsSync(devIconPath)) {
-        options.icon = devIconPath;
-      }
+    const iconPath = AbstractWindow.getIconPath();
+    if (iconPath) {
+      options.icon = iconPath;
     }
 
     return options;

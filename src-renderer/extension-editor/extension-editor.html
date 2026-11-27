@@ -75,6 +75,13 @@
               <button id="ai-open-settings" type="button"></button>
             </div>
             <div id="ai-settings-hint"></div>
+            <div class="ai-field ai-toggle-field">
+              <label class="ai-checkbox-label">
+                <input type="checkbox" id="ai-auto-apply" checked>
+                <span id="ai-auto-apply-label"></span>
+              </label>
+              <div id="ai-auto-apply-hint" class="ai-toggle-hint"></div>
+            </div>
           </div>
 
           <div id="ai-messages"></div>
@@ -90,9 +97,29 @@
           </div>
         </div>
 
+        <div id="blocks-panel" class="closed">
+          <div id="blocks-header">
+            <span id="blocks-title"></span>
+            <span class="spacer"></span>
+            <button id="blocks-refresh-btn" class="icon-btn" type="button" title="">
+              <svg viewBox="0 0 24 24"><path d="M17.65 6.35A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.76-4.24L15 11h7V4l-4.35 2.35z"/></svg>
+            </button>
+            <button id="blocks-popout-btn" class="icon-btn" type="button" title="">
+              <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+            </button>
+            <button id="blocks-close-btn" class="icon-btn" type="button" title="">
+              <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+          </div>
+          <div id="blocks-body"></div>
+        </div>
+
         <div id="activity-bar">
           <button id="activity-ai" class="activity-btn" type="button" title="">
             <svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 0 1 .95.68l1.7 4.67 4.67 1.7a1 1 0 0 1 0 1.9l-4.67 1.7-1.7 4.67a1 1 0 0 1-1.9 0l-1.7-4.67-4.67-1.7a1 1 0 0 1 0-1.9l4.67-1.7 1.7-4.67A1 1 0 0 1 12 2zm7 12a.9.9 0 0 1 .86.61l.85 2.34 2.34.85a.9.9 0 0 1 0 1.71l-2.34.85-.85 2.34a.9.9 0 0 1-1.71 0l-.85-2.34-2.34-.85a.9.9 0 0 1 0-1.71l2.34-.85.85-2.34A.9.9 0 0 1 19 14z"/></svg>
+          </button>
+          <button id="activity-blocks" class="activity-btn" type="button" title="">
+            <svg viewBox="0 0 24 24"><path d="M3 13h8v8H3v-8zm0-10h8v8H3V3zm10 0h8v8h-8V3zm0 10h8v8h-8v-8z"/></svg>
           </button>
         </div>
       </div>
@@ -123,6 +150,7 @@
 
     <script src="vs/loader.js"></script>
     <script src="ai-shared.js"></script>
+    <script src="blocks-render.js"></script>
     <script src="extension-editor.js"></script>
   </body>
 </html>

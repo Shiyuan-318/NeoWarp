@@ -3783,7 +3783,6 @@
                   ? '<span class="ai-active-tag">' + aiEscape(aiS.active) + '</span>'
                   : (isFree ? '<span class="ai-free-tag">' + aiEscape(aiS.freeBadge) + '</span>' : ''))) +
             (isFree ? '' :
-              '<button type="button" class="ai-row-btn ai-edit-btn">' + aiEscape(aiS.edit) + '</button>' +
               '<button type="button" class="ai-row-btn danger ai-delete-btn">' + aiEscape(aiS.delete) + '</button>') +
           '</div>';
 
@@ -3796,7 +3795,6 @@
           aiSetActive(cfg.id);
         });
         if (!isFree) {
-          row.querySelector('.ai-edit-btn').addEventListener('click', () => openAiModelDialog(cfg.id));
           row.querySelector('.ai-delete-btn').addEventListener('click', () => aiDeleteConfig(cfg.id));
         }
         return row;
@@ -3830,7 +3828,7 @@
 
         // 按请求地址分类：自定义配置按规范化端点，内置服务商按服务商。
         // 批量添加（同一地址多个模型 ID）的配置收进同一可折叠组，
-        // 不再平铺成一堆；单条配置的组不渲染组头，保持原有平铺样式。
+        // 不再平铺成一堆；每个渠道（含单条配置）统一渲染组头。
         const epKeyOf = (cfg) => {
           const p = AI_PROVIDERS[cfg.provider] || {};
           return (p.isCustom || cfg.customEndpoint)
@@ -3847,11 +3845,9 @@
           }
           epGroups[epIndex[key]].idxs.push(cfg);
         });
+        // 编辑入口统一收敛到渠道级组头（编辑/删除整组），
+        // 单条配置的渠道同样渲染组头，保证仍有编辑入口
         epGroups.forEach((g) => {
-          if (g.idxs.length === 1) {
-            list.appendChild(aiModelRow(g.idxs[0]));
-            return;
-          }
           const first = g.idxs[0];
           const p = AI_PROVIDERS[first.provider] || {};
           const address = (p.isCustom || first.customEndpoint)
@@ -3948,11 +3944,12 @@
       }
 
       // 新增/编辑共用对话框；id 为 null 表示新增。
-      // groupIds 用于渠道级编辑：同组的多条配置一起载入，保存时整组替换。
+      // groupIds 用于渠道级编辑：同组的多条配置一起载入，保存时整组替换
+      // （单条配置的渠道也传入，保持“编辑渠道”语义）。
       function openAiModelDialog (id, groupIds) {
         const isEdit = typeof id === 'string';
         const cfg = isEdit ? aiConfigs.find((c) => c.id === id) : null;
-        const editGroupIds = Array.isArray(groupIds) && groupIds.length > 1 ? groupIds.slice() : null;
+        const editGroupIds = Array.isArray(groupIds) && groupIds.length ? groupIds.slice() : null;
         const groupCfgs = editGroupIds
           ? editGroupIds.map((gid) => aiConfigs.find((c) => c.id === gid)).filter(Boolean)
           : (cfg ? [cfg] : []);

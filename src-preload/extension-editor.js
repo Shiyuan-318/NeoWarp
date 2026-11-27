@@ -66,8 +66,27 @@ contextBridge.exposeInMainWorld('ExtensionEditorPreload', {
   popoutInsertCode: (code) => ipcRenderer.invoke('ai-popout-insert-code', code),
   // 用 AI 生成的代码替换编辑器整个文件内容
   popoutReplaceCode: (code) => ipcRenderer.invoke('ai-popout-replace-code', code),
+  // 应用 AI 编辑指令（replace / insert / patch）
+  popoutApplyEdit: (edit) => ipcRenderer.invoke('ai-popout-apply-edit', edit),
   popoutGetAiModelConfigs: () => ipcRenderer.invoke('ai-get-model-configs'),
   popoutSaveAiModelConfigs: (payload) => ipcRenderer.invoke('ai-save-model-configs', payload),
   reportPopoutState: (state) => ipcRenderer.send('ai-popout-state', state),
-  dockBack: (state) => ipcRenderer.invoke('ai-popout-dock-back', state)
+  dockBack: (state) => ipcRenderer.invoke('ai-popout-dock-back', state),
+
+  // ── 积木预览弹窗 ──
+  // 编辑器侧：点击活动栏积木预览按钮，打开 / 聚焦独立预览窗口
+  popoutBlocks: () => ipcRenderer.invoke('extension-popout-blocks'),
+  // 编辑器侧：弹窗关闭后重新停靠回侧栏
+  onBlocksPopoutClosed: (callback) => {
+    ipcRenderer.on('blocks-popout-closed', () => callback());
+  },
+  // 编辑器侧：停靠面板取当前代码解析出的积木信息
+  getBlocksInfo: () => ipcRenderer.invoke('blocks-get-info'),
+  // 弹窗侧：初始化信息（locale）
+  getBlocksPopoutInitial: () => ipcRenderer.invoke('blocks-popout-get-initial'),
+  onBlocksPopoutInit: (callback) => {
+    ipcRenderer.on('blocks-popout-init', (event, data) => callback(data));
+  },
+  // 弹窗侧：取当前扩展代码解析出的积木信息（主进程 vm 沙箱解析）
+  popoutGetBlocks: () => ipcRenderer.invoke('blocks-popout-get-info')
 });

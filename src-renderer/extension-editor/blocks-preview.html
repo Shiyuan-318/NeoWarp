@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>积木预览</title>
+    <link rel="stylesheet" href="blocks-preview.css">
+  </head>
+  <body>
+    <div id="blocks-app">
+      <div id="blocks-header">
+        <span id="blocks-title"></span>
+        <span class="spacer"></span>
+        <button id="blocks-refresh-btn" class="icon-btn" type="button" title="">
+          <svg viewBox="0 0 24 24"><path d="M17.65 6.35A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.76-4.24L15 11h7V4l-4.35 2.35z"/></svg>
+        </button>
+        <button id="blocks-close-btn" class="icon-btn" type="button" title="">
+          <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+
+      <div id="blocks-body"></div>
+    </div>
+
+    <script src="blocks-render.js"></script>
+    <script src="blocks-preview.js"></script>
+  </body>
+</html>

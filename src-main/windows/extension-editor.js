@@ -8,6 +8,7 @@ const {getLocale} = require('../l10n');
 const {writeFileAtomic} = require('../atomic-write-stream');
 const {APP_NAME} = require('../brand');
 const {registerAiModelConfigIpc} = require('../ai-model-configs');
+const {extractExtensionInfos} = require('../extract-extension-info');
 
 /**
  * Windows 下阻止把文件写进应用安装目录 / userData（覆盖程序自身的风险），
@@ -85,6 +86,8 @@ class ExtensionEditorWindow extends AbstractWindow {
     this.aiPopout = null;
     /** 弹窗与侧栏之间交接的聊天状态 */
     this.aiPopoutState = null;
+    /** @type {Electron.BrowserWindow|null} 弹出的独立积木预览窗口 */
+    this.blocksPopout = null;
 
     this.window.setTitle(APP_NAME);
     this.window.on('page-title-updated', (event, title) => {
@@ -264,10 +267,25 @@ class ExtensionEditorWindow extends AbstractWindow {
       return {success: true};
     });
 
-    // 编辑器窗口关闭时一并关掉它的 AI 弹窗
+    // 积木预览：停靠面板取数据 + 弹窗打开/聚焦
+    this.ipc.handle('blocks-get-info', () => this.getBlocksInfo());
+    this.ipc.handle('extension-popout-blocks', () => {
+      if (this.blocksPopout && !this.blocksPopout.isDestroyed()) {
+        this.blocksPopout.show();
+        this.blocksPopout.focus();
+        return {success: true};
+      }
+      this.openBlocksPopout();
+      return {success: true};
+    });
+
+    // 编辑器窗口关闭时一并关掉它的 AI 弹窗与积木预览弹窗
     this.window.on('closed', () => {
       if (this.aiPopout && !this.aiPopout.isDestroyed()) {
         this.aiPopout.close();
+      }
+      if (this.blocksPopout && !this.blocksPopout.isDestroyed()) {
+        this.blocksPopout.close();
       }
     });
 
@@ -384,6 +402,7 @@ class ExtensionEditorWindow extends AbstractWindow {
       show: false,
       backgroundColor: '#252526',
       autoHideMenuBar: true,
+      icon: AbstractWindow.getIconPath(),
       title: (isZh ? 'AI 助手' : 'AI Assistant') + ' - ' + APP_NAME,
       webPreferences: {
         nodeIntegration: false,
@@ -405,6 +424,7 @@ class ExtensionEditorWindow extends AbstractWindow {
     popoutIpc.handle('ai-popout-get-code', () => this.requestFromRenderer('get-code'));
     popoutIpc.handle('ai-popout-insert-code', (event, code) => this.requestFromRenderer('insert-code', code));
     popoutIpc.handle('ai-popout-replace-code', (event, code) => this.requestFromRenderer('replace-code', code));
+    popoutIpc.handle('ai-popout-apply-edit', (event, edit) => this.requestFromRenderer('apply-edit', edit));
     popoutIpc.on('ai-popout-state', (event, state) => {
       this.aiPopoutState = state;
     });
@@ -433,8 +453,77 @@ class ExtensionEditorWindow extends AbstractWindow {
   }
 
   /**
-   * 向编辑器渲染层发请求（取当前代码 / 插入代码 / 替换全文），带 5 秒超时。
-   * @param {'get-code'|'insert-code'|'replace-code'} type
+   * 打开（或聚焦）独立积木预览窗口。弹窗复用扩展编辑器的 preload，
+   * 其 IPC 注册在弹窗自身的 mainFrame 上。
+   */
+  openBlocksPopout () {
+    if (this.blocksPopout && !this.blocksPopout.isDestroyed()) {
+      this.blocksPopout.show();
+      this.blocksPopout.focus();
+      return;
+    }
+
+    const isZh = (getLocale() || 'en').toLowerCase().startsWith('zh');
+    const popout = new BrowserWindow({
+      width: 460,
+      height: 680,
+      minWidth: 360,
+      minHeight: 420,
+      useContentSize: true,
+      show: false,
+      backgroundColor: '#252526',
+      autoHideMenuBar: true,
+      icon: AbstractWindow.getIconPath(),
+      title: (isZh ? '积木预览' : 'Blocks Preview') + ' - ' + APP_NAME,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+        preload: path.resolve(__dirname, '../../src-preload/extension-editor.js')
+      }
+    });
+    this.blocksPopout = popout;
+    popout.on('page-title-updated', (event) => event.preventDefault());
+    popout.setMenuBarVisibility(false);
+
+    const popoutIpc = popout.webContents.mainFrame.ipc;
+    popoutIpc.handle('blocks-popout-get-initial', () => ({
+      locale: getLocale() || 'en'
+    }));
+    popoutIpc.handle('blocks-popout-get-info', () => this.getBlocksInfo());
+
+    popout.on('closed', () => {
+      this.blocksPopout = null;
+      if (!this.window.isDestroyed()) {
+        // 弹窗关闭后把积木预览重新停靠回侧栏
+        this.window.webContents.send('blocks-popout-closed');
+      }
+    });
+
+    popout.loadURL('tw-extension-editor://./blocks-preview.html');
+    popout.webContents.on('did-finish-load', () => {
+      popout.webContents.send('blocks-popout-init', {locale: getLocale() || 'en'});
+    });
+    popout.once('ready-to-show', () => {
+      popout.show();
+      popout.focus();
+    });
+  }
+
+  /**
+   * 取当前标签代码并解析出积木定义（vm 沙箱在主进程执行，避免渲染层 CSP 禁 eval）。
+   */
+  async getBlocksInfo () {
+    const data = await this.requestFromRenderer('get-code');
+    if (!data || typeof data.content !== 'string' || !data.content.trim()) {
+      return {ok: false, extensions: null, error: 'no-tab'};
+    }
+    return extractExtensionInfos(data.content, getLocale() || 'en');
+  }
+
+  /**
+   * 向编辑器渲染层发请求（取当前代码 / 插入代码 / 替换全文 / 应用 AI 编辑），带 5 秒超时。
+   * @param {'get-code'|'insert-code'|'replace-code'|'apply-edit'} type
    * @param {*} [payload]
    */
   requestFromRenderer (type, payload) {
