@@ -260,6 +260,9 @@
         color: var(--brand-text, var(--text));
         transition: color 0.3s ease;
       }
+      /* 点击 Logo / 品牌名打开官网 */
+      .logo-wrap, .brand-name { cursor: pointer; }
+      .brand-name:hover { opacity: 0.85; }
       /* 自定义背景：字色由 JS 按背景亮度决定（on-dark-bg 白字 / on-light-bg 黑字） */
       body.custom-bg.on-dark-bg { --brand-text: #f5f5f7; }
       body.custom-bg.on-light-bg { --brand-text: #1d1d1f; }
@@ -1727,6 +1730,17 @@
         }
       };
       applyBranding(info.homeLogo, info.homeLogoText);
+
+      // ===== 点击 Logo / 品牌名：新标签页打开官网 =====
+      // 监听容器本身（而非内部 img），这样自定义 Logo 替换 innerHTML 后依然生效
+      const OFFICIAL_SITE_URL = 'https://np.sy1.top';
+      const openOfficialSite = (event) => {
+        if (event.defaultPrevented) return;
+        event.preventDefault();
+        window.open(OFFICIAL_SITE_URL, '_blank', 'noopener,noreferrer');
+      };
+      logoWrap.addEventListener('click', openOfficialSite);
+      brandName.addEventListener('click', openOfficialSite);
 
       // ===== 自定义背景图（启用液态玻璃按钮效果） =====
       const bgImage = document.getElementById('bg-image');
