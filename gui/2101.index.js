@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkneowarp=self.webpackChunkneowarp||[]).push([[2101],{28509(e,s,n){async function r(e){let{addon:s}=e;s.tab.traps.vm.setCompilerOptions({enabled:!1})}n.r(s),n.d(s,{resources:()=>t}),n.dn(r);const t={"userscript.js":r}}}]);

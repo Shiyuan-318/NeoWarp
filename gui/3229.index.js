@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkneowarp=self.webpackChunkneowarp||[]).push([[3229],{38755(e,s,c){async function n(e){let{addon:s}=e;s.tab.redux.dispatch({type:"tw/SET_CLOUD",cloud:!1})}c.r(s),c.d(s,{resources:()=>t}),c.dn(n);const t={"userscript.js":n}}}]);

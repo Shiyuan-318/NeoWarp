@@ -1,0 +1,1 @@
+(self.webpackChunkneowarp=self.webpackChunkneowarp||[]).push([[8169],{83342(e,s,n){"use strict";n.r(s);var a=n(76511);const r={"remove-feedback.css":n.n(a)()};n.d(s,["resources",0,r])},76511(e,s,n){(e.exports=n(97396)(!1)).push([e.id,'a[class^="menu-bar_feedback-link_"] {\n  display: none;\n}\n',""])}}]);

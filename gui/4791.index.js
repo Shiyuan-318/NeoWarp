@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkneowarp=self.webpackChunkneowarp||[]).push([[4791],{3403(s,e,o){async function t(s){let{addon:e,console:o}=s;const t=await e.tab.traps.getBlockly(),c=t.BlockSvg.prototype.bumpNeighbours_;t.BlockSvg.prototype.bumpNeighbours_=function(){e.self.disabled&&c.call(this)}}o.r(e),o.d(e,{resources:()=>c}),o.dn(t);const c={"userscript.js":t}}}]);
