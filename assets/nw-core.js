@@ -1,6 +1,6 @@
 /* NeoWarp Web Runtime — 由 web/build.mjs 自动生成，请勿直接修改 */
 (function () {
-  window.NW_VERSION = "2.2.0";
+  window.NW_VERSION = "2.4.0";
   window.NW_MONACO_CDNS = ["https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs","https://unpkg.com/monaco-editor@0.52.2/min/vs"];
 })();
 /* ===== 00-util.js ===== */

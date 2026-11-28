@@ -34,7 +34,7 @@
   var pendingFileMap = new Map();
 
   var FILE_OPEN_ACCEPTS = [
-    { description: '项目文件', accept: { 'application/json': ['.sb3', '.np1', '.npnp', '.viewsb3', '.sb2', '.sb'] } },
+    { description: '项目文件', accept: { 'application/json': ['.sb3', '.np1', '.npnp', '.viewsb3'] } },
     { description: '所有文件', accept: { '*/*': ['*'] } }
   ];
 
@@ -110,7 +110,7 @@
     return new Promise(function (resolve) {
       var input = global.document.createElement('input');
       input.type = 'file';
-      input.accept = '.sb3,.np1,.npnp,.viewsb3,.sb2,.sb';
+      input.accept = '.sb3,.np1,.npnp,.viewsb3';
       input.addEventListener('change', function () {
         var file = input.files && input.files[0];
         if (!file) {
@@ -1053,6 +1053,23 @@
     getStageAreaBackgroundImage: () => util.readLocal('neowarp:stageBg', null),
     setStageAreaBackgroundImage: async (imageData) => {
       util.writeLocal('neowarp:stageBg', imageData || null);
+    },
+    // 标签栏「源代码Beta」按钮显隐（编辑器设置模态框 → 外观）：
+    // 本地存储 + 广播，多标签页实时同步
+    getShowSourceCodeButton: () => {
+      // localStorage 会把布尔转成 "true"/"false" 字符串，这里统一解析；
+      // 未存储过时默认显示
+      var value = util.readLocal('neowarp:showSourceCodeButton', null);
+      return value === null ? true : String(value) !== 'false';
+    },
+    setShowSourceCodeButton: async (enabled) => {
+      util.writeLocal('neowarp:showSourceCodeButton', enabled !== false);
+      util.broadcast('showSourceCodeButton', enabled !== false);
+    },
+    onShowSourceCodeButtonChanged: (callback) => {
+      util.onBroadcast(function (message) {
+        if (message.type === 'showSourceCodeButton') callback(message.data);
+      });
     },
     getGlobalUITheme: async () => storage.getSettings().uiTheme || 'system',
     onGlobalUIThemeChanged: (callback) => {

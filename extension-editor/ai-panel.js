@@ -9,13 +9,17 @@
       dockBack: '恢复到编辑器侧栏',
       inserted: '代码已插入编辑器',
       replaced: '已替换编辑器全部内容（Ctrl+Z 可撤销）',
-      replaceFailed: '替换失败：编辑器无可用标签'
+      replaceFailed: '替换失败：编辑器无可用标签',
+      editApplied: 'AI 修改已写入编辑器（Ctrl+Z 可撤销）',
+      editFailed: 'AI 修改失败：编辑器无可用标签'
     },
     en: {
       dockBack: 'Dock back to editor sidebar',
       inserted: 'Code inserted into editor',
       replaced: 'Editor content replaced (Ctrl+Z to undo)',
-      replaceFailed: 'Replace failed: no active tab in the editor'
+      replaceFailed: 'Replace failed: no active tab in the editor',
+      editApplied: 'AI edit applied (Ctrl+Z to undo)',
+      editFailed: 'AI edit failed: no active tab in the editor'
     }
   };
 
@@ -70,6 +74,15 @@
           } else {
             showToast(strings.replaceFailed);
           }
+        });
+      },
+      applyEdit: function (edit) {
+        return P.popoutApplyEdit(edit).then(function (ok) {
+          showToast(ok ? strings.editApplied : strings.editFailed);
+          return !!ok;
+        }, function () {
+          showToast(strings.editFailed);
+          return false;
         });
       },
       settingsApi: {

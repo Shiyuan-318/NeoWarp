@@ -27,6 +27,10 @@
 
       <div id="ai-settings">
         <div class="ai-field">
+          <label id="ai-channel-select-label" for="ai-channel-select"></label>
+          <select id="ai-channel-select"></select>
+        </div>
+        <div class="ai-field">
           <label id="ai-model-select-label" for="ai-model-select"></label>
           <select id="ai-model-select"></select>
         </div>
@@ -34,6 +38,13 @@
           <button id="ai-open-settings" type="button"></button>
         </div>
         <div id="ai-settings-hint"></div>
+        <div class="ai-field ai-toggle-field">
+          <label class="ai-checkbox-label">
+            <input type="checkbox" id="ai-auto-apply" checked>
+            <span id="ai-auto-apply-label"></span>
+          </label>
+          <div id="ai-auto-apply-hint" class="ai-toggle-hint"></div>
+        </div>
       </div>
 
       <div id="ai-messages"></div>

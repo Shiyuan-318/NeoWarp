@@ -13,7 +13,6 @@
 (function () {
   'use strict';
 
-  var TOKEN = window.__NEOWARP_REMOTE_TOKEN__ || '';
   var BOOT = window.__NEOWARP_REMOTE_BOOT__ || {};
   var listeners = [];
   var source = null;
@@ -21,9 +20,9 @@
   var online = false;
   var statusBar = null;
 
-  function withToken (path) {
-    return path + (path.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN);
-  }
+  // 鉴权只靠会话 Cookie（HttpOnly，页面脚本拿不到也拿不着）：本页所有子
+  // 请求都是同源相对地址，fetch / EventSource 会自动附带 Cookie，
+  // 因此这里不再把令牌拼进 URL——URL 会进浏览器历史和代理日志。
 
   function emit (kind, data) {
     for (var i = 0; i < listeners.length; i++) {
@@ -71,7 +70,7 @@
       retryTimer = 0;
     }
     try {
-      source = new EventSource(withToken('/api/events'));
+      source = new EventSource('/api/events');
     } catch (e) {
       retryTimer = setTimeout(connect, 2500);
       return;
@@ -116,7 +115,7 @@
         body[key] = payload[key];
       });
     }
-    return fetch(withToken('/api/cmd'), {
+    return fetch('/api/cmd', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body)
@@ -128,7 +127,7 @@
   }
 
   function fetchSnapshot () {
-    return fetch(withToken('/api/state')).then(function (res) {
+    return fetch('/api/state').then(function (res) {
       if (!res.ok) throw new Error('bad token');
       return res.json();
     });
